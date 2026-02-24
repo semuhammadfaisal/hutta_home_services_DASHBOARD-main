@@ -19,7 +19,13 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500', 'https://hutta-home-services-dashboard.onrender.com'],
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5500',
+    'http://127.0.0.1:5500',
+    'https://hutta-home-services-dashboard.onrender.com',
+    'https://hutta-home-services-dashboard-main.onrender.com'
+  ],
   credentials: true
 }));
 
