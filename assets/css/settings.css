@@ -1,0 +1,199 @@
+/* Settings Styles */
+.settings-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.settings-section {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.settings-section h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 18px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setting-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.setting-item label {
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.setting-item input,
+.setting-item select,
+.setting-item textarea {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.setting-item input:focus,
+.setting-item select:focus,
+.setting-item textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.system-info {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.info-label {
+    font-weight: 500;
+    color: #666;
+}
+
+.info-value {
+    font-weight: 600;
+    color: #333;
+}
+
+.status-connected {
+    color: #28a745 !important;
+}
+
+/* Dark Theme */
+.dark-theme {
+    background: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.dark-theme .top-nav {
+    background: #2d2d2d;
+    border-bottom-color: #404040;
+}
+
+.dark-theme .sidebar {
+    background: #2d2d2d;
+    border-right-color: #404040;
+}
+
+.dark-theme .main-content {
+    background: #1a1a1a;
+}
+
+.dark-theme .settings-section,
+.dark-theme .report-section,
+.dark-theme .kpi-card {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+.dark-theme .settings-section h2,
+.dark-theme .report-section h2 {
+    color: #e0e0e0;
+    border-bottom-color: #404040;
+}
+
+.dark-theme .setting-item label,
+.dark-theme .info-label {
+    color: #b0b0b0;
+}
+
+.dark-theme .info-value {
+    color: #e0e0e0;
+}
+
+.dark-theme .setting-item input,
+.dark-theme .setting-item select,
+.dark-theme .setting-item textarea {
+    background: #404040;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.dark-theme .setting-item input:focus,
+.dark-theme .setting-item select:focus,
+.dark-theme .setting-item textarea:focus {
+    border-color: #007bff;
+}
+
+.dark-theme .info-item {
+    background: #404040;
+    border-color: #555;
+}
+
+.dark-theme .chart-box,
+.dark-theme .report-card {
+    background: #404040;
+}
+
+.dark-theme .top-item,
+.dark-theme .budget-item {
+    background: #404040;
+    border-color: #555;
+}
+
+.dark-theme .menu-item a {
+    color: #b0b0b0;
+}
+
+.dark-theme .menu-item.active a,
+.dark-theme .menu-item a:hover {
+    color: #007bff;
+}
+
+@media (max-width: 768px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-actions {
+        flex-direction: column;
+    }
+}

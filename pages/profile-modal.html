@@ -1,0 +1,84 @@
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profileModal">
+    <div class="modal-content profile-modal">
+        <div class="modal-header">
+            <h2><i class="fas fa-user"></i> Profile Settings</h2>
+            <button class="modal-close" onclick="closeProfileModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="profile-section">
+                <div class="profile-avatar-section">
+                    <div class="avatar-container">
+                        <img src="https://via.placeholder.com/100x100/4CAF50/white?text=A" alt="Profile" id="profileAvatar">
+                        <button class="avatar-upload-btn" onclick="uploadAvatar()">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <form class="profile-form" id="profileForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" name="firstName" value="Admin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" name="lastName" value="User" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profileEmail">Email Address</label>
+                        <input type="email" id="profileEmail" name="email" value="admin@huttaservices.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" value="+1 (555) 123-4567">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role">Role</label>
+                        <select id="role" name="role">
+                            <option value="administrator">Administrator</option>
+                            <option value="manager">Manager</option>
+                            <option value="supervisor">Supervisor</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <input type="text" id="department" name="department" value="Operations">
+                    </div>
+                </form>
+            </div>
+            
+            <div class="password-section">
+                <h3><i class="fas fa-lock"></i> Change Password</h3>
+                <form class="password-form" id="passwordForm">
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" name="currentPassword" placeholder="Enter current password">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm new password">
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeProfileModal()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="saveProfile()">Save Changes</button>
+        </div>
+    </div>
+</div>

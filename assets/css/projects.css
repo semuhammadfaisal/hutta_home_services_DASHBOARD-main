@@ -1,0 +1,107 @@
+/* Project Management Styles */
+.progress-bar {
+    position: relative;
+    width: 80px;
+    height: 20px;
+    background: #f0f0f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: bold;
+    color: #333;
+}
+
+.priority-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.priority-badge.low {
+    background: #e8f5e8;
+    color: #4caf50;
+}
+
+.priority-badge.medium {
+    background: #fff3e0;
+    color: #ff9800;
+}
+
+.priority-badge.high {
+    background: #ffebee;
+    color: #f44336;
+}
+
+.priority-badge.urgent {
+    background: #f3e5f5;
+    color: #9c27b0;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.project-modal .modal-content {
+    max-width: 800px;
+}
+
+#projectEmployees {
+    height: 120px;
+}
+
+/* Payment Method Badges */
+.method-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+.method-badge.cash {
+    background: #e8f5e8;
+    color: #4caf50;
+}
+
+.method-badge.credit-card,
+.method-badge.debit-card {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.method-badge.bank-transfer {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.method-badge.check {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.method-badge.online {
+    background: #e0f2f1;
+    color: #00796b;
+}
+
+.payment-modal .modal-content {
+    max-width: 700px;
+}

@@ -1,0 +1,102 @@
+/* Enhanced Project Card Styles */
+.project-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 12px !important;
+    gap: 10px !important;
+}
+
+.project-name {
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    color: #1f2937 !important;
+    line-height: 1.5 !important;
+}
+
+.project-id {
+    font-size: 11px !important;
+    color: #6b7280 !important;
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb) !important;
+    padding: 4px 10px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.project-customer {
+    font-size: 13px !important;
+    color: #6b7280 !important;
+    margin-bottom: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+    background: #f9fafb !important;
+    border-radius: 8px !important;
+    border: 1px solid #f3f4f6 !important;
+}
+
+.project-customer i {
+    color: #667eea !important;
+    font-size: 13px !important;
+}
+
+.project-meta {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 11px !important;
+    color: #9ca3af !important;
+    padding-top: 12px !important;
+    border-top: 2px solid #f3f4f6 !important;
+    margin-top: 4px !important;
+}
+
+.project-priority {
+    padding: 5px 12px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 10px !important;
+    letter-spacing: 0.8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid !important;
+}
+
+.project-priority.high {
+    background: linear-gradient(135deg, #fee2e2, #fecaca) !important;
+    color: #991b1b !important;
+    border-color: #fca5a5 !important;
+}
+
+.project-priority.medium {
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    color: #92400e !important;
+    border-color: #fcd34d !important;
+}
+
+.project-priority.low {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0) !important;
+    color: #065f46 !important;
+    border-color: #6ee7b7 !important;
+}
+
+.drag-handle {
+    cursor: grab !important;
+    color: #d1d5db !important;
+    margin-right: 8px !important;
+    font-size: 14px !important;
+    transition: color 0.2s !important;
+}
+
+.drag-handle:hover {
+    color: #667eea !important;
+}
+
+.drag-handle:active {
+    cursor: grabbing !important;
+    color: #764ba2 !important;
+}
