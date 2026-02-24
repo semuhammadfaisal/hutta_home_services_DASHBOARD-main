@@ -1,9 +1,10 @@
 // API Service for Hutta Home Services
 class APIService {
     constructor() {
+        // Use relative API path when on production, localhost for development
         this.baseURL = window.location.hostname === 'localhost' 
             ? 'http://localhost:10000/api'
-            : 'https://hutta-home-services-dashboard.onrender.com/api';
+            : `${window.location.origin}/api`;
         this.token = this.getToken();
         this.demoMode = false; // Disable demo mode - using real backend
         console.log('APIService initialized - Demo Mode:', this.demoMode);
