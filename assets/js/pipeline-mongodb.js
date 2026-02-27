@@ -167,23 +167,20 @@ function renderRecords(stageId) {
         return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No records yet</div>';
     }
     return stageRecords.map(record => {
-        const dueDate = record.dueDate ? new Date(record.dueDate).toLocaleDateString() : '';
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         return `
         <div class="record-card" draggable="true" data-record-id="${record._id}">
             <div class="record-header">
-                <div class="record-title">${record.projectName}</div>
+                <div class="record-title">${record.customerName}</div>
                 <div class="record-actions">
                     <button class="icon-btn record-view-btn" data-record-id="${record._id}" title="View Details"><i class="fas fa-eye"></i></button>
                     <button class="icon-btn record-edit-btn" data-record-id="${record._id}" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="icon-btn delete record-delete-btn" data-record-id="${record._id}" title="Delete"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
-            <div class="record-customer"><i class="fas fa-user"></i> ${record.customerName}</div>
             ${record.email ? `<div class="record-info"><i class="fas fa-envelope"></i> ${record.email}</div>` : ''}
             ${record.phone ? `<div class="record-info"><i class="fas fa-phone"></i> ${record.phone}</div>` : ''}
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}
-            ${dueDate ? `<div class="record-info"><i class="fas fa-calendar"></i> Due: ${dueDate}</div>` : ''}
             ${record.description ? `<div class="record-description">${record.description}</div>` : ''}
             <div class="record-footer">
                 <span class="priority-badge priority-${record.priority}">${record.priority}</span>
@@ -275,7 +272,7 @@ function viewRecord(recordId) {
     currentViewRecordId = recordId;
     const stage = stages.find(s => s._id === record.stageId);
     
-    document.getElementById('viewProjectName').textContent = record.projectName || '-';
+    document.getElementById('viewProjectName').textContent = record.customerName || '-';
     document.getElementById('viewCustomerName').textContent = record.customerName || '-';
     document.getElementById('viewEmail').textContent = record.email || '-';
     document.getElementById('viewPhone').textContent = record.phone || '-';
@@ -287,7 +284,6 @@ function viewRecord(recordId) {
     document.getElementById('viewBudget').textContent = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '-';
     document.getElementById('viewStage').textContent = stage ? stage.name : '-';
     document.getElementById('viewStartDate').textContent = record.startDate ? new Date(record.startDate).toLocaleDateString() : '-';
-    document.getElementById('viewDueDate').textContent = record.dueDate ? new Date(record.dueDate).toLocaleDateString() : '-';
     document.getElementById('viewCreated').textContent = new Date(record.createdAt).toLocaleString();
     document.getElementById('viewUpdated').textContent = new Date(record.updatedAt).toLocaleString();
     document.getElementById('viewDescription').textContent = record.description || 'No description provided';
@@ -309,9 +305,10 @@ function editFromView() {
 }
 
 // Record Modal Functions
-let availableOrders = [];
+let availableCustomers = [];
+let selectedCustomerId = null;
 
-async function loadAvailableOrders() {
+async function loadAvailableCustomers() {
     try {
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
         if (!session) return;
@@ -319,86 +316,128 @@ async function loadAvailableOrders() {
         const sessionData = JSON.parse(session);
         const token = sessionData.token;
         
-        const response = await fetch(`${API_BASE_URL}/orders`, {
+        const response = await fetch(`${API_BASE_URL}/customers`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         
-        if (!response.ok) throw new Error('Failed to load orders');
+        if (!response.ok) throw new Error('Failed to load customers');
         
-        availableOrders = await response.json();
-        populateOrderDropdown();
+        availableCustomers = await response.json();
     } catch (error) {
-        console.error('Error loading orders:', error);
+        console.error('Error loading customers:', error);
     }
 }
 
-function populateOrderDropdown() {
-    const select = document.getElementById('existingOrderSelect');
-    if (!select) return;
+function searchCustomers(query) {
+    const dropdown = document.getElementById('customerSuggestions');
+    if (!dropdown) return;
     
-    select.innerHTML = '<option value="">-- Select an order --</option>' +
-        availableOrders.map(order => {
-            const orderId = order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`;
-            const customerName = order.customer?.name || order.customer;
-            return `<option value="${order._id}">${orderId} - ${customerName} - ${order.service}</option>`;
-        }).join('');
+    if (!query || query.length < 2) {
+        dropdown.classList.remove('show');
+        dropdown.innerHTML = '';
+        selectedCustomerId = null;
+        document.getElementById('recordWorkOrder').innerHTML = '<option value="">Select customer first</option>';
+        return;
+    }
+    
+    const filtered = availableCustomers.filter(c => 
+        c.name.toLowerCase().includes(query.toLowerCase()) ||
+        (c.email && c.email.toLowerCase().includes(query.toLowerCase()))
+    );
+    
+    if (filtered.length === 0) {
+        dropdown.classList.remove('show');
+        dropdown.innerHTML = '';
+        return;
+    }
+    
+    dropdown.innerHTML = filtered.map(customer => `
+        <div class="suggestion-item" onclick="selectCustomer('${customer._id}', '${customer.name.replace(/'/g, "\\'")}')">            <div class="customer-name">${customer.name}</div>
+            ${customer.email ? `<div class="customer-email">${customer.email}</div>` : ''}
+        </div>
+    `).join('');
+    
+    dropdown.classList.add('show');
 }
 
-function toggleOrderSelection() {
-    const checkbox = document.getElementById('selectFromOrders');
-    const orderGroup = document.getElementById('orderSelectionGroup');
-    const manualFields = document.getElementById('manualEntryFields');
-    const form = document.getElementById('recordForm');
+async function selectCustomer(customerId, customerName) {
+    selectedCustomerId = customerId;
+    document.getElementById('recordCustomerName').value = customerName;
+    document.getElementById('customerSuggestions').classList.remove('show');
+    document.getElementById('customerSuggestions').innerHTML = '';
     
-    if (checkbox.checked) {
-        orderGroup.style.display = 'block';
-        manualFields.style.display = 'none';
+    // Load work orders for this customer
+    await loadCustomerWorkOrders(customerId);
+}
+
+async function loadCustomerWorkOrders(customerId) {
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        if (!session) return;
         
-        // Remove required from manual fields
-        form.querySelectorAll('#manualEntryFields input[required]').forEach(input => {
-            input.removeAttribute('required');
+        const sessionData = JSON.parse(session);
+        const token = sessionData.token;
+        
+        // Get customer details first
+        const customerResponse = await fetch(`${API_BASE_URL}/customers/${customerId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        // Add required to order select
-        document.getElementById('existingOrderSelect').setAttribute('required', 'required');
+        if (!customerResponse.ok) throw new Error('Failed to load customer');
+        const customer = await customerResponse.json();
         
-        // Load orders if not loaded
-        if (availableOrders.length === 0) {
-            loadAvailableOrders();
+        // Get all orders and filter by customer email
+        const response = await fetch(`${API_BASE_URL}/orders`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load work orders');
+        
+        const allOrders = await response.json();
+        const orders = allOrders.filter(order => 
+            order.customerId === customerId || 
+            order.customer?.email === customer.email
+        );
+        
+        const workOrderSelect = document.getElementById('recordWorkOrder');
+        
+        if (orders.length === 0) {
+            workOrderSelect.innerHTML = '<option value="">No work orders available</option>';
+            return;
         }
-    } else {
-        orderGroup.style.display = 'none';
-        manualFields.style.display = 'block';
         
-        // Add required back to manual fields
-        document.getElementById('recordProjectName').setAttribute('required', 'required');
-        document.getElementById('recordCustomerName').setAttribute('required', 'required');
+        workOrderSelect.innerHTML = '<option value="">-- Select work order --</option>' +
+            orders.map(order => {
+                const woNumber = order.workOrderNumber || order.orderId || 'N/A';
+                const service = order.service || 'Unknown Service';
+                return `<option value="${order._id}">${woNumber} - ${service}</option>`;
+            }).join('');
         
-        // Remove required from order select
-        document.getElementById('existingOrderSelect').removeAttribute('required');
+        // Add change event to populate form when work order is selected
+        workOrderSelect.onchange = function() {
+            const orderId = this.value;
+            if (orderId) {
+                const order = orders.find(o => o._id === orderId);
+                if (order) {
+                    populateFromWorkOrder(order);
+                }
+            }
+        };
+    } catch (error) {
+        console.error('Error loading work orders:', error);
+        document.getElementById('recordWorkOrder').innerHTML = '<option value="">Error loading orders</option>';
     }
 }
 
-function populateFromOrder() {
-    const select = document.getElementById('existingOrderSelect');
-    const orderId = select?.value;
-    
-    if (!orderId) return;
-    
-    const order = availableOrders.find(o => o._id === orderId);
-    if (!order) return;
-    
+function populateFromWorkOrder(order) {
     const fields = {
-        recordProjectName: order.service || '',
-        recordCustomerName: order.customer?.name || order.customer || '',
         recordEmail: order.customer?.email || '',
         recordPhone: order.customer?.phone || '',
         recordAddress: order.customer?.address || '',
         recordBudget: order.amount || '',
         recordStartDate: order.startDate ? order.startDate.split('T')[0] : '',
-        recordDueDate: order.endDate ? order.endDate.split('T')[0] : '',
         recordDescription: order.description || '',
         recordNotes: order.notes || ''
     };
@@ -422,18 +461,16 @@ function openRecordModal(stageId) {
     document.getElementById('recordId').value = '';
     document.getElementById('recordStageId').value = stageId;
     
-    // Reset toggle
-    document.getElementById('selectFromOrders').checked = false;
-    document.getElementById('orderSelectionGroup').style.display = 'none';
-    document.getElementById('manualEntryFields').style.display = 'block';
+    // Reset customer selection
+    selectedCustomerId = null;
+    document.getElementById('customerSuggestions').classList.remove('show');
+    document.getElementById('customerSuggestions').innerHTML = '';
+    document.getElementById('recordWorkOrder').innerHTML = '<option value="">Select customer first</option>';
     
-    // Restore required attributes
-    document.getElementById('recordProjectName').setAttribute('required', 'required');
-    document.getElementById('recordCustomerName').setAttribute('required', 'required');
-    document.getElementById('existingOrderSelect').removeAttribute('required');
-    
-    // Load orders
-    loadAvailableOrders();
+    // Load customers
+    if (availableCustomers.length === 0) {
+        loadAvailableCustomers();
+    }
     
     modal.classList.add('show');
 }
@@ -450,14 +487,12 @@ function editRecord(recordId) {
     document.getElementById('recordModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Record';
     document.getElementById('recordId').value = record._id;
     document.getElementById('recordStageId').value = record.stageId;
-    document.getElementById('recordProjectName').value = record.projectName;
     document.getElementById('recordCustomerName').value = record.customerName;
     document.getElementById('recordEmail').value = record.email || '';
     document.getElementById('recordPhone').value = record.phone || '';
     document.getElementById('recordPriority').value = record.priority;
     document.getElementById('recordBudget').value = record.budget || '';
     document.getElementById('recordStartDate').value = record.startDate ? record.startDate.split('T')[0] : '';
-    document.getElementById('recordDueDate').value = record.dueDate ? record.dueDate.split('T')[0] : '';
     document.getElementById('recordAddress').value = record.address || '';
     document.getElementById('recordDescription').value = record.description || '';
     document.getElementById('recordNotes').value = record.notes || '';
@@ -485,94 +520,32 @@ async function saveRecord(event) {
     
     const id = document.getElementById('recordId')?.value || '';
     const stageId = document.getElementById('recordStageId')?.value || '';
-    const projectName = document.getElementById('recordProjectName')?.value || '';
     const customerName = document.getElementById('recordCustomerName')?.value || '';
     const email = document.getElementById('recordEmail')?.value || '';
     const phone = document.getElementById('recordPhone')?.value || '';
     const priority = document.getElementById('recordPriority')?.value || 'medium';
     const budget = document.getElementById('recordBudget')?.value || '';
     const startDate = document.getElementById('recordStartDate')?.value || '';
-    const dueDate = document.getElementById('recordDueDate')?.value || '';
     const address = document.getElementById('recordAddress')?.value || '';
     const description = document.getElementById('recordDescription')?.value || '';
     const notes = document.getElementById('recordNotes')?.value || '';
+    const orderId = document.getElementById('recordWorkOrder')?.value || null;
     
-    console.log('Form data:', { projectName, customerName, stageId });
+    console.log('Form data:', { customerName, stageId, orderId });
     
     try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        const token = session ? JSON.parse(session).token : null;
-        const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        };
-        
-        let customerId = null;
-        if (!id && customerName) {
-            const customerResponse = await fetch(`${API_BASE_URL}/customers`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    name: customerName,
-                    email: email || '',
-                    phone: phone || '',
-                    address: address || '',
-                    customerType: 'one-time',
-                    status: 'active'
-                })
-            });
-            if (customerResponse.ok) {
-                const customer = await customerResponse.json();
-                customerId = customer._id;
-                console.log('Customer created:', customerId);
-            } else {
-                const error = await customerResponse.json();
-                console.error('Customer creation failed:', error);
-                throw new Error('Failed to create customer: ' + (error.message || 'Unknown error'));
-            }
-        }
-        
-        let projectId = null;
-        if (!id && projectName && customerId) {
-            const projectResponse = await fetch(`${API_BASE_URL}/projects`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    name: projectName,
-                    customer: customerId,
-                    budget: parseFloat(budget) || 0,
-                    startDate: startDate || new Date().toISOString(),
-                    endDate: dueDate || new Date().toISOString(),
-                    status: 'planning',
-                    priority: priority,
-                    progress: 0,
-                    description: description || '',
-                    notes: notes || ''
-                })
-            });
-            if (projectResponse.ok) {
-                const project = await projectResponse.json();
-                projectId = project._id;
-                console.log('Project created:', projectId);
-            } else {
-                const error = await projectResponse.json();
-                console.error('Project creation failed:', error);
-                throw new Error('Failed to create project: ' + (error.message || 'Unknown error'));
-            }
-        }
-        
         let response;
         if (id) {
             response = await fetch(`${API_BASE_URL}/pipeline-records/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectName, customerName, email, phone, priority, budget, startDate, dueDate, address, description, notes })
+                body: JSON.stringify({ customerName, email, phone, priority, budget, startDate, address, description, notes })
             });
         } else {
             response = await fetch(`${API_BASE_URL}/pipeline-records`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ stageId, projectName, customerName, email, phone, priority, budget, startDate, dueDate, address, description, notes })
+                body: JSON.stringify({ stageId, orderId, customerName, email, phone, priority, budget, startDate, address, description, notes })
             });
         }
         
@@ -602,7 +575,7 @@ async function deleteRecord(recordId) {
     const record = records.find(r => r._id === recordId);
     if (!record) return;
     
-    if (!confirm(`Delete "${record.projectName}"?`)) return;
+    if (!confirm(`Delete "${record.customerName}"?`)) return;
     
     try {
         await fetch(`${API_BASE_URL}/pipeline-records/${recordId}`, { method: 'DELETE' });
@@ -652,7 +625,7 @@ async function drop(event) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     recordId,
-                    projectName: record.projectName,
+                    customerName: record.customerName,
                     fromStageId: oldStageId,
                     fromStageName: oldStageName,
                     toStageId: newStageId,
@@ -777,5 +750,5 @@ window.addEventListener('click', (event) => {
 });
 
 // Make functions globally accessible
-window.toggleOrderSelection = toggleOrderSelection;
-window.populateFromOrder = populateFromOrder;
+window.searchCustomers = searchCustomers;
+window.selectCustomer = selectCustomer;

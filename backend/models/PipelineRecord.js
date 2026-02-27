@@ -6,10 +6,9 @@ const pipelineRecordSchema = new mongoose.Schema({
         ref: 'Stage',
         required: true
     },
-    projectName: {
-        type: String,
-        required: true,
-        trim: true
+    orderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order'
     },
     customerName: {
         type: String,
@@ -25,7 +24,6 @@ const pipelineRecordSchema = new mongoose.Schema({
     },
     budget: Number,
     startDate: Date,
-    dueDate: Date,
     address: String,
     description: {
         type: String,

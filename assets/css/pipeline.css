@@ -863,3 +863,55 @@
         justify-content: center;
     }
 }
+
+/* Customer Suggestions Dropdown */
+.suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #667eea;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: none;
+}
+
+.suggestions-dropdown.show {
+    display: block;
+}
+
+.suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: #f8f9fa;
+}
+
+.suggestion-item .customer-name {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+.suggestion-item .customer-email {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.form-group {
+    position: relative;
+}

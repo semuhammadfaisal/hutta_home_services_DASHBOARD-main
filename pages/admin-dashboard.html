@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="../assets/css/dashboard-styles.css">
     <link rel="stylesheet" href="../assets/css/forms.css">
     <link rel="stylesheet" href="../assets/css/notifications.css">
-    <link rel="stylesheet" href="../assets/css/projects.css">
     <link rel="stylesheet" href="../assets/css/reports.css">
     <link rel="stylesheet" href="../assets/css/settings.css">
     <link rel="stylesheet" href="../assets/css/pipeline.css">
@@ -15,6 +14,8 @@
     <link rel="stylesheet" href="../assets/css/pipeline-horizontal.css">
     <link rel="stylesheet" href="../assets/css/accounting-styles.css">
     <link rel="stylesheet" href="../assets/css/calendar.css">
+    <link rel="stylesheet" href="../assets/css/detail-pages.css">
+    <link rel="stylesheet" href="../assets/css/toast.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -97,12 +98,6 @@
                 <a href="#employees" data-section="employees">
                     <i class="fas fa-user-tie"></i>
                     <span>Employees</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#projects" data-section="projects">
-                    <i class="fas fa-project-diagram"></i>
-                    <span>Projects</span>
                 </a>
             </li>
             <li class="menu-item">
@@ -191,28 +186,6 @@
                     </div>
                 </div>
                 
-                <div class="kpi-card projects-card">
-                    <div class="kpi-icon projects">
-                        <i class="fas fa-project-diagram"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-main">
-                            <h3 id="activeProjects">0</h3>
-                            <p>Active Projects</p>
-                        </div>
-                        <div class="kpi-trend">
-                            <span class="kpi-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                +8%
-                            </span>
-                            <span class="kpi-period">vs last month</span>
-                        </div>
-                    </div>
-                    <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="projects"></div>
-                    </div>
-                </div>
-                
                 <div class="kpi-card vendors-card">
                     <div class="kpi-icon vendors">
                         <i class="fas fa-handshake"></i>
@@ -293,10 +266,6 @@
                             <i class="fas fa-user-plus"></i>
                             <span>Add Customer</span>
                         </button>
-                        <button class="quick-action" onclick="showAddProjectModal()">
-                            <i class="fas fa-project-diagram"></i>
-                            <span>New Project</span>
-                        </button>
                         <button class="quick-action" onclick="showAddPaymentModal()">
                             <i class="fas fa-credit-card"></i>
                             <span>Record Payment</span>
@@ -326,11 +295,11 @@
                             </div>
                         </div>
                         <div class="activity-item">
-                            <div class="activity-icon projects">
+                            <div class="activity-icon orders">
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="activity-content">
-                                <p>Project completed</p>
+                                <p>Order completed</p>
                                 <span>1 hour ago</span>
                             </div>
                         </div>
@@ -532,12 +501,108 @@
             </div>
         </section>
 
+        <!-- Customer Profile Section -->
+        <section id="customer-profile" class="content-section">
+            <div class="page-header">
+                <button class="btn-secondary" onclick="backToCustomers()">
+                    <i class="fas fa-arrow-left"></i> Back to Customers
+                </button>
+                <h1 id="customerProfileName">Customer Profile</h1>
+            </div>
+            
+            <div class="profile-container">
+                <div class="profile-info-card">
+                    <h3>Customer Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Email:</label>
+                            <span id="profileEmail">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Phone:</label>
+                            <span id="profilePhone">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Address:</label>
+                            <span id="profileAddress">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>City:</label>
+                            <span id="profileCity">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Type:</label>
+                            <span id="profileType">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Status:</label>
+                            <span id="profileStatus">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3 id="profileTotalOrders">0</h3>
+                        <p>Total Orders</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-check-circle"></i>
+                        <h3 id="profileCompletedOrders">0</h3>
+                        <p>Completed</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock"></i>
+                        <h3 id="profileActiveOrders">0</h3>
+                        <p>Active</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-dollar-sign"></i>
+                        <h3 id="profileTotalSpent">$0</h3>
+                        <p>Total Spent</p>
+                    </div>
+                </div>
+                
+                <div class="profile-orders-card">
+                    <h3>Work Orders</h3>
+                    <table class="profile-orders-table">
+                        <thead>
+                            <tr>
+                                <th>Work Order #</th>
+                                <th>Order ID</th>
+                                <th>Service</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="profileOrdersBody">
+                            <!-- Orders will be populated -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="profile-documents-card">
+                    <h3><i class="fas fa-file-alt"></i> Documents</h3>
+                    <div id="customerDocumentsList" class="documents-list">
+                        <p class="no-documents">No documents uploaded</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="vendors" class="content-section">
             <div class="page-header">
                 <h1>Vendors</h1>
-                <button class="btn-primary" onclick="showAddVendorModal()">
-                    <i class="fas fa-user-plus"></i> Add Vendor
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-secondary" onclick="importVendorsFromCSV()">
+                        <i class="fas fa-file-csv"></i> Import CSV
+                    </button>
+                    <button class="btn-primary" onclick="showAddVendorModal()">
+                        <i class="fas fa-user-plus"></i> Add Vendor
+                    </button>
+                </div>
             </div>
             
             <!-- Vendors Toolbar -->
@@ -598,12 +663,66 @@
             </div>
         </section>
 
+        <!-- Vendor Detail Section -->
+        <section id="vendor-detail" class="content-section">
+            <div class="page-header">
+                <button class="btn-secondary" onclick="backToVendors()">
+                    <i class="fas fa-arrow-left"></i> Back to Vendors
+                </button>
+                <h1 id="vendorDetailName">Vendor Details</h1>
+            </div>
+            
+            <div class="detail-container">
+                <div class="detail-info-card">
+                    <h3>Vendor Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Email:</label>
+                            <span id="detailVendorEmail">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Phone:</label>
+                            <span id="detailVendorPhone">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Category:</label>
+                            <span id="detailVendorCategory">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Rating:</label>
+                            <span id="detailVendorRating">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Address:</label>
+                            <span id="detailVendorAddress">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Status:</label>
+                            <span id="detailVendorStatus">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-documents-card">
+                    <h3><i class="fas fa-file-alt"></i> Documents</h3>
+                    <div id="vendorDocumentsList" class="documents-list">
+                        <p class="no-documents">No documents uploaded</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="employees" class="content-section">
             <div class="page-header">
                 <h1>Employees</h1>
-                <button class="btn-primary" onclick="showAddEmployeeModal()">
-                    <i class="fas fa-user-plus"></i> Add Employee
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-secondary" onclick="importEmployeesFromCSV()">
+                        <i class="fas fa-file-csv"></i> Import CSV
+                    </button>
+                    <button class="btn-primary" onclick="showAddEmployeeModal()">
+                        <i class="fas fa-user-plus"></i> Add Employee
+                    </button>
+                </div>
             </div>
             
             <!-- Employees Toolbar -->
@@ -667,70 +786,60 @@
             </div>
         </section>
 
-        <section id="projects" class="content-section">
+        <!-- Employee Detail Section -->
+        <section id="employee-detail" class="content-section">
             <div class="page-header">
-                <h1>Projects</h1>
-                <button class="btn-primary" onclick="showAddProjectModal()">
-                    <i class="fas fa-plus"></i> New Project
+                <button class="btn-secondary" onclick="backToEmployees()">
+                    <i class="fas fa-arrow-left"></i> Back to Employees
                 </button>
+                <h1 id="employeeDetailName">Employee Details</h1>
             </div>
             
-            <!-- Projects Toolbar -->
-            <div class="projects-toolbar">
-                <div class="projects-search-filter">
-                    <div class="projects-search">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="projectSearchInput" placeholder="Search projects by name, customer, or ID...">
-                    </div>
-                    <div class="projects-filters">
-                        <select class="filter-select" id="projectStatusFilter">
-                            <option value="all">All Status</option>
-                            <option value="planning">Planning</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="on-hold">On Hold</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                        <select class="filter-select" id="projectPriorityFilter">
-                            <option value="all">All Priority</option>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
+            <div class="detail-container">
+                <div class="detail-info-card">
+                    <h3>Employee Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Email:</label>
+                            <span id="detailEmployeeEmail">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Phone:</label>
+                            <span id="detailEmployeePhone">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Role:</label>
+                            <span id="detailEmployeeRole">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Department:</label>
+                            <span id="detailEmployeeDepartment">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Status:</label>
+                            <span id="detailEmployeeStatus">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Hire Date:</label>
+                            <span id="detailEmployeeHireDate">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Address:</label>
+                            <span id="detailEmployeeAddress">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Skills:</label>
+                            <span id="detailEmployeeSkills">-</span>
+                        </div>
                     </div>
                 </div>
-                <div class="projects-stats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalProjectsCount">0</div>
-                        <div class="stat-label">Total</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="activeProjectsCount">0</div>
-                        <div class="stat-label">Active</div>
+                
+                <div class="detail-documents-card">
+                    <h3><i class="fas fa-file-alt"></i> Documents</h3>
+                    <div id="employeeDocumentsList" class="documents-list">
+                        <p class="no-documents">No documents uploaded</p>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Projects Table -->
-            <div class="projects-table-container">
-                <table class="projects-table">
-                    <thead>
-                        <tr>
-                            <th>Project</th>
-                            <th>Customer</th>
-                            <th>Status</th>
-                            <th>Priority</th>
-                            <th>Progress</th>
-                            <th>Budget</th>
-                            <th>End Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="projectsTableBody">
-                        <!-- Projects will be populated by JavaScript -->
-                    </tbody>
-                </table>
             </div>
         </section>
 
@@ -1463,33 +1572,6 @@
                 </div>
             </div>
             
-            <!-- Projects Report -->
-            <div class="report-section">
-                <h2>Project Performance</h2>
-                <div class="chart-container">
-                    <div class="chart-box">
-                        <h3>Project Status</h3>
-                        <div id="projectStatusChart" class="chart"></div>
-                    </div>
-                    <div class="chart-box">
-                        <h3>Budget Analysis</h3>
-                        <div id="budgetAnalysis" class="budget-analysis">
-                            <div class="budget-item">
-                                <span>Total Budget:</span>
-                                <span id="totalBudget">$0</span>
-                            </div>
-                            <div class="budget-item">
-                                <span>Actual Cost:</span>
-                                <span id="totalActualCost">$0</span>
-                            </div>
-                            <div class="budget-item">
-                                <span>Average Progress:</span>
-                                <span id="avgProgress">0%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <section id="settings" class="content-section">
@@ -1708,37 +1790,42 @@
                 <form id="orderForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="customerName">Customer Name *</label>
-                            <input type="text" id="customerName" required>
+                            <label for="customerSelect">Select Customer</label>
+                            <select id="customerSelect" onchange="handleCustomerSelect()">
+                                <option value="">-- Select Existing Customer --</option>
+                                <option value="new">+ Add New Customer</option>
+                            </select>
                         </div>
-                        <div class="form-group">
-                            <label for="customerEmail">Customer Email *</label>
-                            <input type="email" id="customerEmail" required>
+                    </div>
+                    
+                    <div id="newCustomerFields">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="customerName">Customer Name *</label>
+                                <input type="text" id="customerName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="customerEmail">Customer Email *</label>
+                                <input type="email" id="customerEmail" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="customerPhone">Phone</label>
+                                <input type="tel" id="customerPhone">
+                            </div>
+                            <div class="form-group">
+                                <label for="customerAddress">Address</label>
+                                <input type="text" id="customerAddress">
+                            </div>
                         </div>
                     </div>
                     
                     <div class="form-row">
-                        <div class="form-group">
-                            <label for="customerPhone">Phone</label>
-                            <input type="tel" id="customerPhone">
-                        </div>
                         <div class="form-group">
                             <label for="service">Service *</label>
                             <input type="text" id="service" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="customerAddress">Address</label>
-                        <textarea id="customerAddress" rows="2"></textarea>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="vendor">Vendor</label>
-                            <select id="vendor">
-                                <option value="">Select Vendor</option>
-                            </select>
                         </div>
                         <div class="form-group">
                             <label for="amount">Amount *</label>
@@ -1759,6 +1846,12 @@
                     
                     <div class="form-row">
                         <div class="form-group">
+                            <label for="vendor">Vendor</label>
+                            <select id="vendor">
+                                <option value="">Select Vendor</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="status">Status</label>
                             <select id="status">
                                 <option value="new">New</option>
@@ -1768,6 +1861,9 @@
                                 <option value="delayed">Delayed</option>
                             </select>
                         </div>
+                    </div>
+                    
+                    <div class="form-row">
                         <div class="form-group">
                             <label for="priority">Priority</label>
                             <select id="priority">
@@ -1775,6 +1871,8 @@
                                 <option value="medium" selected>Medium</option>
                                 <option value="high">High</option>
                             </select>
+                        </div>
+                        <div class="form-group">
                         </div>
                     </div>
                     
@@ -1854,12 +1952,6 @@
                                 <option value="">Select Order (Optional)</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="paymentProject">Related Project</label>
-                            <select id="paymentProject">
-                                <option value="">Select Project (Optional)</option>
-                            </select>
-                        </div>
                     </div>
                     
                     <div class="form-row">
@@ -1899,115 +1991,6 @@
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="closePaymentModal()">Cancel</button>
                 <button type="button" class="btn-primary" onclick="savePayment()">Save Payment</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Project Modal -->
-    <div class="modal-overlay" id="projectModal">
-        <div class="modal-content project-modal">
-            <div class="modal-header">
-                <h2 id="projectModalTitle">Add New Project</h2>
-                <button class="modal-close" onclick="closeProjectModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <form id="projectForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectName">Project Name *</label>
-                            <input type="text" id="projectName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="projectCustomer">Customer *</label>
-                            <select id="projectCustomer" required>
-                                <option value="">Select Customer</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="projectDescription">Description</label>
-                        <textarea id="projectDescription" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectVendor">Vendor</label>
-                            <select id="projectVendor">
-                                <option value="">Select Vendor</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="projectBudget">Budget *</label>
-                            <input type="number" id="projectBudget" step="0.01" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectStartDate">Start Date *</label>
-                            <input type="date" id="projectStartDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="projectEndDate">End Date *</label>
-                            <input type="date" id="projectEndDate" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectStatus">Status</label>
-                            <select id="projectStatus">
-                                <option value="planning">Planning</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="on-hold">On Hold</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="projectPriority">Priority</label>
-                            <select id="projectPriority">
-                                <option value="low">Low</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectProgress">Progress (%)</label>
-                            <input type="number" id="projectProgress" min="0" max="100" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="projectLocation">Location</label>
-                            <input type="text" id="projectLocation">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="projectEmployees">Assigned Employees</label>
-                        <select id="projectEmployees" multiple>
-                            <!-- Employees will be populated by JavaScript -->
-                        </select>
-                        <small>Hold Ctrl/Cmd to select multiple employees</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="projectNotes">Notes</label>
-                        <textarea id="projectNotes" rows="3"></textarea>
-                    </div>
-                </form>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeProjectModal()">Cancel</button>
-                <button type="button" class="btn-primary" onclick="saveProject()">Save Project</button>
             </div>
         </div>
     </div>
@@ -2091,6 +2074,13 @@
                         <label for="employeeSkills">Skills (comma separated)</label>
                         <input type="text" id="employeeSkills" placeholder="e.g. Electrical wiring, Circuit repair, Installation">
                     </div>
+                    
+                    <div class="form-group">
+                        <label for="employeeDocs"><i class="fas fa-file-upload"></i> Documents (PDF, Word, etc.)</label>
+                        <input type="file" id="employeeDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                        <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
+                        <div id="employeeDocsPreview" class="docs-preview"></div>
+                    </div>
                 </form>
             </div>
             
@@ -2167,6 +2157,13 @@
                                 <option value="false">Inactive</option>
                             </select>
                         </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="vendorDocs"><i class="fas fa-file-upload"></i> Documents (PDF, Word, etc.)</label>
+                        <input type="file" id="vendorDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                        <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
+                        <div id="vendorDocsPreview" class="docs-preview"></div>
                     </div>
                 </form>
             </div>
@@ -2246,6 +2243,13 @@
                     <div class="form-group">
                         <label for="customerNotes">Notes</label>
                         <textarea id="customerNotes" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="customerDocs"><i class="fas fa-file-upload"></i> Documents (PDF, Word, etc.)</label>
+                        <input type="file" id="customerDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                        <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
+                        <div id="customerDocsPreview" class="docs-preview"></div>
                     </div>
                 </form>
             </div>
@@ -2480,34 +2484,19 @@
                     <input type="hidden" id="recordId">
                     <input type="hidden" id="recordStageId">
                     
-                    <!-- Toggle between new and existing order -->
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                            <input type="checkbox" id="selectFromOrders" onchange="toggleOrderSelection()" style="width: auto;">
-                            <span><i class="fas fa-clipboard-list"></i> Select from existing orders</span>
-                        </label>
-                    </div>
-                    
-                    <!-- Order Selection Dropdown -->
-                    <div id="orderSelectionGroup" class="form-group" style="display: none;">
-                        <label for="existingOrderSelect"><i class="fas fa-list"></i> Select Order *</label>
-                        <select id="existingOrderSelect" onchange="populateFromOrder()">
-                            <option value="">-- Select an order --</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Manual Entry Fields -->
-                    <div id="manualEntryFields">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="recordProjectName"><i class="fas fa-project-diagram"></i> Project Name *</label>
-                                <input type="text" id="recordProjectName" placeholder="Enter project name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="recordCustomerName"><i class="fas fa-user"></i> Customer *</label>
-                                <input type="text" id="recordCustomerName" placeholder="Enter customer name" required>
-                            </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="recordCustomerName"><i class="fas fa-user"></i> Customer Name *</label>
+                            <input type="text" id="recordCustomerName" placeholder="Start typing customer name..." required autocomplete="off" oninput="searchCustomers(this.value)">
+                            <div id="customerSuggestions" class="suggestions-dropdown"></div>
                         </div>
+                        <div class="form-group">
+                            <label for="recordWorkOrder"><i class="fas fa-file-alt"></i> Work Order</label>
+                            <select id="recordWorkOrder">
+                                <option value="">Select customer first</option>
+                            </select>
+                        </div>
+                    </div>
                     
                     <div class="form-row">
                         <div class="form-group">
@@ -2556,10 +2545,9 @@
                         <textarea id="recordDescription" rows="3" placeholder="Enter project details and requirements..."></textarea>
                     </div>
                     
-                        <div class="form-group">
-                            <label for="recordNotes"><i class="fas fa-sticky-note"></i> Notes</label>
-                            <textarea id="recordNotes" rows="2" placeholder="Additional notes or comments..."></textarea>
-                        </div>
+                    <div class="form-group">
+                        <label for="recordNotes"><i class="fas fa-sticky-note"></i> Notes</label>
+                        <textarea id="recordNotes" rows="2" placeholder="Additional notes or comments..."></textarea>
                     </div>
                 </form>
             </div>
@@ -2772,7 +2760,10 @@
     </div>
 
     <script src="../assets/js/api-service.js"></script>
+    <script src="../assets/js/toast.js"></script>
+    <script src="../assets/js/csv-import.js"></script>
     <script src="../assets/js/login-script.js"></script>
+    <script src="../assets/js/file-upload.js"></script>
     <script src="../assets/js/pipeline-mongodb.js"></script>
     <script src="../assets/js/accounting-system.js"></script>
     <script src="../assets/js/calendar.js"></script>

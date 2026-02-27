@@ -211,6 +211,10 @@ class APIService {
         });
     }
 
+    async getCustomerProfile(id) {
+        return this.request(`/customers/${id}/profile`);
+    }
+
     // Vendors
     async getVendors() {
         return this.request('/vendors');
@@ -221,9 +225,13 @@ class APIService {
     }
 
     async createVendor(vendorData) {
+        console.log('Creating vendor with data:', vendorData);
+        console.log('Documents before stringify:', vendorData.documents);
+        const body = JSON.stringify(vendorData);
+        console.log('Body after stringify:', body);
         return this.request('/vendors', {
             method: 'POST',
-            body: JSON.stringify(vendorData)
+            body: body
         });
     }
 

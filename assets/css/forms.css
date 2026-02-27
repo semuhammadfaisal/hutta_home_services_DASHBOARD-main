@@ -637,3 +637,51 @@
         padding: 13px 16px;
     }
 }
+
+/* Document Upload Styles */
+.form-group input[type="file"] {
+    padding: 12px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.form-group input[type="file"]:hover {
+    border-color: #6366f1;
+    background: #fafbff;
+}
+
+.docs-preview {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.doc-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #475569;
+}
+
+.doc-item i {
+    color: #6366f1;
+}
+
+.doc-item .remove-doc {
+    margin-left: 6px;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.doc-item .remove-doc:hover {
+    color: #dc2626;
+}

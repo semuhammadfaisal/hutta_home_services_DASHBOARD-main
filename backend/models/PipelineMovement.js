@@ -6,7 +6,7 @@ const pipelineMovementSchema = new mongoose.Schema({
         ref: 'PipelineRecord',
         required: true
     },
-    projectName: {
+    customerName: {
         type: String,
         required: true
     },

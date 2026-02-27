@@ -1,5 +1,7 @@
 const express = require('express');
 const Customer = require('../models/Customer');
+const Order = require('../models/Order');
+const Payment = require('../models/Payment');
 const authenticateToken = require('../middleware/auth');
 const router = express.Router();
 
@@ -10,6 +12,91 @@ router.get('/', authenticateToken, async (req, res) => {
     res.json(customers);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get customer profile with orders - MUST be before /:id route
+router.get('/:id/profile', authenticateToken, async (req, res) => {
+  try {
+    console.log('Fetching profile for customer:', req.params.id);
+    
+    const customer = await Customer.findById(req.params.id).lean();
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+    
+    console.log('Customer found:', customer.email);
+    
+    // Find orders
+    const orders = await Order.find({
+      $or: [
+        { customerId: req.params.id },
+        { 'customer.email': customer.email }
+      ]
+    })
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+    
+    console.log('Orders found:', orders.length);
+    
+    // Populate pipeline stage info
+    const PipelineRecord = require('../models/PipelineRecord');
+    const Stage = require('../models/Stage');
+    
+    for (let order of orders) {
+      try {
+        // Find pipeline record by orderId
+        const pipelineRecord = await PipelineRecord.findOne({ orderId: order._id }).lean();
+        if (pipelineRecord && pipelineRecord.stageId) {
+          const stage = await Stage.findById(pipelineRecord.stageId).select('name').lean();
+          order.pipelineStage = stage ? stage.name : null;
+        }
+      } catch (err) {
+        console.log('Pipeline record not found for order:', order._id);
+      }
+      
+      // Populate vendor info
+      if (order.vendor) {
+        try {
+          const Vendor = require('../models/Vendor');
+          const vendor = await Vendor.findById(order.vendor).select('name category').lean();
+          order.vendor = vendor;
+        } catch (err) {
+          console.log('Vendor not found for order:', order._id);
+        }
+      }
+    }
+    
+    // Find payments
+    let payments = [];
+    try {
+      payments = await Payment.find({ customer: req.params.id })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean();
+    } catch (err) {
+      console.log('Payments query failed:', err.message);
+    }
+    
+    const stats = {
+      totalOrders: orders.length,
+      completedOrders: orders.filter(o => o.status === 'completed').length,
+      activeOrders: orders.filter(o => ['new', 'in-progress'].includes(o.status)).length,
+      totalSpent: orders.reduce((sum, o) => sum + (o.amount || 0), 0),
+      totalPaid: payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + (p.amount || 0), 0)
+    };
+    
+    console.log('Sending profile response');
+    res.json({
+      customer,
+      orders,
+      payments,
+      stats
+    });
+  } catch (error) {
+    console.error('Profile error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
@@ -33,11 +120,7 @@ router.post('/', authenticateToken, async (req, res) => {
     await customer.save();
     res.status(201).json(customer);
   } catch (error) {
-    if (error.code === 11000) {
-      res.status(400).json({ message: 'Customer with this email already exists' });
-    } else {
-      res.status(500).json({ message: 'Server error' });
-    }
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

@@ -29,21 +29,30 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new vendor
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    console.log('=== VENDOR CREATION DEBUG ===');
+    console.log('req.body:', req.body);
+    console.log('req.body.documents type:', typeof req.body.documents);
+    console.log('req.body.documents is array:', Array.isArray(req.body.documents));
+    console.log('req.body.documents:', JSON.stringify(req.body.documents));
+    
     const vendor = new Vendor(req.body);
     await vendor.save();
     res.status(201).json(vendor);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Vendor creation error:', error);
+    console.error('Error details:', error.errors);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 
 // Update vendor
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    console.log('Updating vendor with data:', req.body);
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id, 
       req.body, 
-      { new: true }
+      { new: true, runValidators: true }
     );
     
     if (!vendor) {
@@ -52,7 +61,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
     
     res.json(vendor);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Vendor update error:', error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 

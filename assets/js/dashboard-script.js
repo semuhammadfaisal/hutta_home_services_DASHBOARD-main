@@ -11,7 +11,6 @@ class DashboardManager {
         this.data = {
             kpis: {
                 totalOrders: 0,
-                activeProjects: 0,
                 totalVendors: 0,
                 totalEmployees: 0,
                 monthlyRevenue: 0
@@ -50,8 +49,6 @@ class DashboardManager {
                     loadVendorsSection();
                 } else if (targetSection === 'employees') {
                     loadEmployeesSection();
-                } else if (targetSection === 'projects') {
-                    loadProjectsSection();
                 } else if (targetSection === 'payments') {
                     loadPaymentsSection();
                 } else if (targetSection === 'reports') {
@@ -119,20 +116,17 @@ class DashboardManager {
 
     renderKPIs(stats = null) {
         const totalOrdersEl = document.getElementById('totalOrders');
-        const activeProjectsEl = document.getElementById('activeProjects');
         const monthlyRevenueEl = document.getElementById('monthlyRevenue');
         const totalVendorsEl = document.getElementById('totalVendors');
         const totalEmployeesEl = document.getElementById('totalEmployees');
         
         if (stats) {
             if (totalOrdersEl) totalOrdersEl.textContent = stats.totalOrders || 0;
-            if (activeProjectsEl) activeProjectsEl.textContent = stats.activeProjects || 0;
             if (monthlyRevenueEl) monthlyRevenueEl.textContent = `$${(stats.monthlyRevenue || 0).toLocaleString()}`;
             if (totalVendorsEl) totalVendorsEl.textContent = stats.totalVendors || 0;
             if (totalEmployeesEl) totalEmployeesEl.textContent = stats.totalEmployees || 0;
         } else {
             if (totalOrdersEl) totalOrdersEl.textContent = '0';
-            if (activeProjectsEl) activeProjectsEl.textContent = '0';
             if (monthlyRevenueEl) monthlyRevenueEl.textContent = '$0';
             if (totalVendorsEl) totalVendorsEl.textContent = '0';
             if (totalEmployeesEl) totalEmployeesEl.textContent = '0';
@@ -217,6 +211,8 @@ class DashboardManager {
             const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
             const customerName = order.customer?.name || order.customer;
             const customerEmail = order.customer?.email || '';
+            const statusDisplay = order.pipelineStage || order.status.replace('-', ' ');
+            const statusClass = order.pipelineStage ? 'pipeline' : order.status;
             
             return `
             <tr>
@@ -239,7 +235,7 @@ class DashboardManager {
                 </td>
                 <td><span class="service-badge">${order.service}</span></td>
                 <td><span class="order-vendor">${order.vendor?.name || 'N/A'}</span></td>
-                <td><span class="order-status-badge ${order.status}">${this.formatStatus(order.status)}</span></td>
+                <td><span class="order-status-badge ${statusClass}">${this.formatStatus(statusDisplay)}</span></td>
                 <td><span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span></td>
                 <td>${order.startDate ? this.formatDate(order.startDate) : 'N/A'}</td>
                 <td><span class="order-amount">$${order.amount?.toLocaleString() || '0'}</span></td>
@@ -611,6 +607,7 @@ function initializeLogout() {
 // Order Management Functions
 let currentOrderId = null;
 let vendors = [];
+let orderCustomers = [];
 
 async function loadVendors() {
     try {
@@ -623,16 +620,70 @@ async function loadVendors() {
     }
 }
 
+async function loadOrderCustomers() {
+    try {
+        orderCustomers = await window.APIService.getCustomers();
+        const customerSelect = document.getElementById('customerSelect');
+        customerSelect.innerHTML = '<option value="">-- Select Existing Customer --</option>' +
+            '<option value="new">+ Add New Customer</option>' +
+            orderCustomers.map(customer => `<option value="${customer._id}">${customer.name} (${customer.email})</option>`).join('');
+    } catch (error) {
+        console.error('Failed to load customers:', error);
+    }
+}
+
+function handleCustomerSelect() {
+    const customerSelect = document.getElementById('customerSelect');
+    const newCustomerFields = document.getElementById('newCustomerFields');
+    const selectedValue = customerSelect.value;
+    
+    if (selectedValue === 'new' || selectedValue === '') {
+        // Show new customer fields
+        newCustomerFields.style.display = 'block';
+        document.getElementById('customerName').value = '';
+        document.getElementById('customerEmail').value = '';
+        document.getElementById('customerPhone').value = '';
+        document.getElementById('customerAddress').value = '';
+        
+        // Make fields required
+        document.getElementById('customerName').required = true;
+        document.getElementById('customerEmail').required = true;
+    } else {
+        // Hide new customer fields and populate with existing customer
+        const customer = orderCustomers.find(c => c._id === selectedValue);
+        if (customer) {
+            document.getElementById('customerName').value = customer.name;
+            document.getElementById('customerEmail').value = customer.email;
+            document.getElementById('customerPhone').value = customer.phone || '';
+            document.getElementById('customerAddress').value = customer.address || '';
+            
+            // Make fields not required (already exists)
+            document.getElementById('customerName').required = false;
+            document.getElementById('customerEmail').required = false;
+            
+            // Hide fields
+            newCustomerFields.style.display = 'none';
+        }
+    }
+}
+
+window.handleCustomerSelect = handleCustomerSelect;
+
 function showAddOrderModal() {
     currentOrderId = null;
     document.getElementById('orderModalTitle').textContent = 'Add New Order';
     document.getElementById('orderForm').reset();
+    
+    // Reset customer select
+    document.getElementById('customerSelect').value = '';
+    document.getElementById('newCustomerFields').style.display = 'block';
     
     // Set default dates
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').value = today;
     
     loadVendors();
+    loadOrderCustomers();
     document.getElementById('orderModal').classList.add('show');
 }
 
@@ -643,7 +694,13 @@ async function editOrder(orderId) {
         
         document.getElementById('orderModalTitle').textContent = 'Edit Order';
         
+        // Load customers and vendors first
+        await loadVendors();
+        await loadOrderCustomers();
+        
         // Populate form
+        document.getElementById('customerSelect').value = 'new';
+        document.getElementById('newCustomerFields').style.display = 'block';
         document.getElementById('customerName').value = order.customer.name || '';
         document.getElementById('customerEmail').value = order.customer.email || '';
         document.getElementById('customerPhone').value = order.customer.phone || '';
@@ -657,7 +714,6 @@ async function editOrder(orderId) {
         document.getElementById('description').value = order.description || '';
         document.getElementById('notes').value = order.notes || '';
         
-        await loadVendors();
         if (order.vendor) {
             document.getElementById('vendor').value = order.vendor._id || order.vendor;
         }
@@ -696,17 +752,17 @@ async function saveOrder() {
     try {
         if (currentOrderId) {
             await window.APIService.updateOrder(currentOrderId, orderData);
-            alert('Order updated successfully!');
+            showToast('Order updated successfully!', 'success');
         } else {
             await window.APIService.createOrder(orderData);
-            alert('Order created successfully!');
+            showToast('Order created successfully!', 'success');
         }
         
         closeOrderModal();
         await refreshOrders();
         if (window.refreshCalendar) window.refreshCalendar();
     } catch (error) {
-        alert('Failed to save order: ' + error.message);
+        showToast('Failed to save order: ' + error.message, 'error');
     }
 }
 
@@ -717,10 +773,10 @@ async function deleteOrder(orderId) {
     
     try {
         await window.APIService.deleteOrder(orderId);
-        alert('Order deleted successfully!');
+        showToast('Order deleted successfully!', 'success');
         await refreshOrders();
     } catch (error) {
-        alert('Failed to delete order: ' + error.message);
+        showToast('Failed to delete order: ' + error.message, 'error');
     }
 }
 
@@ -855,9 +911,9 @@ async function saveSettings() {
         // Apply theme immediately
         applyTheme(settingsData.theme);
         
-        alert('Settings saved successfully!');
+        showToast('Settings saved successfully!', 'success');
     } catch (error) {
-        alert('Failed to save settings: ' + error.message);
+        showToast('Failed to save settings: ' + error.message, 'error');
     }
 }
 
@@ -870,9 +926,9 @@ async function resetSettings() {
         const defaultSettings = await window.APIService.resetSettings();
         currentSettings = defaultSettings;
         populateSettingsForm(defaultSettings);
-        alert('Settings reset to default successfully!');
+        showToast('Settings reset to default successfully!', 'success');
     } catch (error) {
-        alert('Failed to reset settings: ' + error.message);
+        showToast('Failed to reset settings: ' + error.message, 'error');
     }
 }
 
@@ -907,11 +963,10 @@ async function generateReports() {
     
     try {
         // Load all reports
-        const [financial, orders, customers, projects] = await Promise.all([
+        const [financial, orders, customers] = await Promise.all([
             window.APIService.getFinancialReport(startDate, endDate),
             window.APIService.getOrdersReport(startDate, endDate),
-            window.APIService.getCustomersReport(),
-            window.APIService.getProjectsReport()
+            window.APIService.getCustomersReport()
         ]);
         
         // Render financial report
@@ -922,9 +977,6 @@ async function generateReports() {
         
         // Render customers report
         renderCustomersReport(customers);
-        
-        // Render projects report
-        renderProjectsReport(projects);
         
     } catch (error) {
         console.error('Failed to generate reports:', error);
@@ -986,22 +1038,6 @@ function renderCustomersReport(data) {
     `).join('');
 }
 
-function renderProjectsReport(data) {
-    // Render project status chart
-    const statusChart = document.getElementById('projectStatusChart');
-    statusChart.innerHTML = data.statusBreakdown.map(item => `
-        <div class="chart-item">
-            <div class="chart-bar" style="width: ${(item.count / Math.max(...data.statusBreakdown.map(s => s.count))) * 100}%"></div>
-            <span class="chart-label">${item._id}: ${item.count}</span>
-        </div>
-    `).join('');
-    
-    // Render budget analysis
-    document.getElementById('totalBudget').textContent = `$${data.budgetAnalysis.totalBudget.toLocaleString()}`;
-    document.getElementById('totalActualCost').textContent = `$${data.budgetAnalysis.totalActualCost.toLocaleString()}`;
-    document.getElementById('avgProgress').textContent = `${Math.round(data.budgetAnalysis.avgProgress)}%`;
-}
-
 // Load reports when reports section is shown
 function loadReportsSection() {
     // Set default date range (last 30 days)
@@ -1022,14 +1058,12 @@ window.generateReports = generateReports;
 let currentPaymentId = null;
 let paymentCustomers = [];
 let paymentOrders = [];
-let paymentProjects = [];
 
 async function loadPaymentData() {
     try {
-        [paymentCustomers, paymentOrders, paymentProjects] = await Promise.all([
+        [paymentCustomers, paymentOrders] = await Promise.all([
             window.APIService.getCustomers(),
-            window.APIService.getOrders(),
-            window.APIService.getProjects()
+            window.APIService.getOrders()
         ]);
         
         // Populate customer dropdown
@@ -1041,11 +1075,6 @@ async function loadPaymentData() {
         const orderSelect = document.getElementById('paymentOrder');
         orderSelect.innerHTML = '<option value="">Select Order (Optional)</option>' +
             paymentOrders.map(order => `<option value="${order._id}">${order.orderId} - ${order.service}</option>`).join('');
-        
-        // Populate project dropdown
-        const projectSelect = document.getElementById('paymentProject');
-        projectSelect.innerHTML = '<option value="">Select Project (Optional)</option>' +
-            paymentProjects.map(project => `<option value="${project._id}">${project.projectId} - ${project.name}</option>`).join('');
     } catch (error) {
         console.error('Failed to load payment data:', error);
     }
@@ -1080,7 +1109,6 @@ async function editPayment(paymentId) {
         document.getElementById('paymentMethod').value = payment.paymentMethod || '';
         document.getElementById('paymentStatus').value = payment.status || 'pending';
         document.getElementById('paymentOrder').value = payment.order?._id || '';
-        document.getElementById('paymentProject').value = payment.project?._id || '';
         document.getElementById('paymentDate').value = payment.paymentDate ? payment.paymentDate.split('T')[0] : '';
         document.getElementById('paymentDueDate').value = payment.dueDate ? payment.dueDate.split('T')[0] : '';
         document.getElementById('paymentTransactionId').value = payment.transactionId || '';
@@ -1107,7 +1135,6 @@ async function savePayment() {
         paymentMethod: document.getElementById('paymentMethod').value,
         status: document.getElementById('paymentStatus').value,
         order: document.getElementById('paymentOrder').value || null,
-        project: document.getElementById('paymentProject').value || null,
         paymentDate: document.getElementById('paymentDate').value,
         dueDate: document.getElementById('paymentDueDate').value || null,
         transactionId: document.getElementById('paymentTransactionId').value,
@@ -1119,16 +1146,16 @@ async function savePayment() {
     try {
         if (currentPaymentId) {
             await window.APIService.updatePayment(currentPaymentId, paymentData);
-            alert('Payment updated successfully!');
+            showToast('Payment updated successfully!', 'success');
         } else {
             await window.APIService.createPayment(paymentData);
-            alert('Payment recorded successfully!');
+            showToast('Payment recorded successfully!', 'success');
         }
         
         closePaymentModal();
         await refreshPayments();
     } catch (error) {
-        alert('Failed to save payment: ' + error.message);
+        showToast('Failed to save payment: ' + error.message, 'error');
     }
 }
 
@@ -1139,10 +1166,10 @@ async function deletePayment(paymentId) {
     
     try {
         await window.APIService.deletePayment(paymentId);
-        alert('Payment deleted successfully!');
+        showToast('Payment deleted successfully!', 'success');
         await refreshPayments();
     } catch (error) {
-        alert('Failed to delete payment: ' + error.message);
+        showToast('Failed to delete payment: ' + error.message, 'error');
     }
 }
 
@@ -1187,9 +1214,7 @@ function renderPaymentsTable(payments) {
             <td><span class="status-badge ${payment.status}">${payment.status}</span></td>
             <td>${payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : 'N/A'}</td>
             <td>
-                ${payment.order ? `Order: ${payment.order.orderId}` : ''}
-                ${payment.project ? `Project: ${payment.project.projectId}` : ''}
-                ${!payment.order && !payment.project ? 'N/A' : ''}
+                ${payment.order ? `Order: ${payment.order.orderId}` : 'N/A'}
             </td>
             <td>
                 <button class="btn-action" onclick="viewPayment('${payment._id}')" title="View">
@@ -1218,312 +1243,6 @@ window.deletePayment = deletePayment;
 window.showAddPaymentModal = showAddPaymentModal;
 window.closePaymentModal = closePaymentModal;
 window.savePayment = savePayment;
-
-// Project Management Functions
-let currentProjectId = null;
-let projectCustomers = [];
-let projectVendors = [];
-let projectEmployees = [];
-
-async function loadProjectData() {
-    try {
-        [projectCustomers, projectVendors, projectEmployees] = await Promise.all([
-            window.APIService.getCustomers(),
-            window.APIService.getVendors(),
-            window.APIService.getEmployees()
-        ]);
-        
-        // Populate customer dropdown
-        const customerSelect = document.getElementById('projectCustomer');
-        customerSelect.innerHTML = '<option value="">Select Customer</option>' +
-            projectCustomers.map(customer => `<option value="${customer._id}">${customer.name}</option>`).join('');
-        
-        // Populate vendor dropdown
-        const vendorSelect = document.getElementById('projectVendor');
-        vendorSelect.innerHTML = '<option value="">Select Vendor</option>' +
-            projectVendors.map(vendor => `<option value="${vendor._id}">${vendor.name} (${vendor.category})</option>`).join('');
-        
-        // Populate employees dropdown
-        const employeeSelect = document.getElementById('projectEmployees');
-        employeeSelect.innerHTML = projectEmployees.map(employee => 
-            `<option value="${employee._id}">${employee.name} - ${employee.role}</option>`
-        ).join('');
-    } catch (error) {
-        console.error('Failed to load project data:', error);
-    }
-}
-
-function showAddProjectModal() {
-    currentProjectId = null;
-    document.getElementById('projectModalTitle').textContent = 'Add New Project';
-    document.getElementById('projectForm').reset();
-    
-    // Set default dates
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('projectStartDate').value = today;
-    
-    loadProjectData();
-    document.getElementById('projectModal').classList.add('show');
-}
-
-async function editProject(projectId) {
-    try {
-        currentProjectId = projectId;
-        const project = await window.APIService.getProject(projectId);
-        
-        document.getElementById('projectModalTitle').textContent = 'Edit Project';
-        
-        // Load data first
-        await loadProjectData();
-        
-        // Populate form
-        document.getElementById('projectName').value = project.name || '';
-        document.getElementById('projectDescription').value = project.description || '';
-        document.getElementById('projectCustomer').value = project.customer?._id || '';
-        document.getElementById('projectVendor').value = project.vendor?._id || '';
-        document.getElementById('projectBudget').value = project.budget || '';
-        document.getElementById('projectStartDate').value = project.startDate ? project.startDate.split('T')[0] : '';
-        document.getElementById('projectEndDate').value = project.endDate ? project.endDate.split('T')[0] : '';
-        document.getElementById('projectStatus').value = project.status || 'planning';
-        document.getElementById('projectPriority').value = project.priority || 'medium';
-        document.getElementById('projectProgress').value = project.progress || 0;
-        document.getElementById('projectLocation').value = project.location || '';
-        document.getElementById('projectNotes').value = project.notes || '';
-        
-        // Select assigned employees
-        const employeeSelect = document.getElementById('projectEmployees');
-        const assignedIds = project.assignedEmployees?.map(emp => emp._id) || [];
-        Array.from(employeeSelect.options).forEach(option => {
-            option.selected = assignedIds.includes(option.value);
-        });
-        
-        document.getElementById('projectModal').classList.add('show');
-    } catch (error) {
-        alert('Failed to load project: ' + error.message);
-    }
-}
-
-async function saveProject() {
-    const form = document.getElementById('projectForm');
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-    }
-    
-    const employeeSelect = document.getElementById('projectEmployees');
-    const selectedEmployees = Array.from(employeeSelect.selectedOptions).map(option => option.value);
-    
-    const projectData = {
-        name: document.getElementById('projectName').value,
-        description: document.getElementById('projectDescription').value,
-        customer: document.getElementById('projectCustomer').value,
-        vendor: document.getElementById('projectVendor').value || null,
-        budget: parseFloat(document.getElementById('projectBudget').value),
-        startDate: document.getElementById('projectStartDate').value,
-        endDate: document.getElementById('projectEndDate').value,
-        status: document.getElementById('projectStatus').value,
-        priority: document.getElementById('projectPriority').value,
-        progress: parseInt(document.getElementById('projectProgress').value) || 0,
-        location: document.getElementById('projectLocation').value,
-        assignedEmployees: selectedEmployees,
-        notes: document.getElementById('projectNotes').value
-    };
-    
-    try {
-        if (currentProjectId) {
-            await window.APIService.updateProject(currentProjectId, projectData);
-            alert('Project updated successfully!');
-        } else {
-            await window.APIService.createProject(projectData);
-            alert('Project created successfully!');
-        }
-        
-        closeProjectModal();
-        await refreshProjects();
-        if (window.refreshCalendar) window.refreshCalendar();
-    } catch (error) {
-        alert('Failed to save project: ' + error.message);
-    }
-}
-
-async function deleteProject(projectId) {
-    if (!confirm('Are you sure you want to delete this project?')) {
-        return;
-    }
-    
-    try {
-        await window.APIService.deleteProject(projectId);
-        alert('Project deleted successfully!');
-        await refreshProjects();
-    } catch (error) {
-        alert('Failed to delete project: ' + error.message);
-    }
-}
-
-function viewProject(projectId) {
-    editProject(projectId);
-    // Make form read-only
-    const inputs = document.querySelectorAll('#projectForm input, #projectForm select, #projectForm textarea');
-    inputs.forEach(input => input.disabled = true);
-    
-    document.getElementById('projectModalTitle').textContent = 'View Project';
-    document.querySelector('#projectModal .modal-footer .btn-primary').style.display = 'none';
-}
-
-function closeProjectModal() {
-    document.getElementById('projectModal').classList.remove('show');
-    
-    // Re-enable form inputs
-    const inputs = document.querySelectorAll('#projectForm input, #projectForm select, #projectForm textarea');
-    inputs.forEach(input => input.disabled = false);
-    
-    document.querySelector('#projectModal .modal-footer .btn-primary').style.display = 'inline-block';
-}
-
-function renderProjectsTable(projects) {
-    const tbody = document.getElementById('projectsTableBody');
-    
-    updateProjectStats(projects);
-    
-    if (!projects || projects.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="projects-empty-state">
-                    <i class="fas fa-project-diagram"></i>
-                    <h3>No Projects Found</h3>
-                    <p>Start by creating your first project</p>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tbody.innerHTML = projects.map(project => {
-        const initials = project.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-        const projectId = project.projectId || `#${project._id.substring(0, 8).toUpperCase()}`;
-        
-        return `
-        <tr>
-            <td>
-                <span class="project-icon">${initials}</span>
-                <div class="project-info">
-                    <div class="project-name">${project.name}</div>
-                    <div class="project-id">${projectId}</div>
-                </div>
-            </td>
-            <td>${project.customer?.name || 'N/A'}</td>
-            <td><span class="project-status-badge ${project.status}">${project.status.replace('-', ' ')}</span></td>
-            <td><span class="project-priority-badge ${project.priority}">${project.priority}</span></td>
-            <td>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${project.progress}%"></div>
-                    <span class="progress-text">${project.progress}%</span>
-                </div>
-            </td>
-            <td><span class="project-budget">$${project.budget.toLocaleString()}</span></td>
-            <td>${project.endDate ? new Date(project.endDate).toLocaleDateString() : 'N/A'}</td>
-            <td>
-                <div class="project-actions">
-                    <button class="action-btn view" onclick="viewProject('${project._id}')" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="action-btn edit" onclick="editProject('${project._id}')" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete" onclick="deleteProject('${project._id}')" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `;
-    }).join('');
-}
-
-function updateProjectStats(projects) {
-    const totalCount = document.getElementById('totalProjectsCount');
-    const activeCount = document.getElementById('activeProjectsCount');
-    
-    if (totalCount) totalCount.textContent = projects.length;
-    if (activeCount) {
-        const activeProjects = projects.filter(p => ['planning', 'in-progress'].includes(p.status)).length;
-        activeCount.textContent = activeProjects;
-    }
-}
-
-let allProjects = [];
-
-async function loadProjectsSection() {
-    try {
-        allProjects = await window.APIService.getProjects();
-        renderProjectsTable(allProjects);
-        initializeProjectFilters();
-    } catch (error) {
-        console.error('Failed to load projects:', error);
-        renderProjectsTable([]);
-    }
-}
-
-function initializeProjectFilters() {
-    const searchInput = document.getElementById('projectSearchInput');
-    const statusFilter = document.getElementById('projectStatusFilter');
-    const priorityFilter = document.getElementById('projectPriorityFilter');
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', filterProjects);
-    }
-    
-    if (statusFilter) {
-        statusFilter.addEventListener('change', filterProjects);
-    }
-    
-    if (priorityFilter) {
-        priorityFilter.addEventListener('change', filterProjects);
-    }
-}
-
-function filterProjects() {
-    const searchTerm = document.getElementById('projectSearchInput')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('projectStatusFilter')?.value || 'all';
-    const priorityFilter = document.getElementById('projectPriorityFilter')?.value || 'all';
-    
-    let filtered = allProjects;
-    
-    if (searchTerm) {
-        filtered = filtered.filter(project => 
-            project.name.toLowerCase().includes(searchTerm) ||
-            (project.projectId || '').toLowerCase().includes(searchTerm) ||
-            (project.customer?.name || '').toLowerCase().includes(searchTerm)
-        );
-    }
-    
-    if (statusFilter !== 'all') {
-        filtered = filtered.filter(project => project.status === statusFilter);
-    }
-    
-    if (priorityFilter !== 'all') {
-        filtered = filtered.filter(project => project.priority === priorityFilter);
-    }
-    
-    renderProjectsTable(filtered);
-}
-
-async function refreshProjects() {
-    try {
-        allProjects = await window.APIService.getProjects();
-        renderProjectsTable(allProjects);
-    } catch (error) {
-        console.error('Failed to refresh projects:', error);
-    }
-}
-
-// Global functions for button clicks
-window.viewProject = viewProject;
-window.editProject = editProject;
-window.deleteProject = deleteProject;
-window.showAddProjectModal = showAddProjectModal;
-window.closeProjectModal = closeProjectModal;
-window.saveProject = saveProject;
 
 // Employee Management Functions
 let currentEmployeeId = null;
@@ -1589,18 +1308,31 @@ async function saveEmployee() {
     };
     
     try {
+        // Upload documents if any
+        if (window.uploadedFiles && window.uploadedFiles.employee && window.uploadedFiles.employee.length > 0) {
+            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.employee);
+            if (uploadedDocs && uploadedDocs.length > 0) {
+                employeeData.documents = uploadedDocs;
+            }
+        }
+        
         if (currentEmployeeId) {
             await window.APIService.updateEmployee(currentEmployeeId, employeeData);
-            alert('Employee updated successfully!');
+            showToast('Employee updated successfully!', 'success');
         } else {
             await window.APIService.createEmployee(employeeData);
-            alert('Employee created successfully!');
+            showToast('Employee created successfully!', 'success');
+        }
+        
+        // Clear uploaded files
+        if (window.uploadedFiles) {
+            window.uploadedFiles.employee = [];
         }
         
         closeEmployeeModal();
         await refreshEmployees();
     } catch (error) {
-        alert('Failed to save employee: ' + error.message);
+        showToast('Failed to save employee: ' + error.message, 'error');
     }
 }
 
@@ -1611,21 +1343,67 @@ async function deleteEmployee(employeeId) {
     
     try {
         await window.APIService.deleteEmployee(employeeId);
-        alert('Employee deleted successfully!');
+        showToast('Employee deleted successfully!', 'success');
         await refreshEmployees();
     } catch (error) {
-        alert('Failed to delete employee: ' + error.message);
+        showToast('Failed to delete employee: ' + error.message, 'error');
     }
 }
 
 function viewEmployee(employeeId) {
-    editEmployee(employeeId);
-    // Make form read-only
-    const inputs = document.querySelectorAll('#employeeForm input, #employeeForm select, #employeeForm textarea');
-    inputs.forEach(input => input.disabled = true);
-    
-    document.getElementById('employeeModalTitle').textContent = 'View Employee';
-    document.querySelector('#employeeModal .modal-footer .btn-primary').style.display = 'none';
+    showEmployeeDetail(employeeId);
+}
+
+async function showEmployeeDetail(employeeId) {
+    try {
+        const employee = await window.APIService.getEmployee(employeeId);
+        
+        document.getElementById('employeeDetailName').textContent = employee.name;
+        document.getElementById('detailEmployeeEmail').textContent = employee.email || '-';
+        document.getElementById('detailEmployeePhone').textContent = employee.phone || '-';
+        document.getElementById('detailEmployeeRole').textContent = employee.role.replace('-', ' ') || '-';
+        document.getElementById('detailEmployeeDepartment').textContent = employee.department || '-';
+        document.getElementById('detailEmployeeStatus').innerHTML = `<span class="employee-status-badge ${employee.status}">${employee.status.replace('-', ' ')}</span>`;
+        document.getElementById('detailEmployeeHireDate').textContent = employee.hireDate ? new Date(employee.hireDate).toLocaleDateString() : '-';
+        document.getElementById('detailEmployeeAddress').textContent = employee.address || '-';
+        document.getElementById('detailEmployeeSkills').textContent = employee.skills && employee.skills.length > 0 ? employee.skills.join(', ') : '-';
+        
+        const docsList = document.getElementById('employeeDocumentsList');
+        if (employee.documents && employee.documents.length > 0) {
+            docsList.innerHTML = employee.documents.map(doc => `
+                <div class="document-item">
+                    <div class="document-info">
+                        <div class="document-icon">
+                            <i class="fas fa-file-${getDocIcon(doc.name)}"></i>
+                        </div>
+                        <div class="document-details">
+                            <div class="document-name">${doc.name}</div>
+                            <div class="document-meta">${formatFileSize(doc.size)} • ${new Date(doc.uploadedAt).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                    <div class="document-actions">
+                        <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
+        }
+        
+        showSection('employee-detail');
+    } catch (error) {
+        console.error('Failed to load employee details:', error);
+        showToast('Failed to load employee details: ' + error.message, 'error');
+    }
+}
+
+function backToEmployees() {
+    showSection('employees');
 }
 
 function closeEmployeeModal() {
@@ -1636,6 +1414,13 @@ function closeEmployeeModal() {
     inputs.forEach(input => input.disabled = false);
     
     document.querySelector('#employeeModal .modal-footer .btn-primary').style.display = 'inline-block';
+    
+    // Clear file input and preview
+    const fileInput = document.getElementById('employeeDocs');
+    const filePreview = document.getElementById('employeeDocsPreview');
+    if (fileInput) fileInput.value = '';
+    if (filePreview) filePreview.innerHTML = '';
+    if (window.uploadedFiles) window.uploadedFiles.employee = [];
 }
 
 async function refreshEmployees() {
@@ -1778,6 +1563,8 @@ window.deleteEmployee = deleteEmployee;
 window.showAddEmployeeModal = showAddEmployeeModal;
 window.closeEmployeeModal = closeEmployeeModal;
 window.saveEmployee = saveEmployee;
+window.showEmployeeDetail = showEmployeeDetail;
+window.backToEmployees = backToEmployees;
 
 // Vendor Management Functions
 let currentVendorId = null;
@@ -1829,18 +1616,37 @@ async function saveVendor() {
     };
     
     try {
+        // Upload documents if any
+        if (window.uploadedFiles && window.uploadedFiles.vendor && window.uploadedFiles.vendor.length > 0) {
+            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.vendor);
+            console.log('Uploaded docs response:', uploadedDocs);
+            if (uploadedDocs && uploadedDocs.length > 0) {
+                vendorData.documents = uploadedDocs;
+            }
+        }
+        
+        console.log('Final vendor data:', vendorData);
+        console.log('Documents type:', typeof vendorData.documents);
+        console.log('Documents is array:', Array.isArray(vendorData.documents));
+        
         if (currentVendorId) {
             await window.APIService.updateVendor(currentVendorId, vendorData);
-            alert('Vendor updated successfully!');
+            showToast('Vendor updated successfully!', 'success');
         } else {
             await window.APIService.createVendor(vendorData);
-            alert('Vendor created successfully!');
+            showToast('Vendor created successfully!', 'success');
+        }
+        
+        // Clear uploaded files
+        if (window.uploadedFiles) {
+            window.uploadedFiles.vendor = [];
         }
         
         closeVendorModal();
         await refreshVendors();
     } catch (error) {
-        alert('Failed to save vendor: ' + error.message);
+        console.error('Save vendor error:', error);
+        showToast('Failed to save vendor: ' + error.message, 'error');
     }
 }
 
@@ -1851,10 +1657,10 @@ async function deleteVendor(vendorId) {
     
     try {
         await window.APIService.deleteVendor(vendorId);
-        alert('Vendor deleted successfully!');
+        showToast('Vendor deleted successfully!', 'success');
         await refreshVendors();
     } catch (error) {
-        alert('Failed to delete vendor: ' + error.message);
+        showToast('Failed to delete vendor: ' + error.message, 'error');
     }
 }
 
@@ -1876,6 +1682,13 @@ function closeVendorModal() {
     inputs.forEach(input => input.disabled = false);
     
     document.querySelector('#vendorModal .modal-footer .btn-primary').style.display = 'inline-block';
+    
+    // Clear file input and preview
+    const fileInput = document.getElementById('vendorDocs');
+    const filePreview = document.getElementById('vendorDocsPreview');
+    if (fileInput) fileInput.value = '';
+    if (filePreview) filePreview.innerHTML = '';
+    if (window.uploadedFiles) window.uploadedFiles.vendor = [];
 }
 
 async function refreshVendors() {
@@ -1889,6 +1702,9 @@ async function refreshVendors() {
 
 function renderVendorsTable(vendors) {
     const tbody = document.getElementById('vendorsTableBody');
+    
+    // Store vendors globally for detail view
+    window.vendorsData = vendors;
     
     // Update stats
     updateVendorStats(vendors);
@@ -1927,7 +1743,7 @@ function renderVendorsTable(vendors) {
             <td><span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span></td>
             <td>
                 <div class="vendor-actions">
-                    <button class="action-btn view" onclick="viewVendor('${vendor._id}')" title="View Details">
+                    <button class="action-btn view" onclick="showVendorDetail('${vendor._id}')" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
                     <button class="action-btn edit" onclick="editVendor('${vendor._id}')" title="Edit">
@@ -2079,19 +1895,44 @@ async function saveCustomer() {
         notes: document.getElementById('customerNotes').value
     };
     
+    // Build addresses array from primary address fields
+    if (customerData.address || customerData.city || customerData.state || customerData.zipCode) {
+        customerData.addresses = [{
+            label: 'Primary',
+            address: customerData.address,
+            city: customerData.city,
+            state: customerData.state,
+            zipCode: customerData.zipCode,
+            isPrimary: true
+        }];
+    }
+    
     try {
+        // Upload documents if any
+        if (window.uploadedFiles && window.uploadedFiles.customer && window.uploadedFiles.customer.length > 0) {
+            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.customer);
+            if (uploadedDocs && uploadedDocs.length > 0) {
+                customerData.documents = uploadedDocs;
+            }
+        }
+        
         if (currentCustomerId) {
             await window.APIService.updateCustomer(currentCustomerId, customerData);
-            alert('Customer updated successfully!');
+            showToast('Customer updated successfully!', 'success');
         } else {
             await window.APIService.createCustomer(customerData);
-            alert('Customer created successfully!');
+            showToast('Customer created successfully!', 'success');
+        }
+        
+        // Clear uploaded files
+        if (window.uploadedFiles) {
+            window.uploadedFiles.customer = [];
         }
         
         closeCustomerModal();
         await refreshCustomers();
     } catch (error) {
-        alert('Failed to save customer: ' + error.message);
+        showToast('Failed to save customer: ' + error.message, 'error');
     }
 }
 
@@ -2102,21 +1943,104 @@ async function deleteCustomer(customerId) {
     
     try {
         await window.APIService.deleteCustomer(customerId);
-        alert('Customer deleted successfully!');
+        showToast('Customer deleted successfully!', 'success');
         await refreshCustomers();
     } catch (error) {
-        alert('Failed to delete customer: ' + error.message);
+        showToast('Failed to delete customer: ' + error.message, 'error');
     }
 }
 
 function viewCustomer(customerId) {
-    editCustomer(customerId);
-    // Make form read-only
-    const inputs = document.querySelectorAll('#customerForm input, #customerForm select, #customerForm textarea');
-    inputs.forEach(input => input.disabled = true);
+    showCustomerProfile(customerId);
+}
+
+async function showCustomerProfile(customerId) {
+    try {
+        const profileData = await window.APIService.getCustomerProfile(customerId);
+        
+        // Hide customers section, show profile section
+        document.getElementById('customers').classList.remove('active');
+        document.getElementById('customer-profile').classList.add('active');
+        
+        // Update menu
+        document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+        
+        // Populate customer info
+        document.getElementById('customerProfileName').textContent = profileData.customer.name;
+        document.getElementById('profileEmail').textContent = profileData.customer.email || '-';
+        document.getElementById('profilePhone').textContent = profileData.customer.phone || '-';
+        document.getElementById('profileAddress').textContent = profileData.customer.address || '-';
+        document.getElementById('profileCity').textContent = profileData.customer.city || '-';
+        document.getElementById('profileType').textContent = profileData.customer.customerType || '-';
+        document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
+        
+        // Populate stats
+        document.getElementById('profileTotalOrders').textContent = profileData.stats.totalOrders;
+        document.getElementById('profileCompletedOrders').textContent = profileData.stats.completedOrders;
+        document.getElementById('profileActiveOrders').textContent = profileData.stats.activeOrders;
+        document.getElementById('profileTotalSpent').textContent = `$${profileData.stats.totalSpent.toLocaleString()}`;
+        
+        // Populate orders table
+        const ordersBody = document.getElementById('profileOrdersBody');
+        if (profileData.orders.length === 0) {
+            ordersBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No orders found</td></tr>';
+        } else {
+            ordersBody.innerHTML = profileData.orders.map(order => {
+                const statusDisplay = order.pipelineStage || order.status.replace('-', ' ');
+                const statusClass = order.pipelineStage ? 'pipeline' : order.status;
+                return `
+                <tr>
+                    <td><strong>${order.workOrderNumber || '-'}</strong></td>
+                    <td>${order.orderId}</td>
+                    <td>${order.service}</td>
+                    <td><span class="order-status-badge ${statusClass}">${statusDisplay}</span></td>
+                    <td>$${order.amount.toLocaleString()}</td>
+                    <td>${new Date(order.createdAt).toLocaleDateString()}</td>
+                </tr>
+            `;
+            }).join('');
+        }
+        
+        // Populate documents
+        const docsList = document.getElementById('customerDocumentsList');
+        if (profileData.customer.documents && profileData.customer.documents.length > 0) {
+            docsList.innerHTML = profileData.customer.documents.map(doc => `
+                <div class="document-item">
+                    <div class="document-info">
+                        <div class="document-icon">
+                            <i class="fas fa-file-${getDocIcon(doc.name)}"></i>
+                        </div>
+                        <div class="document-details">
+                            <div class="document-name">${doc.name}</div>
+                            <div class="document-meta">${formatFileSize(doc.size)} • ${new Date(doc.uploadedAt).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                    <div class="document-actions">
+                        <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load customer profile:', error);
+        showToast('Failed to load customer profile: ' + error.message, 'error');
+    }
+}
+
+function backToCustomers() {
+    document.getElementById('customer-profile').classList.remove('active');
+    document.getElementById('customers').classList.add('active');
     
-    document.getElementById('customerModalTitle').textContent = 'View Customer';
-    document.querySelector('#customerModal .modal-footer .btn-primary').style.display = 'none';
+    // Update menu
+    document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+    document.querySelector('[data-section="customers"]').parentElement.classList.add('active');
 }
 
 function closeCustomerModal() {
@@ -2127,6 +2051,13 @@ function closeCustomerModal() {
     inputs.forEach(input => input.disabled = false);
     
     document.querySelector('#customerModal .modal-footer .btn-primary').style.display = 'inline-block';
+    
+    // Clear file input and preview
+    const fileInput = document.getElementById('customerDocs');
+    const filePreview = document.getElementById('customerDocsPreview');
+    if (fileInput) fileInput.value = '';
+    if (filePreview) filePreview.innerHTML = '';
+    if (window.uploadedFiles) window.uploadedFiles.customer = [];
 }
 
 async function refreshCustomers() {
@@ -2276,6 +2207,7 @@ window.deleteCustomer = deleteCustomer;
 window.showAddCustomerModal = showAddCustomerModal;
 window.closeCustomerModal = closeCustomerModal;
 window.saveCustomer = saveCustomer;
+window.backToCustomers = backToCustomers;
 
 // Global functions for button clicks
 window.viewOrder = viewOrder;
@@ -2361,14 +2293,6 @@ function filterOrders() {
     
     window.dashboard.renderOrdersTable(filtered);
 }
-
-// Update menu navigation to load orders section
-function loadOrdersSectionOnNav() {
-    loadOrdersSection();
-}
-
-// Global function
-window.loadOrdersSection = loadOrdersSectionOnNav;
 
 // Profile and settings functions
 function showProfile() {
@@ -2456,11 +2380,11 @@ function saveProfile() {
         // Update UI
         updateUserInfo(sessionData);
         
-        alert('Profile updated successfully!');
+        showToast('Profile updated successfully!', 'success');
         closeProfileModal();
     }).catch(error => {
         console.error('Profile update error:', error);
-        alert('Failed to update profile: ' + error.message);
+        showToast('Failed to update profile: ' + error.message, 'error');
     });
     
     // Clear password fields
@@ -2478,7 +2402,7 @@ function uploadAvatar() {
         if (file) {
             // Check file size (limit to 2MB)
             if (file.size > 2 * 1024 * 1024) {
-                alert('Image size must be less than 2MB');
+                showToast('Image size must be less than 2MB', 'error');
                 return;
             }
             
@@ -2544,3 +2468,97 @@ function loadAccountingSection() {
 // Global function
 window.loadPipelineSection = loadPipelineSection;
 window.loadAccountingSection = loadAccountingSection;
+
+// Vendor Detail Functions
+async function showVendorDetail(vendorId) {
+    try {
+        const vendor = await window.APIService.getVendor(vendorId);
+        
+        document.getElementById('vendorDetailName').textContent = vendor.name;
+        document.getElementById('detailVendorEmail').textContent = vendor.email || '-';
+        document.getElementById('detailVendorPhone').textContent = vendor.phone || '-';
+        document.getElementById('detailVendorCategory').textContent = vendor.category || '-';
+        document.getElementById('detailVendorRating').innerHTML = '⭐'.repeat(vendor.rating || 0);
+        document.getElementById('detailVendorAddress').textContent = vendor.address || '-';
+        document.getElementById('detailVendorStatus').innerHTML = vendor.isActive 
+            ? '<span style="color: #22c55e;">Active</span>' 
+            : '<span style="color: #ef4444;">Inactive</span>';
+        
+        const docsList = document.getElementById('vendorDocumentsList');
+        if (vendor.documents && vendor.documents.length > 0) {
+            docsList.innerHTML = vendor.documents.map(doc => `
+                <div class="document-item">
+                    <div class="document-info">
+                        <div class="document-icon">
+                            <i class="fas fa-file-${getDocIcon(doc.name)}"></i>
+                        </div>
+                        <div class="document-details">
+                            <div class="document-name">${doc.name}</div>
+                            <div class="document-meta">${formatFileSize(doc.size)} • ${new Date(doc.uploadedAt).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                    <div class="document-actions">
+                        <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
+        }
+        
+        showSection('vendor-detail');
+    } catch (error) {
+        console.error('Failed to load vendor details:', error);
+        showToast('Failed to load vendor details: ' + error.message, 'error');
+    }
+}
+
+function backToVendors() {
+    showSection('vendors');
+}
+
+function getDocIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'word';
+    if (['jpg', 'jpeg', 'png'].includes(ext)) return 'image';
+    return 'alt';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function downloadDocument(url) {
+    window.open('http://localhost:10000' + url, '_blank');
+}
+
+function viewDocument(url) {
+    window.open('http://localhost:10000' + url, '_blank');
+}
+
+window.showVendorDetail = showVendorDetail;
+window.backToVendors = backToVendors;
+window.downloadDocument = downloadDocument;
+window.viewDocument = viewDocument;
+
+// Global showSection function
+window.showSection = function(sectionId) {
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+};

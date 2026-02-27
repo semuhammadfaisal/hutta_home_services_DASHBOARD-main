@@ -33,10 +33,13 @@ router.post('/', authenticateToken, async (req, res) => {
     await employee.save();
     res.status(201).json(employee);
   } catch (error) {
+    console.error('Employee creation error:', error);
     if (error.code === 11000) {
       res.status(400).json({ message: 'Employee with this email already exists' });
+    } else if (error.name === 'ValidationError') {
+      res.status(400).json({ message: error.message });
     } else {
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: error.message || 'Server error' });
     }
   }
 });

@@ -1,0 +1,4 @@
+name,email,phone,address,role,department,salary,hiredate,status,skills
+John Smith,john@example.com,555-1001,100 First St,electrician,Operations,50000,2024-01-15,available,Electrical wiring;Circuit repair
+Jane Doe,jane@example.com,555-1002,200 Second St,plumber,Operations,48000,2024-02-01,available,Pipe installation;Leak repair
+Bob Johnson,bob@example.com,555-1003,300 Third St,carpenter,Operations,52000,2024-01-20,available,Woodwork;Cabinet making

@@ -33,6 +33,18 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Debug middleware to log request body
+app.use('/api/vendors', (req, res, next) => {
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('=== VENDOR REQUEST DEBUG ===');
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Documents:', req.body.documents);
+    console.log('Documents type:', typeof req.body.documents);
+    console.log('Is array:', Array.isArray(req.body.documents));
+  }
+  next();
+});
+
 // Request logging
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
@@ -66,11 +78,15 @@ try {
   app.use('/api/stages', require('./routes/stages'));
   app.use('/api/pipeline-records', require('./routes/pipelineRecords'));
   app.use('/api/pipeline-movements', require('./routes/pipelineMovements'));
+  app.use('/api/upload', require('./routes/upload'));
   console.log('✅ All routes loaded');
 } catch (error) {
   console.error('❌ Error loading routes:', error);
   process.exit(1);
 }
+
+// Serve uploads folder
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..'), {

@@ -26,14 +26,13 @@ router.get('/stage/:stageId', async (req, res) => {
 router.post('/', async (req, res) => {
     const record = new PipelineRecord({
         stageId: req.body.stageId,
-        projectName: req.body.projectName,
+        orderId: req.body.orderId,
         customerName: req.body.customerName,
         email: req.body.email,
         phone: req.body.phone,
         priority: req.body.priority || 'medium',
         budget: req.body.budget,
         startDate: req.body.startDate,
-        dueDate: req.body.dueDate,
         address: req.body.address,
         description: req.body.description,
         notes: req.body.notes
@@ -41,6 +40,13 @@ router.post('/', async (req, res) => {
 
     try {
         const newRecord = await record.save();
+        
+        // Update order with pipelineRecordId if orderId is provided
+        if (req.body.orderId) {
+            const Order = require('../models/Order');
+            await Order.findByIdAndUpdate(req.body.orderId, { pipelineRecordId: newRecord._id });
+        }
+        
         res.status(201).json(newRecord);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -55,14 +61,12 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ message: 'Record not found' });
         }
 
-        if (req.body.projectName) record.projectName = req.body.projectName;
         if (req.body.customerName) record.customerName = req.body.customerName;
         if (req.body.email !== undefined) record.email = req.body.email;
         if (req.body.phone !== undefined) record.phone = req.body.phone;
         if (req.body.priority) record.priority = req.body.priority;
         if (req.body.budget !== undefined) record.budget = req.body.budget;
         if (req.body.startDate !== undefined) record.startDate = req.body.startDate;
-        if (req.body.dueDate !== undefined) record.dueDate = req.body.dueDate;
         if (req.body.address !== undefined) record.address = req.body.address;
         if (req.body.description !== undefined) record.description = req.body.description;
         if (req.body.notes !== undefined) record.notes = req.body.notes;

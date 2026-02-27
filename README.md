@@ -35,9 +35,35 @@ hutta_home_ervices/
 - User authentication
 - Admin dashboard with KPI metrics
 - Order management
-- Customer management
+- **Customer management** (supports multiple locations with shared email)
 - Vendor management
 - Employee management
 - Project tracking
 - Payment processing
 - Reporting system
+
+## Recent Updates
+
+### Customer Management Enhancement (Latest)
+
+The customer management system now supports:
+
+1. **Multiple customers with the same email address**
+   - Perfect for businesses with multiple office locations
+   - Example: Dentistry groups, retail chains, property management companies
+
+2. **Multiple physical addresses per customer**
+   - Store headquarters, warehouses, branches, etc.
+   - Each address can be labeled (Primary, Branch Office, etc.)
+
+**Documentation:**
+- 📘 Full Guide: [CUSTOMER_MANAGEMENT_UPDATE.md](CUSTOMER_MANAGEMENT_UPDATE.md)
+- 🚀 Quick Reference: [CUSTOMER_QUICK_REFERENCE.md](CUSTOMER_QUICK_REFERENCE.md)
+- 📊 Visual Guide: [CUSTOMER_VISUAL_GUIDE.md](CUSTOMER_VISUAL_GUIDE.md)
+- ✅ Deployment Checklist: [CUSTOMER_DEPLOYMENT_CHECKLIST.md](CUSTOMER_DEPLOYMENT_CHECKLIST.md)
+
+**Migration Required:**
+```bash
+cd backend
+node remove-email-unique-index.js
+```

@@ -1,5 +1,6 @@
 const express = require('express');
 const Order = require('../models/Order');
+const Customer = require('../models/Customer');
 const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const router = express.Router();
@@ -61,7 +62,26 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const orders = await Order.find()
       .populate('vendor', 'name category')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    // Populate pipeline stage info
+    const PipelineRecord = require('../models/PipelineRecord');
+    const Stage = require('../models/Stage');
+    
+    for (let order of orders) {
+      try {
+        // Find pipeline record by orderId
+        const pipelineRecord = await PipelineRecord.findOne({ orderId: order._id }).lean();
+        if (pipelineRecord && pipelineRecord.stageId) {
+          const stage = await Stage.findById(pipelineRecord.stageId).select('name').lean();
+          order.pipelineStage = stage ? stage.name : null;
+        }
+      } catch (err) {
+        console.log('Pipeline record not found for order:', order._id);
+      }
+    }
+    
     res.json(orders);
   } catch (error) {
     console.error('Get orders error:', error);
@@ -89,8 +109,34 @@ router.post('/', authenticateToken, async (req, res) => {
     const orderCount = await Order.countDocuments();
     const orderId = `ORD-${String(orderCount + 1).padStart(3, '0')}`;
     
-    const order = new Order({ ...req.body, orderId });
+    // Find or create customer
+    let customer = await Customer.findOne({ email: req.body.customer.email });
+    if (!customer) {
+      customer = new Customer({
+        name: req.body.customer.name,
+        email: req.body.customer.email,
+        phone: req.body.customer.phone,
+        address: req.body.customer.address
+      });
+      await customer.save();
+    }
+    
+    // Generate work order number for this customer
+    const customerOrderCount = await Order.countDocuments({ customerId: customer._id });
+    const workOrderNumber = `WO-${String(customerOrderCount + 1).padStart(2, '0')}`;
+    
+    const order = new Order({ 
+      ...req.body, 
+      orderId,
+      customerId: customer._id,
+      workOrderNumber
+    });
     await order.save();
+    
+    // Update customer stats
+    await Customer.findByIdAndUpdate(customer._id, {
+      $inc: { totalOrders: 1, totalSpent: req.body.amount || 0 }
+    });
     
     const populatedOrder = await Order.findById(order._id).populate('vendor');
     res.status(201).json(populatedOrder);

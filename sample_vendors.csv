@@ -1,0 +1,4 @@
+name,email,phone,address,category,rating,status
+ABC Electrical Services,abc@electrical.com,555-0101,123 Main St,electrical,5,active
+XYZ Plumbing Co,xyz@plumbing.com,555-0102,456 Oak Ave,plumbing,4,active
+Quality Carpentry,quality@carpentry.com,555-0103,789 Pine Rd,carpentry,5,active
