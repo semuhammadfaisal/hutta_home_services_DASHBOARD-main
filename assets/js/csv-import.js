@@ -128,6 +128,8 @@ async function importVendorsFromCSV() {
                 return;
             }
             
+            showToast(`Processing ${vendors.length} vendors...`, 'info');
+            
             let successCount = 0;
             let errorCount = 0;
             const errors = [];
@@ -150,7 +152,9 @@ async function importVendorsFromCSV() {
                         continue;
                     }
                     
-                    await window.APIService.createVendor(vendorData);
+                    console.log('Importing vendor:', vendorData);
+                    const result = await window.APIService.createVendor(vendorData);
+                    console.log('Vendor created:', result);
                     successCount++;
                 } catch (error) {
                     console.error('Failed to import vendor:', vendor.name, error);
@@ -165,9 +169,11 @@ async function importVendorsFromCSV() {
             
             if (successCount > 0) {
                 showToast(`Imported ${successCount} vendors successfully. ${errorCount} failed.`, 'success');
-                await refreshVendors();
+                if (typeof refreshVendors === 'function') {
+                    await refreshVendors();
+                }
             } else {
-                showToast(`Failed to import vendors. ${errorCount} errors.`, 'error');
+                showToast(`Failed to import vendors. ${errorCount} errors. Check console for details.`, 'error');
             }
         } catch (error) {
             console.error('CSV import error:', error);
@@ -196,6 +202,8 @@ async function importEmployeesFromCSV() {
                 return;
             }
             
+            showToast(`Processing ${employees.length} employees...`, 'info');
+            
             let successCount = 0;
             let errorCount = 0;
             const errors = [];
@@ -208,7 +216,7 @@ async function importEmployeesFromCSV() {
                         phone: employee.phone || employee['phone number'],
                         address: employee.address,
                         role: mapEmployeeRole(employee.role),
-                        department: employee.department,
+                        department: employee.department || 'General',
                         salary: parseFloat(employee.salary) || 0,
                         hireDate: employee.hiredate || employee['hire date'] || new Date().toISOString().split('T')[0],
                         status: mapEmployeeStatus(employee.status || 'available'),
@@ -223,7 +231,8 @@ async function importEmployeesFromCSV() {
                         continue;
                     }
                     
-                    await window.APIService.createEmployee(employeeData);
+                    const result = await window.APIService.createEmployee(employeeData);
+                    console.log('Employee created:', result);
                     successCount++;
                 } catch (error) {
                     console.error('Failed to import employee:', employee.name, error);
@@ -238,9 +247,11 @@ async function importEmployeesFromCSV() {
             
             if (successCount > 0) {
                 showToast(`Imported ${successCount} employees successfully. ${errorCount} failed.`, 'success');
-                await refreshEmployees();
+                if (typeof refreshEmployees === 'function') {
+                    await refreshEmployees();
+                }
             } else {
-                showToast(`Failed to import employees. ${errorCount} errors.`, 'error');
+                showToast(`Failed to import employees. ${errorCount} errors. Check console for details.`, 'error');
             }
         } catch (error) {
             console.error('CSV import error:', error);
