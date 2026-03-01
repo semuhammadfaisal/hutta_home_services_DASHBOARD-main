@@ -707,6 +707,7 @@ async function editOrder(orderId) {
         document.getElementById('customerAddress').value = order.customer.address || '';
         document.getElementById('service').value = order.service || '';
         document.getElementById('amount').value = order.amount || '';
+        document.getElementById('vendorCost').value = order.vendorCost || '';
         document.getElementById('startDate').value = order.startDate ? order.startDate.split('T')[0] : '';
         document.getElementById('endDate').value = order.endDate ? order.endDate.split('T')[0] : '';
         document.getElementById('status').value = order.status || 'new';
@@ -731,22 +732,27 @@ async function saveOrder() {
         return;
     }
     
+    const saveBtn = document.querySelector('#orderModal .btn-primary');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    
     const orderData = {
         customer: {
             name: document.getElementById('customerName').value,
             email: document.getElementById('customerEmail').value,
-            phone: document.getElementById('customerPhone').value,
-            address: document.getElementById('customerAddress').value
+            phone: document.getElementById('customerPhone').value || '',
+            address: document.getElementById('customerAddress').value || ''
         },
         service: document.getElementById('service').value,
         amount: parseFloat(document.getElementById('amount').value),
+        vendorCost: parseFloat(document.getElementById('vendorCost').value) || 0,
         vendor: document.getElementById('vendor').value || null,
         startDate: document.getElementById('startDate').value,
         endDate: document.getElementById('endDate').value,
-        status: document.getElementById('status').value,
-        priority: document.getElementById('priority').value,
-        description: document.getElementById('description').value,
-        notes: document.getElementById('notes').value
+        status: document.getElementById('status').value || 'new',
+        priority: document.getElementById('priority').value || 'medium',
+        description: document.getElementById('description').value || '',
+        notes: document.getElementById('notes').value || ''
     };
     
     try {
@@ -760,9 +766,11 @@ async function saveOrder() {
         
         closeOrderModal();
         await refreshOrders();
-        if (window.refreshCalendar) window.refreshCalendar();
     } catch (error) {
-        showToast('Failed to save order: ' + error.message, 'error');
+        console.error('Save order error:', error);
+        showToast(error.message || 'Failed to save order', 'error');
+    } finally {
+        saveBtn.disabled = false;
     }
 }
 
@@ -802,6 +810,9 @@ function closeOrderModal() {
 
 async function refreshOrders() {
     try {
+        if (window.ordersRefreshing) return; // Prevent duplicate calls
+        window.ordersRefreshing = true;
+        
         const orders = await window.APIService.getOrders();
         window.dashboard.renderOrdersTable(orders);
         
@@ -811,6 +822,8 @@ async function refreshOrders() {
         window.dashboard.renderWorkflowFromOrders(orders);
     } catch (error) {
         console.error('Failed to refresh orders:', error);
+    } finally {
+        window.ordersRefreshing = false;
     }
 }
 
@@ -2063,6 +2076,17 @@ function closeCustomerModal() {
 async function refreshCustomers() {
     try {
         const customers = await window.APIService.getCustomers();
+        const orders = await window.APIService.getOrders();
+        
+        // Count orders for each customer
+        customers.forEach(customer => {
+            customer.totalOrders = orders.filter(order => {
+                const customerId = order.customer?._id || order.customer;
+                const customerEmail = order.customer?.email;
+                return customerId === customer._id || customerEmail === customer.email;
+            }).length;
+        });
+        
         renderCustomersTable(customers);
     } catch (error) {
         console.error('Failed to refresh customers:', error);
@@ -2078,7 +2102,7 @@ function renderCustomersTable(customers) {
     if (!customers || customers.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="customers-empty-state">
+                <td colspan="8" class="customers-empty-state">
                     <i class="fas fa-users"></i>
                     <h3>No Customers Found</h3>
                     <p>Start by adding your first customer</p>
@@ -2109,7 +2133,6 @@ function renderCustomersTable(customers) {
             <td><span class="customer-type-badge ${customer.customerType}">${customer.customerType}</span></td>
             <td><span class="customer-status-badge ${customer.status}">${customer.status}</span></td>
             <td><span class="customer-orders-count">${customer.totalOrders || 0}</span></td>
-            <td><span class="customer-total-spent">$${(customer.totalSpent || 0).toLocaleString()}</span></td>
             <td>
                 <div class="customer-actions">
                     <button class="action-btn view" onclick="viewCustomer('${customer._id}')" title="View Details">
@@ -2145,6 +2168,17 @@ let allCustomers = [];
 async function loadCustomersSection() {
     try {
         allCustomers = await window.APIService.getCustomers();
+        const orders = await window.APIService.getOrders();
+        
+        // Count orders for each customer
+        allCustomers.forEach(customer => {
+            customer.totalOrders = orders.filter(order => {
+                const customerId = order.customer?._id || order.customer;
+                const customerEmail = order.customer?.email;
+                return customerId === customer._id || customerEmail === customer.email;
+            }).length;
+        });
+        
         renderCustomersTable(allCustomers);
         initializeCustomerFilters();
     } catch (error) {
@@ -2234,12 +2268,17 @@ let allOrders = [];
 
 async function loadOrdersSection() {
     try {
+        if (window.ordersLoading) return; // Prevent duplicate calls
+        window.ordersLoading = true;
+        
         allOrders = await window.APIService.getOrders();
         window.dashboard.renderOrdersTable(allOrders);
         initializeOrderFilters();
     } catch (error) {
         console.error('Failed to load orders:', error);
         window.dashboard.renderOrdersTable([]);
+    } finally {
+        window.ordersLoading = false;
     }
 }
 
@@ -2509,6 +2548,43 @@ async function showVendorDetail(vendorId) {
             `).join('');
         } else {
             docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
+        }
+        
+        const orders = await window.APIService.getOrders();
+        const vendorOrders = orders.filter(order => order.vendor && (order.vendor._id === vendorId || order.vendor === vendorId));
+        
+        // Calculate financial summary
+        const totalValue = vendorOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+        const totalCost = vendorOrders.reduce((sum, order) => sum + (order.vendorCost || 0), 0);
+        const totalProfit = totalValue - totalCost;
+        
+        document.getElementById('vendorTotalValue').textContent = `$${totalValue.toLocaleString()}`;
+        document.getElementById('vendorTotalCost').textContent = `$${totalCost.toLocaleString()}`;
+        document.getElementById('vendorTotalProfit').textContent = `$${totalProfit.toLocaleString()}`;
+        
+        const ordersList = document.getElementById('vendorOrdersList');
+        if (vendorOrders.length > 0) {
+            ordersList.innerHTML = vendorOrders.map(order => `
+                <div class="order-item">
+                    <div class="order-info">
+                        <div class="order-header">
+                            <strong>${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}</strong>
+                            <span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>
+                        </div>
+                        <div class="order-details">
+                            <span><i class="fas fa-user"></i> ${order.customer?.name || order.customer}</span>
+                            <span><i class="fas fa-wrench"></i> ${order.service}</span>
+                            <span><i class="fas fa-dollar-sign"></i> $${order.amount?.toLocaleString() || '0'}</span>
+                            <span><i class="fas fa-calendar"></i> ${order.startDate ? new Date(order.startDate).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                    </div>
+                    <button class="btn-icon" onclick="viewOrder('${order._id}')" title="View Order">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            ordersList.innerHTML = '<p class="no-orders">No orders assigned</p>';
         }
         
         showSection('vendor-detail');

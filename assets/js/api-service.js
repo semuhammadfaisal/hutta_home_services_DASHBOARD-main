@@ -60,11 +60,19 @@ class APIService {
                 data = await response.json();
             } else {
                 const text = await response.text();
-                data = { message: text };
+                console.error('Non-JSON response:', text);
+                data = { message: text || 'Server returned non-JSON response' };
             }
             
             if (!response.ok) {
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                console.error('API Error Response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data
+                });
+                
+                const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+                throw new Error(errorMessage);
             }
             
             return data;
@@ -73,10 +81,15 @@ class APIService {
             
             // Provide more specific error messages
             if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                throw new Error('Network error: Unable to connect to server');
+                throw new Error('Network error: Unable to connect to server. Please check if the server is running.');
             }
             
-            throw error;
+            // If it's already a formatted error, re-throw it
+            if (error.message && !error.message.includes('Failed to fetch')) {
+                throw error;
+            }
+            
+            throw new Error('An unexpected error occurred. Please try again.');
         }
     }
 

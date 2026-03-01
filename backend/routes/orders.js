@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Vendor = require('../models/Vendor');
@@ -106,62 +107,107 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new order
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const orderCount = await Order.countDocuments();
-    const orderId = `ORD-${String(orderCount + 1).padStart(3, '0')}`;
+    console.log('ORDER REQUEST:', JSON.stringify(req.body, null, 2));
     
-    // Find or create customer
-    let customer = await Customer.findOne({ email: req.body.customer.email });
-    if (!customer) {
-      customer = new Customer({
-        name: req.body.customer.name,
-        email: req.body.customer.email,
-        phone: req.body.customer.phone,
-        address: req.body.customer.address
-      });
-      await customer.save();
+    // Generate unique order ID
+    let orderId;
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    do {
+      const orderCount = await Order.countDocuments();
+      const timestamp = Date.now() + attempts;
+      orderId = `ORD-${String(orderCount + 1 + attempts).padStart(3, '0')}-${timestamp.toString().slice(-4)}`;
+      
+      const existingOrder = await Order.findOne({ orderId });
+      if (!existingOrder) break;
+      
+      attempts++;
+    } while (attempts < maxAttempts);
+    
+    if (attempts >= maxAttempts) {
+      return res.status(500).json({ message: 'Unable to generate unique order ID' });
     }
     
-    // Generate work order number for this customer
-    const customerOrderCount = await Order.countDocuments({ customerId: customer._id });
-    const workOrderNumber = `WO-${String(customerOrderCount + 1).padStart(2, '0')}`;
-    
-    const order = new Order({ 
-      ...req.body, 
+    const order = new Order({
       orderId,
-      customerId: customer._id,
-      workOrderNumber
+      customer: {
+        name: req.body.customer.name,
+        email: req.body.customer.email,
+        phone: req.body.customer.phone || '',
+        address: req.body.customer.address || ''
+      },
+      service: req.body.service,
+      amount: Number(req.body.amount),
+      vendorCost: Number(req.body.vendorCost) || 0,
+      startDate: new Date(req.body.startDate),
+      endDate: new Date(req.body.endDate),
+      status: req.body.status || 'new',
+      priority: req.body.priority || 'medium',
+      description: req.body.description || '',
+      notes: req.body.notes || ''
     });
+    
+    if (req.body.vendor && mongoose.Types.ObjectId.isValid(req.body.vendor)) {
+      order.vendor = req.body.vendor;
+    }
+    
     await order.save();
+    console.log('ORDER SAVED:', order._id, 'with ID:', orderId);
     
-    // Update customer stats
-    await Customer.findByIdAndUpdate(customer._id, {
-      $inc: { totalOrders: 1, totalSpent: req.body.amount || 0 }
-    });
-    
-    const populatedOrder = await Order.findById(order._id).populate('vendor');
-    res.status(201).json(populatedOrder);
+    res.status(201).json(order);
   } catch (error) {
-    console.error('Create order error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('ORDER ERROR:', error.message);
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Duplicate order detected. Please try again.' });
+    }
+    
+    res.status(500).json({ message: error.message });
   }
 });
 
 // Update order
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    console.log('Updating order:', req.params.id, 'with data:', JSON.stringify(req.body, null, 2));
+    
+    // Prepare update data
+    const updateData = {
+      ...req.body
+    };
+    
+    // Convert dates if provided
+    if (req.body.startDate) {
+      updateData.startDate = new Date(req.body.startDate);
+    }
+    if (req.body.endDate) {
+      updateData.endDate = new Date(req.body.endDate);
+    }
+    
+    // Convert numbers if provided
+    if (req.body.amount) {
+      updateData.amount = parseFloat(req.body.amount);
+    }
+    if (req.body.vendorCost) {
+      updateData.vendorCost = parseFloat(req.body.vendorCost);
+    }
+    
     const order = await Order.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
-      { new: true }
+      updateData, 
+      { new: true, runValidators: true }
     ).populate('vendor');
     
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
     
+    console.log('Order updated successfully:', order._id);
     res.json(order);
   } catch (error) {
     console.error('Update order error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

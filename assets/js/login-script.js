@@ -45,7 +45,8 @@ class LoginManager {
         try {
             const response = await window.APIService.login(email, password);
             
-            // Show success and redirect
+            // The APIService.login already stores the session with token
+            // Just show success and redirect
             this.showSuccess();
             setTimeout(() => {
                 window.location.href = window.DASHBOARD_URL || '/pages/admin-dashboard.html';
