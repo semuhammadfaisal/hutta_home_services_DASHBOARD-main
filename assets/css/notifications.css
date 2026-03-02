@@ -30,7 +30,7 @@
 .mark-all-read {
     background: none;
     border: none;
-    color: #007bff;
+    color: #0056B8;
     cursor: pointer;
     font-size: 12px;
     padding: 4px 8px;
@@ -121,7 +121,7 @@
     right: 15px;
     width: 8px;
     height: 8px;
-    background: #007bff;
+    background: #0056B8;
     border-radius: 50%;
 }
 

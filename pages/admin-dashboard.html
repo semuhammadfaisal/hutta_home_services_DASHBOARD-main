@@ -16,6 +16,8 @@
     <link rel="stylesheet" href="../assets/css/calendar.css">
     <link rel="stylesheet" href="../assets/css/detail-pages.css">
     <link rel="stylesheet" href="../assets/css/toast.css">
+    <link rel="stylesheet" href="../assets/css/color-overrides.css">
+    <link rel="stylesheet" href="../assets/css/dashboard-enhanced.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -26,8 +28,7 @@
                 <i class="fas fa-bars"></i>
             </button>
             <div class="logo">
-                <i class="fas fa-home"></i>
-                <span>Hutta Home Services</span>
+                <img src="../assets/images/logo.png" alt="Hutta Home Services" class="navbar-logo">
             </div>
         </div>
         <div class="nav-center">
@@ -266,9 +267,21 @@
                             <i class="fas fa-user-plus"></i>
                             <span>Add Customer</span>
                         </button>
+                        <button class="quick-action" onclick="showAddVendorModal()">
+                            <i class="fas fa-handshake"></i>
+                            <span>Add Vendor</span>
+                        </button>
+                        <button class="quick-action" onclick="showAddEmployeeModal()">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Add Employee</span>
+                        </button>
                         <button class="quick-action" onclick="showAddPaymentModal()">
                             <i class="fas fa-credit-card"></i>
                             <span>Record Payment</span>
+                        </button>
+                        <button class="quick-action" onclick="loadReportsSection(); window.dashboard.showSection('reports'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=reports]').parentElement.classList.add('active');">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>View Reports</span>
                         </button>
                     </div>
                 </div>

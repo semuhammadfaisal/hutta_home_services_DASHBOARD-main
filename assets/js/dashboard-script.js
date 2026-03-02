@@ -99,18 +99,47 @@ class DashboardManager {
 
     async renderDashboard() {
         try {
-            const stats = await window.APIService.getOrderStats();
-            this.renderKPIs(stats);
+            // Load all data in parallel for instant display
+            const [orders, vendors, employees, customers, payments] = await Promise.all([
+                window.APIService.getOrders(),
+                window.APIService.getVendors().catch(() => []),
+                window.APIService.getEmployees().catch(() => []),
+                window.APIService.getCustomers().catch(() => []),
+                window.APIService.getPayments().catch(() => [])
+            ]);
             
-            const orders = await window.APIService.getOrders();
+            // Calculate stats from orders
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const monthlyRevenue = orders
+                .filter(order => {
+                    const orderDate = new Date(order.createdAt);
+                    return orderDate.getMonth() === currentMonth && 
+                           orderDate.getFullYear() === currentYear;
+                })
+                .reduce((sum, order) => sum + (order.amount || 0), 0);
+            
+            const stats = {
+                totalOrders: orders.length,
+                monthlyRevenue: monthlyRevenue,
+                totalVendors: vendors.length,
+                totalEmployees: employees.length
+            };
+            
+            // Render all sections instantly
+            this.renderKPIs(stats);
+            this.renderVendorCategories(vendors);
+            this.renderCustomerSummary(customers);
+            this.renderFinancialOverview(orders, payments);
             this.renderWorkflowFromOrders(orders);
             this.renderOrdersTable(orders);
+            this.renderRecentActivity(orders);
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
-            // Show empty state
             this.renderKPIs();
             this.renderWorkflowFromOrders([]);
             this.renderOrdersTable([]);
+            this.renderRecentActivity([]);
         }
     }
 
@@ -255,6 +284,115 @@ class DashboardManager {
             </tr>
         `;
         }).join('');
+    }
+
+    renderRecentActivity(orders) {
+        const activityList = document.getElementById('recentActivity');
+        if (!activityList) return;
+        
+        if (!orders || orders.length === 0) {
+            activityList.innerHTML = '<div class="activity-item"><p>No recent activity</p></div>';
+            return;
+        }
+        
+        const recentOrders = orders
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 5);
+        
+        activityList.innerHTML = recentOrders.map(order => {
+            const timeAgo = this.getTimeAgo(order.createdAt);
+            const customerName = order.customer?.name || order.customer;
+            
+            return `
+                <div class="activity-item">
+                    <div class="activity-icon orders">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p>New order from ${customerName}</p>
+                        <span>${timeAgo}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    getTimeAgo(date) {
+        const now = new Date();
+        const past = new Date(date);
+        const diffMs = now - past;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    }
+
+    renderCustomerSummary(customers) {
+        const permanentCount = document.getElementById('permanentCustomers');
+        const oneTimeCount = document.getElementById('oneTimeCustomers');
+        
+        if (!customers || customers.length === 0) {
+            if (permanentCount) permanentCount.textContent = '0';
+            if (oneTimeCount) oneTimeCount.textContent = '0';
+            return;
+        }
+        
+        const permanent = customers.filter(c => c.customerType === 'permanent').length;
+        const oneTime = customers.filter(c => c.customerType === 'one-time').length;
+        
+        if (permanentCount) permanentCount.textContent = permanent;
+        if (oneTimeCount) oneTimeCount.textContent = oneTime;
+    }
+
+    renderVendorCategories(vendors) {
+        const electricalCount = document.getElementById('electricalVendors');
+        const plumbingCount = document.getElementById('plumbingVendors');
+        const civilCount = document.getElementById('civilVendors');
+        const carpentryCount = document.getElementById('carpentryVendors');
+        
+        if (!vendors || vendors.length === 0) {
+            if (electricalCount) electricalCount.textContent = '0';
+            if (plumbingCount) plumbingCount.textContent = '0';
+            if (civilCount) civilCount.textContent = '0';
+            if (carpentryCount) carpentryCount.textContent = '0';
+            return;
+        }
+        
+        const electrical = vendors.filter(v => v.category === 'electrical').length;
+        const plumbing = vendors.filter(v => v.category === 'plumbing').length;
+        const civil = vendors.filter(v => v.category === 'civil').length;
+        const carpentry = vendors.filter(v => v.category === 'carpentry').length;
+        
+        if (electricalCount) electricalCount.textContent = electrical;
+        if (plumbingCount) plumbingCount.textContent = plumbing;
+        if (civilCount) civilCount.textContent = civil;
+        if (carpentryCount) carpentryCount.textContent = carpentry;
+    }
+
+    renderFinancialOverview(orders, payments) {
+        const totalRevenueEl = document.getElementById('totalRevenue');
+        const pendingPaymentsEl = document.getElementById('pendingPayments');
+        const thisMonthRevenueEl = document.getElementById('thisMonthRevenue');
+        
+        const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
+        const pendingPayments = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + (p.amount || 0), 0);
+        
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const thisMonthRevenue = orders
+            .filter(order => {
+                const orderDate = new Date(order.createdAt);
+                return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+            })
+            .reduce((sum, order) => sum + (order.amount || 0), 0);
+        
+        if (totalRevenueEl) totalRevenueEl.textContent = `$${totalRevenue.toLocaleString()}`;
+        if (pendingPaymentsEl) pendingPaymentsEl.textContent = `$${pendingPayments.toLocaleString()}`;
+        if (thisMonthRevenueEl) thisMonthRevenueEl.textContent = `$${thisMonthRevenue.toLocaleString()}`;
     }
 
 

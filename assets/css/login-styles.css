@@ -6,16 +6,16 @@
 }
 
 :root {
-    --primary-blue: #3b82f6;
-    --primary-green: #10b981;
-    --primary-dark: #1e40af;
-    --dark-gray: #1f2937;
-    --medium-gray: #6b7280;
-    --light-gray: #f9fafb;
-    --border-gray: #e5e7eb;
-    --white: #ffffff;
-    --danger: #ef4444;
-    --success: #10b981;
+    --primary-blue: #0056B8;
+    --primary-green: #0056B8;
+    --primary-dark: #0056B8;
+    --dark-gray: #000000;
+    --medium-gray: #4A4A4A;
+    --light-gray: #F2F2F2;
+    --border-gray: #F2F2F2;
+    --white: #FFFFFF;
+    --danger: #000000;
+    --success: #0056B8;
 }
 
 body {
@@ -33,7 +33,7 @@ body {
 
 .login-image-section {
     flex: 1;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(16, 185, 129, 0.95)), 
+    background: linear-gradient(135deg, rgba(0, 86, 184, 0.95), rgba(0, 86, 184, 0.85)), 
                 url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80');
     background-size: cover;
     background-position: center;
@@ -112,28 +112,10 @@ body {
     margin-bottom: 32px;
 }
 
-.logo-circle {
-    width: 80px;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.logo-circle i {
-    font-size: 36px;
-    color: white;
-}
-
-.brand-logo h2 {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 0;
+.login-logo {
+    max-width: 200px;
+    height: auto;
+    object-fit: contain;
 }
 
 .brand-content > p {
@@ -213,7 +195,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+    background: var(--primary-blue);
     color: white;
     padding: 8px 16px;
     border-radius: 20px;
@@ -383,7 +365,7 @@ body {
 }
 
 .login-btn {
-    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-green) 100%);
+    background: var(--primary-blue);
     color: white;
     border: none;
     padding: 18px;
@@ -398,7 +380,7 @@ body {
     justify-content: center;
     gap: 8px;
     margin-top: 8px;
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 86, 184, 0.3);
     overflow: hidden;
 }
 
@@ -419,7 +401,7 @@ body {
 
 .login-btn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 12px 35px rgba(0, 86, 184, 0.4);
 }
 
 .login-btn:active {
@@ -505,17 +487,8 @@ body {
         padding: 30px 20px;
     }
     
-    .brand-logo h2 {
-        font-size: 24px;
-    }
-    
-    .logo-circle {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .logo-circle i {
-        font-size: 28px;
+    .login-logo {
+        max-width: 150px;
     }
     
     .brand-content > p {

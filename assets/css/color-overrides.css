@@ -1,0 +1,197 @@
+/* Hutta Color Theme Global Overrides */
+
+/* Menu hover - white text */
+.menu-item a:hover {
+    background-color: #0056B8 !important;
+    color: #FFFFFF !important;
+}
+
+.menu-item a:hover i,
+.menu-item a:hover span {
+    color: #FFFFFF !important;
+}
+
+/* All blue backgrounds must have white text */
+.btn-refresh,
+.btn-primary,
+.action-btn.view,
+.menu-item.active a,
+.notification-badge,
+.kpi-icon,
+.customer-avatar,
+.vendor-avatar,
+.employee-avatar,
+.order-icon,
+.project-icon,
+.payment-icon {
+    color: #FFFFFF !important;
+}
+
+.btn-refresh i,
+.btn-primary i,
+.action-btn.view i,
+.menu-item.active a i,
+.menu-item.active a span {
+    color: #FFFFFF !important;
+}
+
+/* Update all gradient backgrounds to solid primary blue */
+.kpi-icon.orders,
+.kpi-icon.projects,
+.kpi-icon.vendors,
+.kpi-icon.employees,
+.kpi-icon.revenue { 
+    background: #0056B8 !important; 
+}
+
+.customer-avatar,
+.vendor-avatar,
+.employee-avatar,
+.order-icon,
+.project-icon,
+.payment-icon { 
+    background: #0056B8 !important; 
+}
+
+/* Update all primary color references */
+.btn-refresh,
+.btn-primary,
+.action-btn.view {
+    background: #0056B8 !important;
+    box-shadow: 0 4px 12px rgba(0, 86, 184, 0.3) !important;
+}
+
+.btn-refresh:hover,
+.btn-primary:hover,
+.action-btn.view:hover {
+    background: #004494 !important;
+    box-shadow: 0 6px 20px rgba(0, 86, 184, 0.4) !important;
+}
+
+/* Menu active state */
+.menu-item.active a {
+    background-color: #0056B8 !important;
+    color: #FFFFFF !important;
+}
+
+/* Links and interactive elements */
+a, .customer-email {
+    color: #0056B8 !important;
+}
+
+a:hover, .customer-email:hover {
+    color: #004494 !important;
+}
+
+/* Status badges - keep primary blue for active/completed states */
+.status-badge.new,
+.order-status-badge.new,
+.customer-status-badge.active,
+.vendor-status-badge.active,
+.employee-status-badge.available,
+.payment-status-badge.completed {
+    background: #E6F0FF !important;
+    color: #0056B8 !important;
+    border: 1px solid #0056B8 !important;
+}
+
+/* Input focus states */
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: #0056B8 !important;
+    box-shadow: 0 0 0 4px rgba(0, 86, 184, 0.1) !important;
+}
+
+/* Progress bars and charts */
+.progress-fill,
+.mini-chart::after {
+    background: #0056B8 !important;
+}
+
+/* Stat values */
+.stat-value,
+.kpi-change.positive,
+.customer-orders-count,
+.customer-total-spent,
+.payment-amount {
+    color: #0056B8 !important;
+}
+
+/* Page header accents */
+#orders .page-header::before,
+#customers .page-header::before,
+#vendors .page-header::before,
+#employees .page-header::before,
+#projects .page-header::before {
+    background: #0056B8 !important;
+}
+
+#orders .page-header h1::before,
+#customers .page-header h1::before {
+    color: #0056B8 !important;
+    background: rgba(0, 86, 184, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(0, 86, 184, 0.15) !important;
+}
+
+/* Table hover effects */
+.orders-table tbody tr:hover,
+.customers-table tbody tr:hover,
+.vendors-table tbody tr:hover,
+.employees-table tbody tr:hover,
+.projects-table tbody tr:hover {
+    background: rgba(0, 86, 184, 0.03) !important;
+    box-shadow: -4px 0 0 #0056B8 !important;
+}
+
+/* Notification badge */
+.notification-badge {
+    background: #0056B8 !important;
+}
+
+/* Text colors */
+h1, h2, h3, h4, h5, h6,
+.admin-name,
+.customer-name,
+.vendor-name,
+.employee-name,
+.order-number,
+.project-name {
+    color: #000000 !important;
+}
+
+p, span, label,
+.admin-role,
+.customer-id,
+.vendor-id,
+.employee-id,
+.order-date,
+.project-id {
+    color: #4A4A4A !important;
+}
+
+/* Background colors */
+body,
+.main-content,
+.top-nav,
+.sidebar {
+    background-color: #FFFFFF !important;
+}
+
+.search-box input,
+.orders-search input,
+.customers-search input,
+.vendors-search input,
+.employees-search input,
+.projects-search input {
+    background-color: #F2F2F2 !important;
+}
+
+.search-box input:focus,
+.orders-search input:focus,
+.customers-search input:focus,
+.vendors-search input:focus,
+.employees-search input:focus,
+.projects-search input:focus {
+    background-color: #FFFFFF !important;
+}

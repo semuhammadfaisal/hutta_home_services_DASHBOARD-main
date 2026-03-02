@@ -14,17 +14,17 @@ body {
 
 /* Color Variables */
 :root {
-    --primary-blue: #2563eb;
-    --primary-green: #059669;
-    --light-blue: #dbeafe;
-    --light-green: #d1fae5;
-    --dark-gray: #374151;
-    --medium-gray: #6b7280;
-    --light-gray: #f3f4f6;
-    --white: #ffffff;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
+    --primary-blue: #0056B8;
+    --primary-green: #0056B8;
+    --light-blue: #E6F0FF;
+    --light-green: #E6F0FF;
+    --dark-gray: #000000;
+    --medium-gray: #4A4A4A;
+    --light-gray: #F2F2F2;
+    --white: #FFFFFF;
+    --success: #0056B8;
+    --warning: #0056B8;
+    --danger: #000000;
     --sidebar-width: 260px;
     --topnav-height: 70px;
 }
@@ -71,14 +71,12 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--primary-blue);
 }
 
-.logo i {
-    font-size: 24px;
-    color: var(--primary-green);
+.navbar-logo {
+    height: 45px;
+    width: auto;
+    object-fit: contain;
 }
 
 .nav-center {
@@ -299,8 +297,8 @@ body {
 }
 
 .menu-item a:hover {
-    background-color: var(--light-blue);
-    color: var(--primary-blue);
+    background-color: var(--primary-blue);
+    color: #FFFFFF !important;
 }
 
 .menu-item.active a {
@@ -604,7 +602,7 @@ body {
 
 .quick-actions {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
 }
 

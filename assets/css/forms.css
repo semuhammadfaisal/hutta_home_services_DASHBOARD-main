@@ -3,7 +3,7 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(12px);
     display: none;
     align-items: center;
@@ -53,7 +53,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    background: #0056B8;
 }
 
 .modal-header {
@@ -67,20 +67,14 @@
     margin: 0;
     font-size: 1.75rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #000000;
     display: flex;
     align-items: center;
     gap: 14px;
 }
 
 .modal-header h2 i {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #0056B8;
     font-size: 1.6rem;
 }
 
@@ -123,7 +117,7 @@
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+    background: #0056B8;
     border-radius: 4px;
 }
 
@@ -157,7 +151,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: #0056B8;
     color: #fff;
     border-radius: 10px;
     font-size: 1rem;
@@ -181,7 +175,7 @@
 }
 
 .form-group label i {
-    color: #6366f1;
+    color: #0056B8;
     font-size: 0.95rem;
 }
 
@@ -215,9 +209,9 @@
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #0056B8;
     background: #fafbff;
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08), 0 4px 12px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 4px rgba(0, 86, 184, 0.08), 0 4px 12px rgba(0, 86, 184, 0.1);
     transform: translateY(-1px);
 }
 
@@ -235,7 +229,7 @@
 .form-group select {
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%236366f1' d='M10 13l-5-5h10z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%230056B8' d='M10 13l-5-5h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     padding-right: 48px;
@@ -254,7 +248,7 @@
 }
 
 .form-group select[multiple] option:checked {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: #0056B8;
     color: #fff;
 }
 
@@ -316,13 +310,13 @@
 }
 
 .checkbox-label:hover .checkmark {
-    border-color: #6366f1;
+    border-color: #0056B8;
     background: #fafbff;
 }
 
 .checkbox-label input:checked ~ .checkmark {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    border-color: #6366f1;
+    background: #0056B8;
+    border-color: #0056B8;
     transform: scale(1.05);
 }
 
@@ -369,14 +363,14 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: #0056B8;
     color: #fff;
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 6px 20px rgba(0, 86, 184, 0.35);
 }
 
 .btn-primary:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45);
+    box-shadow: 0 10px 30px rgba(0, 86, 184, 0.45);
 }
 
 .btn-primary:active {
@@ -517,7 +511,7 @@
 }
 
 .toggle-switch input:checked + .toggle-slider {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: #0056B8;
 }
 
 .toggle-switch input:checked + .toggle-slider:before {
@@ -552,16 +546,13 @@
 }
 
 .file-upload-label:hover {
-    border-color: #6366f1;
+    border-color: #0056B8;
     background: linear-gradient(135deg, #fafbff 0%, #f5f3ff 100%);
 }
 
 .file-upload-label i {
     font-size: 3rem;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #0056B8;
 }
 
 .order-modal,
@@ -649,7 +640,7 @@
 }
 
 .form-group input[type="file"]:hover {
-    border-color: #6366f1;
+    border-color: #0056B8;
     background: #fafbff;
 }
 
@@ -672,7 +663,7 @@
 }
 
 .doc-item i {
-    color: #6366f1;
+    color: #0056B8;
 }
 
 .doc-item .remove-doc {
