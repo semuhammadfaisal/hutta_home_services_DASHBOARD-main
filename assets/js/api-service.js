@@ -7,6 +7,8 @@ class APIService {
             : `${window.location.origin}/api`;
         this.token = this.getToken();
         this.demoMode = false; // Disable demo mode - using real backend
+        this.requestCache = new Map();
+        this.pendingRequests = new Map();
         console.log('APIService initialized - Demo Mode:', this.demoMode);
         console.log('API Base URL:', this.baseURL);
     }
@@ -32,6 +34,20 @@ class APIService {
             return this.getMockResponse(endpoint, options);
         }
         
+        // Request deduplication - prevent duplicate simultaneous requests
+        const cacheKey = `${options.method || 'GET'}:${endpoint}`;
+        if (this.pendingRequests.has(cacheKey)) {
+            return this.pendingRequests.get(cacheKey);
+        }
+        
+        // Check cache for GET requests (2 minute TTL)
+        if (!options.method || options.method === 'GET') {
+            const cached = this.requestCache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < 2 * 60 * 1000) {
+                return cached.data;
+            }
+        }
+        
         console.log('Making request to:', `${this.baseURL}${endpoint}`);
         
         const url = `${this.baseURL}${endpoint}`;
@@ -49,48 +65,68 @@ class APIService {
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        try {
-            const response = await fetch(url, config);
-            
-            // Handle non-JSON responses
-            const contentType = response.headers.get('content-type');
-            let data;
-            
-            if (contentType && contentType.includes('application/json')) {
-                data = await response.json();
-            } else {
-                const text = await response.text();
-                console.error('Non-JSON response:', text);
-                data = { message: text || 'Server returned non-JSON response' };
-            }
-            
-            if (!response.ok) {
-                console.error('API Error Response:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: data
-                });
+        const requestPromise = (async () => {
+            try {
+                const response = await fetch(url, config);
                 
-                const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
-                throw new Error(errorMessage);
+                // Handle non-JSON responses
+                const contentType = response.headers.get('content-type');
+                let data;
+                
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    data = { message: text || 'Server returned non-JSON response' };
+                }
+                
+                if (!response.ok) {
+                    console.error('API Error Response:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: data
+                    });
+                    
+                    const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+                    throw new Error(errorMessage);
+                }
+                
+                // Cache successful GET requests
+                if (!options.method || options.method === 'GET') {
+                    this.requestCache.set(cacheKey, { data, timestamp: Date.now() });
+                } else {
+                    // Clear cache on mutations
+                    this.clearCache();
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                
+                // Provide more specific error messages
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    throw new Error('Network error: Unable to connect to server. Please check if the server is running.');
+                }
+                
+                // If it's already a formatted error, re-throw it
+                if (error.message && !error.message.includes('Failed to fetch')) {
+                    throw error;
+                }
+                
+                throw new Error('An unexpected error occurred. Please try again.');
+            } finally {
+                this.pendingRequests.delete(cacheKey);
             }
-            
-            return data;
-        } catch (error) {
-            console.error('API Error:', error);
-            
-            // Provide more specific error messages
-            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                throw new Error('Network error: Unable to connect to server. Please check if the server is running.');
-            }
-            
-            // If it's already a formatted error, re-throw it
-            if (error.message && !error.message.includes('Failed to fetch')) {
-                throw error;
-            }
-            
-            throw new Error('An unexpected error occurred. Please try again.');
-        }
+        })();
+        
+        this.pendingRequests.set(cacheKey, requestPromise);
+        return requestPromise;
+    }
+
+    clearCache() {
+        this.requestCache.clear();
+        sessionStorage.removeItem('dashboardCache');
     }
 
     getMockResponse(endpoint, options) {
@@ -408,6 +444,10 @@ class APIService {
         return this.request(`/employees/${id}`, {
             method: 'DELETE'
         });
+    }
+
+    async getEmployeeStats(id) {
+        return this.request(`/employees/${id}/stats`);
     }
 }
 

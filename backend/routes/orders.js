@@ -63,6 +63,7 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const orders = await Order.find()
       .populate('vendor', 'name category')
+      .populate('employee', 'name')
       .sort({ createdAt: -1 })
       .lean();
     
@@ -129,8 +130,17 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(500).json({ message: 'Unable to generate unique order ID' });
     }
     
+    // Generate work order number per customer (WO-01, WO-02, etc.)
+    const customerEmail = req.body.customer.email;
+    const customerOrderCount = await Order.countDocuments({ 
+      'customer.email': customerEmail,
+      workOrderNumber: { $exists: true } 
+    });
+    const workOrderNumber = `WO-${String(customerOrderCount + 1).padStart(2, '0')}`;
+    
     const order = new Order({
       orderId,
+      workOrderNumber,
       customer: {
         name: req.body.customer.name,
         email: req.body.customer.email,
@@ -152,8 +162,12 @@ router.post('/', authenticateToken, async (req, res) => {
       order.vendor = req.body.vendor;
     }
     
+    if (req.body.employee && mongoose.Types.ObjectId.isValid(req.body.employee)) {
+      order.employee = req.body.employee;
+    }
+    
     await order.save();
-    console.log('ORDER SAVED:', order._id, 'with ID:', orderId);
+    console.log('ORDER SAVED:', order._id, 'with ID:', orderId, 'WO:', workOrderNumber);
     
     res.status(201).json(order);
   } catch (error) {

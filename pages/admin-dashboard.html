@@ -450,13 +450,105 @@
             </div>
         </section>
 
+
+<!-- ORDER DETAIL SECTION - ADD THIS AFTER THE ORDERS SECTION (after line 450) -->
+
+        <!-- Order Detail Section -->
+        <section id="order-detail" class="content-section">
+            <div class="page-header">
+                <button class="btn-secondary" onclick="backToOrders()">
+                    <i class="fas fa-arrow-left"></i> Back to Orders
+                </button>
+                <h1 id="orderDetailTitle">Order Details</h1>
+            </div>
+            
+            <div class="detail-container">
+                <div class="detail-info-card">
+                    <h3>Order Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Order ID:</label>
+                            <span id="detailOrderId">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Status:</label>
+                            <span id="detailOrderStatus">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Priority:</label>
+                            <span id="detailOrderPriority">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Amount:</label>
+                            <span id="detailOrderAmount">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Service:</label>
+                            <span id="detailOrderService">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Vendor:</label>
+                            <span id="detailOrderVendor">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Start Date:</label>
+                            <span id="detailOrderStartDate">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>End Date:</label>
+                            <span id="detailOrderEndDate">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-info-card">
+                    <h3>Customer Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Name:</label>
+                            <span id="detailOrderCustomerName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Email:</label>
+                            <span id="detailOrderCustomerEmail">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Phone:</label>
+                            <span id="detailOrderCustomerPhone">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Address:</label>
+                            <span id="detailOrderCustomerAddress">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-info-card">
+                    <h3>Description & Notes</h3>
+                    <div class="info-item full-width">
+                        <label>Description:</label>
+                        <p id="detailOrderDescription" style="margin-top: 8px; line-height: 1.6;">-</p>
+                    </div>
+                    <div class="info-item full-width" style="margin-top: 16px;">
+                        <label>Notes:</label>
+                        <p id="detailOrderNotes" style="margin-top: 8px; line-height: 1.6;">-</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Other sections (simplified for brevity) -->
         <section id="customers" class="content-section">
             <div class="page-header">
                 <h1>Customers</h1>
-                <button class="btn-primary" onclick="showAddCustomerModal()">
-                    <i class="fas fa-user-plus"></i> Add Customer
-                </button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn-secondary" onclick="importCustomersFromCSV()" style="white-space: nowrap;">
+                        <i class="fas fa-file-csv"></i> Import CSV
+                    </button>
+                    <button class="btn-primary" onclick="showAddCustomerModal()" style="white-space: nowrap;">
+                        <i class="fas fa-user-plus"></i> Add Customer
+                    </button>
+                </div>
             </div>
             
             <!-- Customers Toolbar -->
@@ -538,10 +630,6 @@
                         <div class="info-item">
                             <label>Address:</label>
                             <span id="profileAddress">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>City:</label>
-                            <span id="profileCity">-</span>
                         </div>
                         <div class="info-item">
                             <label>Type:</label>
@@ -864,6 +952,32 @@
                         <div class="info-item full-width">
                             <label>Skills:</label>
                             <span id="detailEmployeeSkills">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-info-card">
+                    <h3><i class="fas fa-chart-line"></i> Performance Stats</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Total Orders:</label>
+                            <span id="employeeTotalOrders" style="font-weight: 600; color: #3b82f6;">0</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Active Orders:</label>
+                            <span id="employeeActiveOrders" style="font-weight: 600; color: #f59e0b;">0</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Completed Orders:</label>
+                            <span id="employeeCompletedOrders" style="font-weight: 600; color: #10b981;">0</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Revenue:</label>
+                            <span id="employeeTotalRevenue" style="font-weight: 600; color: #3b82f6;">$0</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Profit:</label>
+                            <span id="employeeTotalProfit" style="font-weight: 600; color: #10b981;">$0</span>
                         </div>
                     </div>
                 </div>
@@ -1893,6 +2007,15 @@
                             </select>
                         </div>
                         <div class="form-group">
+                            <label for="employee">Assign Employee</label>
+                            <select id="employee">
+                                <option value="">Select Employee</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="status">Status</label>
                             <select id="status">
                                 <option value="new">New</option>
@@ -1902,9 +2025,6 @@
                                 <option value="delayed">Delayed</option>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="form-row">
                         <div class="form-group">
                             <label for="priority">Priority</label>
                             <select id="priority">
@@ -1912,8 +2032,6 @@
                                 <option value="medium" selected>Medium</option>
                                 <option value="high">High</option>
                             </select>
-                        </div>
-                        <div class="form-group">
                         </div>
                     </div>
                     
@@ -2254,24 +2372,17 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="customerAddressField">Address</label>
-                        <textarea id="customerAddressField" rows="2"></textarea>
+                        <label for="customerAddressField_0">Address</label>
+                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2"></textarea>
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="customerCity">City</label>
-                            <input type="text" id="customerCity">
-                        </div>
-                        <div class="form-group">
-                            <label for="customerState">State</label>
-                            <input type="text" id="customerState">
-                        </div>
-                        <div class="form-group">
-                            <label for="customerZip">Zip Code</label>
-                            <input type="text" id="customerZip">
-                        </div>
+                    <div style="margin: 20px 0;">
+                        <button type="button" class="btn-secondary" onclick="addPhysicalAddress()" style="width: 100%;">
+                            <i class="fas fa-plus"></i> Add Physical Address
+                        </button>
                     </div>
+                    
+                    <div id="addressesContainer"></div>
                     
                     <div class="form-group">
                         <label for="customerStatus">Status</label>

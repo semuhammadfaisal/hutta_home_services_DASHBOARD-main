@@ -38,13 +38,33 @@ hutta_home_ervices/
 - **Customer management** (supports multiple locations with shared email)
 - Vendor management
 - Employee management
+- **Employee order assignment with performance tracking**
 - Project tracking
 - Payment processing
 - Reporting system
 
 ## Recent Updates
 
-### Customer Management Enhancement (Latest)
+### Employee Order Assignment (Latest)
+
+The order management system now supports:
+
+1. **Employee assignment to orders**
+   - Dropdown to select employee when creating/editing orders
+   - Track which employee is responsible for each order
+
+2. **Employee performance statistics**
+   - Total orders assigned
+   - Total revenue generated
+   - Total profit (Amount - Vendor Cost)
+   - Active and completed order counts
+   - All stats calculated dynamically from database
+
+**Documentation:**
+- 📘 Full Guide: [EMPLOYEE_ORDER_ASSIGNMENT.md](EMPLOYEE_ORDER_ASSIGNMENT.md)
+- 🚀 Quick Reference: [EMPLOYEE_ASSIGNMENT_QUICK_REF.md](EMPLOYEE_ASSIGNMENT_QUICK_REF.md)
+
+### Customer Management Enhancement
 
 The customer management system now supports:
 

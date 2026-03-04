@@ -13,6 +13,32 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Get employee performance stats - MUST BE BEFORE /:id
+router.get('/:id/stats', authenticateToken, async (req, res) => {
+  try {
+    const Order = require('../models/Order');
+    const employeeId = req.params.id;
+    
+    const orders = await Order.find({ employee: employeeId });
+    
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
+    const totalProfit = orders.reduce((sum, order) => sum + ((order.amount || 0) - (order.vendorCost || 0)), 0);
+    const activeOrders = orders.filter(o => ['new', 'in-progress'].includes(o.status)).length;
+    const completedOrders = orders.filter(o => o.status === 'completed').length;
+    
+    res.json({
+      totalOrders,
+      totalRevenue,
+      totalProfit,
+      activeOrders,
+      completedOrders
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get single employee
 router.get('/:id', authenticateToken, async (req, res) => {
   try {

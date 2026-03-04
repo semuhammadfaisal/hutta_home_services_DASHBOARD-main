@@ -262,5 +262,111 @@ async function importEmployeesFromCSV() {
     input.click();
 }
 
+// Map CSV customer type to valid customer type
+function mapCustomerType(type) {
+    const typeMap = {
+        'permanent': 'permanent',
+        'one-time': 'one-time',
+        'onetime': 'one-time',
+        'recurring': 'permanent',
+        'regular': 'permanent',
+        'single': 'one-time'
+    };
+    
+    const normalized = type?.toLowerCase().trim();
+    return typeMap[normalized] || 'one-time';
+}
+
+// Map CSV customer status to valid status
+function mapCustomerStatus(status) {
+    const statusMap = {
+        'active': 'active',
+        'inactive': 'inactive',
+        'disabled': 'inactive'
+    };
+    
+    const normalized = status?.toLowerCase().trim();
+    return statusMap[normalized] || 'active';
+}
+
+async function importCustomersFromCSV() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            const text = await file.text();
+            const customers = parseCSV(text);
+            
+            if (customers.length === 0) {
+                showToast('No data found in CSV file', 'error');
+                return;
+            }
+            
+            showToast(`Processing ${customers.length} customers...`, 'info');
+            
+            let successCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            
+            for (const customer of customers) {
+                try {
+                    const customerData = {
+                        name: customer.name || customer['customer name'],
+                        email: customer.email,
+                        phone: customer.phone || customer['phone number'],
+                        address: customer.address,
+                        city: customer.city,
+                        state: customer.state,
+                        zip: customer.zip || customer.zipcode || customer['zip code'],
+                        type: mapCustomerType(customer.type || customer['customer type']),
+                        status: mapCustomerStatus(customer.status),
+                        notes: customer.notes || ''
+                    };
+                    
+                    console.log('Importing customer:', customerData);
+                    
+                    if (!customerData.name || !customerData.email) {
+                        errors.push(`Row skipped: Missing name or email`);
+                        errorCount++;
+                        continue;
+                    }
+                    
+                    const result = await window.APIService.createCustomer(customerData);
+                    console.log('Customer created:', result);
+                    successCount++;
+                } catch (error) {
+                    console.error('Failed to import customer:', customer.name, error);
+                    errors.push(`${customer.name || 'Unknown'}: ${error.message}`);
+                    errorCount++;
+                }
+            }
+            
+            if (errors.length > 0) {
+                console.log('Import errors:', errors);
+            }
+            
+            if (successCount > 0) {
+                showToast(`Imported ${successCount} customers successfully. ${errorCount} failed.`, 'success');
+                if (typeof refreshCustomers === 'function') {
+                    await refreshCustomers();
+                }
+            } else {
+                showToast(`Failed to import customers. ${errorCount} errors. Check console for details.`, 'error');
+            }
+        } catch (error) {
+            console.error('CSV import error:', error);
+            showToast('Failed to read CSV file: ' + error.message, 'error');
+        }
+    };
+    
+    input.click();
+}
+
 window.importVendorsFromCSV = importVendorsFromCSV;
 window.importEmployeesFromCSV = importEmployeesFromCSV;
+window.importCustomersFromCSV = importCustomersFromCSV;

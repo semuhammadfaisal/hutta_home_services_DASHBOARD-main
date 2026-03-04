@@ -1,0 +1,5 @@
+name,email,phone,address,city,state,zip,type,status,notes
+John Smith,john.smith@example.com,555-0101,123 Main St,Springfield,IL,62701,permanent,active,Regular customer
+Jane Doe,jane.doe@example.com,555-0102,456 Oak Ave,Chicago,IL,60601,one-time,active,Single project
+ABC Corp,contact@abccorp.com,555-0103,789 Business Blvd,Naperville,IL,60540,permanent,active,Corporate client
+Mike Johnson,mike.j@email.com,555-0104,321 Elm St,Peoria,IL,61602,one-time,inactive,Completed project

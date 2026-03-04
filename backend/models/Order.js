@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
+  workOrderNumber: { type: String },
   customer: {
     name: { type: String, required: true },
     email: { type: String, required: true },
@@ -12,6 +13,7 @@ const orderSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   vendorCost: { type: Number, default: 0 },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
+  employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
   status: { type: String, default: 'new' },

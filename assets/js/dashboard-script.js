@@ -38,6 +38,7 @@ class DashboardManager {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetSection = item.getAttribute('data-section');
+                console.log('Menu clicked:', targetSection);
                 this.showSection(targetSection);
                 
                 // Load section-specific data
@@ -99,14 +100,25 @@ class DashboardManager {
 
     async renderDashboard() {
         try {
+            // Show loading state immediately
+            this.showLoadingState();
+            
+            // Check cache first (5 minute TTL)
+            const cached = this.getCachedData();
+            if (cached) {
+                this.renderFromCache(cached);
+            }
+            
             // Load all data in parallel for instant display
             const [orders, vendors, employees, customers, payments] = await Promise.all([
-                window.APIService.getOrders(),
+                window.APIService.getOrders().catch(err => { console.error('Orders error:', err); return []; }),
                 window.APIService.getVendors().catch(() => []),
                 window.APIService.getEmployees().catch(() => []),
                 window.APIService.getCustomers().catch(() => []),
                 window.APIService.getPayments().catch(() => [])
             ]);
+            
+            console.log('Dashboard data loaded:', { orders: orders.length, vendors: vendors.length, employees: employees.length });
             
             // Calculate stats from orders
             const currentMonth = new Date().getMonth();
@@ -126,6 +138,9 @@ class DashboardManager {
                 totalEmployees: employees.length
             };
             
+            // Cache the data
+            this.cacheData({ orders, vendors, employees, customers, payments, stats });
+            
             // Render all sections instantly
             this.renderKPIs(stats);
             this.renderVendorCategories(vendors);
@@ -134,13 +149,61 @@ class DashboardManager {
             this.renderWorkflowFromOrders(orders);
             this.renderOrdersTable(orders);
             this.renderRecentActivity(orders);
+            
+            console.log('Orders table rendered with', orders.length, 'orders');
+            this.hideLoadingState();
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
+            this.hideLoadingState();
             this.renderKPIs();
             this.renderWorkflowFromOrders([]);
             this.renderOrdersTable([]);
             this.renderRecentActivity([]);
         }
+    }
+
+    getCachedData() {
+        const cached = sessionStorage.getItem('dashboardCache');
+        if (!cached) return null;
+        
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        
+        // Cache valid for 5 minutes
+        if (age < 5 * 60 * 1000) {
+            return data;
+        }
+        return null;
+    }
+
+    cacheData(data) {
+        sessionStorage.setItem('dashboardCache', JSON.stringify({
+            data,
+            timestamp: Date.now()
+        }));
+    }
+
+    renderFromCache(cached) {
+        console.log('Rendering from cache:', cached);
+        this.renderKPIs(cached.stats);
+        this.renderVendorCategories(cached.vendors);
+        this.renderCustomerSummary(cached.customers);
+        this.renderFinancialOverview(cached.orders, cached.payments);
+        this.renderWorkflowFromOrders(cached.orders);
+        this.renderOrdersTable(cached.orders);
+        this.renderRecentActivity(cached.orders);
+    }
+
+    showLoadingState() {
+        const kpis = ['totalOrders', 'monthlyRevenue', 'totalVendors', 'totalEmployees'];
+        kpis.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<div class="skeleton-loader"></div>';
+        });
+    }
+
+    hideLoadingState() {
+        // Loading state is replaced by actual content
     }
 
     renderKPIs(stats = null) {
@@ -218,6 +281,8 @@ class DashboardManager {
     renderOrdersTable(orders = null) {
         const tbody = document.getElementById('ordersTableBody');
         const ordersData = orders || this.data.orders;
+        
+        console.log('renderOrdersTable called with:', ordersData ? ordersData.length : 0, 'orders');
         
         // Update stats
         updateOrderStats(ordersData);
@@ -746,6 +811,7 @@ function initializeLogout() {
 let currentOrderId = null;
 let vendors = [];
 let orderCustomers = [];
+let employees = [];
 
 async function loadVendors() {
     try {
@@ -755,6 +821,17 @@ async function loadVendors() {
             vendors.map(vendor => `<option value="${vendor._id}">${vendor.name} (${vendor.category})</option>`).join('');
     } catch (error) {
         console.error('Failed to load vendors:', error);
+    }
+}
+
+async function loadEmployees() {
+    try {
+        employees = await window.APIService.getEmployees();
+        const employeeSelect = document.getElementById('employee');
+        employeeSelect.innerHTML = '<option value="">Select Employee</option>' +
+            employees.map(emp => `<option value="${emp._id}">${emp.name} - ${emp.role.replace('-', ' ')}</option>`).join('');
+    } catch (error) {
+        console.error('Failed to load employees:', error);
     }
 }
 
@@ -821,6 +898,7 @@ function showAddOrderModal() {
     document.getElementById('startDate').value = today;
     
     loadVendors();
+    loadEmployees();
     loadOrderCustomers();
     document.getElementById('orderModal').classList.add('show');
 }
@@ -834,6 +912,7 @@ async function editOrder(orderId) {
         
         // Load customers and vendors first
         await loadVendors();
+        await loadEmployees();
         await loadOrderCustomers();
         
         // Populate form
@@ -855,6 +934,10 @@ async function editOrder(orderId) {
         
         if (order.vendor) {
             document.getElementById('vendor').value = order.vendor._id || order.vendor;
+        }
+        
+        if (order.employee) {
+            document.getElementById('employee').value = order.employee._id || order.employee;
         }
         
         document.getElementById('orderModal').classList.add('show');
@@ -885,6 +968,7 @@ async function saveOrder() {
         amount: parseFloat(document.getElementById('amount').value),
         vendorCost: parseFloat(document.getElementById('vendorCost').value) || 0,
         vendor: document.getElementById('vendor').value || null,
+        employee: document.getElementById('employee').value || null,
         startDate: document.getElementById('startDate').value,
         endDate: document.getElementById('endDate').value,
         status: document.getElementById('status').value || 'new',
@@ -927,14 +1011,44 @@ async function deleteOrder(orderId) {
 }
 
 function viewOrder(orderId) {
-    editOrder(orderId);
-    // Make form read-only
-    const inputs = document.querySelectorAll('#orderForm input, #orderForm select, #orderForm textarea');
-    inputs.forEach(input => input.disabled = true);
-    
-    document.getElementById('orderModalTitle').textContent = 'View Order';
-    document.querySelector('.modal-footer .btn-primary').style.display = 'none';
+    showOrderDetail(orderId);
 }
+
+async function showOrderDetail(orderId) {
+    try {
+        const order = await window.APIService.getOrder(orderId);
+        
+        document.getElementById('orderDetailTitle').textContent = `Order ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
+        document.getElementById('detailOrderId').textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
+        document.getElementById('detailOrderStatus').innerHTML = `<span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>`;
+        document.getElementById('detailOrderPriority').innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
+        document.getElementById('detailOrderAmount').textContent = '$' + (order.amount?.toLocaleString() || '0');
+        document.getElementById('detailOrderService').textContent = order.service || '-';
+        document.getElementById('detailOrderVendor').textContent = order.vendor?.name || 'N/A';
+        document.getElementById('detailOrderStartDate').textContent = order.startDate ? new Date(order.startDate).toLocaleDateString() : '-';
+        document.getElementById('detailOrderEndDate').textContent = order.endDate ? new Date(order.endDate).toLocaleDateString() : '-';
+        
+        document.getElementById('detailOrderCustomerName').textContent = order.customer?.name || order.customer || '-';
+        document.getElementById('detailOrderCustomerEmail').textContent = order.customer?.email || '-';
+        document.getElementById('detailOrderCustomerPhone').textContent = order.customer?.phone || '-';
+        document.getElementById('detailOrderCustomerAddress').textContent = order.customer?.address || '-';
+        
+        document.getElementById('detailOrderDescription').textContent = order.description || 'No description provided';
+        document.getElementById('detailOrderNotes').textContent = order.notes || 'No notes';
+        
+        showSection('order-detail');
+    } catch (error) {
+        console.error('Failed to load order details:', error);
+        showToast('Failed to load order details: ' + error.message, 'error');
+    }
+}
+
+function backToOrders() {
+    showSection('orders');
+}
+
+window.showOrderDetail = showOrderDetail;
+window.backToOrders = backToOrders;
 
 function closeOrderModal() {
     document.getElementById('orderModal').classList.remove('show');
@@ -954,10 +1068,13 @@ async function refreshOrders() {
         const orders = await window.APIService.getOrders();
         window.dashboard.renderOrdersTable(orders);
         
-        // Refresh dashboard stats after order changes
-        const stats = await window.APIService.getOrderStats();
-        window.dashboard.renderKPIs(stats);
-        window.dashboard.renderWorkflowFromOrders(orders);
+        // Refresh dashboard stats after order changes (debounced)
+        clearTimeout(window.statsRefreshTimer);
+        window.statsRefreshTimer = setTimeout(async () => {
+            const stats = await window.APIService.getOrderStats();
+            window.dashboard.renderKPIs(stats);
+            window.dashboard.renderWorkflowFromOrders(orders);
+        }, 300);
     } catch (error) {
         console.error('Failed to refresh orders:', error);
     } finally {
@@ -1502,12 +1619,15 @@ async function deleteEmployee(employeeId) {
 }
 
 function viewEmployee(employeeId) {
+    console.log('viewEmployee called with ID:', employeeId);
     showEmployeeDetail(employeeId);
 }
 
 async function showEmployeeDetail(employeeId) {
     try {
+        console.log('Loading employee details for:', employeeId);
         const employee = await window.APIService.getEmployee(employeeId);
+        console.log('Employee data loaded:', employee);
         
         document.getElementById('employeeDetailName').textContent = employee.name;
         document.getElementById('detailEmployeeEmail').textContent = employee.email || '-';
@@ -1518,6 +1638,28 @@ async function showEmployeeDetail(employeeId) {
         document.getElementById('detailEmployeeHireDate').textContent = employee.hireDate ? new Date(employee.hireDate).toLocaleDateString() : '-';
         document.getElementById('detailEmployeeAddress').textContent = employee.address || '-';
         document.getElementById('detailEmployeeSkills').textContent = employee.skills && employee.skills.length > 0 ? employee.skills.join(', ') : '-';
+        
+        // Load performance stats
+        console.log('Loading employee stats...');
+        const stats = await window.APIService.getEmployeeStats(employeeId);
+        console.log('Stats loaded:', stats);
+        console.log('Stats breakdown:', {
+            totalOrders: stats.totalOrders,
+            totalRevenue: stats.totalRevenue,
+            totalProfit: stats.totalProfit,
+            activeOrders: stats.activeOrders,
+            completedOrders: stats.completedOrders
+        });
+        document.getElementById('employeeTotalOrders').textContent = stats.totalOrders || 0;
+        document.getElementById('employeeActiveOrders').textContent = stats.activeOrders || 0;
+        document.getElementById('employeeCompletedOrders').textContent = stats.completedOrders || 0;
+        document.getElementById('employeeTotalRevenue').textContent = `$${(stats.totalRevenue || 0).toLocaleString()}`;
+        document.getElementById('employeeTotalProfit').textContent = `$${(stats.totalProfit || 0).toLocaleString()}`;
+        
+        // Show message if no orders assigned
+        if (stats.totalOrders === 0) {
+            console.log('No orders assigned to this employee yet');
+        }
         
         const docsList = document.getElementById('employeeDocumentsList');
         if (employee.documents && employee.documents.length > 0) {
@@ -1546,6 +1688,7 @@ async function showEmployeeDetail(employeeId) {
             docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
         }
         
+        console.log('Showing employee-detail section');
         showSection('employee-detail');
     } catch (error) {
         console.error('Failed to load employee details:', error);
@@ -1993,11 +2136,49 @@ window.saveVendor = saveVendor;
 
 // Customer Management Functions
 let currentCustomerId = null;
+let addressCounter = 1;
+
+function addPhysicalAddress() {
+    const container = document.getElementById('addressesContainer');
+    const newAddressGroup = document.createElement('div');
+    newAddressGroup.className = 'address-group';
+    newAddressGroup.setAttribute('data-address-index', addressCounter);
+    newAddressGroup.style.marginTop = '20px';
+    newAddressGroup.style.paddingTop = '20px';
+    newAddressGroup.style.borderTop = '1px solid #e5e7eb';
+    newAddressGroup.style.position = 'relative';
+    
+    newAddressGroup.innerHTML = `
+        <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${addressCounter})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+            <i class="fas fa-times"></i> Remove
+        </button>
+        <div class="form-group">
+            <label for="customerAddressField_${addressCounter}">Address ${addressCounter + 1}</label>
+            <textarea id="customerAddressField_${addressCounter}" class="customer-address-field" rows="2"></textarea>
+        </div>
+    `;
+    
+    container.appendChild(newAddressGroup);
+    addressCounter++;
+}
+
+function removePhysicalAddress(index) {
+    const addressGroup = document.querySelector(`[data-address-index="${index}"]`);
+    if (addressGroup) {
+        addressGroup.remove();
+    }
+}
 
 function showAddCustomerModal() {
     currentCustomerId = null;
+    addressCounter = 1;
     document.getElementById('customerModalTitle').textContent = 'Add New Customer';
     document.getElementById('customerForm').reset();
+    
+    // Clear the addresses container
+    const container = document.getElementById('addressesContainer');
+    container.innerHTML = '';
+    
     document.getElementById('customerModal').classList.add('show');
 }
 
@@ -2008,17 +2189,70 @@ async function editCustomer(customerId) {
         
         document.getElementById('customerModalTitle').textContent = 'Edit Customer';
         
-        // Populate form
+        // Populate basic fields
         document.getElementById('customerNameField').value = customer.name || '';
         document.getElementById('customerEmailField').value = customer.email || '';
         document.getElementById('customerPhoneField').value = customer.phone || '';
-        document.getElementById('customerAddressField').value = customer.address || '';
-        document.getElementById('customerCity').value = customer.city || '';
-        document.getElementById('customerState').value = customer.state || '';
-        document.getElementById('customerZip').value = customer.zipCode || '';
         document.getElementById('customerType').value = customer.customerType || 'one-time';
         document.getElementById('customerStatus').value = customer.status || 'active';
         document.getElementById('customerNotes').value = customer.notes || '';
+        
+        // Reset and populate addresses
+        addressCounter = 1;
+        const container = document.getElementById('addressesContainer');
+        container.innerHTML = '';
+        
+        if (customer.addresses && customer.addresses.length > 0) {
+            customer.addresses.forEach((addr, index) => {
+                const addressGroup = document.createElement('div');
+                addressGroup.className = 'address-group';
+                addressGroup.setAttribute('data-address-index', index);
+                if (index > 0) {
+                    addressGroup.style.marginTop = '20px';
+                    addressGroup.style.paddingTop = '20px';
+                    addressGroup.style.borderTop = '1px solid #e5e7eb';
+                    addressGroup.style.position = 'relative';
+                }
+                
+                addressGroup.innerHTML = `
+                    ${index > 0 ? `<button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-times"></i> Remove
+                    </button>` : ''}
+                    <div class="form-group">
+                        <label for="customerAddressField_${index}">Address${index > 0 ? ' ' + (index + 1) : ''}</label>
+                        <textarea id="customerAddressField_${index}" class="customer-address-field" rows="2">${addr.address || ''}</textarea>
+                    </div>
+                `;
+                
+                container.appendChild(addressGroup);
+            });
+            addressCounter = customer.addresses.length;
+        } else {
+            // No addresses, show default empty address
+            container.innerHTML = `
+                <div class="address-group" data-address-index="0">
+                    <div class="form-group">
+                        <label for="customerAddressField_0">Address</label>
+                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2">${customer.address || ''}</textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerCity_0">City</label>
+                            <input type="text" id="customerCity_0" class="customer-city-field" value="${customer.city || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerState_0">State</label>
+                            <input type="text" id="customerState_0" class="customer-state-field" value="${customer.state || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerZip_0">Zip Code</label>
+                            <input type="text" id="customerZip_0" class="customer-zip-field" value="${customer.zipCode || ''}">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
         
         document.getElementById('customerModal').classList.add('show');
     } catch (error) {
@@ -2033,29 +2267,56 @@ async function saveCustomer() {
         return;
     }
     
+    // Collect all addresses
+    const addresses = [];
+    
+    // First address (index 0) - just the address field
+    const address0 = document.getElementById('customerAddressField_0')?.value;
+    if (address0) {
+        addresses.push({
+            label: 'Primary',
+            address: address0,
+            city: '',
+            state: '',
+            zipCode: '',
+            isPrimary: true
+        });
+    }
+    
+    // Additional addresses (inside container)
+    const addressGroups = document.querySelectorAll('#addressesContainer .address-group');
+    addressGroups.forEach((group) => {
+        const addressIndex = group.getAttribute('data-address-index');
+        const address = document.getElementById(`customerAddressField_${addressIndex}`)?.value;
+        
+        if (address) {
+            addresses.push({
+                label: `Address ${addresses.length + 1}`,
+                address: address || '',
+                city: '',
+                state: '',
+                zipCode: '',
+                isPrimary: false
+            });
+        }
+    });
+    
     const customerData = {
         name: document.getElementById('customerNameField').value,
         email: document.getElementById('customerEmailField').value,
         phone: document.getElementById('customerPhoneField').value,
-        address: document.getElementById('customerAddressField').value,
-        city: document.getElementById('customerCity').value,
-        state: document.getElementById('customerState').value,
-        zipCode: document.getElementById('customerZip').value,
         customerType: document.getElementById('customerType').value,
         status: document.getElementById('customerStatus').value,
-        notes: document.getElementById('customerNotes').value
+        notes: document.getElementById('customerNotes').value,
+        addresses: addresses
     };
     
-    // Build addresses array from primary address fields
-    if (customerData.address || customerData.city || customerData.state || customerData.zipCode) {
-        customerData.addresses = [{
-            label: 'Primary',
-            address: customerData.address,
-            city: customerData.city,
-            state: customerData.state,
-            zipCode: customerData.zipCode,
-            isPrimary: true
-        }];
+    // For backward compatibility, set primary address fields
+    if (addresses.length > 0) {
+        customerData.address = addresses[0].address;
+        customerData.city = addresses[0].city;
+        customerData.state = addresses[0].state;
+        customerData.zipCode = addresses[0].zipCode;
     }
     
     try {
@@ -2120,8 +2381,17 @@ async function showCustomerProfile(customerId) {
         document.getElementById('customerProfileName').textContent = profileData.customer.name;
         document.getElementById('profileEmail').textContent = profileData.customer.email || '-';
         document.getElementById('profilePhone').textContent = profileData.customer.phone || '-';
-        document.getElementById('profileAddress').textContent = profileData.customer.address || '-';
-        document.getElementById('profileCity').textContent = profileData.customer.city || '-';
+        
+        // Display all addresses
+        const addressElement = document.getElementById('profileAddress');
+        if (profileData.customer.addresses && profileData.customer.addresses.length > 0) {
+            addressElement.innerHTML = profileData.customer.addresses.map((addr, index) => 
+                `<div style="margin-bottom: ${index < profileData.customer.addresses.length - 1 ? '10px' : '0'};"><strong>${addr.label || 'Address ' + (index + 1)}:</strong> ${addr.address || '-'}</div>`
+            ).join('');
+        } else {
+            addressElement.textContent = profileData.customer.address || '-';
+        }
+        
         document.getElementById('profileType').textContent = profileData.customer.customerType || '-';
         document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
         
@@ -2380,6 +2650,8 @@ window.showAddCustomerModal = showAddCustomerModal;
 window.closeCustomerModal = closeCustomerModal;
 window.saveCustomer = saveCustomer;
 window.backToCustomers = backToCustomers;
+window.addPhysicalAddress = addPhysicalAddress;
+window.removePhysicalAddress = removePhysicalAddress;
 
 // Global functions for button clicks
 window.viewOrder = viewOrder;
@@ -2406,10 +2678,12 @@ let allOrders = [];
 
 async function loadOrdersSection() {
     try {
+        console.log('loadOrdersSection called');
         if (window.ordersLoading) return; // Prevent duplicate calls
         window.ordersLoading = true;
         
         allOrders = await window.APIService.getOrders();
+        console.log('Orders loaded:', allOrders.length);
         window.dashboard.renderOrdersTable(allOrders);
         initializeOrderFilters();
     } catch (error) {
