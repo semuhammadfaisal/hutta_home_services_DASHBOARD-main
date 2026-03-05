@@ -103,6 +103,14 @@ function loadStages() {
             deleteRecord(deleteBtn.dataset.recordId);
             return;
         }
+        
+        // Expand stage button
+        const expandBtn = e.target.closest('.expand-stage-btn');
+        if (expandBtn) {
+            e.stopPropagation();
+            expandStage(expandBtn.dataset.stageId);
+            return;
+        }
     });
     
     // Add drag event delegation
@@ -131,6 +139,7 @@ function createStageColumn(stage) {
         <div class="stage-title">
             <h3>${stage.name}</h3>
             <div class="stage-actions">
+                <button class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
                 <button class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
                 <button class="icon-btn delete delete-stage-btn" data-stage-id="${stage._id}" title="Delete Stage"><i class="fas fa-trash"></i></button>
             </div>
@@ -752,3 +761,134 @@ window.addEventListener('click', (event) => {
 // Make functions globally accessible
 window.searchCustomers = searchCustomers;
 window.selectCustomer = selectCustomer;
+
+// Expand Stage Function
+async function expandStage(stageId) {
+    const stage = stages.find(s => s._id === stageId);
+    if (!stage) return;
+    
+    const stageRecords = records.filter(r => r.stageId === stageId);
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay show';
+    modal.id = 'expandedStageModal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 1400px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2><i class="fas fa-expand-alt"></i> ${stage.name} - All Orders (${stageRecords.length})</h2>
+                <button class="modal-close" onclick="closeExpandedStage()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                ${stageRecords.length === 0 ? 
+                    '<p style="text-align: center; color: #999; padding: 40px;">No orders in this stage</p>' :
+                    `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 20px;">
+                        ${stageRecords.map(record => `
+                            <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                                    <div>
+                                        <h3 style="margin: 0 0 5px 0; font-size: 18px; color: #1f2937;">${record.customerName}</h3>
+                                        <span class="priority-badge priority-${record.priority}" style="font-size: 11px;">${record.priority}</span>
+                                    </div>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button class="action-btn view" onclick="viewRecordFromExpanded('${record._id}')" title="View" style="padding: 6px 10px;">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="action-btn edit" onclick="editRecordFromExpanded('${record._id}')" title="Edit" style="padding: 6px 10px;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: grid; gap: 10px; font-size: 14px; color: #4b5563;">
+                                    ${record.email ? `
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-envelope" style="width: 16px; color: #6b7280;"></i>
+                                            <span>${record.email}</span>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${record.phone ? `
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-phone" style="width: 16px; color: #6b7280;"></i>
+                                            <span>${record.phone}</span>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${record.address ? `
+                                        <div style="display: flex; align-items: start; gap: 8px;">
+                                            <i class="fas fa-map-marker-alt" style="width: 16px; color: #6b7280; margin-top: 2px;"></i>
+                                            <span>${record.address}</span>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${record.budget ? `
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-dollar-sign" style="width: 16px; color: #6b7280;"></i>
+                                            <span style="font-weight: 600; color: #059669;">$${parseFloat(record.budget).toLocaleString()}</span>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${record.startDate ? `
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-calendar" style="width: 16px; color: #6b7280;"></i>
+                                            <span>Start: ${new Date(record.startDate).toLocaleDateString()}</span>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-clock" style="width: 16px; color: #6b7280;"></i>
+                                        <span>Created: ${new Date(record.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                                
+                                ${record.description ? `
+                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                        <div style="font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 5px;">Description:</div>
+                                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${record.description}</div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${record.notes ? `
+                                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                                        <div style="font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 5px;">Notes:</div>
+                                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${record.notes}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>`
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeExpandedStage()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeExpandedStage() {
+    const modal = document.getElementById('expandedStageModal');
+    if (modal) modal.remove();
+}
+
+function viewRecordFromExpanded(recordId) {
+    closeExpandedStage();
+    viewRecord(recordId);
+}
+
+function editRecordFromExpanded(recordId) {
+    closeExpandedStage();
+    editRecord(recordId);
+}
+
+window.expandStage = expandStage;
+window.closeExpandedStage = closeExpandedStage;
+window.viewRecordFromExpanded = viewRecordFromExpanded;
+window.editRecordFromExpanded = editRecordFromExpanded;

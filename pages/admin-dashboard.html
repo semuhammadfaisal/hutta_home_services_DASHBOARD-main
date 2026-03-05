@@ -78,9 +78,21 @@
                 </a>
             </li>
             <li class="menu-item">
+                <a href="#calendar" data-section="calendar">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Calendar</span>
+                </a>
+            </li>
+            <li class="menu-item">
                 <a href="#orders" data-section="orders">
                     <i class="fas fa-clipboard-list"></i>
                     <span>Orders</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#pipeline" data-section="pipeline">
+                    <i class="fas fa-stream"></i>
+                    <span>Pipeline</span>
                 </a>
             </li>
             <li class="menu-item">
@@ -93,18 +105,6 @@
                 <a href="#vendors" data-section="vendors">
                     <i class="fas fa-handshake"></i>
                     <span>Vendors</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#employees" data-section="employees">
-                    <i class="fas fa-user-tie"></i>
-                    <span>Employees</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#pipeline" data-section="pipeline">
-                    <i class="fas fa-stream"></i>
-                    <span>Pipeline</span>
                 </a>
             </li>
             <li class="menu-item">
@@ -126,15 +126,15 @@
                 </a>
             </li>
             <li class="menu-item">
-                <a href="#settings" data-section="settings">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
+                <a href="#employees" data-section="employees">
+                    <i class="fas fa-user-tie"></i>
+                    <span>Employees</span>
                 </a>
             </li>
             <li class="menu-item">
-                <a href="#calendar" data-section="calendar">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Calendar</span>
+                <a href="#settings" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
                 </a>
             </li>
         </ul>
@@ -479,8 +479,16 @@
                             <span id="detailOrderPriority">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Amount:</label>
-                            <span id="detailOrderAmount">-</span>
+                            <label>Revenue:</label>
+                            <span id="detailOrderRevenue">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Cost:</label>
+                            <span id="detailOrderCost">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Profit:</label>
+                            <span id="detailOrderProfit">-</span>
                         </div>
                         <div class="info-item">
                             <label>Service:</label>
@@ -1976,15 +1984,26 @@
                             <input type="text" id="service" required>
                         </div>
                         <div class="form-group">
-                            <label for="amount">Amount *</label>
-                            <input type="number" id="amount" step="0.01" required>
+                            <label for="amount">Revenue *</label>
+                            <input type="number" id="amount" step="0.01" required oninput="calculateProfit()">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="vendorCost">Vendor Cost</label>
-                            <input type="number" id="vendorCost" step="0.01">
+                            <label for="vendorCost">Cost</label>
+                            <input type="number" id="vendorCost" step="0.01" oninput="calculateProfit()">
+                        </div>
+                        <div class="form-group">
+                            <label for="processingFee">Processing Fee (%)</label>
+                            <input type="number" id="processingFee" step="0.01" min="0" max="100" placeholder="0" oninput="calculateProfit()">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="profit">Profit</label>
+                            <input type="number" id="profit" step="0.01" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
                         </div>
                     </div>
 

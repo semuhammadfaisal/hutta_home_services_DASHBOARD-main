@@ -12,6 +12,8 @@ const orderSchema = new mongoose.Schema({
   service: { type: String, required: true },
   amount: { type: Number, required: true },
   vendorCost: { type: Number, default: 0 },
+  processingFee: { type: Number, default: 0 },
+  profit: { type: Number, default: 0 },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
   startDate: { type: Date, required: true },

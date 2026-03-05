@@ -925,6 +925,8 @@ async function editOrder(orderId) {
         document.getElementById('service').value = order.service || '';
         document.getElementById('amount').value = order.amount || '';
         document.getElementById('vendorCost').value = order.vendorCost || '';
+        document.getElementById('processingFee').value = order.processingFee || '';
+        document.getElementById('profit').value = order.profit || '';
         document.getElementById('startDate').value = order.startDate ? order.startDate.split('T')[0] : '';
         document.getElementById('endDate').value = order.endDate ? order.endDate.split('T')[0] : '';
         document.getElementById('status').value = order.status || 'new';
@@ -967,6 +969,8 @@ async function saveOrder() {
         service: document.getElementById('service').value,
         amount: parseFloat(document.getElementById('amount').value),
         vendorCost: parseFloat(document.getElementById('vendorCost').value) || 0,
+        processingFee: parseFloat(document.getElementById('processingFee').value) || 0,
+        profit: parseFloat(document.getElementById('profit').value) || 0,
         vendor: document.getElementById('vendor').value || null,
         employee: document.getElementById('employee').value || null,
         startDate: document.getElementById('startDate').value,
@@ -1022,7 +1026,9 @@ async function showOrderDetail(orderId) {
         document.getElementById('detailOrderId').textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
         document.getElementById('detailOrderStatus').innerHTML = `<span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>`;
         document.getElementById('detailOrderPriority').innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
-        document.getElementById('detailOrderAmount').textContent = '$' + (order.amount?.toLocaleString() || '0');
+        document.getElementById('detailOrderRevenue').textContent = '$' + (order.amount?.toLocaleString() || '0');
+        document.getElementById('detailOrderCost').textContent = '$' + (order.vendorCost?.toLocaleString() || '0');
+        document.getElementById('detailOrderProfit').textContent = '$' + (order.profit?.toLocaleString() || '0');
         document.getElementById('detailOrderService').textContent = order.service || '-';
         document.getElementById('detailOrderVendor').textContent = order.vendor?.name || 'N/A';
         document.getElementById('detailOrderStartDate').textContent = order.startDate ? new Date(order.startDate).toLocaleDateString() : '-';
@@ -2660,6 +2666,20 @@ window.deleteOrder = deleteOrder;
 window.showAddOrderModal = showAddOrderModal;
 window.closeOrderModal = closeOrderModal;
 window.saveOrder = saveOrder;
+
+// Calculate Profit Function
+function calculateProfit() {
+    const revenue = parseFloat(document.getElementById('amount').value) || 0;
+    const cost = parseFloat(document.getElementById('vendorCost').value) || 0;
+    const processingFeePercent = parseFloat(document.getElementById('processingFee').value) || 0;
+    
+    const processingFeeAmount = (revenue * processingFeePercent) / 100;
+    const profit = revenue - cost - processingFeeAmount;
+    
+    document.getElementById('profit').value = profit.toFixed(2);
+}
+
+window.calculateProfit = calculateProfit;
 
 // Order Stats Update Function
 function updateOrderStats(orders) {

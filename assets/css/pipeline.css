@@ -129,15 +129,16 @@
 }
 
 .pipeline-stage {
-    background: #fafafa;
+    background: #fff;
     border-radius: 8px;
-    min-width: 300px;
-    max-width: 300px;
-    box-shadow: none;
+    min-width: 320px;
+    max-width: 320px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     transition: all 0.2s;
     border: 1px solid #e5e7eb;
+    flex-shrink: 0;
 }
 
 .pipeline-stage.dragging-over {
@@ -146,68 +147,115 @@
 }
 
 .stage-header {
-    padding: 16px 20px;
-    background: #ffffff;
-    color: #1f2937;
-    border-radius: 8px 8px 0 0;
+    padding: 8px 10px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    box-shadow: none;
-    position: relative;
-    overflow: hidden;
-    border-bottom: 2px solid #e5e7eb;
+    justify-content: space-between;
+    gap: 6px;
 }
 
 .stage-title {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 6px;
     flex: 1;
+    min-width: 0;
 }
 
 .stage-title h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0;
     color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 20px;
 }
 
 .stage-count {
-    background: #f3f4f6;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.count-badge {
+    background: #e5e7eb;
+    color: #4b5563;
+    border-radius: 10px;
+    font-size: 10px;
     font-weight: 600;
-    min-width: 24px;
-    text-align: center;
-    color: #6b7280;
+    padding: 2px 6px;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-add-record {
+    background: #10b981;
+    color: white;
+    border: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-add-record:hover {
+    background: #059669;
+    transform: scale(1.1);
 }
 
 .stage-actions {
     display: flex;
-    gap: 6px;
+    gap: 3px;
+    align-items: center;
 }
 
-.stage-action-btn {
+.icon-btn {
     background: transparent;
     border: none;
-    color: #6b7280;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+    color: #9ca3af;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    font-size: 14px;
+    font-size: 10px;
+    flex-shrink: 0;
 }
 
-.stage-action-btn:hover {
+.icon-btn:hover {
     background: #f3f4f6;
-    color: #1f2937;
+    color: #374151;
+}
+
+.icon-btn.expand-stage-btn:hover {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+.icon-btn.edit-stage-btn:hover {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.icon-btn.delete:hover {
+    background: #fee2e2;
+    color: #ef4444;
 }
 
 .stage-body {
@@ -215,7 +263,7 @@
     flex: 1;
     overflow-y: auto;
     max-height: 600px;
-    background: #fafafa;
+    background: #f9fafb;
 }
 
 .stage-projects {
@@ -326,29 +374,7 @@
     background: #ffffff;
     border-radius: 0 0 8px 8px;
     text-align: center;
-}
-
-.btn-add-record {
-    width: 100%;
-    padding: 8px;
-    background: transparent;
-    border: 1px dashed #d1d5db;
-    color: #6b7280;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
-.btn-add-record:hover {
-    border-color: #9ca3af;
-    color: #1f2937;
-    background: #f9fafb;
+    display: none;
 }
 
 .drag-handle {
