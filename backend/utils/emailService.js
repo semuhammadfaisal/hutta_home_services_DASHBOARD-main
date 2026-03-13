@@ -1,17 +1,16 @@
 const nodemailer = require('nodemailer');
-const sgMail = require('@sendgrid/mail');
 
-// Try SendGrid first (works on Render), fallback to Gmail SMTP
-const useSendGrid = process.env.SENDGRID_API_KEY;
+// Use Resend for email delivery (works on Render)
+const Resend = require('resend').Resend;
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-if (useSendGrid) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  console.log('Using SendGrid for email delivery');
+if (resend) {
+  console.log('Using Resend for email delivery');
 } else {
   console.log('Using Gmail SMTP for email delivery');
 }
 
-const transporter = !useSendGrid ? nodemailer.createTransport({
+const transporter = !resend ? nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
@@ -351,16 +350,15 @@ const sendWelcomeEmail = async (email, password, firstName) => {
 
   console.log('Sending email to:', email);
   
-  if (useSendGrid) {
-    // SendGrid API (works on Render)
-    const msg = {
+  if (resend) {
+    // Resend API (works on Render)
+    const result = await resend.emails.send({
+      from: `Hutta Home Services <onboarding@resend.dev>`,
       to: email,
-      from: process.env.EMAIL_USER,
       subject: mailOptions.subject,
       html: mailOptions.html
-    };
-    const result = await sgMail.send(msg);
-    console.log('Email sent via SendGrid:', result[0].statusCode);
+    });
+    console.log('Email sent via Resend:', result.id);
     return result;
   } else {
     // Gmail SMTP fallback
