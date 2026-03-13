@@ -1,6 +1,17 @@
 const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
-const transporter = nodemailer.createTransport({
+// Try SendGrid first (works on Render), fallback to Gmail SMTP
+const useSendGrid = process.env.SENDGRID_API_KEY;
+
+if (useSendGrid) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log('Using SendGrid for email delivery');
+} else {
+  console.log('Using Gmail SMTP for email delivery');
+}
+
+const transporter = !useSendGrid ? nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
@@ -11,7 +22,7 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 10000,
   greetingTimeout: 10000,
   socketTimeout: 10000
-});
+}) : null;
 
 const sendPasswordResetEmail = async (email, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL || 'https://hutta-home-services-dashboard.onrender.com'}/pages/reset-password.html?token=${resetToken}`;
@@ -339,9 +350,24 @@ const sendWelcomeEmail = async (email, password, firstName) => {
   }
 
   console.log('Sending email to:', email);
-  const result = await transporter.sendMail(mailOptions);
-  console.log('Email sent successfully:', result.messageId);
-  return result;
+  
+  if (useSendGrid) {
+    // SendGrid API (works on Render)
+    const msg = {
+      to: email,
+      from: process.env.EMAIL_USER,
+      subject: mailOptions.subject,
+      html: mailOptions.html
+    };
+    const result = await sgMail.send(msg);
+    console.log('Email sent via SendGrid:', result[0].statusCode);
+    return result;
+  } else {
+    // Gmail SMTP fallback
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email sent via Gmail:', result.messageId);
+    return result;
+  }
   } catch (error) {
     console.error('Email sending error:', error.message);
     console.error('Error details:', error);
