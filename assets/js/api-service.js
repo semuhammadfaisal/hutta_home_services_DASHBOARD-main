@@ -455,10 +455,23 @@ class APIService {
         return this.request('/users');
     }
 
+    async createUser(userData) {
+        return this.request('/users', {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        });
+    }
+
     async assignUserRole(userId, role) {
         return this.request(`/users/${userId}/role`, {
             method: 'PATCH',
             body: JSON.stringify({ role })
+        });
+    }
+
+    async deleteUser(userId) {
+        return this.request(`/users/${userId}`, {
+            method: 'DELETE'
         });
     }
 }

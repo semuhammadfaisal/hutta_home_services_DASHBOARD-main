@@ -3097,7 +3097,7 @@ function renderUsersTable(users) {
     if (!users || users.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="users-empty-state">
+                <td colspan="7" class="users-empty-state">
                     <i class="fas fa-users-cog"></i>
                     <h3>No Users Found</h3>
                     <p>No users have signed up yet</p>
@@ -3162,6 +3162,11 @@ function renderUsersTable(users) {
                     </select>
                 `}
             </td>
+            <td>
+                <button class="action-btn delete" onclick="deleteUser('${user._id}')" title="Delete User">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
         </tr>
     `;
     }).join('');
@@ -3218,7 +3223,160 @@ async function approveUserRole(userId, requestedRole) {
     }
 }
 
+async function deleteUser(userId) {
+    showConfirmModal(
+        'Delete User',
+        'Are you sure you want to delete this user?',
+        'This action cannot be undone. The user will be permanently removed from the system.',
+        async () => {
+            try {
+                await window.APIService.deleteUser(userId);
+                showToast('User deleted successfully!', 'success');
+                await loadUsersSection();
+            } catch (error) {
+                showToast('Failed to delete user: ' + error.message, 'error');
+            }
+        }
+    );
+}
+
+// Custom Confirmation Modal
+function showConfirmModal(title, message, warning, onConfirm) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('customConfirmModal');
+    if (existingModal) existingModal.remove();
+    
+    // Create modal HTML
+    const modalHTML = `
+        <div class="confirm-modal-overlay" id="customConfirmModal">
+            <div class="confirm-modal">
+                <div class="confirm-modal-header">
+                    <div class="confirm-modal-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h2 class="confirm-modal-title">${title}</h2>
+                </div>
+                <div class="confirm-modal-body">
+                    <p class="confirm-modal-message">${message}</p>
+                    ${warning ? `
+                        <div class="confirm-modal-warning">
+                            <div class="confirm-modal-warning-title">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Warning</span>
+                            </div>
+                            <p class="confirm-modal-warning-text">${warning}</p>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="confirm-modal-footer">
+                    <button class="confirm-modal-btn confirm-modal-btn-cancel" onclick="closeConfirmModal()">
+                        <i class="fas fa-times"></i>
+                        Cancel
+                    </button>
+                    <button class="confirm-modal-btn confirm-modal-btn-confirm" onclick="confirmAction()">
+                        <i class="fas fa-trash"></i>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Store callback
+    window.confirmCallback = onConfirm;
+    
+    // Show modal with animation
+    setTimeout(() => {
+        document.getElementById('customConfirmModal').classList.add('show');
+    }, 10);
+    
+    // Close on overlay click
+    document.getElementById('customConfirmModal').addEventListener('click', (e) => {
+        if (e.target.id === 'customConfirmModal') {
+            closeConfirmModal();
+        }
+    });
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('customConfirmModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+    window.confirmCallback = null;
+}
+
+function confirmAction() {
+    if (window.confirmCallback) {
+        window.confirmCallback();
+    }
+    closeConfirmModal();
+}
+
+window.closeConfirmModal = closeConfirmModal;
+window.confirmAction = confirmAction;
+
 window.loadUsersSection = loadUsersSection;
 window.assignUserRole = assignUserRole;
 window.changeUserRole = changeUserRole;
 window.approveUserRole = approveUserRole;
+window.deleteUser = deleteUser;
+
+// Add User Functions
+function showAddUserModal() {
+    document.getElementById('addUserForm').reset();
+    document.getElementById('sendEmailCheckbox').checked = true;
+    document.getElementById('addUserModal').classList.add('show');
+}
+
+function closeAddUserModal() {
+    document.getElementById('addUserModal').classList.remove('show');
+}
+
+async function saveNewUser() {
+    const form = document.getElementById('addUserForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const saveBtn = document.querySelector('#addUserModal .btn-primary');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+    
+    const userData = {
+        firstName: document.getElementById('newUserFirstName').value,
+        lastName: document.getElementById('newUserLastName').value,
+        email: document.getElementById('newUserEmail').value,
+        password: document.getElementById('newUserPassword').value,
+        role: document.getElementById('newUserRole').value
+    };
+    
+    try {
+        await window.APIService.createUser(userData);
+        
+        const sendEmail = document.getElementById('sendEmailCheckbox').checked;
+        if (sendEmail) {
+            showToast('User created successfully! Login credentials have been sent to their email.', 'success');
+        } else {
+            showToast('User created successfully!', 'success');
+        }
+        
+        closeAddUserModal();
+        await loadUsersSection();
+    } catch (error) {
+        showToast('Failed to create user: ' + error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Create User';
+    }
+}
+
+window.showAddUserModal = showAddUserModal;
+window.closeAddUserModal = closeAddUserModal;
+window.saveNewUser = saveNewUser;

@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="../assets/css/detail-pages.css">
     <link rel="stylesheet" href="../assets/css/toast.css">
     <link rel="stylesheet" href="../assets/css/users.css">
+    <link rel="stylesheet" href="../assets/css/confirm-modal.css">
     <link rel="stylesheet" href="../assets/css/color-overrides.css">
     <link rel="stylesheet" href="../assets/css/dashboard-enhanced.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -1748,15 +1749,20 @@
         <section id="users" class="content-section">
             <div class="page-header">
                 <h1>User Management</h1>
-                <div class="header-stats">
-                    <div class="stat-badge pending">
-                        <i class="fas fa-clock"></i>
-                        <span id="pendingUsersCount">0</span> Pending
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div class="header-stats">
+                        <div class="stat-badge pending">
+                            <i class="fas fa-clock"></i>
+                            <span id="pendingUsersCount">0</span> Pending
+                        </div>
+                        <div class="stat-badge active">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="activeUsersCount">0</span> Active
+                        </div>
                     </div>
-                    <div class="stat-badge active">
-                        <i class="fas fa-check-circle"></i>
-                        <span id="activeUsersCount">0</span> Active
-                    </div>
+                    <button class="btn-primary" onclick="showAddUserModal()">
+                        <i class="fas fa-user-plus"></i> Add User
+                    </button>
                 </div>
             </div>
             
@@ -2974,6 +2980,69 @@
                 </button>
                 <button type="button" class="btn-primary" onclick="confirmOverridePayout()" style="background: #f44336;">
                     <i class="fas fa-check"></i> Approve Override
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal-overlay" id="addUserModal">
+        <div class="modal-content user-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-plus"></i> Add New User</h2>
+                <button class="modal-close" onclick="closeAddUserModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newUserFirstName">First Name *</label>
+                            <input type="text" id="newUserFirstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserLastName">Last Name *</label>
+                            <input type="text" id="newUserLastName" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newUserEmail">Email *</label>
+                        <input type="email" id="newUserEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newUserPassword">Password *</label>
+                        <input type="password" id="newUserPassword" required minlength="8">
+                        <small style="color: #6b7280; font-size: 12px;">Minimum 8 characters</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newUserRole">Role *</label>
+                        <select id="newUserRole" required>
+                            <option value="">Select Role</option>
+                            <option value="admin">Admin</option>
+                            <option value="manager">Manager</option>
+                            <option value="account_rep">Account Rep</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="sendEmailCheckbox" checked>
+                            <span class="checkmark"></span>
+                            Send login credentials via email
+                        </label>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="saveNewUser()">
+                    <i class="fas fa-save"></i> Create User
                 </button>
             </div>
         </div>
