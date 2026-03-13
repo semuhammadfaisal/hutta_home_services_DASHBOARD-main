@@ -1,10 +1,11 @@
 const express = require('express');
 const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get all vendors
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const vendors = await Vendor.find().sort({ name: 1 });
     res.json(vendors);
@@ -14,7 +15,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get single vendor
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const vendor = await Vendor.findById(req.params.id);
     if (!vendor) {
@@ -27,7 +28,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create new vendor
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     console.log('=== VENDOR CREATION DEBUG ===');
     console.log('req.body:', req.body);
@@ -46,7 +47,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update vendor
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     console.log('Updating vendor with data:', req.body);
     const vendor = await Vendor.findByIdAndUpdate(
@@ -67,7 +68,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete vendor
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndDelete(req.params.id);
     if (!vendor) {

@@ -3,6 +3,7 @@ const Customer = require('../models/Customer');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get all customers
@@ -114,7 +115,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create new customer
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
     const customer = new Customer(req.body);
     await customer.save();
@@ -125,7 +126,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update customer
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
     const customer = await Customer.findByIdAndUpdate(
       req.params.id, 
@@ -144,7 +145,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete customer
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const customer = await Customer.findByIdAndDelete(req.params.id);
     if (!customer) {

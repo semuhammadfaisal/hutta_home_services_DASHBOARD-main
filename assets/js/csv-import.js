@@ -265,11 +265,11 @@ async function importEmployeesFromCSV() {
 // Map CSV customer type to valid customer type
 function mapCustomerType(type) {
     const typeMap = {
-        'permanent': 'permanent',
+        'permanent': 'recurring',
         'one-time': 'one-time',
         'onetime': 'one-time',
-        'recurring': 'permanent',
-        'regular': 'permanent',
+        'recurring': 'recurring',
+        'regular': 'recurring',
         'single': 'one-time'
     };
     

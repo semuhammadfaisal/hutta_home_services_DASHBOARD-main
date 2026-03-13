@@ -182,13 +182,15 @@ body {
 
 .login-container {
     width: 100%;
-    max-width: 420px;
+    max-width: 680px;
     background: var(--white);
-    padding: 48px;
+    padding: 40px;
     border-radius: 24px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     position: relative;
     z-index: 1;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .welcome-badge {
@@ -210,7 +212,7 @@ body {
 
 .login-header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
 }
 
 .login-header h1 {
@@ -228,13 +230,13 @@ body {
 .login-form {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .form-group label {
@@ -526,4 +528,70 @@ body {
     .login-header h1 {
         font-size: 28px;
     }
+}
+
+/* Signup Page Specific Styles */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.input-wrapper select {
+    width: 100%;
+    padding: 18px 18px 18px 52px;
+    border: 2px solid var(--border-gray);
+    border-radius: 16px;
+    font-size: 16px;
+    background-color: var(--light-gray);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    font-weight: 400;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8"><path fill="%234A4A4A" d="M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    padding-right: 45px;
+}
+
+.input-wrapper select:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    background-color: var(--white);
+    transform: translateY(-1px);
+}
+
+.form-group small {
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+    line-height: 1.4;
+}
+
+/* Adjust form spacing for signup */
+.login-form .form-group:last-of-type {
+    margin-bottom: 0;
+}
+
+.login-form .form-options {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* Better alignment for checkbox with text */
+.checkbox-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--dark-gray);
+    line-height: 1.5;
+}
+
+.checkmark {
+    flex-shrink: 0;
+    margin-top: 2px;
 }

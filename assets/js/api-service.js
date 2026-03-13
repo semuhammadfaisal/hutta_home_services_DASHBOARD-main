@@ -449,6 +449,18 @@ class APIService {
     async getEmployeeStats(id) {
         return this.request(`/employees/${id}/stats`);
     }
+
+    // Users (Admin only)
+    async getUsers() {
+        return this.request('/users');
+    }
+
+    async assignUserRole(userId, role) {
+        return this.request(`/users/${userId}/role`, {
+            method: 'PATCH',
+            body: JSON.stringify({ role })
+        });
+    }
 }
 
 // Create global instance

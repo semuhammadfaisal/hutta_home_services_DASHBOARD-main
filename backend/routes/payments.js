@@ -1,10 +1,11 @@
 const express = require('express');
 const Payment = require('../models/Payment');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get all payments
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const payments = await Payment.find()
       .populate('customer', 'name email')
@@ -19,7 +20,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get single payment
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id)
       .populate('customer')
@@ -36,7 +37,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create new payment
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const paymentCount = await Payment.countDocuments();
     const paymentId = `PAY-${String(paymentCount + 1).padStart(4, '0')}`;
@@ -61,7 +62,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update payment
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const payment = await Payment.findByIdAndUpdate(
       req.params.id, 
@@ -84,7 +85,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete payment
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const payment = await Payment.findByIdAndDelete(req.params.id);
     if (!payment) {

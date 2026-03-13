@@ -4,10 +4,11 @@ const Payment = require('../models/Payment');
 const Project = require('../models/Project');
 const Customer = require('../models/Customer');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get financial report
-router.get('/financial', authenticateToken, async (req, res) => {
+router.get('/financial', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const dateFilter = {};
@@ -47,7 +48,7 @@ router.get('/financial', authenticateToken, async (req, res) => {
 });
 
 // Get orders report
-router.get('/orders', authenticateToken, async (req, res) => {
+router.get('/orders', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const dateFilter = {};
@@ -87,7 +88,7 @@ router.get('/orders', authenticateToken, async (req, res) => {
 });
 
 // Get customers report
-router.get('/customers', authenticateToken, async (req, res) => {
+router.get('/customers', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const [customerTypes, topCustomers] = await Promise.all([
       Customer.aggregate([
@@ -106,7 +107,7 @@ router.get('/customers', authenticateToken, async (req, res) => {
 });
 
 // Get projects report
-router.get('/projects', authenticateToken, async (req, res) => {
+router.get('/projects', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const [statusBreakdown, budgetAnalysis] = await Promise.all([
       Project.aggregate([

@@ -1,10 +1,11 @@
 const express = require('express');
 const Settings = require('../models/Settings');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get user settings
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     let settings = await Settings.findOne({ userId: req.user.userId });
     
@@ -21,7 +22,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Update user settings
-router.put('/', authenticateToken, async (req, res) => {
+router.put('/', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     let settings = await Settings.findOne({ userId: req.user.userId });
     
@@ -39,7 +40,7 @@ router.put('/', authenticateToken, async (req, res) => {
 });
 
 // Reset settings to default
-router.post('/reset', authenticateToken, async (req, res) => {
+router.post('/reset', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     await Settings.findOneAndDelete({ userId: req.user.userId });
     

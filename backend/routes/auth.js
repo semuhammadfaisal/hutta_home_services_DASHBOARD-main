@@ -92,9 +92,9 @@ router.post('/register', async (req, res) => {
 router.post('/signup', async (req, res) => {
   try {
     console.log('Signup request received:', req.body);
-    const { name, email, password } = req.body;
+    const { name, email, password, requestedRole } = req.body;
     
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !requestedRole) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -110,14 +110,15 @@ router.post('/signup', async (req, res) => {
     const [firstName, ...lastNameParts] = name.split(' ');
     const lastName = lastNameParts.join(' ') || firstName;
 
-    console.log('Creating user:', { email, firstName, lastName, role: 'supervisor' });
+    console.log('Creating user:', { email, firstName, lastName, role: 'pending', requestedRole });
 
     const user = new User({ 
       email, 
       password, 
       firstName, 
       lastName,
-      role: 'supervisor'
+      role: 'pending',
+      requestedRole
     });
     await user.save();
 
@@ -129,7 +130,8 @@ router.post('/signup', async (req, res) => {
         id: user._id,
         email: user.email,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
+        requestedRole: user.requestedRole
       }
     });
   } catch (error) {

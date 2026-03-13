@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="../assets/css/calendar.css">
     <link rel="stylesheet" href="../assets/css/detail-pages.css">
     <link rel="stylesheet" href="../assets/css/toast.css">
+    <link rel="stylesheet" href="../assets/css/users.css">
     <link rel="stylesheet" href="../assets/css/color-overrides.css">
     <link rel="stylesheet" href="../assets/css/dashboard-enhanced.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -129,6 +130,12 @@
                 <a href="#employees" data-section="employees">
                     <i class="fas fa-user-tie"></i>
                     <span>Employees</span>
+                </a>
+            </li>
+            <li class="menu-item" data-rbac-role="admin">
+                <a href="#users" data-section="users">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Users</span>
                 </a>
             </li>
             <li class="menu-item">
@@ -326,8 +333,8 @@
                     <h3>Customer Summary</h3>
                     <div class="customer-types">
                         <div class="customer-type">
-                            <span class="type-label">Permanent Customers</span>
-                            <span class="type-count" id="permanentCustomers">0</span>
+                            <span class="type-label">Recurring Customers</span>
+                            <span class="type-count" id="recurringCustomers">0</span>
                         </div>
                         <div class="customer-type">
                             <span class="type-label">One-time Customers</span>
@@ -569,7 +576,7 @@
                     <div class="customers-filters">
                         <select class="filter-select" id="customerTypeFilter">
                             <option value="all">All Types</option>
-                            <option value="permanent">Permanent</option>
+                            <option value="recurring">Recurring</option>
                             <option value="one-time">One-time</option>
                         </select>
                         <select class="filter-select" id="customerStatusFilter">
@@ -1018,6 +1025,13 @@
                         <button class="btn-secondary" onclick="clearPipelineData()" title="Clear all data">Clear Data</button>
                         <button class="btn-add-stage" onclick="openStageModal()">+ Add Stage</button>
                     </div>
+                </div>
+                <div class="pipeline-search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)">
+                    <button class="btn-clear-search" onclick="clearPipelineSearch()" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
                 <div class="stages-container" id="stagesContainer">
                     <!-- Stages will be dynamically loaded here -->
@@ -1730,6 +1744,41 @@
             
         </section>
 
+        <!-- Users Section (Admin Only) -->
+        <section id="users" class="content-section">
+            <div class="page-header">
+                <h1>User Management</h1>
+                <div class="header-stats">
+                    <div class="stat-badge pending">
+                        <i class="fas fa-clock"></i>
+                        <span id="pendingUsersCount">0</span> Pending
+                    </div>
+                    <div class="stat-badge active">
+                        <i class="fas fa-check-circle"></i>
+                        <span id="activeUsersCount">0</span> Active
+                    </div>
+                </div>
+            </div>
+            
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Current Role</th>
+                            <th>Signed Up</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <section id="settings" class="content-section">
             <div class="page-header">
                 <h1>Settings</h1>
@@ -1961,8 +2010,8 @@
                                 <input type="text" id="customerName" required>
                             </div>
                             <div class="form-group">
-                                <label for="customerEmail">Customer Email *</label>
-                                <input type="email" id="customerEmail" required>
+                                <label for="customerEmail">Customer Email</label>
+                                <input type="email" id="customerEmail">
                             </div>
                         </div>
                         
@@ -2191,8 +2240,8 @@
                             <input type="text" id="employeeName" required>
                         </div>
                         <div class="form-group">
-                            <label for="employeeEmail">Email *</label>
-                            <input type="email" id="employeeEmail" required>
+                            <label for="employeeEmail">Email</label>
+                            <input type="email" id="employeeEmail">
                         </div>
                     </div>
                     
@@ -2287,8 +2336,8 @@
                             <input type="text" id="vendorName" required>
                         </div>
                         <div class="form-group">
-                            <label for="vendorEmail">Email *</label>
-                            <input type="email" id="vendorEmail" required>
+                            <label for="vendorEmail">Email</label>
+                            <input type="email" id="vendorEmail">
                         </div>
                     </div>
                     
@@ -2371,8 +2420,8 @@
                             <input type="text" id="customerNameField" required>
                         </div>
                         <div class="form-group">
-                            <label for="customerEmailField">Email *</label>
-                            <input type="email" id="customerEmailField" required>
+                            <label for="customerEmailField">Email</label>
+                            <input type="email" id="customerEmailField">
                         </div>
                     </div>
                     
@@ -2385,7 +2434,7 @@
                             <label for="customerType">Customer Type</label>
                             <select id="customerType">
                                 <option value="one-time">One-time</option>
-                                <option value="permanent">Permanent</option>
+                                <option value="recurring">Recurring</option>
                             </select>
                         </div>
                     </div>
@@ -2931,6 +2980,7 @@
     </div>
 
     <script src="../assets/js/api-service.js"></script>
+    <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
     <script src="../assets/js/csv-import.js"></script>
     <script src="../assets/js/login-script.js"></script>
@@ -2939,6 +2989,7 @@
     <script src="../assets/js/accounting-system.js"></script>
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/dashboard-script.js"></script>
+    <script src="../assets/js/rbac-wrappers.js"></script>
 </body>
 </html>
 

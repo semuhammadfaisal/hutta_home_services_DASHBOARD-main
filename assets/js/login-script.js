@@ -45,6 +45,13 @@ class LoginManager {
         try {
             const response = await window.APIService.login(email, password);
             
+            // Check if user has pending role
+            if (response.user && response.user.role === 'pending') {
+                this.showError('Your account is pending approval. Please contact an administrator.');
+                this.showLoading(false);
+                return;
+            }
+            
             // The APIService.login already stores the session with token
             // Just show success and redirect
             this.showSuccess();

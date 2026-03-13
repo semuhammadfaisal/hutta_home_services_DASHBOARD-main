@@ -61,10 +61,11 @@ class SignupManager {
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
+        const requestedRole = document.getElementById('requestedRole').value;
         const agreeTerms = document.getElementById('agreeTerms').checked;
         
         // Validation
-        if (!fullName || !email || !password || !confirmPassword) {
+        if (!fullName || !email || !password || !confirmPassword || !requestedRole) {
             this.showError('Please fill in all fields');
             return;
         }
@@ -91,18 +92,60 @@ class SignupManager {
             const response = await window.APIService.signup({
                 name: fullName,
                 email: email,
-                password: password
+                password: password,
+                requestedRole: requestedRole
             });
             
-            this.showSuccess();
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 1500);
+            // Show success message and redirect to confirmation page
+            this.showRoleConfirmation(requestedRole);
         } catch (error) {
             this.showError(error.message || 'Signup failed. Please try again.');
-        } finally {
             this.showLoading(false);
         }
+    }
+
+    showRoleConfirmation(requestedRole) {
+        const roleNames = {
+            'admin': 'Administrator',
+            'manager': 'Manager',
+            'account_rep': 'Account Representative'
+        };
+        
+        const formSection = document.querySelector('.login-form-section');
+        formSection.innerHTML = `
+            <div class="login-container" style="text-align: center; padding: 40px 20px;">
+                <div style="margin-bottom: 30px;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
+                    </div>
+                    <h1 style="color: #111827; margin-bottom: 10px;">Account Created!</h1>
+                    <p style="color: #6b7280; font-size: 16px;">Your registration was successful</p>
+                </div>
+                
+                <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 30px; text-align: left;">
+                    <h3 style="color: #374151; margin-bottom: 16px; font-size: 18px;">
+                        <i class="fas fa-info-circle" style="color: #3b82f6;"></i> What's Next?
+                    </h3>
+                    <div style="color: #6b7280; line-height: 1.8;">
+                        <p style="margin-bottom: 12px;">✅ You requested: <strong style="color: #111827;">${roleNames[requestedRole]}</strong></p>
+                        <p style="margin-bottom: 12px;">⏳ Your request is pending admin approval</p>
+                        <p style="margin-bottom: 12px;">📧 You'll receive an email once approved</p>
+                        <p>🔐 After approval, you can login with full access</p>
+                    </div>
+                </div>
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin-bottom: 30px; text-align: left;">
+                    <p style="color: #92400e; margin: 0; font-size: 14px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Important:</strong> You cannot login until an administrator approves your account and assigns your role.
+                    </p>
+                </div>
+                
+                <a href="login.html" class="login-btn" style="display: inline-block; text-decoration: none; padding: 14px 32px;">
+                    <i class="fas fa-arrow-left"></i> Go to Login Page
+                </a>
+            </div>
+        `;
     }
 
     showLoading(show) {

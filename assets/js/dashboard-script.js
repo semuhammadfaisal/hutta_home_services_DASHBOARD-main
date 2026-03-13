@@ -60,6 +60,8 @@ class DashboardManager {
                     loadPipelineSection();
                 } else if (targetSection === 'accounting') {
                     loadAccountingSection();
+                } else if (targetSection === 'users') {
+                    loadUsersSection();
                 }
                 
                 // Update active menu item
@@ -397,19 +399,19 @@ class DashboardManager {
     }
 
     renderCustomerSummary(customers) {
-        const permanentCount = document.getElementById('permanentCustomers');
+        const recurringCount = document.getElementById('recurringCustomers');
         const oneTimeCount = document.getElementById('oneTimeCustomers');
         
         if (!customers || customers.length === 0) {
-            if (permanentCount) permanentCount.textContent = '0';
+            if (recurringCount) recurringCount.textContent = '0';
             if (oneTimeCount) oneTimeCount.textContent = '0';
             return;
         }
         
-        const permanent = customers.filter(c => c.customerType === 'permanent').length;
+        const recurring = customers.filter(c => c.customerType === 'recurring').length;
         const oneTime = customers.filter(c => c.customerType === 'one-time').length;
         
-        if (permanentCount) permanentCount.textContent = permanent;
+        if (recurringCount) recurringCount.textContent = recurring;
         if (oneTimeCount) oneTimeCount.textContent = oneTime;
     }
 
@@ -3070,3 +3072,153 @@ window.showSection = function(sectionId) {
         targetSection.classList.add('active');
     }
 };
+
+// User Management Functions
+async function loadUsersSection() {
+    try {
+        const users = await window.APIService.getUsers();
+        renderUsersTable(users);
+    } catch (error) {
+        console.error('Failed to load users:', error);
+        showToast('Failed to load users: ' + error.message, 'error');
+    }
+}
+
+function renderUsersTable(users) {
+    const tbody = document.getElementById('usersTableBody');
+    
+    // Update stats
+    const pendingCount = users.filter(u => u.role === 'pending').length;
+    const activeCount = users.filter(u => u.role !== 'pending').length;
+    
+    document.getElementById('pendingUsersCount').textContent = pendingCount;
+    document.getElementById('activeUsersCount').textContent = activeCount;
+    
+    if (!users || users.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="users-empty-state">
+                    <i class="fas fa-users-cog"></i>
+                    <h3>No Users Found</h3>
+                    <p>No users have signed up yet</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        const initials = ((user.firstName || '')[0] + (user.lastName || '')[0]).toUpperCase() || 'U';
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
+        const userId = `#${user._id.substring(0, 8).toUpperCase()}`;
+        const signupDate = new Date(user.createdAt).toLocaleDateString();
+        const isPending = user.role === 'pending';
+        const requestedRoleName = user.requestedRole ? user.requestedRole.replace('_', ' ') : 'Not specified';
+        
+        return `
+        <tr>
+            <td>
+                <div class="user-info">
+                    <div class="user-avatar">${initials}</div>
+                    <div class="user-details">
+                        <div class="user-name">${fullName}</div>
+                        <div class="user-id">${userId}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${user.email}</td>
+            <td>
+                <span class="role-badge ${user.role}">${user.role.replace('_', ' ')}</span>
+                ${isPending && user.requestedRole ? `<br><small style="color: #6b7280; font-size: 11px;">Wants: ${requestedRoleName}</small>` : ''}
+            </td>
+            <td>${signupDate}</td>
+            <td>
+                <span class="status-badge ${isPending ? 'pending' : 'active'}">
+                    <i class="fas fa-${isPending ? 'clock' : 'check-circle'}"></i>
+                    ${isPending ? 'Pending' : 'Active'}
+                </span>
+            </td>
+            <td>
+                ${isPending ? `
+                    ${user.requestedRole ? `
+                        <button class="btn-assign-role" onclick="approveUserRole('${user._id}', '${user.requestedRole}')" style="background: #10b981; margin-right: 8px;">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                    ` : ''}
+                    <select class="role-select" id="role-${user._id}" style="width: auto; display: inline-block;">
+                        <option value="">Or assign...</option>
+                        <option value="admin">Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="account_rep">Account Rep</option>
+                    </select>
+                    <button class="btn-assign-role" onclick="assignUserRole('${user._id}')">
+                        <i class="fas fa-user-check"></i> Assign
+                    </button>
+                ` : `
+                    <select class="role-select" id="role-${user._id}" onchange="changeUserRole('${user._id}')">
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option>
+                        <option value="account_rep" ${user.role === 'account_rep' ? 'selected' : ''}>Account Rep</option>
+                    </select>
+                `}
+            </td>
+        </tr>
+    `;
+    }).join('');
+}
+
+async function assignUserRole(userId) {
+    const roleSelect = document.getElementById(`role-${userId}`);
+    const role = roleSelect.value;
+    
+    if (!role) {
+        showToast('Please select a role', 'error');
+        return;
+    }
+    
+    try {
+        await window.APIService.assignUserRole(userId, role);
+        showToast('Role assigned successfully! User must logout and login to see changes.', 'success');
+        await loadUsersSection();
+    } catch (error) {
+        showToast('Failed to assign role: ' + error.message, 'error');
+    }
+}
+
+async function changeUserRole(userId) {
+    const roleSelect = document.getElementById(`role-${userId}`);
+    const role = roleSelect.value;
+    
+    if (!confirm(`Are you sure you want to change this user's role to ${role.replace('_', ' ')}?`)) {
+        await loadUsersSection();
+        return;
+    }
+    
+    try {
+        await window.APIService.assignUserRole(userId, role);
+        showToast('Role updated successfully! User must logout and login to see changes.', 'success');
+        await loadUsersSection();
+    } catch (error) {
+        showToast('Failed to update role: ' + error.message, 'error');
+        await loadUsersSection();
+    }
+}
+
+async function approveUserRole(userId, requestedRole) {
+    if (!confirm(`Approve user's request for ${requestedRole.replace('_', ' ')} role?`)) {
+        return;
+    }
+    
+    try {
+        await window.APIService.assignUserRole(userId, requestedRole);
+        showToast('User approved! They can now login with their requested role.', 'success');
+        await loadUsersSection();
+    } catch (error) {
+        showToast('Failed to approve user: ' + error.message, 'error');
+    }
+}
+
+window.loadUsersSection = loadUsersSection;
+window.assignUserRole = assignUserRole;
+window.changeUserRole = changeUserRole;
+window.approveUserRole = approveUserRole;

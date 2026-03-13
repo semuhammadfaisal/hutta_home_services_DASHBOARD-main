@@ -30,7 +30,7 @@ const customerSchema = new mongoose.Schema({
   addresses: { type: [addressSchema], default: [] },
   customerType: { 
     type: String, 
-    enum: ['permanent', 'one-time'], 
+    enum: ['recurring', 'one-time'], 
     default: 'one-time' 
   },
   status: { 

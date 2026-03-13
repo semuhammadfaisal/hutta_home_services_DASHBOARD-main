@@ -4,7 +4,9 @@ const API_BASE_URL = '/api';
 // Data storage
 let stages = [];
 let records = [];
+let filteredRecords = [];
 let draggedStage = null;
+let searchQuery = '';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,6 +33,7 @@ async function fetchStages() {
 async function fetchRecords() {
     const response = await fetch(`${API_BASE_URL}/pipeline-records`);
     records = await response.json();
+    filteredRecords = [...records];
 }
 
 // Load and render stages
@@ -171,8 +174,12 @@ function createStageColumn(stage) {
 
 // Render records
 function renderRecords(stageId) {
-    const stageRecords = records.filter(r => r.stageId === stageId);
+    const stageRecords = filteredRecords.filter(r => r.stageId === stageId);
     if (stageRecords.length === 0) {
+        const allRecordsInStage = records.filter(r => r.stageId === stageId).length;
+        if (searchQuery && allRecordsInStage > 0) {
+            return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No matching records</div>';
+        }
         return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No records yet</div>';
     }
     return stageRecords.map(record => {
@@ -761,6 +768,56 @@ window.addEventListener('click', (event) => {
 // Make functions globally accessible
 window.searchCustomers = searchCustomers;
 window.selectCustomer = selectCustomer;
+
+// Pipeline Search Functions
+function filterPipelineRecords(query) {
+    searchQuery = query.toLowerCase().trim();
+    
+    const searchInput = document.getElementById('pipelineSearchInput');
+    const clearBtn = document.querySelector('.btn-clear-search');
+    
+    if (searchQuery) {
+        filteredRecords = records.filter(record => {
+            const customerName = (record.customerName || '').toLowerCase();
+            const email = (record.email || '').toLowerCase();
+            const phone = (record.phone || '').toLowerCase();
+            
+            return customerName.includes(searchQuery) || 
+                   email.includes(searchQuery) || 
+                   phone.includes(searchQuery);
+        });
+        
+        if (clearBtn) clearBtn.style.display = 'block';
+    } else {
+        filteredRecords = [...records];
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
+    
+    loadStages();
+    updateSearchStats();
+}
+
+function clearPipelineSearch() {
+    const searchInput = document.getElementById('pipelineSearchInput');
+    if (searchInput) searchInput.value = '';
+    filterPipelineRecords('');
+}
+
+function updateSearchStats() {
+    const totalRecordsEl = document.getElementById('totalRecords');
+    if (totalRecordsEl) {
+        if (searchQuery) {
+            totalRecordsEl.textContent = `${filteredRecords.length} / ${records.length}`;
+            totalRecordsEl.style.color = '#3b82f6';
+        } else {
+            totalRecordsEl.textContent = records.length;
+            totalRecordsEl.style.color = '';
+        }
+    }
+}
+
+window.filterPipelineRecords = filterPipelineRecords;
+window.clearPipelineSearch = clearPipelineSearch;
 
 // Expand Stage Function
 async function expandStage(stageId) {

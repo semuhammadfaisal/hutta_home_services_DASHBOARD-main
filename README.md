@@ -39,6 +39,7 @@ hutta_home_ervices/
 - Vendor management
 - Employee management
 - **Employee order assignment with performance tracking**
+- **User Management System** (admin can assign roles to new signups)
 - Project tracking
 - Payment processing
 - Reporting system
@@ -63,6 +64,37 @@ The order management system now supports:
 **Documentation:**
 - 📘 Full Guide: [EMPLOYEE_ORDER_ASSIGNMENT.md](EMPLOYEE_ORDER_ASSIGNMENT.md)
 - 🚀 Quick Reference: [EMPLOYEE_ASSIGNMENT_QUICK_REF.md](EMPLOYEE_ASSIGNMENT_QUICK_REF.md)
+
+### User Management System (Latest)
+
+Admins can now control user access through a dedicated Users tab:
+
+1. **Pending User System**
+   - New signups get "pending" role by default
+   - Pending users cannot access dashboard until admin assigns role
+   - Clear message shown: "Account pending approval"
+
+2. **Admin Users Tab**
+   - View all signed-up users
+   - See user status (Pending/Active)
+   - Assign roles to pending users
+   - Change roles for existing users
+
+3. **Role Assignment**
+   - Admin: Full access to everything
+   - Manager: Operations only (no financial/settings)
+   - Account Rep: Sales focus (limited access)
+   - User must logout/login after role change
+
+**Documentation:**
+- 📘 Full Guide: [USER_MANAGEMENT_GUIDE.md](USER_MANAGEMENT_GUIDE.md)
+- 🚀 Quick Setup: [USER_MANAGEMENT_SETUP.md](USER_MANAGEMENT_SETUP.md)
+
+**Initial Setup:**
+```bash
+cd backend
+node make-first-user-admin.js
+```
 
 ### Customer Management Enhancement
 

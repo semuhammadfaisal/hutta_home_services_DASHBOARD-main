@@ -66,6 +66,7 @@ app.get('/api/health', (req, res) => {
 // API Routes with error handling
 try {
   app.use('/api/auth', require('./routes/auth'));
+  app.use('/api/users', require('./routes/users'));
   app.use('/api/orders', require('./routes/orders'));
   app.use('/api/customers', require('./routes/customers'));
   app.use('/api/vendors', require('./routes/vendors'));

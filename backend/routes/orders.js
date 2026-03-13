@@ -4,6 +4,7 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get dashboard stats - MUST be before /:id route
@@ -106,7 +107,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create new order
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
     console.log('ORDER REQUEST:', JSON.stringify(req.body, null, 2));
     
@@ -182,7 +183,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update order
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
     console.log('Updating order:', req.params.id, 'with data:', JSON.stringify(req.body, null, 2));
     
@@ -227,7 +228,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete order
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const order = await Order.findByIdAndDelete(req.params.id);
     if (!order) {

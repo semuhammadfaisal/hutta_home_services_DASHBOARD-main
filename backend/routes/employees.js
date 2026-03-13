@@ -1,10 +1,11 @@
 const express = require('express');
 const Employee = require('../models/Employee');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get all employees
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const employees = await Employee.find().sort({ name: 1 });
     res.json(employees);
@@ -14,7 +15,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get employee performance stats - MUST BE BEFORE /:id
-router.get('/:id/stats', authenticateToken, async (req, res) => {
+router.get('/:id/stats', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const Order = require('../models/Order');
     const employeeId = req.params.id;
@@ -40,7 +41,7 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
 });
 
 // Get single employee
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) {
@@ -53,7 +54,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create new employee
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const employee = new Employee(req.body);
     await employee.save();
@@ -71,7 +72,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update employee
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const employee = await Employee.findByIdAndUpdate(
       req.params.id, 
@@ -90,7 +91,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete employee
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const employee = await Employee.findByIdAndDelete(req.params.id);
     if (!employee) {
