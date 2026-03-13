@@ -48,14 +48,16 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
     
     await user.save();
     
-    // Send welcome email with credentials
-    try {
-      await sendWelcomeEmail(email, password, firstName);
-    } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
-      // Don't fail the user creation if email fails
-    }
+    // Send welcome email with credentials (non-blocking)
+    sendWelcomeEmail(email, password, firstName)
+      .then(() => {
+        console.log('Welcome email sent successfully to:', email);
+      })
+      .catch(emailError => {
+        console.error('Failed to send welcome email:', emailError);
+      });
     
+    // Return immediately without waiting for email
     res.status(201).json({
       message: 'User created successfully',
       user: {
