@@ -58,16 +58,16 @@ const sendPasswordResetEmail = async (email, resetToken) => {
 const sendWelcomeEmail = async (email, password, firstName) => {
   const loginUrl = 'https://hutta-home-services-dashboard-main.onrender.com';
   const path = require('path');
+  const fs = require('fs');
+  
+  // Check if logo exists
+  const logoPath = path.join(__dirname, '../../assets/images/logo.png');
+  const logoExists = fs.existsSync(logoPath);
   
   const mailOptions = {
     from: `"Hutta Home Services" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Welcome to Hutta Home Services - Your Account Details',
-    attachments: [{
-      filename: 'logo.png',
-      path: path.join(__dirname, '../../assets/images/logo.png'),
-      cid: 'company-logo'
-    }],
     html: `
       <!DOCTYPE html>
       <html>
@@ -263,7 +263,7 @@ const sendWelcomeEmail = async (email, password, firstName) => {
         <div class="email-wrapper">
           <div class="header">
             <div class="logo-container">
-              <img src="cid:company-logo" alt="Hutta's Home Services" style="max-width: 200px; height: auto; margin-bottom: 15px;" />
+              ${logoExists ? '<img src="cid:company-logo" alt="Hutta\'s Home Services" style="max-width: 200px; height: auto; margin-bottom: 15px;" />' : ''}
               <h1 class="logo-text">Hutta's Home Services</h1>
             </div>
             <p class="header-subtitle">Professional Home Services Management</p>
@@ -313,6 +313,15 @@ const sendWelcomeEmail = async (email, password, firstName) => {
       </html>
     `
   };
+  
+  // Add logo attachment only if it exists
+  if (logoExists) {
+    mailOptions.attachments = [{
+      filename: 'logo.png',
+      path: logoPath,
+      cid: 'company-logo'
+    }];
+  }
 
   await transporter.sendMail(mailOptions);
 };
