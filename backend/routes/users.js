@@ -120,4 +120,39 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
   }
 });
 
+// Test email configuration (admin only)
+router.get('/test-email', authenticateToken, checkRole(['admin']), async (req, res) => {
+  try {
+    const { sendWelcomeEmail } = require('../utils/emailService');
+    
+    // Check if email credentials are configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      return res.status(500).json({ 
+        message: 'Email not configured',
+        details: {
+          EMAIL_USER: process.env.EMAIL_USER ? 'Set' : 'Missing',
+          EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? 'Set' : 'Missing'
+        }
+      });
+    }
+    
+    // Send test email
+    await sendWelcomeEmail(
+      req.user.email || 'test@example.com',
+      'TestPassword123',
+      'Test'
+    );
+    
+    res.json({ 
+      message: 'Test email sent successfully',
+      sentTo: req.user.email || 'test@example.com'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Failed to send test email',
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;
