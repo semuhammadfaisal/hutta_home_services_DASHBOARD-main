@@ -59,13 +59,23 @@ const sendPasswordResetEmail = async (email, resetToken) => {
 };
 
 const sendWelcomeEmail = async (email, password, firstName) => {
-  const loginUrl = 'https://hutta-home-services-dashboard-main.onrender.com';
-  const path = require('path');
-  const fs = require('fs');
-  
-  // Check if logo exists
-  const logoPath = path.join(__dirname, '../../assets/images/logo.png');
-  const logoExists = fs.existsSync(logoPath);
+  try {
+    console.log('Attempting to send welcome email to:', email);
+    console.log('EMAIL_USER configured:', process.env.EMAIL_USER ? 'Yes' : 'No');
+    console.log('EMAIL_PASSWORD configured:', process.env.EMAIL_PASSWORD ? 'Yes' : 'No');
+    
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      throw new Error('Email credentials not configured');
+    }
+    
+    const loginUrl = 'https://hutta-home-services-dashboard-main.onrender.com';
+    const path = require('path');
+    const fs = require('fs');
+    
+    // Check if logo exists
+    const logoPath = path.join(__dirname, '../../assets/images/logo.png');
+    const logoExists = fs.existsSync(logoPath);
+    console.log('Logo exists:', logoExists);
   
   const mailOptions = {
     from: `"Hutta Home Services" <${process.env.EMAIL_USER}>`,
@@ -326,7 +336,15 @@ const sendWelcomeEmail = async (email, password, firstName) => {
     }];
   }
 
-  await transporter.sendMail(mailOptions);
+  console.log('Sending email to:', email);
+  const result = await transporter.sendMail(mailOptions);
+  console.log('Email sent successfully:', result.messageId);
+  return result;
+  } catch (error) {
+    console.error('Email sending error:', error.message);
+    console.error('Error details:', error);
+    throw error;
+  }
 };
 
 module.exports = { sendPasswordResetEmail, sendWelcomeEmail };
