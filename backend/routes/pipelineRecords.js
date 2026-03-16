@@ -41,10 +41,18 @@ router.post('/', async (req, res) => {
     try {
         const newRecord = await record.save();
         
-        // Update order with pipelineRecordId if orderId is provided
-        if (req.body.orderId) {
+        // Update order with pipelineRecordId and initial stage if orderId is provided
+        if (req.body.orderId && req.body.stageId) {
+            const Stage = require('../models/Stage');
+            const stage = await Stage.findById(req.body.stageId);
+            const stageName = stage ? stage.name : null;
+            
             const Order = require('../models/Order');
-            await Order.findByIdAndUpdate(req.body.orderId, { pipelineRecordId: newRecord._id });
+            await Order.findByIdAndUpdate(req.body.orderId, { 
+                pipelineRecordId: newRecord._id,
+                pipelineStage: stageName
+            });
+            console.log(`Set order ${req.body.orderId} initial pipelineStage to: ${stageName}`);
         }
         
         res.status(201).json(newRecord);
@@ -81,15 +89,77 @@ router.put('/:id', async (req, res) => {
 // Update record stage (for drag and drop)
 router.patch('/:id/stage', async (req, res) => {
     try {
+        console.log('=== PIPELINE STAGE UPDATE BACKEND ===');
+        console.log('Record ID:', req.params.id);
+        console.log('New Stage ID:', req.body.stageId);
+        
         const record = await PipelineRecord.findById(req.params.id);
         if (!record) {
             return res.status(404).json({ message: 'Record not found' });
         }
+        
+        console.log('Found record:', {
+            id: record._id,
+            orderId: record.orderId,
+            customerName: record.customerName,
+            currentStageId: record.stageId
+        });
+
+        // Get the new stage name for updating the order
+        const Stage = require('../models/Stage');
+        const newStage = await Stage.findById(req.body.stageId);
+        const newStageName = newStage ? newStage.name : null;
+        
+        console.log('New stage name:', newStageName);
 
         record.stageId = req.body.stageId;
         const updatedRecord = await record.save();
+        
+        // Update the linked order's pipelineStage field for immediate KPI updates
+        if (record.orderId && newStageName) {
+            console.log('Updating linked order:', record.orderId, 'to stage:', newStageName);
+            const Order = require('../models/Order');
+            
+            try {
+                const updateResult = await Order.findByIdAndUpdate(
+                    record.orderId, 
+                    { pipelineStage: newStageName }, 
+                    { new: true, runValidators: true }
+                );
+                
+                if (updateResult) {
+                    console.log(`Successfully updated order ${record.orderId} pipelineStage to: ${newStageName}`);
+                    console.log('Updated order pipelineStage field:', updateResult.pipelineStage);
+                    
+                    // Force a small delay to ensure database write is committed
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Verify the update was persisted
+                    const verifyOrder = await Order.findById(record.orderId);
+                    if (verifyOrder && verifyOrder.pipelineStage === newStageName) {
+                        console.log('✅ Order update verified in database');
+                    } else {
+                        console.log('❌ Order update not yet persisted, current stage:', verifyOrder?.pipelineStage);
+                    }
+                } else {
+                    console.log(`Order ${record.orderId} not found or not updated`);
+                }
+            } catch (orderUpdateError) {
+                console.error('Error updating order pipelineStage:', orderUpdateError);
+            }
+        } else {
+            console.log('No order update needed:', {
+                hasOrderId: !!record.orderId,
+                hasNewStageName: !!newStageName,
+                orderId: record.orderId,
+                newStageName: newStageName
+            });
+        }
+        
+        console.log('=== PIPELINE STAGE UPDATE COMPLETE ===');
         res.json(updatedRecord);
     } catch (error) {
+        console.error('Pipeline stage update error:', error);
         res.status(400).json({ message: error.message });
     }
 });

@@ -18,11 +18,14 @@ router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, 
 router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const vendor = await Vendor.findById(req.params.id);
+    console.log('Fetched vendor from DB:', vendor);
+    console.log('Vendor notes from DB:', vendor?.notes);
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
     res.json(vendor);
   } catch (error) {
+    console.error('Error fetching vendor:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -32,12 +35,17 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
   try {
     console.log('=== VENDOR CREATION DEBUG ===');
     console.log('req.body:', req.body);
+    console.log('req.body.notes:', req.body.notes);
     console.log('req.body.documents type:', typeof req.body.documents);
     console.log('req.body.documents is array:', Array.isArray(req.body.documents));
     console.log('req.body.documents:', JSON.stringify(req.body.documents));
     
     const vendor = new Vendor(req.body);
+    console.log('Vendor before save:', vendor);
+    console.log('Vendor notes before save:', vendor.notes);
     await vendor.save();
+    console.log('Vendor after save:', vendor);
+    console.log('Vendor notes after save:', vendor.notes);
     res.status(201).json(vendor);
   } catch (error) {
     console.error('Vendor creation error:', error);

@@ -68,20 +68,25 @@ router.get('/', authenticateToken, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     
-    // Populate pipeline stage info
-    const PipelineRecord = require('../models/PipelineRecord');
-    const Stage = require('../models/Stage');
-    
+    // For orders without pipelineStage, try to populate from pipeline records
     for (let order of orders) {
-      try {
-        // Find pipeline record by orderId
-        const pipelineRecord = await PipelineRecord.findOne({ orderId: order._id }).lean();
-        if (pipelineRecord && pipelineRecord.stageId) {
-          const stage = await Stage.findById(pipelineRecord.stageId).select('name').lean();
-          order.pipelineStage = stage ? stage.name : null;
+      if (!order.pipelineStage && order.pipelineRecordId) {
+        try {
+          const PipelineRecord = require('../models/PipelineRecord');
+          const Stage = require('../models/Stage');
+          
+          const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId).lean();
+          if (pipelineRecord && pipelineRecord.stageId) {
+            const stage = await Stage.findById(pipelineRecord.stageId).select('name').lean();
+            if (stage) {
+              order.pipelineStage = stage.name;
+              // Update order with pipelineStage for future efficiency
+              await Order.findByIdAndUpdate(order._id, { pipelineStage: stage.name });
+            }
+          }
+        } catch (err) {
+          console.log('Pipeline stage lookup failed for order:', order._id);
         }
-      } catch (err) {
-        console.log('Pipeline record not found for order:', order._id);
       }
     }
     
@@ -110,6 +115,30 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
     console.log('ORDER REQUEST:', JSON.stringify(req.body, null, 2));
+    
+    // Check if customer exists, if not create one
+    let customerId = null;
+    if (req.body.customer && req.body.customer.email) {
+      let customer = await Customer.findOne({ 
+        email: req.body.customer.email,
+        name: req.body.customer.name 
+      });
+      
+      if (!customer) {
+        // Create new customer
+        customer = new Customer({
+          name: req.body.customer.name,
+          email: req.body.customer.email,
+          phone: req.body.customer.phone || '',
+          address: req.body.customer.address || '',
+          customerType: 'one-time',
+          status: 'active'
+        });
+        await customer.save();
+        console.log('Created new customer:', customer._id);
+      }
+      customerId = customer._id;
+    }
     
     // Generate unique order ID
     let orderId;
@@ -142,6 +171,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     const order = new Order({
       orderId,
       workOrderNumber,
+      customerId,
       customer: {
         name: req.body.customer.name,
         email: req.body.customer.email,
@@ -234,6 +264,13 @@ router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
+    
+    // Clean up associated pipeline record
+    if (order.pipelineRecordId) {
+      const PipelineRecord = require('../models/PipelineRecord');
+      await PipelineRecord.findByIdAndDelete(order.pipelineRecordId);
+    }
+    
     res.json({ message: 'Order deleted successfully' });
   } catch (error) {
     console.error('Delete order error:', error);

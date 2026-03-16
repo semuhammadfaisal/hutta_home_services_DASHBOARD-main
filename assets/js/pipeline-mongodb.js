@@ -7,21 +7,34 @@ let records = [];
 let filteredRecords = [];
 let draggedStage = null;
 let searchQuery = '';
+let newOrders = []; // Store new orders for suggestions
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    loadDataFromDB();
+    console.log('Pipeline MongoDB script loaded');
+    // Only load data if we're on the pipeline section or if it's active
+    const pipelineSection = document.getElementById('pipeline');
+    if (pipelineSection && pipelineSection.classList.contains('active')) {
+        console.log('Pipeline section is active, loading data...');
+        loadDataFromDB();
+    }
 });
 
 // Load all data from MongoDB
 async function loadDataFromDB() {
     try {
-        await Promise.all([fetchStages(), fetchRecords()]);
+        console.log('Loading pipeline data from database...');
+        await Promise.all([fetchStages(), fetchRecords(), fetchNewOrders()]);
+        console.log('Pipeline data loaded - Stages:', stages.length, 'Records:', records.length, 'New Orders:', newOrders.length);
         loadStages();
+        loadNewOrdersSuggestions();
     } catch (error) {
         console.error('Error loading data:', error);
     }
 }
+
+// Make function globally accessible
+window.loadDataFromDB = loadDataFromDB;
 
 // Fetch stages from MongoDB
 async function fetchStages() {
@@ -36,6 +49,52 @@ async function fetchRecords() {
     filteredRecords = [...records];
 }
 
+// Fetch new orders (orders without pipeline records)
+async function fetchNewOrders() {
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        if (!session) {
+            newOrders = [];
+            return;
+        }
+        
+        const sessionData = JSON.parse(session);
+        const token = sessionData.token;
+        
+        const response = await fetch(`${API_BASE_URL}/orders`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            newOrders = [];
+            return;
+        }
+        
+        const allOrders = await response.json();
+        
+        // Filter orders that don't have pipeline records yet
+        // Get all order IDs that are already in pipeline
+        const ordersInPipeline = records.map(r => r.orderId).filter(Boolean);
+        
+        // Filter new orders (created in last 30 days and not in pipeline)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        newOrders = allOrders.filter(order => {
+            const isNotInPipeline = !ordersInPipeline.includes(order._id);
+            const isRecent = new Date(order.createdAt) > thirtyDaysAgo;
+            return isNotInPipeline && isRecent;
+        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Most recent first
+        
+        console.log('New orders found:', newOrders.length);
+    } catch (error) {
+        console.error('Error fetching new orders:', error);
+        newOrders = [];
+    }
+}
+
 // Load and render stages
 function loadStages() {
     const container = document.getElementById('stagesContainer');
@@ -44,6 +103,10 @@ function loadStages() {
     // Remove old event listeners by cloning
     const newContainer = container.cloneNode(false);
     container.parentNode.replaceChild(newContainer, container);
+    
+    // Add new orders suggestion column first
+    const suggestionsColumn = createNewOrdersSuggestionColumn();
+    newContainer.appendChild(suggestionsColumn);
     
     stages.forEach(stage => {
         const stageColumn = createStageColumn(stage);
@@ -118,7 +181,7 @@ function loadStages() {
     
     // Add drag event delegation
     newContainer.addEventListener('dragstart', (e) => {
-        if (e.target.classList.contains('record-card')) {
+        if (e.target.classList.contains('record-card') || e.target.classList.contains('new-order-card')) {
             drag(e);
         }
     });
@@ -603,7 +666,15 @@ async function deleteRecord(recordId) {
 
 // Drag and Drop
 function drag(event) {
-    event.dataTransfer.setData('recordId', event.target.dataset.recordId);
+    if (event.target.classList.contains('new-order-card')) {
+        console.log('Drag started for new order:', event.target.dataset.orderId);
+        event.dataTransfer.setData('orderId', event.target.dataset.orderId);
+        event.dataTransfer.setData('isNewOrder', 'true');
+    } else {
+        console.log('Drag started for record:', event.target.dataset.recordId);
+        event.dataTransfer.setData('recordId', event.target.dataset.recordId);
+        event.dataTransfer.setData('isNewOrder', 'false');
+    }
     event.target.classList.add('dragging');
 }
 
@@ -620,40 +691,215 @@ async function drop(event) {
     event.preventDefault();
     event.currentTarget.classList.remove('drag-over');
     
-    const recordId = event.dataTransfer.getData('recordId');
+    const isNewOrder = event.dataTransfer.getData('isNewOrder') === 'true';
     const newStageId = event.currentTarget.dataset.stageId;
     
-    const record = records.find(r => r._id === recordId);
-    if (record && record.stageId !== newStageId) {
+    if (isNewOrder) {
+        // Handle new order drop
+        const orderId = event.dataTransfer.getData('orderId');
+        const order = newOrders.find(o => o._id === orderId);
+        
+        if (order) {
+            console.log('Dropping new order into stage:', order.orderId, 'to stage:', newStageId);
+            await createPipelineRecordFromOrder(order, newStageId);
+        }
+    } else {
+        // Handle existing record drop
+        const recordId = event.dataTransfer.getData('recordId');
+        const record = records.find(r => r._id === recordId);
+        
+        if (record && record.stageId !== newStageId) {
         const oldStageId = record.stageId;
         const oldStageName = stages.find(s => s._id === oldStageId)?.name || 'Unknown';
         const newStageName = stages.find(s => s._id === newStageId)?.name || 'Unknown';
         
+        console.log('=== PIPELINE DROP DEBUG ===');
+        console.log('Record ID:', recordId);
+        console.log('Old Stage:', oldStageName, '(' + oldStageId + ')');
+        console.log('New Stage:', newStageName, '(' + newStageId + ')');
+        
         try {
-            await fetch(`${API_BASE_URL}/pipeline-records/${recordId}/stage`, {
+            // Update the pipeline record stage (this is the important one)
+            console.log('Updating pipeline record stage...');
+            const stageUpdateResponse = await fetch(`${API_BASE_URL}/pipeline-records/${recordId}/stage`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ stageId: newStageId })
             });
             
-            await fetch(`${API_BASE_URL}/pipeline-movements`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    recordId,
-                    customerName: record.customerName,
-                    fromStageId: oldStageId,
-                    fromStageName: oldStageName,
-                    toStageId: newStageId,
-                    toStageName: newStageName,
-                    movedBy: 'Admin'
-                })
-            });
+            if (!stageUpdateResponse.ok) {
+                const errorText = await stageUpdateResponse.text();
+                console.error('Stage update failed:', stageUpdateResponse.status, errorText);
+                throw new Error('Failed to update pipeline record stage: ' + errorText);
+            }
             
+            console.log('Pipeline record stage updated successfully');
+            
+            // Try to log the movement (optional - don't fail if this doesn't work)
+            try {
+                console.log('Logging pipeline movement...');
+                const movementResponse = await fetch(`${API_BASE_URL}/pipeline-movements`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordId,
+                        customerName: record.customerName,
+                        fromStageId: oldStageId,
+                        fromStageName: oldStageName,
+                        toStageId: newStageId,
+                        toStageName: newStageName,
+                        movedBy: 'Admin'
+                    })
+                });
+                
+                if (movementResponse.ok) {
+                    console.log('Pipeline movement logged successfully');
+                } else {
+                    const errorText = await movementResponse.text();
+                    console.warn('Pipeline movement logging failed:', movementResponse.status, errorText);
+                }
+            } catch (movementError) {
+                console.warn('Failed to log pipeline movement:', movementError);
+                // Don't fail the whole operation if movement logging fails
+            }
+            
+            console.log('Reloading pipeline data...');
             await loadDataFromDB();
+            
+            // Wait longer to ensure backend update is complete
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Refresh dashboard KPIs if moved to/from 'Paid' stage
+            if (newStageName === 'Paid' || oldStageName === 'Paid') {
+                console.log('=== DASHBOARD REFRESH TRIGGERED ===');
+                console.log('Stage change detected - from:', oldStageName, 'to:', newStageName);
+                console.log('Record orderId:', record.orderId);
+                
+                // Force clear any cached data first
+                if (window.dashboard && window.dashboard.clearCache) {
+                    console.log('Clearing dashboard cache...');
+                    window.dashboard.clearCache();
+                }
+                
+                // CRITICAL: Clear APIService cache to force fresh data
+                if (window.APIService && window.APIService.clearCache) {
+                    console.log('Clearing APIService cache...');
+                    window.APIService.clearCache();
+                }
+                
+                // Verify the backend update was successful before refreshing dashboard
+                console.log('Verifying backend update...');
+                try {
+                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+                    if (session) {
+                        const sessionData = JSON.parse(session);
+                        const token = sessionData.token;
+                        
+                        // Check if the order was actually updated
+                        const orderResponse = await fetch(`/api/orders/${record.orderId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (orderResponse.ok) {
+                            const updatedOrder = await orderResponse.json();
+                            console.log('Backend verification - Order pipelineStage:', updatedOrder.pipelineStage);
+                            
+                            if (updatedOrder.pipelineStage === newStageName) {
+                                console.log('✅ Backend update verified successfully');
+                            } else {
+                                console.log('❌ Backend update not yet reflected, waiting more...');
+                                await new Promise(resolve => setTimeout(resolve, 2000));
+                            }
+                        } else {
+                            console.error('Failed to verify order update:', orderResponse.status);
+                        }
+                    }
+                } catch (verifyError) {
+                    console.error('Error verifying backend update:', verifyError);
+                }
+                
+                // Check order data before refresh
+                console.log('Checking order data before refresh...');
+                try {
+                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+                    if (session) {
+                        const sessionData = JSON.parse(session);
+                        const token = sessionData.token;
+                        
+                        const response = await fetch('/api/orders', {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const orders = await response.json();
+                            const updatedOrder = orders.find(o => o._id === record.orderId);
+                            console.log('Updated order found:', updatedOrder ? {
+                                id: updatedOrder._id,
+                                pipelineStage: updatedOrder.pipelineStage,
+                                amount: updatedOrder.amount
+                            } : 'NOT FOUND');
+                            
+                            const paidOrders = orders.filter(order => order.pipelineStage === 'Paid');
+                            const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+                            console.log('Fresh data - Paid orders:', paidOrders.length, 'Payments collected:', paymentsCollected);
+                        } else {
+                            console.error('Failed to fetch orders:', response.status, response.statusText);
+                        }
+                    } else {
+                        console.error('No session found for authentication');
+                    }
+                } catch (err) {
+                    console.error('Error checking order data:', err);
+                }
+                
+                // Try multiple refresh methods with retries to ensure dashboard updates
+                console.log('Starting dashboard refresh with retries...');
+                
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    console.log(`Dashboard refresh attempt ${attempt}/3`);
+                    
+                    if (window.refreshDashboard) {
+                        console.log('Calling window.refreshDashboard...');
+                        await window.refreshDashboard();
+                    }
+                    if (window.refreshDashboardKPIs) {
+                        console.log('Calling window.refreshDashboardKPIs...');
+                        await window.refreshDashboardKPIs();
+                    }
+                    if (window.onPipelineStageChange) {
+                        console.log('Calling window.onPipelineStageChange...');
+                        await window.onPipelineStageChange();
+                    }
+                    if (window.dashboard && window.dashboard.renderDashboard) {
+                        console.log('Calling window.dashboard.renderDashboard...');
+                        await window.dashboard.renderDashboard();
+                    }
+                    
+                    // Wait between attempts
+                    if (attempt < 3) {
+                        console.log(`Waiting before attempt ${attempt + 1}...`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                // Additional delay and final check
+                await new Promise(resolve => setTimeout(resolve, 500));
+                console.log('=== DASHBOARD REFRESH COMPLETE ===');
+            } else {
+                console.log('Stage change detected but not to/from Paid stage:', oldStageName, '->', newStageName);
+            }
+            
+            console.log('=== PIPELINE DROP COMPLETE ===');
         } catch (error) {
+            console.error('Error moving record:', error);
             alert('Error moving record: ' + error.message);
         }
+    }
+    
     }
     
     document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
@@ -714,6 +960,10 @@ function updateStatistics() {
     
     if (totalStagesEl) totalStagesEl.textContent = stages.length;
     if (totalRecordsEl) totalRecordsEl.textContent = records.length;
+    
+    // Update new orders count
+    const newOrdersCountEl = document.getElementById('newOrdersCount');
+    if (newOrdersCountEl) newOrdersCountEl.textContent = newOrders.length;
 }
 
 async function clearPipelineData() {
@@ -816,8 +1066,48 @@ function updateSearchStats() {
     }
 }
 
+// Global function to verify pipeline record to order connection
+window.verifyPipelineConnection = async function(recordId) {
+    console.log('=== VERIFYING PIPELINE CONNECTION ===');
+    console.log('Record ID:', recordId);
+    
+    try {
+        // Get pipeline record
+        const recordResponse = await fetch(`/api/pipeline-records/${recordId}`);
+        const record = await recordResponse.json();
+        console.log('Pipeline record:', record);
+        
+        if (record.orderId) {
+            // Get linked order
+            const orderResponse = await fetch(`/api/orders/${record.orderId}`);
+            const order = await orderResponse.json();
+            console.log('Linked order:', {
+                id: order._id,
+                pipelineStage: order.pipelineStage,
+                pipelineRecordId: order.pipelineRecordId,
+                amount: order.amount
+            });
+            
+            // Get stage name
+            const stageResponse = await fetch(`/api/stages/${record.stageId}`);
+            const stage = await stageResponse.json();
+            console.log('Stage:', stage);
+            
+            return { record, order, stage };
+        } else {
+            console.log('No orderId in pipeline record');
+            return { record, order: null, stage: null };
+        }
+    } catch (error) {
+        console.error('Error verifying connection:', error);
+    }
+};
+
 window.filterPipelineRecords = filterPipelineRecords;
 window.clearPipelineSearch = clearPipelineSearch;
+window.verifyPipelineConnection = verifyPipelineConnection;
+window.fetchNewOrders = fetchNewOrders;
+window.renderNewOrders = renderNewOrders;
 
 // Expand Stage Function
 async function expandStage(stageId) {
@@ -949,3 +1239,330 @@ window.expandStage = expandStage;
 window.closeExpandedStage = closeExpandedStage;
 window.viewRecordFromExpanded = viewRecordFromExpanded;
 window.editRecordFromExpanded = editRecordFromExpanded;
+
+// New Orders Suggestions Functions
+function createNewOrdersSuggestionColumn() {
+    const column = document.createElement('div');
+    column.className = 'stage-column new-orders-column';
+    column.style.background = 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)';
+    column.style.border = '2px dashed #0ea5e9';
+    column.style.minWidth = '340px';
+    column.style.maxWidth = '340px';
+    
+    const header = document.createElement('div');
+    header.className = 'stage-header';
+    header.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+    header.style.color = 'white';
+    header.innerHTML = `
+        <div class="stage-title">
+            <h3 style="color: white; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus-circle"></i>
+                New Orders
+            </h3>
+        </div>
+        <div class="stage-count">
+            <span class="count-badge" id="newOrdersCount" style="background: rgba(255,255,255,0.2); color: white;">${newOrders.length}</span>
+        </div>
+    `;
+    
+    const body = document.createElement('div');
+    body.className = 'stage-body';
+    body.style.background = '#f8fafc';
+    body.innerHTML = renderNewOrders();
+    
+    column.appendChild(header);
+    column.appendChild(body);
+    
+    return column;
+}
+
+function renderNewOrders() {
+    if (newOrders.length === 0) {
+        return `
+            <div style="text-align: center; color: #64748b; padding: 40px 20px; font-size: 13px;">
+                <i class="fas fa-check-circle" style="font-size: 32px; color: #10b981; margin-bottom: 12px; display: block;"></i>
+                <div style="font-weight: 600; margin-bottom: 4px;">All caught up!</div>
+                <div>No new orders to add to pipeline</div>
+            </div>
+        `;
+    }
+    
+    // Show only first order by default
+    const firstOrder = newOrders[0];
+    const remainingCount = newOrders.length - 1;
+    
+    let html = renderOrderCard(firstOrder);
+    
+    // Add expand button if more orders exist
+    if (remainingCount > 0) {
+        html += `
+            <button class="expand-new-orders-btn" onclick="expandNewOrders()" style="
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(135deg, #0ea5e9, #0284c7);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                margin-top: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            ">
+                <i class="fas fa-chevron-down"></i>
+                Show ${remainingCount} more order${remainingCount > 1 ? 's' : ''}
+            </button>
+        `;
+    }
+    
+    return html;
+}
+
+function loadNewOrdersSuggestions() {
+    const container = document.querySelector('.new-orders-column .stage-body');
+    if (container) {
+        container.innerHTML = renderNewOrders();
+    }
+    updateStatistics();
+}
+
+// Create pipeline record from order
+async function createPipelineRecordFromOrder(order, stageId) {
+    try {
+        const customerName = order.customer?.name || order.customer || 'Unknown Customer';
+        const email = order.customer?.email || '';
+        const phone = order.customer?.phone || '';
+        const address = order.customer?.address || '';
+        const budget = order.amount || '';
+        const startDate = order.startDate || '';
+        const description = order.description || '';
+        const notes = order.notes || '';
+        const priority = order.priority || 'medium';
+        
+        console.log('Creating pipeline record from order:', {
+            orderId: order._id,
+            customerName,
+            stageId
+        });
+        
+        const response = await fetch(`${API_BASE_URL}/pipeline-records`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                stageId,
+                orderId: order._id,
+                customerName,
+                email,
+                phone,
+                address,
+                budget,
+                startDate,
+                description,
+                notes,
+                priority
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to create pipeline record');
+        }
+        
+        console.log('Pipeline record created successfully');
+        
+        // Remove the order from new orders list
+        newOrders = newOrders.filter(o => o._id !== order._id);
+        
+        // Reload pipeline data
+        await loadDataFromDB();
+        
+        // Show success message
+        if (window.showToast) {
+            window.showToast(`Order "${customerName}" added to pipeline!`, 'success');
+        }
+        
+        // Refresh dashboard if needed
+        if (window.refreshDashboard) {
+            setTimeout(() => window.refreshDashboard(), 1000);
+        }
+        
+    } catch (error) {
+        console.error('Error creating pipeline record from order:', error);
+        if (window.showToast) {
+            window.showToast('Failed to add order to pipeline: ' + error.message, 'error');
+        } else {
+            alert('Failed to add order to pipeline: ' + error.message);
+        }
+    }
+}
+
+// Render individual order card
+function renderOrderCard(order) {
+    const customerName = order.customer?.name || order.customer || 'Unknown Customer';
+    const amount = order.amount ? `$${parseFloat(order.amount).toLocaleString()}` : '';
+    const timeAgo = formatTime(order.createdAt);
+    const priority = order.priority || 'medium';
+    
+    return `
+        <div class="new-order-card" draggable="true" data-order-id="${order._id}" style="
+            background: white;
+            border: 2px solid #e0f2fe;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: move;
+            transition: all 0.2s;
+            position: relative;
+        ">
+            <div class="drag-indicator" style="
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                color: #0ea5e9;
+                font-size: 12px;
+            ">
+                <i class="fas fa-grip-vertical"></i>
+            </div>
+            
+            <div class="order-header" style="margin-bottom: 8px;">
+                <div class="order-title" style="font-weight: 600; font-size: 13px; color: #1e293b; margin-bottom: 2px;">
+                    ${customerName}
+                </div>
+                <div class="order-id" style="font-size: 10px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; display: inline-block;">
+                    ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}
+                </div>
+            </div>
+            
+            <div class="order-info" style="font-size: 12px; color: #475569; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                    <i class="fas fa-wrench" style="color: #64748b; font-size: 11px;"></i>
+                    <span>${order.service || 'Service not specified'}</span>
+                </div>
+                ${order.customer?.email ? `
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                        <i class="fas fa-envelope" style="color: #64748b; font-size: 11px;"></i>
+                        <span>${order.customer.email}</span>
+                    </div>
+                ` : ''}
+                ${amount ? `
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-dollar-sign" style="color: #64748b; font-size: 11px;"></i>
+                        <span style="font-weight: 600; color: #059669;">${amount}</span>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="order-footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid #e2e8f0;">
+                <span class="priority-badge priority-${priority}" style="
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    font-size: 9px;
+                    letter-spacing: 0.5px;
+                    ${priority === 'high' ? 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;' : 
+                      priority === 'medium' ? 'background: #fffbeb; color: #d97706; border: 1px solid #fde68a;' : 
+                      'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;'}
+                ">${priority}</span>
+                <span class="order-time" style="font-size: 10px; color: #94a3b8;">${timeAgo}</span>
+            </div>
+            
+            <div class="drag-hint" style="
+                position: absolute;
+                bottom: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 10px;
+                color: #0ea5e9;
+                background: white;
+                padding: 2px 8px;
+                border-radius: 4px;
+                border: 1px solid #0ea5e9;
+                opacity: 0;
+                transition: opacity 0.2s;
+                pointer-events: none;
+                white-space: nowrap;
+            ">Drag to stage →</div>
+        </div>
+    `;
+}
+
+// Expand new orders to show all
+function expandNewOrders() {
+    const container = document.querySelector('.new-orders-column .stage-body');
+    if (!container) return;
+    
+    // Show all orders
+    const allOrdersHtml = newOrders.map(order => renderOrderCard(order)).join('');
+    
+    // Add collapse button
+    const collapseBtn = `
+        <button class="collapse-new-orders-btn" onclick="collapseNewOrders()" style="
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        ">
+            <i class="fas fa-chevron-up"></i>
+            Show less
+        </button>
+    `;
+    
+    container.innerHTML = allOrdersHtml + collapseBtn;
+}
+
+// Collapse new orders to show only first
+function collapseNewOrders() {
+    const container = document.querySelector('.new-orders-column .stage-body');
+    if (!container) return;
+    
+    container.innerHTML = renderNewOrders();
+}
+
+// Add hover effects for new order cards
+document.addEventListener('DOMContentLoaded', () => {
+    // Add CSS for hover effects
+    const style = document.createElement('style');
+    style.textContent = `
+        .new-order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+            border-color: #0ea5e9 !important;
+        }
+        
+        .new-order-card:hover .drag-hint {
+            opacity: 1;
+        }
+        
+        .new-order-card.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+        
+        .stage-body.drag-over {
+            background: #f0f9ff !important;
+            border: 2px dashed #0ea5e9;
+        }
+    `;
+    document.head.appendChild(style);
+});
+
+window.createPipelineRecordFromOrder = createPipelineRecordFromOrder;
+window.loadNewOrdersSuggestions = loadNewOrdersSuggestions;
+window.expandNewOrders = expandNewOrders;
+window.collapseNewOrders = collapseNewOrders;

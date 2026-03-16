@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
   workOrderNumber: { type: String },
+  customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   customer: {
     name: { type: String, required: true },
     email: { type: String, required: true },
@@ -21,7 +22,9 @@ const orderSchema = new mongoose.Schema({
   status: { type: String, default: 'new' },
   priority: { type: String, default: 'medium' },
   description: String,
-  notes: String
+  notes: String,
+  pipelineRecordId: { type: mongoose.Schema.Types.ObjectId, ref: 'PipelineRecord' },
+  pipelineStage: { type: String } // Store pipeline stage name directly for efficient KPI calculations
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

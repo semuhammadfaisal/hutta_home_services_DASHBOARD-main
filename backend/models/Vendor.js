@@ -9,6 +9,20 @@ const documentSchema = new mongoose.Schema({
   uploadedAt: { type: Date, default: Date.now }
 }, { _id: false });
 
+// Define email subdocument schema
+const emailSchema = new mongoose.Schema({
+  label: { type: String, default: 'Email' },
+  address: { type: String, required: true },
+  isPrimary: { type: Boolean, default: false }
+}, { _id: false });
+
+// Define phone subdocument schema
+const phoneSchema = new mongoose.Schema({
+  label: { type: String, default: 'Phone' },
+  number: { type: String, required: true },
+  isPrimary: { type: Boolean, default: false }
+}, { _id: false });
+
 const vendorSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true },
@@ -16,12 +30,14 @@ const vendorSchema = new mongoose.Schema({
   address: String,
   category: { 
     type: String, 
-    enum: ['electrical', 'plumbing', 'civil', 'carpentry', 'hvac', 'painting', 'cleaning'], 
     required: true 
   },
   rating: { type: Number, min: 1, max: 5, default: 5 },
   isActive: { type: Boolean, default: true },
-  documents: { type: [documentSchema], default: [] }
+  notes: String,
+  documents: { type: [documentSchema], default: [] },
+  emails: { type: [emailSchema], default: [] },
+  phones: { type: [phoneSchema], default: [] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Vendor', vendorSchema);

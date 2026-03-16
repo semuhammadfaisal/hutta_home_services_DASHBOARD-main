@@ -29,7 +29,7 @@ router.get('/record/:recordId', async (req, res) => {
 router.post('/', async (req, res) => {
     const movement = new PipelineMovement({
         recordId: req.body.recordId,
-        projectName: req.body.projectName,
+        customerName: req.body.customerName,
         fromStageId: req.body.fromStageId,
         fromStageName: req.body.fromStageName,
         toStageId: req.body.toStageId,

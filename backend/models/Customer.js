@@ -19,6 +19,20 @@ const addressSchema = new mongoose.Schema({
   isPrimary: { type: Boolean, default: false }
 }, { _id: false });
 
+// Define phone subdocument schema for multiple phone numbers
+const phoneSchema = new mongoose.Schema({
+  label: { type: String, default: 'Primary' },
+  number: String,
+  isPrimary: { type: Boolean, default: false }
+}, { _id: false });
+
+// Define email subdocument schema for multiple email addresses
+const emailSchema = new mongoose.Schema({
+  label: { type: String, default: 'Primary' },
+  address: String,
+  isPrimary: { type: Boolean, default: false }
+}, { _id: false });
+
 const customerSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true },
@@ -28,6 +42,8 @@ const customerSchema = new mongoose.Schema({
   state: String,
   zipCode: String,
   addresses: { type: [addressSchema], default: [] },
+  phones: { type: [phoneSchema], default: [] },
+  emails: { type: [emailSchema], default: [] },
   customerType: { 
     type: String, 
     enum: ['recurring', 'one-time'], 

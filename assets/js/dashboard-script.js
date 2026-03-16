@@ -105,13 +105,12 @@ class DashboardManager {
             // Show loading state immediately
             this.showLoadingState();
             
-            // Check cache first (5 minute TTL)
-            const cached = this.getCachedData();
-            if (cached) {
-                this.renderFromCache(cached);
+            // Always load fresh data - no caching for real-time pipeline updates
+            // Clear APIService cache first to ensure fresh data
+            if (window.APIService && window.APIService.clearCache) {
+                window.APIService.clearCache();
             }
             
-            // Load all data in parallel for instant display
             const [orders, vendors, employees, customers, payments] = await Promise.all([
                 window.APIService.getOrders().catch(err => { console.error('Orders error:', err); return []; }),
                 window.APIService.getVendors().catch(() => []),
@@ -122,28 +121,38 @@ class DashboardManager {
             
             console.log('Dashboard data loaded:', { orders: orders.length, vendors: vendors.length, employees: employees.length });
             
-            // Calculate stats from orders
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
-            const monthlyRevenue = orders
-                .filter(order => {
-                    const orderDate = new Date(order.createdAt);
-                    return orderDate.getMonth() === currentMonth && 
-                           orderDate.getFullYear() === currentYear;
-                })
-                .reduce((sum, order) => sum + (order.amount || 0), 0);
+            if (orders.length === 0 && vendors.length === 0 && employees.length === 0) {
+                console.warn('⚠️ All data arrays are empty - possible server connection issue');
+                console.log('API Base URL:', window.APIService.baseURL);
+                console.log('Token available:', !!window.APIService.getToken());
+            }
+            console.log('Orders with pipeline stages:', orders.filter(o => o.pipelineStage).map(o => ({ id: o._id, stage: o.pipelineStage, amount: o.amount })));
+            console.log('Orders without pipeline stages:', orders.filter(o => !o.pipelineStage).map(o => ({ id: o._id, amount: o.amount, status: o.status })));
+            console.log('All orders pipeline stage breakdown:', orders.map(o => ({ id: o._id, pipelineStage: o.pipelineStage, amount: o.amount })));
+            
+            // Calculate stats from fresh orders data
+            const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
+            
+            // Calculate payments collected (orders in 'Paid' or 'Closed' pipeline stage)
+            const paidOrders = orders.filter(order => order.pipelineStage === 'Paid' || order.pipelineStage === 'Closed');
+            const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+            
+            console.log('Payment calculations:', {
+                totalOrders: orders.length,
+                paidOrders: paidOrders.length,
+                paymentsCollected,
+                totalRevenue
+            });
             
             const stats = {
                 totalOrders: orders.length,
-                monthlyRevenue: monthlyRevenue,
+                totalRevenue: totalRevenue,
+                paymentsCollected: paymentsCollected,
                 totalVendors: vendors.length,
                 totalEmployees: employees.length
             };
             
-            // Cache the data
-            this.cacheData({ orders, vendors, employees, customers, payments, stats });
-            
-            // Render all sections instantly
+            // Render all sections with fresh data
             this.renderKPIs(stats);
             this.renderVendorCategories(vendors);
             this.renderCustomerSummary(customers);
@@ -152,7 +161,7 @@ class DashboardManager {
             this.renderOrdersTable(orders);
             this.renderRecentActivity(orders);
             
-            console.log('Orders table rendered with', orders.length, 'orders');
+            console.log('Dashboard rendered with fresh data');
             this.hideLoadingState();
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
@@ -171,8 +180,8 @@ class DashboardManager {
         const { data, timestamp } = JSON.parse(cached);
         const age = Date.now() - timestamp;
         
-        // Cache valid for 5 minutes
-        if (age < 5 * 60 * 1000) {
+        // Cache valid for 2 minutes (reduced from 5 minutes for more frequent updates)
+        if (age < 2 * 60 * 1000) {
             return data;
         }
         return null;
@@ -185,16 +194,11 @@ class DashboardManager {
         }));
     }
 
-    renderFromCache(cached) {
-        console.log('Rendering from cache:', cached);
-        this.renderKPIs(cached.stats);
-        this.renderVendorCategories(cached.vendors);
-        this.renderCustomerSummary(cached.customers);
-        this.renderFinancialOverview(cached.orders, cached.payments);
-        this.renderWorkflowFromOrders(cached.orders);
-        this.renderOrdersTable(cached.orders);
-        this.renderRecentActivity(cached.orders);
+    clearCache() {
+        sessionStorage.removeItem('dashboardCache');
     }
+
+
 
     showLoadingState() {
         const kpis = ['totalOrders', 'monthlyRevenue', 'totalVendors', 'totalEmployees'];
@@ -210,18 +214,21 @@ class DashboardManager {
 
     renderKPIs(stats = null) {
         const totalOrdersEl = document.getElementById('totalOrders');
-        const monthlyRevenueEl = document.getElementById('monthlyRevenue');
+        const totalRevenueEl = document.getElementById('totalRevenue');
+        const paymentsCollectedEl = document.getElementById('paymentsCollected');
         const totalVendorsEl = document.getElementById('totalVendors');
         const totalEmployeesEl = document.getElementById('totalEmployees');
         
         if (stats) {
             if (totalOrdersEl) totalOrdersEl.textContent = stats.totalOrders || 0;
-            if (monthlyRevenueEl) monthlyRevenueEl.textContent = `$${(stats.monthlyRevenue || 0).toLocaleString()}`;
+            if (totalRevenueEl) totalRevenueEl.textContent = `$${(stats.totalRevenue || 0).toLocaleString()}`;
+            if (paymentsCollectedEl) paymentsCollectedEl.textContent = `$${(stats.paymentsCollected || 0).toLocaleString()}`;
             if (totalVendorsEl) totalVendorsEl.textContent = stats.totalVendors || 0;
             if (totalEmployeesEl) totalEmployeesEl.textContent = stats.totalEmployees || 0;
         } else {
             if (totalOrdersEl) totalOrdersEl.textContent = '0';
-            if (monthlyRevenueEl) monthlyRevenueEl.textContent = '$0';
+            if (totalRevenueEl) totalRevenueEl.textContent = '$0';
+            if (paymentsCollectedEl) paymentsCollectedEl.textContent = '$0';
             if (totalVendorsEl) totalVendorsEl.textContent = '0';
             if (totalEmployeesEl) totalEmployeesEl.textContent = '0';
         }
@@ -702,9 +709,160 @@ function closeNotificationPanel() {
     if (panel) panel.remove();
 }
 
-// Global refresh dashboard function
+// Global function to test pipeline refresh
+window.testPipelineRefresh = function() {
+    console.log('=== TESTING PIPELINE REFRESH ===');
+    console.log('Dashboard object:', window.dashboard);
+    console.log('Refresh functions available:', {
+        refreshDashboard: typeof window.refreshDashboard,
+        refreshDashboardKPIs: typeof window.refreshDashboardKPIs,
+        onPipelineStageChange: typeof window.onPipelineStageChange,
+        forceRefreshDashboard: typeof window.forceRefreshDashboard
+    });
+    
+    // Simulate pipeline stage change
+    console.log('Simulating pipeline stage change...');
+    if (window.onPipelineStageChange) {
+        window.onPipelineStageChange();
+    } else {
+        console.error('onPipelineStageChange function not found!');
+    }
+};
+
+// Global function to manually refresh KPIs
+window.manualRefreshKPIs = async function() {
+    console.log('=== MANUAL KPI REFRESH ===');
+    if (window.dashboard) {
+        // Clear cache first
+        if (window.dashboard.clearCache) {
+            console.log('Clearing cache...');
+            window.dashboard.clearCache();
+        }
+        console.log('Calling dashboard.renderDashboard()...');
+        await window.dashboard.renderDashboard();
+        console.log('Manual refresh complete');
+    } else {
+        console.error('Dashboard object not found!');
+    }
+};
+
+// Global function to force refresh dashboard with fresh data
+window.forceRefreshDashboard = async function() {
+    console.log('=== FORCE REFRESH DASHBOARD ===');
+    if (window.dashboard) {
+        // Clear any cached data
+        if (window.dashboard.clearCache) {
+            window.dashboard.clearCache();
+        }
+        
+        // Force fresh data load
+        await window.dashboard.renderDashboard();
+        console.log('Dashboard force refreshed');
+    } else {
+        console.error('Dashboard object not found!');
+    }
+};
+
+// Global function to check current order data
+window.checkOrderData = async function() {
+    console.log('=== CHECKING ORDER DATA ===');
+    
+    // Clear APIService cache first
+    if (window.APIService && window.APIService.clearCache) {
+        console.log('Clearing APIService cache before check...');
+        window.APIService.clearCache();
+    }
+    
+    try {
+        const orders = await window.APIService.getOrders();
+        console.log('Total orders:', orders.length);
+        
+        // Show all orders with their pipeline stages
+        console.log('All orders with pipeline info:');
+        orders.forEach((order, index) => {
+            console.log(`Order ${index + 1}:`, {
+                id: order._id,
+                orderId: order.orderId,
+                customer: order.customer?.name || order.customer,
+                amount: order.amount,
+                pipelineStage: order.pipelineStage,
+                pipelineRecordId: order.pipelineRecordId,
+                status: order.status
+            });
+        });
+        
+        const paidOrders = orders.filter(order => order.pipelineStage === 'Paid');
+        console.log('Orders in Paid stage:', paidOrders.length);
+        console.log('Paid orders:', paidOrders.map(o => ({ id: o._id, amount: o.amount, stage: o.pipelineStage })));
+        
+        const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+        console.log('Calculated payments collected:', paymentsCollected);
+        
+        const unpaidOrders = orders.filter(order => order.pipelineStage !== 'Paid');
+        console.log('Unpaid orders:', unpaidOrders.length);
+        console.log('Unpaid orders:', unpaidOrders.map(o => ({ id: o._id, amount: o.amount, stage: o.pipelineStage || 'no stage' })));
+        
+        const pendingPayments = unpaidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+        console.log('Calculated pending payments:', pendingPayments);
+        
+        // Also check pipeline records
+        console.log('\n=== CHECKING PIPELINE RECORDS ===');
+        const response = await fetch('/api/pipeline-records');
+        const pipelineRecords = await response.json();
+        console.log('Total pipeline records:', pipelineRecords.length);
+        pipelineRecords.forEach((record, index) => {
+            console.log(`Pipeline Record ${index + 1}:`, {
+                id: record._id,
+                orderId: record.orderId,
+                customerName: record.customerName,
+                stageId: record.stageId
+            });
+        });
+        
+        // Check stages
+        console.log('\n=== CHECKING STAGES ===');
+        const stagesResponse = await fetch('/api/stages');
+        const stages = await stagesResponse.json();
+        console.log('Stages:', stages.map(s => ({ id: s._id, name: s.name })));
+        
+        return { orders, paidOrders, paymentsCollected, pendingPayments, pipelineRecords, stages };
+    } catch (error) {
+        console.error('Error checking order data:', error);
+    }
+};
+
+// Global refresh dashboard function - force immediate refresh
 window.refreshDashboard = async function() {
     if (window.dashboard) {
+        console.log('Force refreshing dashboard...');
+        // Clear cache to ensure fresh data
+        if (window.dashboard.clearCache) {
+            window.dashboard.clearCache();
+        }
+        await window.dashboard.renderDashboard();
+    }
+};
+
+// Global function to refresh dashboard when pipeline changes - immediate refresh
+window.refreshDashboardKPIs = async function() {
+    if (window.dashboard) {
+        console.log('Refreshing dashboard KPIs due to pipeline change...');
+        // Clear cache to ensure fresh data
+        if (window.dashboard.clearCache) {
+            window.dashboard.clearCache();
+        }
+        await window.dashboard.renderDashboard();
+    }
+};
+
+// Function to refresh dashboard from pipeline system
+window.onPipelineStageChange = async function() {
+    console.log('Pipeline stage changed - refreshing dashboard...');
+    if (window.dashboard) {
+        // Clear cache to ensure fresh data
+        if (window.dashboard.clearCache) {
+            window.dashboard.clearCache();
+        }
         await window.dashboard.renderDashboard();
     }
 };
@@ -714,6 +872,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if we're on the dashboard page
     if (!window.location.pathname.includes('admin-dashboard')) {
         return;
+    }
+    
+    // Set current date in the header
+    const currentDateElement = document.getElementById('currentDate');
+    if (currentDateElement) {
+        const today = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        currentDateElement.textContent = today.toLocaleDateString('en-US', options);
     }
     
     // Check authentication
@@ -840,23 +1011,280 @@ async function loadEmployees() {
 async function loadOrderCustomers() {
     try {
         orderCustomers = await window.APIService.getCustomers();
-        const customerSelect = document.getElementById('customerSelect');
-        customerSelect.innerHTML = '<option value="">-- Select Existing Customer --</option>' +
-            '<option value="new">+ Add New Customer</option>' +
-            orderCustomers.map(customer => `<option value="${customer._id}">${customer.name} (${customer.email})</option>`).join('');
+        populateCustomerSelectOptions();
     } catch (error) {
         console.error('Failed to load customers:', error);
     }
 }
 
+function populateCustomerSelectOptions() {
+    const dropdown = document.getElementById('customerSelectDropdown');
+    
+    // Clear existing options except search input and "Add New Customer"
+    const searchContainer = dropdown.querySelector('.search-input-container');
+    const addNewOption = dropdown.querySelector('[data-value="new"]');
+    dropdown.innerHTML = '';
+    dropdown.appendChild(searchContainer);
+    dropdown.appendChild(addNewOption);
+    
+    // Add customer options
+    orderCustomers.forEach(customer => {
+        const option = document.createElement('div');
+        option.className = 'select-option';
+        option.setAttribute('data-value', customer._id);
+        option.innerHTML = `<i class="fas fa-user"></i> ${customer.name} (${customer.email})`;
+        
+        // Simple click handler that directly sets the value
+        option.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Customer clicked:', customer.name);
+            
+            // Set the input value to show only customer name
+            const input = document.getElementById('customerSearchInput');
+            const hiddenSelect = document.getElementById('customerSelect');
+            
+            // Show only the customer name in the input field
+            input.value = customer.name;
+            hiddenSelect.value = customer._id;
+            
+            // Trigger change events
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            console.log('Set input to:', input.value);
+            console.log('Set hidden select to:', hiddenSelect.value);
+            
+            // Close dropdown
+            dropdown.classList.remove('show');
+            document.querySelector('.searchable-select').classList.remove('open');
+            
+            // Handle customer selection
+            handleCustomerSelect();
+        };
+        
+        dropdown.appendChild(option);
+    });
+    
+    // Add event listener for "Add New Customer" option
+    addNewOption.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Add New Customer clicked');
+        
+        const input = document.getElementById('customerSearchInput');
+        const hiddenSelect = document.getElementById('customerSelect');
+        
+        input.value = 'Add New Customer';
+        hiddenSelect.value = 'new';
+        
+        // Trigger change events
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Close dropdown
+        dropdown.classList.remove('show');
+        document.querySelector('.searchable-select').classList.remove('open');
+        
+        // Handle customer selection
+        handleCustomerSelect();
+    };
+}
+
+function filterCustomerOptions(searchTerm) {
+    const dropdown = document.getElementById('customerSelectDropdown');
+    const searchContainer = dropdown.querySelector('.search-input-container');
+    const addNewOption = dropdown.querySelector('[data-value="new"]');
+    
+    if (!searchTerm.trim()) {
+        populateCustomerSelectOptions();
+        return;
+    }
+    
+    const filtered = orderCustomers.filter(customer => 
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    // Clear and rebuild options while preserving search input focus
+    const currentFocus = document.activeElement;
+    const isSearchFocused = currentFocus && currentFocus.id === 'customerSearchFilter';
+    
+    dropdown.innerHTML = '';
+    dropdown.appendChild(searchContainer);
+    dropdown.appendChild(addNewOption);
+    
+    // Restore focus if it was on search input
+    if (isSearchFocused) {
+        setTimeout(() => {
+            const searchFilter = document.getElementById('customerSearchFilter');
+            if (searchFilter) {
+                searchFilter.focus();
+                // Set cursor to end of input
+                searchFilter.setSelectionRange(searchFilter.value.length, searchFilter.value.length);
+            }
+        }, 0);
+    }
+    
+    filtered.forEach(customer => {
+        const option = document.createElement('div');
+        option.className = 'select-option';
+        option.setAttribute('data-value', customer._id);
+        option.innerHTML = `<i class="fas fa-user"></i> ${customer.name} (${customer.email})`;
+        
+        // Simple click handler that directly sets the value
+        option.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Filtered customer clicked:', customer.name);
+            
+            // Set the input value to show only customer name
+            const input = document.getElementById('customerSearchInput');
+            const hiddenSelect = document.getElementById('customerSelect');
+            
+            // Show only the customer name in the input field
+            input.value = customer.name;
+            hiddenSelect.value = customer._id;
+            
+            // Trigger change events
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            console.log('Set input to:', input.value);
+            console.log('Set hidden select to:', hiddenSelect.value);
+            
+            // Close dropdown
+            dropdown.classList.remove('show');
+            document.querySelector('.searchable-select').classList.remove('open');
+            
+            // Handle customer selection
+            handleCustomerSelect();
+        };
+        
+        dropdown.appendChild(option);
+    });
+    
+    // Re-add event listener for "Add New Customer" option
+    addNewOption.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Add New Customer clicked (filtered)');
+        
+        const input = document.getElementById('customerSearchInput');
+        const hiddenSelect = document.getElementById('customerSelect');
+        
+        input.value = 'Add New Customer';
+        hiddenSelect.value = 'new';
+        
+        // Trigger change events
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Close dropdown
+        dropdown.classList.remove('show');
+        document.querySelector('.searchable-select').classList.remove('open');
+        
+        // Handle customer selection
+        handleCustomerSelect();
+    };
+    
+    if (filtered.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'select-option';
+        noResults.style.color = '#6b7280';
+        noResults.style.cursor = 'default';
+        noResults.innerHTML = '<i class="fas fa-search"></i> No customers found';
+        dropdown.appendChild(noResults);
+    }
+}
+
+function toggleCustomerDropdown(event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    const dropdown = document.getElementById('customerSelectDropdown');
+    const container = document.querySelector('.searchable-select');
+    
+    if (dropdown.classList.contains('show')) {
+        // Hide dropdown
+        dropdown.classList.remove('show');
+        container.classList.remove('open');
+        
+        // Clear search filter
+        const searchFilter = document.getElementById('customerSearchFilter');
+        if (searchFilter) {
+            searchFilter.value = '';
+            filterCustomerOptions(''); // Reset to show all options
+        }
+        
+        // Remove click outside listener
+        document.removeEventListener('click', handleOutsideClick);
+    } else {
+        // Show dropdown
+        dropdown.classList.add('show');
+        container.classList.add('open');
+        
+        // Focus on search input inside dropdown after a short delay
+        setTimeout(() => {
+            const searchFilter = document.getElementById('customerSearchFilter');
+            if (searchFilter) {
+                searchFilter.focus();
+            }
+        }, 100);
+        
+        // Add click outside listener after a delay to prevent immediate closing
+        setTimeout(() => {
+            document.addEventListener('click', handleOutsideClick);
+        }, 150);
+    }
+}
+
+
+
+function handleOutsideClick(event) {
+    const container = document.querySelector('.searchable-select');
+    
+    // Check if click is outside the searchable-select container
+    if (container && !container.contains(event.target)) {
+        const dropdown = document.getElementById('customerSelectDropdown');
+        dropdown.classList.remove('show');
+        container.classList.remove('open');
+        
+        // Clear search filter
+        const searchFilter = document.getElementById('customerSearchFilter');
+        if (searchFilter) {
+            searchFilter.value = '';
+            filterCustomerOptions(''); // Reset to show all options
+        }
+        
+        // Remove this listener
+        document.removeEventListener('click', handleOutsideClick);
+    }
+}
+
+window.filterCustomerOptions = filterCustomerOptions;
+window.toggleCustomerDropdown = toggleCustomerDropdown;
+
 function handleCustomerSelect() {
-    const customerSelect = document.getElementById('customerSelect');
+    const hiddenSelect = document.getElementById('customerSelect');
     const newCustomerFields = document.getElementById('newCustomerFields');
-    const selectedValue = customerSelect.value;
+    const customerAddressSelection = document.getElementById('customerAddressSelection');
+    const selectedValue = hiddenSelect.value;
+    
+    console.log('handleCustomerSelect called with value:', selectedValue);
     
     if (selectedValue === 'new' || selectedValue === '') {
+        console.log('Showing new customer fields');
         // Show new customer fields
         newCustomerFields.style.display = 'block';
+        customerAddressSelection.style.display = 'none';
+        
+        // Clear fields
         document.getElementById('customerName').value = '';
         document.getElementById('customerEmail').value = '';
         document.getElementById('customerPhone').value = '';
@@ -864,23 +1292,81 @@ function handleCustomerSelect() {
         
         // Make fields required
         document.getElementById('customerName').required = true;
-        document.getElementById('customerEmail').required = true;
+        document.getElementById('customerEmail').required = false;
+        document.getElementById('customerAddressSelect').required = false;
     } else {
-        // Hide new customer fields and populate with existing customer
+        console.log('Showing address selection for existing customer');
+        // Hide new customer fields and show address selection
         const customer = orderCustomers.find(c => c._id === selectedValue);
+        console.log('Found customer:', customer);
+        
         if (customer) {
+            newCustomerFields.style.display = 'none';
+            customerAddressSelection.style.display = 'block';
+            
+            // Populate customer info (for display/reference)
             document.getElementById('customerName').value = customer.name;
             document.getElementById('customerEmail').value = customer.email;
             document.getElementById('customerPhone').value = customer.phone || '';
-            document.getElementById('customerAddress').value = customer.address || '';
             
             // Make fields not required (already exists)
             document.getElementById('customerName').required = false;
             document.getElementById('customerEmail').required = false;
+            document.getElementById('customerAddressSelect').required = false; // Address selection is now optional
             
-            // Hide fields
-            newCustomerFields.style.display = 'none';
+            // Populate address dropdown
+            populateCustomerAddresses(customer);
+        } else {
+            console.error('Customer not found in orderCustomers array');
         }
+    }
+}
+
+function populateCustomerAddresses(customer) {
+    const addressSelect = document.getElementById('customerAddressSelect');
+    addressSelect.innerHTML = '<option value="">-- Select Address --</option>';
+    
+    // Add primary address (backward compatibility)
+    if (customer.address) {
+        const addressOption = document.createElement('option');
+        addressOption.value = JSON.stringify({
+            address: customer.address,
+            city: customer.city || '',
+            state: customer.state || '',
+            zipCode: customer.zipCode || '',
+            label: 'Primary Address'
+        });
+        addressOption.textContent = `Primary Address: ${customer.address}`;
+        addressSelect.appendChild(addressOption);
+    }
+    
+    // Add additional addresses from addresses array
+    if (customer.addresses && customer.addresses.length > 0) {
+        customer.addresses.forEach((addr, index) => {
+            if (addr.address) {
+                const addressOption = document.createElement('option');
+                addressOption.value = JSON.stringify({
+                    address: addr.address,
+                    city: addr.city || '',
+                    state: addr.state || '',
+                    zipCode: addr.zipCode || '',
+                    label: addr.label || `Address ${index + 1}`
+                });
+                
+                const displayText = `${addr.label || `Address ${index + 1}`}: ${addr.address}`;
+                addressOption.textContent = displayText;
+                addressSelect.appendChild(addressOption);
+            }
+        });
+    }
+    
+    // If no addresses found, show message
+    if (addressSelect.children.length === 1) {
+        const noAddressOption = document.createElement('option');
+        noAddressOption.value = '';
+        noAddressOption.textContent = 'No addresses found for this customer';
+        noAddressOption.disabled = true;
+        addressSelect.appendChild(noAddressOption);
     }
 }
 
@@ -891,9 +1377,23 @@ function showAddOrderModal() {
     document.getElementById('orderModalTitle').textContent = 'Add New Order';
     document.getElementById('orderForm').reset();
     
-    // Reset customer select
+    // Reset customer search and hide address selection
+    document.getElementById('customerSearchInput').value = '-- Select Existing Customer --';
     document.getElementById('customerSelect').value = '';
     document.getElementById('newCustomerFields').style.display = 'block';
+    document.getElementById('customerAddressSelection').style.display = 'none';
+    document.getElementById('customerSelectDropdown').classList.remove('show');
+    document.querySelector('.searchable-select').classList.remove('open');
+    
+    // Reset search filter
+    const searchFilter = document.getElementById('customerSearchFilter');
+    if (searchFilter) {
+        searchFilter.value = '';
+    }
+    
+    // Reset required fields
+    document.getElementById('customerName').required = true;
+    document.getElementById('customerAddressSelect').required = false;
     
     // Set default dates
     const today = new Date().toISOString().split('T')[0];
@@ -961,13 +1461,56 @@ async function saveOrder() {
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
     
-    const orderData = {
-        customer: {
+    // Determine customer data based on selection
+    let customerData;
+    const hiddenSelect = document.getElementById('customerSelect');
+    const selectedCustomerId = hiddenSelect.value;
+    
+    if (selectedCustomerId && selectedCustomerId !== 'new') {
+        // Existing customer - get selected address (optional now)
+        const addressSelect = document.getElementById('customerAddressSelect');
+        const selectedAddressData = addressSelect.value;
+        
+        // Address selection is now optional - use customer's primary address if none selected
+        const customer = orderCustomers.find(c => c._id === selectedCustomerId);
+        
+        if (selectedAddressData) {
+            // Use selected address
+            const addressInfo = JSON.parse(selectedAddressData);
+            customerData = {
+                name: customer.name,
+                email: customer.email,
+                phone: customer.phone || '',
+                address: addressInfo.address,
+                city: addressInfo.city || '',
+                state: addressInfo.state || '',
+                zipCode: addressInfo.zipCode || '',
+                selectedAddressLabel: addressInfo.label
+            };
+        } else {
+            // Use customer's primary address
+            customerData = {
+                name: customer.name,
+                email: customer.email,
+                phone: customer.phone || '',
+                address: customer.address || '',
+                city: customer.city || '',
+                state: customer.state || '',
+                zipCode: customer.zipCode || ''
+            };
+        }
+    } else {
+        // New customer
+        customerData = {
             name: document.getElementById('customerName').value,
             email: document.getElementById('customerEmail').value,
             phone: document.getElementById('customerPhone').value || '',
             address: document.getElementById('customerAddress').value || ''
-        },
+        };
+    }
+    
+    const orderData = {
+        customer: customerData,
         service: document.getElementById('service').value,
         amount: parseFloat(document.getElementById('amount').value),
         vendorCost: parseFloat(document.getElementById('vendorCost').value) || 0,
@@ -990,6 +1533,20 @@ async function saveOrder() {
         } else {
             await window.APIService.createOrder(orderData);
             showToast('Order created successfully!', 'success');
+            
+            // If this was a new customer, refresh the customers list
+            if (!selectedCustomerId || selectedCustomerId === 'new') {
+                // Clear customer cache to ensure fresh data
+                if (window.APIService && window.APIService.clearCache) {
+                    window.APIService.clearCache();
+                }
+                // Refresh customers in background
+                try {
+                    await refreshCustomers();
+                } catch (error) {
+                    console.log('Customer refresh failed:', error);
+                }
+            }
         }
         
         closeOrderModal();
@@ -1076,13 +1633,36 @@ async function refreshOrders() {
         const orders = await window.APIService.getOrders();
         window.dashboard.renderOrdersTable(orders);
         
-        // Refresh dashboard stats after order changes (debounced)
-        clearTimeout(window.statsRefreshTimer);
-        window.statsRefreshTimer = setTimeout(async () => {
-            const stats = await window.APIService.getOrderStats();
-            window.dashboard.renderKPIs(stats);
-            window.dashboard.renderWorkflowFromOrders(orders);
-        }, 300);
+            // Refresh dashboard stats after order changes (debounced)
+            clearTimeout(window.statsRefreshTimer);
+            window.statsRefreshTimer = setTimeout(async () => {
+                const [orders, vendors, employees] = await Promise.all([
+                    window.APIService.getOrders().catch(() => []),
+                    window.APIService.getVendors().catch(() => []),
+                    window.APIService.getEmployees().catch(() => [])
+                ]);
+                
+                // Calculate updated stats with fresh data
+                const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
+                const paidOrders = orders.filter(order => order.pipelineStage === 'Paid' || order.pipelineStage === 'Closed');
+                const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+                
+                console.log('RefreshOrders - Payment calculations:', {
+                    paidOrders: paidOrders.length,
+                    paymentsCollected
+                });
+                
+                const stats = {
+                    totalOrders: orders.length,
+                    totalRevenue: totalRevenue,
+                    paymentsCollected: paymentsCollected,
+                    totalVendors: vendors.length,
+                    totalEmployees: employees.length
+                };
+                
+                window.dashboard.renderKPIs(stats);
+                window.dashboard.renderWorkflowFromOrders(orders);
+            }, 300);
     } catch (error) {
         console.error('Failed to refresh orders:', error);
     } finally {
@@ -1870,11 +2450,139 @@ window.backToEmployees = backToEmployees;
 
 // Vendor Management Functions
 let currentVendorId = null;
+let vendorEmailCounter = 1;
+let vendorPhoneCounter = 1;
+
+function addVendorEmail() {
+    const container = document.getElementById('vendorEmailsContainer');
+    const newEmailGroup = document.createElement('div');
+    newEmailGroup.className = 'email-group';
+    newEmailGroup.setAttribute('data-vendor-email-index', vendorEmailCounter);
+    newEmailGroup.style.marginTop = '20px';
+    newEmailGroup.style.paddingTop = '20px';
+    newEmailGroup.style.borderTop = '1px solid #e5e7eb';
+    newEmailGroup.style.position = 'relative';
+    
+    newEmailGroup.innerHTML = `
+        <button type="button" class="btn-remove-email" onclick="removeVendorEmail(${vendorEmailCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
+            <i class="fas fa-times"></i> Remove
+        </button>
+        <div class="form-group">
+            <label for="vendorEmail_${vendorEmailCounter}">Email ${vendorEmailCounter + 1}</label>
+            <input type="email" id="vendorEmail_${vendorEmailCounter}" class="vendor-email-field">
+        </div>
+    `;
+    
+    container.appendChild(newEmailGroup);
+    vendorEmailCounter++;
+}
+
+function removeVendorEmail(index) {
+    const emailGroup = document.querySelector(`[data-vendor-email-index="${index}"]`);
+    if (emailGroup) {
+        emailGroup.remove();
+    }
+}
+
+function addVendorPhone() {
+    const container = document.getElementById('vendorPhonesContainer');
+    const newPhoneGroup = document.createElement('div');
+    newPhoneGroup.className = 'phone-group';
+    newPhoneGroup.setAttribute('data-vendor-phone-index', vendorPhoneCounter);
+    newPhoneGroup.style.marginTop = '20px';
+    newPhoneGroup.style.paddingTop = '20px';
+    newPhoneGroup.style.borderTop = '1px solid #e5e7eb';
+    newPhoneGroup.style.position = 'relative';
+    
+    newPhoneGroup.innerHTML = `
+        <button type="button" class="btn-remove-phone" onclick="removeVendorPhone(${vendorPhoneCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
+            <i class="fas fa-times"></i> Remove
+        </button>
+        <div class="form-group">
+            <label for="vendorPhone_${vendorPhoneCounter}">Phone ${vendorPhoneCounter + 1}</label>
+            <input type="tel" id="vendorPhone_${vendorPhoneCounter}" class="vendor-phone-field">
+        </div>
+    `;
+    
+    container.appendChild(newPhoneGroup);
+    vendorPhoneCounter++;
+}
+
+function removeVendorPhone(index) {
+    const phoneGroup = document.querySelector(`[data-vendor-phone-index="${index}"]`);
+    if (phoneGroup) {
+        phoneGroup.remove();
+    }
+}
+
+function handleVendorCategoryChange() {
+    const categorySelect = document.getElementById('vendorCategory');
+    const customInput = document.getElementById('vendorCategoryCustom');
+    
+    if (categorySelect.value === '__add_new__') {
+        customInput.style.display = 'block';
+        customInput.required = true;
+        customInput.focus();
+    } else {
+        customInput.style.display = 'none';
+        customInput.required = false;
+        customInput.value = '';
+    }
+}
+
+function updateVendorCategoryOptions() {
+    const categorySelect = document.getElementById('vendorCategory');
+    const addNewOption = categorySelect.querySelector('[value="__add_new__"]');
+    
+    if (addNewOption) {
+        // Check if user is admin
+        const isAdmin = window.RBAC && window.RBAC.hasRole(window.ROLES.ADMIN);
+        
+        if (isAdmin) {
+            addNewOption.style.display = 'block';
+        } else {
+            addNewOption.style.display = 'none';
+            // If non-admin had selected "Add New", reset to empty
+            if (categorySelect.value === '__add_new__') {
+                categorySelect.value = '';
+                const customInput = document.getElementById('vendorCategoryCustom');
+                if (customInput) {
+                    customInput.style.display = 'none';
+                    customInput.required = false;
+                    customInput.value = '';
+                }
+            }
+        }
+    }
+}
+
+window.handleVendorCategoryChange = handleVendorCategoryChange;
+window.updateVendorCategoryOptions = updateVendorCategoryOptions;
 
 function showAddVendorModal() {
     currentVendorId = null;
+    vendorEmailCounter = 1;
+    vendorPhoneCounter = 1;
     document.getElementById('vendorModalTitle').textContent = 'Add New Vendor';
     document.getElementById('vendorForm').reset();
+    
+    // Clear the containers
+    const emailContainer = document.getElementById('vendorEmailsContainer');
+    const phoneContainer = document.getElementById('vendorPhonesContainer');
+    emailContainer.innerHTML = '';
+    phoneContainer.innerHTML = '';
+    
+    // Reset custom category input
+    const customInput = document.getElementById('vendorCategoryCustom');
+    if (customInput) {
+        customInput.style.display = 'none';
+        customInput.required = false;
+        customInput.value = '';
+    }
+    
+    // Show/hide "Add New Category" option based on user role
+    updateVendorCategoryOptions();
+    
     document.getElementById('vendorModal').classList.add('show');
 }
 
@@ -1885,7 +2593,7 @@ async function editVendor(vendorId) {
         
         document.getElementById('vendorModalTitle').textContent = 'Edit Vendor';
         
-        // Populate form
+        // Populate basic fields
         document.getElementById('vendorName').value = vendor.name || '';
         document.getElementById('vendorEmail').value = vendor.email || '';
         document.getElementById('vendorPhone').value = vendor.phone || '';
@@ -1893,6 +2601,74 @@ async function editVendor(vendorId) {
         document.getElementById('vendorCategory').value = vendor.category || '';
         document.getElementById('vendorRating').value = vendor.rating || 5;
         document.getElementById('vendorStatus').value = vendor.isActive.toString();
+        document.getElementById('vendorNotes').value = vendor.notes || '';
+        
+        // Show/hide "Add New Category" option based on user role
+        updateVendorCategoryOptions();
+        
+        // Reset and populate emails and phones
+        vendorEmailCounter = 1;
+        vendorPhoneCounter = 1;
+        const emailContainer = document.getElementById('vendorEmailsContainer');
+        const phoneContainer = document.getElementById('vendorPhonesContainer');
+        emailContainer.innerHTML = '';
+        phoneContainer.innerHTML = '';
+        
+        // Populate additional emails
+        if (vendor.emails && vendor.emails.length > 0) {
+            vendor.emails.forEach((email, index) => {
+                if (index > 0) { // Skip first email as it's in the main field
+                    const emailGroup = document.createElement('div');
+                    emailGroup.className = 'email-group';
+                    emailGroup.setAttribute('data-vendor-email-index', index);
+                    emailGroup.style.marginTop = '20px';
+                    emailGroup.style.paddingTop = '20px';
+                    emailGroup.style.borderTop = '1px solid #e5e7eb';
+                    emailGroup.style.position = 'relative';
+                    
+                    emailGroup.innerHTML = `
+                        <button type="button" class="btn-remove-email" onclick="removeVendorEmail(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                            <i class="fas fa-times"></i> Remove
+                        </button>
+                        <div class="form-group">
+                            <label for="vendorEmail_${index}">Email ${index + 1}</label>
+                            <input type="email" id="vendorEmail_${index}" class="vendor-email-field" value="${email.address || ''}">
+                        </div>
+                    `;
+                    
+                    emailContainer.appendChild(emailGroup);
+                }
+            });
+            vendorEmailCounter = vendor.emails.length;
+        }
+        
+        // Populate additional phones
+        if (vendor.phones && vendor.phones.length > 0) {
+            vendor.phones.forEach((phone, index) => {
+                if (index > 0) { // Skip first phone as it's in the main field
+                    const phoneGroup = document.createElement('div');
+                    phoneGroup.className = 'phone-group';
+                    phoneGroup.setAttribute('data-vendor-phone-index', index);
+                    phoneGroup.style.marginTop = '20px';
+                    phoneGroup.style.paddingTop = '20px';
+                    phoneGroup.style.borderTop = '1px solid #e5e7eb';
+                    phoneGroup.style.position = 'relative';
+                    
+                    phoneGroup.innerHTML = `
+                        <button type="button" class="btn-remove-phone" onclick="removeVendorPhone(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                            <i class="fas fa-times"></i> Remove
+                        </button>
+                        <div class="form-group">
+                            <label for="vendorPhone_${index}">Phone ${index + 1}</label>
+                            <input type="tel" id="vendorPhone_${index}" class="vendor-phone-field" value="${phone.number || ''}">
+                        </div>
+                    `;
+                    
+                    phoneContainer.appendChild(phoneGroup);
+                }
+            });
+            vendorPhoneCounter = vendor.phones.length;
+        }
         
         document.getElementById('vendorModal').classList.add('show');
     } catch (error) {
@@ -1907,15 +2683,101 @@ async function saveVendor() {
         return;
     }
     
+    // Collect all emails
+    const emails = [];
+    
+    // Primary email
+    const primaryEmail = document.getElementById('vendorEmail')?.value;
+    if (primaryEmail) {
+        emails.push({
+            label: 'Primary',
+            address: primaryEmail,
+            isPrimary: true
+        });
+    }
+    
+    // Additional emails
+    const emailGroups = document.querySelectorAll('#vendorEmailsContainer .email-group');
+    emailGroups.forEach((group) => {
+        const emailIndex = group.getAttribute('data-vendor-email-index');
+        const emailAddress = document.getElementById(`vendorEmail_${emailIndex}`)?.value;
+        
+        if (emailAddress) {
+            emails.push({
+                label: `Email ${emails.length + 1}`,
+                address: emailAddress,
+                isPrimary: false
+            });
+        }
+    });
+    
+    // Collect all phones
+    const phones = [];
+    
+    // Primary phone
+    const primaryPhone = document.getElementById('vendorPhone')?.value;
+    if (primaryPhone) {
+        phones.push({
+            label: 'Primary',
+            number: primaryPhone,
+            isPrimary: true
+        });
+    }
+    
+    // Additional phones
+    const phoneGroups = document.querySelectorAll('#vendorPhonesContainer .phone-group');
+    phoneGroups.forEach((group) => {
+        const phoneIndex = group.getAttribute('data-vendor-phone-index');
+        const phoneNumber = document.getElementById(`vendorPhone_${phoneIndex}`)?.value;
+        
+        if (phoneNumber) {
+            phones.push({
+                label: `Phone ${phones.length + 1}`,
+                number: phoneNumber,
+                isPrimary: false
+            });
+        }
+    });
+    
+    // Get category - check if custom category was entered
+    const categorySelect = document.getElementById('vendorCategory');
+    const customCategoryInput = document.getElementById('vendorCategoryCustom');
+    let category = categorySelect.value;
+    
+    if (category === '__add_new__') {
+        const customCategory = customCategoryInput.value.trim();
+        if (!customCategory) {
+            showToast('Please enter a category name', 'error');
+            customCategoryInput.focus();
+            return;
+        }
+        category = customCategory.toLowerCase().replace(/\s+/g, '-');
+        
+        // Add the new category to the dropdown for future use
+        const newOption = document.createElement('option');
+        newOption.value = category;
+        newOption.textContent = customCategory;
+        categorySelect.insertBefore(newOption, categorySelect.querySelector('[value="__add_new__"]'));
+    }
+    
     const vendorData = {
         name: document.getElementById('vendorName').value,
         email: document.getElementById('vendorEmail').value,
         phone: document.getElementById('vendorPhone').value,
         address: document.getElementById('vendorAddress').value,
-        category: document.getElementById('vendorCategory').value,
+        category: category,
         rating: parseInt(document.getElementById('vendorRating').value),
-        isActive: document.getElementById('vendorStatus').value === 'true'
+        isActive: document.getElementById('vendorStatus').value === 'true',
+        notes: document.getElementById('vendorNotes').value,
+        emails: emails,
+        phones: phones
     };
+    
+    console.log('=== SAVING VENDOR ===');
+    console.log('Emails being saved:', emails);
+    console.log('Phones being saved:', phones);
+    console.log('Category being saved:', category);
+    console.log('Full vendor data:', vendorData);
     
     try {
         // Upload documents if any
@@ -1991,6 +2853,14 @@ function closeVendorModal() {
     if (fileInput) fileInput.value = '';
     if (filePreview) filePreview.innerHTML = '';
     if (window.uploadedFiles) window.uploadedFiles.vendor = [];
+    
+    // Reset custom category input
+    const customInput = document.getElementById('vendorCategoryCustom');
+    if (customInput) {
+        customInput.style.display = 'none';
+        customInput.required = false;
+        customInput.value = '';
+    }
 }
 
 async function refreshVendors() {
@@ -2024,7 +2894,14 @@ function renderVendorsTable(vendors) {
         return;
     }
     
-    tbody.innerHTML = vendors.map(vendor => {
+    // Sort vendors by creation date (newest first)
+    const sortedVendors = [...vendors].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA; // Newest first
+    });
+    
+    tbody.innerHTML = sortedVendors.map(vendor => {
         const initials = vendor.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         const vendorId = `#${vendor._id.substring(0, 8).toUpperCase()}`;
         const stars = '★'.repeat(vendor.rating) + '☆'.repeat(5 - vendor.rating);
@@ -2141,10 +3018,78 @@ window.deleteVendor = deleteVendor;
 window.showAddVendorModal = showAddVendorModal;
 window.closeVendorModal = closeVendorModal;
 window.saveVendor = saveVendor;
+window.addVendorEmail = addVendorEmail;
+window.removeVendorEmail = removeVendorEmail;
+window.addVendorPhone = addVendorPhone;
+window.removeVendorPhone = removeVendorPhone;
 
 // Customer Management Functions
 let currentCustomerId = null;
 let addressCounter = 1;
+let emailCounter = 1;
+let phoneCounter = 1;
+
+function addEmailAddress() {
+    const container = document.getElementById('emailsContainer');
+    const newEmailGroup = document.createElement('div');
+    newEmailGroup.className = 'email-group';
+    newEmailGroup.setAttribute('data-email-index', emailCounter);
+    newEmailGroup.style.marginTop = '20px';
+    newEmailGroup.style.paddingTop = '20px';
+    newEmailGroup.style.borderTop = '1px solid #e5e7eb';
+    newEmailGroup.style.position = 'relative';
+    
+    newEmailGroup.innerHTML = `
+        <button type="button" class="btn-remove-email" onclick="removeEmailAddress(${emailCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
+            <i class="fas fa-times"></i> Remove
+        </button>
+        <div class="form-group">
+            <label for="customerEmailField_${emailCounter}">Email ${emailCounter + 1}</label>
+            <input type="email" id="customerEmailField_${emailCounter}" class="customer-email-field">
+        </div>
+    `;
+    
+    container.appendChild(newEmailGroup);
+    emailCounter++;
+}
+
+function removeEmailAddress(index) {
+    const emailGroup = document.querySelector(`[data-email-index="${index}"]`);
+    if (emailGroup) {
+        emailGroup.remove();
+    }
+}
+
+function addPhoneNumber() {
+    const container = document.getElementById('phonesContainer');
+    const newPhoneGroup = document.createElement('div');
+    newPhoneGroup.className = 'phone-group';
+    newPhoneGroup.setAttribute('data-phone-index', phoneCounter);
+    newPhoneGroup.style.marginTop = '20px';
+    newPhoneGroup.style.paddingTop = '20px';
+    newPhoneGroup.style.borderTop = '1px solid #e5e7eb';
+    newPhoneGroup.style.position = 'relative';
+    
+    newPhoneGroup.innerHTML = `
+        <button type="button" class="btn-remove-phone" onclick="removePhoneNumber(${phoneCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
+            <i class="fas fa-times"></i> Remove
+        </button>
+        <div class="form-group">
+            <label for="customerPhoneField_${phoneCounter}">Phone ${phoneCounter + 1}</label>
+            <input type="tel" id="customerPhoneField_${phoneCounter}" class="customer-phone-field">
+        </div>
+    `;
+    
+    container.appendChild(newPhoneGroup);
+    phoneCounter++;
+}
+
+function removePhoneNumber(index) {
+    const phoneGroup = document.querySelector(`[data-phone-index="${index}"]`);
+    if (phoneGroup) {
+        phoneGroup.remove();
+    }
+}
 
 function addPhysicalAddress() {
     const container = document.getElementById('addressesContainer');
@@ -2157,7 +3102,7 @@ function addPhysicalAddress() {
     newAddressGroup.style.position = 'relative';
     
     newAddressGroup.innerHTML = `
-        <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${addressCounter})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+        <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${addressCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
             <i class="fas fa-times"></i> Remove
         </button>
         <div class="form-group">
@@ -2180,12 +3125,18 @@ function removePhysicalAddress(index) {
 function showAddCustomerModal() {
     currentCustomerId = null;
     addressCounter = 1;
+    emailCounter = 1;
+    phoneCounter = 1;
     document.getElementById('customerModalTitle').textContent = 'Add New Customer';
     document.getElementById('customerForm').reset();
     
-    // Clear the addresses container
-    const container = document.getElementById('addressesContainer');
-    container.innerHTML = '';
+    // Clear the containers
+    const addressContainer = document.getElementById('addressesContainer');
+    const emailContainer = document.getElementById('emailsContainer');
+    const phoneContainer = document.getElementById('phonesContainer');
+    addressContainer.innerHTML = '';
+    emailContainer.innerHTML = '';
+    phoneContainer.innerHTML = '';
     
     document.getElementById('customerModal').classList.add('show');
 }
@@ -2205,10 +3156,16 @@ async function editCustomer(customerId) {
         document.getElementById('customerStatus').value = customer.status || 'active';
         document.getElementById('customerNotes').value = customer.notes || '';
         
-        // Reset and populate addresses
+        // Reset and populate addresses, emails, and phones
         addressCounter = 1;
-        const container = document.getElementById('addressesContainer');
-        container.innerHTML = '';
+        emailCounter = 1;
+        phoneCounter = 1;
+        const addressContainer = document.getElementById('addressesContainer');
+        const emailContainer = document.getElementById('emailsContainer');
+        const phoneContainer = document.getElementById('phonesContainer');
+        addressContainer.innerHTML = '';
+        emailContainer.innerHTML = '';
+        phoneContainer.innerHTML = '';
         
         if (customer.addresses && customer.addresses.length > 0) {
             customer.addresses.forEach((addr, index) => {
@@ -2262,6 +3219,62 @@ async function editCustomer(customerId) {
             `;
         }
         
+        // Populate emails
+        if (customer.emails && customer.emails.length > 0) {
+            customer.emails.forEach((email, index) => {
+                const emailGroup = document.createElement('div');
+                emailGroup.className = 'email-group';
+                emailGroup.setAttribute('data-email-index', index);
+                if (index > 0) {
+                    emailGroup.style.marginTop = '20px';
+                    emailGroup.style.paddingTop = '20px';
+                    emailGroup.style.borderTop = '1px solid #e5e7eb';
+                    emailGroup.style.position = 'relative';
+                }
+                
+                emailGroup.innerHTML = `
+                    ${index > 0 ? `<button type="button" class="btn-remove-email" onclick="removeEmailAddress(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-times"></i> Remove
+                    </button>` : ''}
+                    <div class="form-group">
+                        <label for="customerEmailField_${index}">Email${index > 0 ? ' ' + (index + 1) : ''}</label>
+                        <input type="email" id="customerEmailField_${index}" class="customer-email-field" value="${email.address || ''}">
+                    </div>
+                `;
+                
+                emailContainer.appendChild(emailGroup);
+            });
+            emailCounter = customer.emails.length;
+        }
+        
+        // Populate phones
+        if (customer.phones && customer.phones.length > 0) {
+            customer.phones.forEach((phone, index) => {
+                const phoneGroup = document.createElement('div');
+                phoneGroup.className = 'phone-group';
+                phoneGroup.setAttribute('data-phone-index', index);
+                if (index > 0) {
+                    phoneGroup.style.marginTop = '20px';
+                    phoneGroup.style.paddingTop = '20px';
+                    phoneGroup.style.borderTop = '1px solid #e5e7eb';
+                    phoneGroup.style.position = 'relative';
+                }
+                
+                phoneGroup.innerHTML = `
+                    ${index > 0 ? `<button type="button" class="btn-remove-phone" onclick="removePhoneNumber(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-times"></i> Remove
+                    </button>` : ''}
+                    <div class="form-group">
+                        <label for="customerPhoneField_${index}">Phone${index > 0 ? ' ' + (index + 1) : ''}</label>
+                        <input type="tel" id="customerPhoneField_${index}" class="customer-phone-field" value="${phone.number || ''}">
+                    </div>
+                `;
+                
+                phoneContainer.appendChild(phoneGroup);
+            });
+            phoneCounter = customer.phones.length;
+        }
+        
         document.getElementById('customerModal').classList.add('show');
     } catch (error) {
         alert('Failed to load customer: ' + error.message);
@@ -2309,6 +3322,62 @@ async function saveCustomer() {
         }
     });
     
+    // Collect all emails
+    const emails = [];
+    
+    // Primary email
+    const primaryEmail = document.getElementById('customerEmailField')?.value;
+    if (primaryEmail) {
+        emails.push({
+            label: 'Primary',
+            address: primaryEmail,
+            isPrimary: true
+        });
+    }
+    
+    // Additional emails
+    const emailGroups = document.querySelectorAll('#emailsContainer .email-group');
+    emailGroups.forEach((group) => {
+        const emailIndex = group.getAttribute('data-email-index');
+        const emailAddress = document.getElementById(`customerEmailField_${emailIndex}`)?.value;
+        
+        if (emailAddress) {
+            emails.push({
+                label: `Email ${emails.length + 1}`,
+                address: emailAddress,
+                isPrimary: false
+            });
+        }
+    });
+    
+    // Collect all phones
+    const phones = [];
+    
+    // Primary phone
+    const primaryPhone = document.getElementById('customerPhoneField')?.value;
+    if (primaryPhone) {
+        phones.push({
+            label: 'Primary',
+            number: primaryPhone,
+            isPrimary: true
+        });
+    }
+    
+    // Additional phones
+    const phoneGroups = document.querySelectorAll('#phonesContainer .phone-group');
+    phoneGroups.forEach((group) => {
+        const phoneIndex = group.getAttribute('data-phone-index');
+        const phoneNumber = document.getElementById(`customerPhoneField_${phoneIndex}`)?.value;
+        
+        if (phoneNumber) {
+            phones.push({
+                label: `Phone ${phones.length + 1}`,
+                number: phoneNumber,
+                isPrimary: false
+            });
+        }
+    });
+    
     const customerData = {
         name: document.getElementById('customerNameField').value,
         email: document.getElementById('customerEmailField').value,
@@ -2316,7 +3385,9 @@ async function saveCustomer() {
         customerType: document.getElementById('customerType').value,
         status: document.getElementById('customerStatus').value,
         notes: document.getElementById('customerNotes').value,
-        addresses: addresses
+        addresses: addresses,
+        emails: emails,
+        phones: phones
     };
     
     // For backward compatibility, set primary address fields
@@ -2387,8 +3458,26 @@ async function showCustomerProfile(customerId) {
         
         // Populate customer info
         document.getElementById('customerProfileName').textContent = profileData.customer.name;
-        document.getElementById('profileEmail').textContent = profileData.customer.email || '-';
-        document.getElementById('profilePhone').textContent = profileData.customer.phone || '-';
+        
+        // Display all emails
+        const emailElement = document.getElementById('profileEmail');
+        if (profileData.customer.emails && profileData.customer.emails.length > 0) {
+            emailElement.innerHTML = profileData.customer.emails.map((email, index) => 
+                `<div style="margin-bottom: ${index < profileData.customer.emails.length - 1 ? '5px' : '0'};"><strong>${email.label || 'Email ' + (index + 1)}:</strong> ${email.address || '-'}</div>`
+            ).join('');
+        } else {
+            emailElement.textContent = profileData.customer.email || '-';
+        }
+        
+        // Display all phones
+        const phoneElement = document.getElementById('profilePhone');
+        if (profileData.customer.phones && profileData.customer.phones.length > 0) {
+            phoneElement.innerHTML = profileData.customer.phones.map((phone, index) => 
+                `<div style="margin-bottom: ${index < profileData.customer.phones.length - 1 ? '5px' : '0'};"><strong>${phone.label || 'Phone ' + (index + 1)}:</strong> ${phone.number || '-'}</div>`
+            ).join('');
+        } else {
+            phoneElement.textContent = profileData.customer.phone || '-';
+        }
         
         // Display all addresses
         const addressElement = document.getElementById('profileAddress');
@@ -2660,6 +3749,10 @@ window.saveCustomer = saveCustomer;
 window.backToCustomers = backToCustomers;
 window.addPhysicalAddress = addPhysicalAddress;
 window.removePhysicalAddress = removePhysicalAddress;
+window.addEmailAddress = addEmailAddress;
+window.removeEmailAddress = removeEmailAddress;
+window.addPhoneNumber = addPhoneNumber;
+window.removePhoneNumber = removePhoneNumber;
 
 // Global functions for button clicks
 window.viewOrder = viewOrder;
@@ -2925,9 +4018,14 @@ document.head.appendChild(styleSheet);
 
 // Pipeline section loader
 function loadPipelineSection() {
-    if (typeof PipelineManager !== 'undefined') {
-        PipelineManager.loadStages();
-        PipelineManager.loadProjects();
+    console.log('Loading pipeline section...');
+    // The pipeline-mongodb.js script should already be loaded and initialized
+    // Just make sure the data is loaded
+    if (typeof loadDataFromDB === 'function') {
+        console.log('Calling loadDataFromDB from pipeline script...');
+        loadDataFromDB();
+    } else {
+        console.error('Pipeline script not loaded or loadDataFromDB function not found');
     }
 }
 
@@ -2946,16 +4044,77 @@ window.loadAccountingSection = loadAccountingSection;
 async function showVendorDetail(vendorId) {
     try {
         const vendor = await window.APIService.getVendor(vendorId);
+        console.log('Vendor data received:', vendor);
+        console.log('Vendor notes:', vendor.notes);
+        console.log('Vendor notes type:', typeof vendor.notes);
         
         document.getElementById('vendorDetailName').textContent = vendor.name;
-        document.getElementById('detailVendorEmail').textContent = vendor.email || '-';
-        document.getElementById('detailVendorPhone').textContent = vendor.phone || '-';
+        
+        // Display all emails
+        const emailElement = document.getElementById('detailVendorEmail');
+        console.log('Full vendor object:', vendor);
+        console.log('Vendor emails array:', vendor.emails);
+        console.log('Vendor email field:', vendor.email);
+        
+        // Build emails array from both sources
+        let emailsToDisplay = [];
+        
+        if (vendor.emails && Array.isArray(vendor.emails) && vendor.emails.length > 0) {
+            emailsToDisplay = vendor.emails;
+        } else if (vendor.email) {
+            // Fallback: create array from single email field
+            emailsToDisplay = [{ label: 'Primary', address: vendor.email, isPrimary: true }];
+        }
+        
+        if (emailsToDisplay.length > 0) {
+            console.log('Displaying emails:', emailsToDisplay);
+            emailElement.innerHTML = emailsToDisplay.map((email, index) => 
+                `<div style="margin-bottom: ${index < emailsToDisplay.length - 1 ? '5px' : '0'};"><strong>${email.label || 'Email ' + (index + 1)}:</strong> ${email.address || '-'}</div>`
+            ).join('');
+        } else {
+            console.log('No email data found');
+            emailElement.textContent = '-';
+        }
+        
+        // Display all phones
+        const phoneElement = document.getElementById('detailVendorPhone');
+        console.log('Vendor phones array:', vendor.phones);
+        console.log('Vendor phone field:', vendor.phone);
+        
+        // Build phones array from both sources
+        let phonesToDisplay = [];
+        
+        if (vendor.phones && Array.isArray(vendor.phones) && vendor.phones.length > 0) {
+            phonesToDisplay = vendor.phones;
+        } else if (vendor.phone) {
+            // Fallback: create array from single phone field
+            phonesToDisplay = [{ label: 'Primary', number: vendor.phone, isPrimary: true }];
+        }
+        
+        if (phonesToDisplay.length > 0) {
+            console.log('Displaying phones:', phonesToDisplay);
+            phoneElement.innerHTML = phonesToDisplay.map((phone, index) => 
+                `<div style="margin-bottom: ${index < phonesToDisplay.length - 1 ? '5px' : '0'};"><strong>${phone.label || 'Phone ' + (index + 1)}:</strong> ${phone.number || '-'}</div>`
+            ).join('');
+        } else {
+            console.log('No phone data found');
+            phoneElement.textContent = '-';
+        }
+        
         document.getElementById('detailVendorCategory').textContent = vendor.category || '-';
         document.getElementById('detailVendorRating').innerHTML = '⭐'.repeat(vendor.rating || 0);
         document.getElementById('detailVendorAddress').textContent = vendor.address || '-';
         document.getElementById('detailVendorStatus').innerHTML = vendor.isActive 
             ? '<span style="color: #22c55e;">Active</span>' 
             : '<span style="color: #ef4444;">Inactive</span>';
+        
+        // Display notes if available
+        const notesElement = document.getElementById('detailVendorNotes');
+        if (notesElement) {
+            const notesText = vendor.notes && vendor.notes.trim() ? vendor.notes.trim() : 'No notes available';
+            console.log('Setting notes text to:', notesText);
+            notesElement.textContent = notesText;
+        }
         
         const docsList = document.getElementById('vendorDocumentsList');
         if (vendor.documents && vendor.documents.length > 0) {
@@ -3380,3 +4539,4 @@ async function saveNewUser() {
 window.showAddUserModal = showAddUserModal;
 window.closeAddUserModal = closeAddUserModal;
 window.saveNewUser = saveNewUser;
+window.forceRefreshDashboard = forceRefreshDashboard;

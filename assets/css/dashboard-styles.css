@@ -457,6 +457,8 @@ body {
 .kpi-card.vendors-card::before { background: var(--warning); }
 .kpi-card.employees-card::before { background: var(--primary-blue); }
 .kpi-card.revenue-card::before { background: var(--success); }
+.kpi-card.payments-card::before { background: var(--primary-blue); }
+.kpi-card.pending-card::before { background: #f59e0b; }
 
 .kpi-card:hover {
     transform: translateY(-4px);
@@ -492,6 +494,8 @@ body {
 .kpi-icon.vendors { background: linear-gradient(135deg, var(--warning), #d97706); }
 .kpi-icon.employees { background: linear-gradient(135deg, var(--primary-blue), #1d4ed8); }
 .kpi-icon.revenue { background: linear-gradient(135deg, var(--success), #047857); }
+.kpi-icon.payments { background: linear-gradient(135deg, var(--primary-blue), #1d4ed8); }
+.kpi-icon.pending { background: linear-gradient(135deg, #f59e0b, #d97706); }
 
 .kpi-content {
     flex: 1;

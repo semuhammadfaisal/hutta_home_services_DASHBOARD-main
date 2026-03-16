@@ -195,6 +195,50 @@
                     </div>
                 </div>
                 
+                <div class="kpi-card revenue-card">
+                    <div class="kpi-icon revenue">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-main">
+                            <h3 id="totalRevenue">$0</h3>
+                            <p>Total Revenue</p>
+                        </div>
+                        <div class="kpi-trend">
+                            <span class="kpi-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                +15%
+                            </span>
+                            <span class="kpi-period">all orders</span>
+                        </div>
+                    </div>
+                    <div class="kpi-chart">
+                        <div class="mini-chart" data-chart="revenue"></div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card payments-card">
+                    <div class="kpi-icon payments">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-main">
+                            <h3 id="paymentsCollected">$0</h3>
+                            <p>Payments Collected</p>
+                        </div>
+                        <div class="kpi-trend">
+                            <span class="kpi-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                +8%
+                            </span>
+                            <span class="kpi-period">paid orders</span>
+                        </div>
+                    </div>
+                    <div class="kpi-chart">
+                        <div class="mini-chart" data-chart="payments"></div>
+                    </div>
+                </div>
+                
                 <div class="kpi-card vendors-card">
                     <div class="kpi-icon vendors">
                         <i class="fas fa-handshake"></i>
@@ -236,28 +280,6 @@
                     </div>
                     <div class="kpi-chart">
                         <div class="mini-chart" data-chart="employees"></div>
-                    </div>
-                </div>
-                
-                <div class="kpi-card revenue-card">
-                    <div class="kpi-icon revenue">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-main">
-                            <h3 id="monthlyRevenue">$0</h3>
-                            <p>Monthly Revenue</p>
-                        </div>
-                        <div class="kpi-trend">
-                            <span class="kpi-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                +15%
-                            </span>
-                            <span class="kpi-period">vs last month</span>
-                        </div>
-                    </div>
-                    <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="revenue"></div>
                     </div>
                 </div>
             </div>
@@ -377,10 +399,6 @@
                     <div class="financial-item">
                         <span class="financial-label">Total Revenue</span>
                         <span class="financial-value" id="totalRevenue">$0</span>
-                    </div>
-                    <div class="financial-item">
-                        <span class="financial-label">Pending Payments</span>
-                        <span class="financial-value pending" id="pendingPayments">$0</span>
                     </div>
                     <div class="financial-item">
                         <span class="financial-label">This Month</span>
@@ -817,6 +835,10 @@
                             <label>Status:</label>
                             <span id="detailVendorStatus">-</span>
                         </div>
+                        <div class="info-item full-width">
+                            <label>Notes:</label>
+                            <span id="detailVendorNotes">-</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -1021,6 +1043,10 @@
                             <div class="stat-item">
                                 <span class="stat-value" id="totalRecords">0</span>
                                 <span class="stat-label">Records</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="newOrdersCount">0</span>
+                                <span class="stat-label">New Orders</span>
                             </div>
                         </div>
                         <button class="btn-secondary" onclick="clearPipelineData()" title="Clear all data">Clear Data</button>
@@ -2002,10 +2028,21 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="customerSelect">Select Customer</label>
-                            <select id="customerSelect" onchange="handleCustomerSelect()">
-                                <option value="">-- Select Existing Customer --</option>
-                                <option value="new">+ Add New Customer</option>
-                            </select>
+                            <div class="searchable-select">
+                                <input type="text" id="customerSearchInput" placeholder="-- Select Existing Customer --" autocomplete="off" onclick="toggleCustomerDropdown(event)">
+                                <div class="select-dropdown" id="customerSelectDropdown">
+                                    <div class="select-option search-input-container">
+                                        <input type="text" id="customerSearchFilter" placeholder="Search customers..." autocomplete="off" oninput="filterCustomerOptions(this.value)">
+                                    </div>
+                                    <div class="select-option" data-value="new">
+                                        <i class="fas fa-plus"></i> Add New Customer
+                                    </div>
+                                </div>
+                                <div class="select-arrow">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <input type="hidden" id="customerSelect" value="">
+                            </div>
                         </div>
                     </div>
                     
@@ -2070,6 +2107,16 @@
                         <div class="form-group">
                             <label for="endDate">End Date *</label>
                             <input type="date" id="endDate" required>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Address Selection (for existing customers with multiple addresses) -->
+                    <div id="customerAddressSelection" style="display: none;">
+                        <div class="form-group">
+                            <label for="customerAddressSelect">Select Address for Order</label>
+                            <select id="customerAddressSelect">
+                                <option value="">Select an address...</option>
+                            </select>
                         </div>
                     </div>
                     
@@ -2336,40 +2383,52 @@
             
             <div class="modal-body">
                 <form id="vendorForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="vendorName">Vendor Name *</label>
-                            <input type="text" id="vendorName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="vendorEmail">Email</label>
-                            <input type="email" id="vendorEmail">
-                        </div>
+                    <div class="form-group">
+                        <label for="vendorName">Vendor Name *</label>
+                        <input type="text" id="vendorName" required>
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="vendorPhone">Phone</label>
-                            <input type="tel" id="vendorPhone">
-                        </div>
-                        <div class="form-group">
-                            <label for="vendorCategory">Category *</label>
-                            <select id="vendorCategory" required>
-                                <option value="">Select Category</option>
-                                <option value="electrical">Electrical</option>
-                                <option value="plumbing">Plumbing</option>
-                                <option value="civil">Civil</option>
-                                <option value="carpentry">Carpentry</option>
-                                <option value="hvac">HVAC</option>
-                                <option value="painting">Painting</option>
-                                <option value="cleaning">Cleaning</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label for="vendorEmail">Email</label>
+                        <input type="email" id="vendorEmail">
+                        <button type="button" class="btn-add-field" onclick="addVendorEmail()">
+                            <i class="fas fa-plus"></i> Add Email
+                        </button>
                     </div>
+                    
+                    <!-- Additional emails will be inserted here -->
+                    <div id="vendorEmailsContainer"></div>
+                    
+                    <div class="form-group">
+                        <label for="vendorPhone">Phone</label>
+                        <input type="tel" id="vendorPhone">
+                        <button type="button" class="btn-add-field" onclick="addVendorPhone()">
+                            <i class="fas fa-plus"></i> Add Phone
+                        </button>
+                    </div>
+                    
+                    <!-- Additional phones will be inserted here -->
+                    <div id="vendorPhonesContainer"></div>
                     
                     <div class="form-group">
                         <label for="vendorAddress">Address</label>
                         <textarea id="vendorAddress" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="vendorCategory">Category *</label>
+                        <select id="vendorCategory" required onchange="handleVendorCategoryChange()">
+                            <option value="">Select Category</option>
+                            <option value="electrical">Electrical</option>
+                            <option value="plumbing">Plumbing</option>
+                            <option value="civil">Civil</option>
+                            <option value="carpentry">Carpentry</option>
+                            <option value="hvac">HVAC</option>
+                            <option value="painting">Painting</option>
+                            <option value="cleaning">Cleaning</option>
+                            <option value="__add_new__">+ Add New Category</option>
+                        </select>
+                        <input type="text" id="vendorCategoryCustom" placeholder="Enter new category name" style="display: none; margin-top: 10px;">
                     </div>
                     
                     <div class="form-row">
@@ -2397,6 +2456,11 @@
                         <input type="file" id="vendorDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
                         <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
                         <div id="vendorDocsPreview" class="docs-preview"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="vendorNotes">Notes</label>
+                        <textarea id="vendorNotes" rows="3" placeholder="Additional notes about the vendor..."></textarea>
                     </div>
                 </form>
             </div>
@@ -2426,36 +2490,45 @@
                             <input type="text" id="customerNameField" required>
                         </div>
                         <div class="form-group">
-                            <label for="customerEmailField">Email</label>
+                            <label for="customerEmailField">Email:</label>
                             <input type="email" id="customerEmailField">
+                            <button type="button" class="btn-add-field" onclick="addEmailAddress()">
+                                <i class="fas fa-plus"></i> Add Email
+                            </button>
                         </div>
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="customerPhoneField">Phone</label>
-                            <input type="tel" id="customerPhoneField">
-                        </div>
-                        <div class="form-group">
-                            <label for="customerType">Customer Type</label>
-                            <select id="customerType">
-                                <option value="one-time">One-time</option>
-                                <option value="recurring">Recurring</option>
-                            </select>
-                        </div>
-                    </div>
+                    <!-- Additional emails will be inserted here -->
+                    <div id="emailsContainer"></div>
                     
                     <div class="form-group">
-                        <label for="customerAddressField_0">Address</label>
-                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2"></textarea>
-                    </div>
-                    
-                    <div style="margin: 20px 0;">
-                        <button type="button" class="btn-secondary" onclick="addPhysicalAddress()" style="width: 100%;">
-                            <i class="fas fa-plus"></i> Add Physical Address
+                        <label for="customerPhoneField">Phone:</label>
+                        <input type="tel" id="customerPhoneField">
+                        <button type="button" class="btn-add-field" onclick="addPhoneNumber()">
+                            <i class="fas fa-plus"></i> Add Phone
                         </button>
                     </div>
                     
+                    <!-- Additional phones will be inserted here -->
+                    <div id="phonesContainer"></div>
+                    
+                    <div class="form-group">
+                        <label for="customerType">Customer Type</label>
+                        <select id="customerType">
+                            <option value="one-time">One-time</option>
+                            <option value="recurring">Recurring</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="customerAddressField_0">Address:</label>
+                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2"></textarea>
+                        <button type="button" class="btn-add-field" onclick="addPhysicalAddress()">
+                            <i class="fas fa-plus"></i> Add Address
+                        </button>
+                    </div>
+                    
+                    <!-- Additional addresses will be inserted here -->
                     <div id="addressesContainer"></div>
                     
                     <div class="form-group">
