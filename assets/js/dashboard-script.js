@@ -134,7 +134,10 @@ class DashboardManager {
             const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
             
             // Calculate payments collected (orders in 'Paid' or 'Closed' pipeline stage)
-            const paidOrders = orders.filter(order => order.pipelineStage === 'Paid' || order.pipelineStage === 'Closed');
+            const paidOrders = orders.filter(order => {
+                const stage = order.pipelineStage;
+                return stage === 'Paid' || stage === 'Closed';
+            });
             const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
             
             console.log('Payment calculations:', {
@@ -1644,7 +1647,10 @@ async function refreshOrders() {
                 
                 // Calculate updated stats with fresh data
                 const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
-                const paidOrders = orders.filter(order => order.pipelineStage === 'Paid' || order.pipelineStage === 'Closed');
+                const paidOrders = orders.filter(order => {
+                    const stage = order.pipelineStage;
+                    return stage === 'Paid' || stage === 'Closed';
+                });
                 const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
                 
                 console.log('RefreshOrders - Payment calculations:', {
