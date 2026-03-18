@@ -3195,12 +3195,12 @@ async function editCustomer(customerId) {
                     </div>
                 `;
                 
-                container.appendChild(addressGroup);
+                addressContainer.appendChild(addressGroup);
             });
             addressCounter = customer.addresses.length;
         } else {
             // No addresses, show default empty address
-            container.innerHTML = `
+            addressContainer.innerHTML = `
                 <div class="address-group" data-address-index="0">
                     <div class="form-group">
                         <label for="customerAddressField_0">Address</label>
