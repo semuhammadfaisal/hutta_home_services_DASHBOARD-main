@@ -58,8 +58,13 @@ async function uploadFiles(files) {
     const formData = new FormData();
     files.forEach(file => formData.append('documents', file));
     
+    // Use dynamic URL like api-service.js
+    const baseURL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:10000/api'
+        : `${window.location.origin}/api`;
+    
     try {
-        const response = await fetch('http://localhost:10000/api/upload', {
+        const response = await fetch(`${baseURL}/upload`, {
             method: 'POST',
             body: formData
         });
