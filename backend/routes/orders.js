@@ -168,6 +168,11 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     });
     const workOrderNumber = `WO-${String(customerOrderCount + 1).padStart(2, '0')}`;
     
+    const amount = Number(req.body.amount);
+    const vendorCost = Number(req.body.vendorCost) || 0;
+    const processingFee = Number(req.body.processingFee) || 0;
+    const profit = amount - vendorCost - processingFee;
+    
     const order = new Order({
       orderId,
       workOrderNumber,
@@ -179,8 +184,10 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
         address: req.body.customer.address || ''
       },
       service: req.body.service,
-      amount: Number(req.body.amount),
-      vendorCost: Number(req.body.vendorCost) || 0,
+      amount,
+      vendorCost,
+      processingFee,
+      profit,
       startDate: new Date(req.body.startDate),
       endDate: new Date(req.body.endDate),
       status: req.body.status || 'new',
@@ -237,6 +244,15 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     if (req.body.vendorCost) {
       updateData.vendorCost = parseFloat(req.body.vendorCost);
     }
+    if (req.body.processingFee !== undefined) {
+      updateData.processingFee = parseFloat(req.body.processingFee) || 0;
+    }
+    
+    // Calculate profit: amount - vendorCost - processingFee
+    const amount = updateData.amount || (await Order.findById(req.params.id)).amount;
+    const vendorCost = updateData.vendorCost !== undefined ? updateData.vendorCost : (await Order.findById(req.params.id)).vendorCost;
+    const processingFee = updateData.processingFee !== undefined ? updateData.processingFee : (await Order.findById(req.params.id)).processingFee;
+    updateData.profit = amount - vendorCost - processingFee;
     
     const order = await Order.findByIdAndUpdate(
       req.params.id, 
