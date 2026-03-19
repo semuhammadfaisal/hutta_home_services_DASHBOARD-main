@@ -88,7 +88,18 @@ class APIService {
                         data: data
                     });
                     
-                    const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+                    // Extract detailed error message
+                    let errorMessage = 'Server error';
+                    if (data.message) {
+                        errorMessage = data.message;
+                    } else if (data.error) {
+                        errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+                    } else if (data.errors) {
+                        errorMessage = Array.isArray(data.errors) ? data.errors.join(', ') : JSON.stringify(data.errors);
+                    } else {
+                        errorMessage = `HTTP error! status: ${response.status}`;
+                    }
+                    
                     throw new Error(errorMessage);
                 }
                 
@@ -241,6 +252,8 @@ class APIService {
     }
 
     async createCustomer(customerData) {
+        console.log('Creating customer with data:', customerData);
+        console.log('Documents:', customerData.documents);
         return this.request('/customers', {
             method: 'POST',
             body: JSON.stringify(customerData)

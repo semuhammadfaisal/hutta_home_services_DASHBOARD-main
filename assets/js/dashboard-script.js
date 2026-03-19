@@ -2788,10 +2788,12 @@ async function saveVendor() {
     try {
         // Upload documents if any
         if (window.uploadedFiles && window.uploadedFiles.vendor && window.uploadedFiles.vendor.length > 0) {
+            console.log('Uploading vendor documents:', window.uploadedFiles.vendor.length, 'files');
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.vendor);
-            console.log('Uploaded docs response:', uploadedDocs);
+            console.log('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
                 vendorData.documents = uploadedDocs;
+                console.log('Documents added to vendorData:', vendorData.documents);
             }
         }
         
@@ -3407,10 +3409,16 @@ async function saveCustomer() {
     try {
         // Upload documents if any
         if (window.uploadedFiles && window.uploadedFiles.customer && window.uploadedFiles.customer.length > 0) {
+            console.log('Uploading customer documents:', window.uploadedFiles.customer.length, 'files');
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.customer);
+            console.log('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
                 customerData.documents = uploadedDocs;
+                console.log('Documents added to customerData:', customerData.documents);
             }
+        } else {
+            // Initialize documents as empty array if no files uploaded
+            customerData.documents = [];
         }
         
         if (currentCustomerId) {

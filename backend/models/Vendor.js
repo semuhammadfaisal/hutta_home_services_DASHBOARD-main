@@ -25,7 +25,7 @@ const phoneSchema = new mongoose.Schema({
 
 const vendorSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true },
+  email: String,
   phone: String,
   address: String,
   category: { 
