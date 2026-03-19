@@ -247,16 +247,18 @@ function renderRecords(stageId) {
     }
     return stageRecords.map(record => {
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
+        const displayTitle = record.orderIdDisplay || record.customerName;
         return `
         <div class="record-card" draggable="true" data-record-id="${record._id}">
             <div class="record-header">
-                <div class="record-title">${record.customerName}</div>
+                <div class="record-title">${displayTitle}</div>
                 <div class="record-actions">
                     <button class="icon-btn record-view-btn" data-record-id="${record._id}" title="View Details"><i class="fas fa-eye"></i></button>
                     <button class="icon-btn record-edit-btn" data-record-id="${record._id}" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="icon-btn delete record-delete-btn" data-record-id="${record._id}" title="Delete"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
+            ${record.customerName ? `<div class="record-info"><i class="fas fa-user"></i> ${record.customerName}</div>` : ''}
             ${record.email ? `<div class="record-info"><i class="fas fa-envelope"></i> ${record.email}</div>` : ''}
             ${record.phone ? `<div class="record-info"><i class="fas fa-phone"></i> ${record.phone}</div>` : ''}
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}
@@ -608,9 +610,9 @@ async function saveRecord(event) {
     const address = document.getElementById('recordAddress')?.value || '';
     const description = document.getElementById('recordDescription')?.value || '';
     const notes = document.getElementById('recordNotes')?.value || '';
-    const orderId = document.getElementById('recordWorkOrder')?.value || null;
+    const orderIdValue = document.getElementById('recordWorkOrder')?.value || null;
     
-    console.log('Form data:', { customerName, stageId, orderId });
+    console.log('Form data:', { customerName, stageId, orderId: orderIdValue });
     
     try {
         let response;
@@ -621,10 +623,44 @@ async function saveRecord(event) {
                 body: JSON.stringify({ customerName, email, phone, priority, budget, startDate, address, description, notes })
             });
         } else {
+            // Get order details if orderId is selected
+            let orderIdDisplay = '';
+            if (orderIdValue) {
+                try {
+                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+                    if (session) {
+                        const sessionData = JSON.parse(session);
+                        const token = sessionData.token;
+                        const orderResponse = await fetch(`${API_BASE_URL}/orders/${orderIdValue}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (orderResponse.ok) {
+                            const order = await orderResponse.json();
+                            orderIdDisplay = order.orderId || '';
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching order details:', err);
+                }
+            }
+            
             response = await fetch(`${API_BASE_URL}/pipeline-records`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ stageId, orderId, customerName, email, phone, priority, budget, startDate, address, description, notes })
+                body: JSON.stringify({ 
+                    stageId, 
+                    orderId: orderIdValue, 
+                    orderIdDisplay,
+                    customerName, 
+                    email, 
+                    phone, 
+                    priority, 
+                    budget, 
+                    startDate, 
+                    address, 
+                    description, 
+                    notes 
+                })
             });
         }
         
@@ -1031,10 +1067,16 @@ function filterPipelineRecords(query) {
             const customerName = (record.customerName || '').toLowerCase();
             const email = (record.email || '').toLowerCase();
             const phone = (record.phone || '').toLowerCase();
+            const orderIdDisplay = (record.orderIdDisplay || '').toLowerCase();
+            const address = (record.address || '').toLowerCase();
+            const description = (record.description || '').toLowerCase();
             
             return customerName.includes(searchQuery) || 
                    email.includes(searchQuery) || 
-                   phone.includes(searchQuery);
+                   phone.includes(searchQuery) ||
+                   orderIdDisplay.includes(searchQuery) ||
+                   address.includes(searchQuery) ||
+                   description.includes(searchQuery);
         });
         
         if (clearBtn) clearBtn.style.display = 'block';
@@ -1342,9 +1384,11 @@ async function createPipelineRecordFromOrder(order, stageId) {
         const description = order.description || '';
         const notes = order.notes || '';
         const priority = order.priority || 'medium';
+        const orderIdDisplay = order.orderId || '';
         
         console.log('Creating pipeline record from order:', {
             orderId: order._id,
+            orderIdDisplay,
             customerName,
             stageId
         });
@@ -1355,6 +1399,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
             body: JSON.stringify({
                 stageId,
                 orderId: order._id,
+                orderIdDisplay,
                 customerName,
                 email,
                 phone,
@@ -1382,7 +1427,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
         
         // Show success message
         if (window.showToast) {
-            window.showToast(`Order "${customerName}" added to pipeline!`, 'success');
+            window.showToast(`Order "${orderIdDisplay || customerName}" added to pipeline!`, 'success');
         }
         
         // Refresh dashboard if needed

@@ -10,6 +10,9 @@ const pipelineRecordSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order'
     },
+    orderIdDisplay: {
+        type: String
+    },
     customerName: {
         type: String,
         required: true,
@@ -36,5 +39,6 @@ const pipelineRecordSchema = new mongoose.Schema({
 
 pipelineRecordSchema.index({ stageId: 1 });
 pipelineRecordSchema.index({ createdAt: -1 });
+pipelineRecordSchema.index({ orderIdDisplay: 1 });
 
 module.exports = mongoose.model('PipelineRecord', pipelineRecordSchema);

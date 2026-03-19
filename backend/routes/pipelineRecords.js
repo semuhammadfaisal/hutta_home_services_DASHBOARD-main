@@ -27,6 +27,7 @@ router.post('/', async (req, res) => {
     const record = new PipelineRecord({
         stageId: req.body.stageId,
         orderId: req.body.orderId,
+        orderIdDisplay: req.body.orderIdDisplay,
         customerName: req.body.customerName,
         email: req.body.email,
         phone: req.body.phone,

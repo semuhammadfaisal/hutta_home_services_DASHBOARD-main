@@ -328,7 +328,12 @@ class DashboardManager {
                             <i class="fas fa-file-alt"></i>
                         </div>
                         <div class="order-info">
-                            <div class="order-number">${orderNumber}</div>
+                            <div class="order-number" style="display: flex; align-items: center; gap: 8px;">
+                                <span>${orderNumber}</span>
+                                <button class="btn-copy-order-id" onclick="copyOrderId('${orderNumber}')" title="Copy Order ID" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.2s;">
+                                    <i class="fas fa-copy" style="font-size: 12px;"></i>
+                                </button>
+                            </div>
                             <div class="order-date">${orderDate}</div>
                         </div>
                     </div>
@@ -4554,3 +4559,16 @@ window.showAddUserModal = showAddUserModal;
 window.closeAddUserModal = closeAddUserModal;
 window.saveNewUser = saveNewUser;
 window.forceRefreshDashboard = forceRefreshDashboard;
+
+
+// Copy Order ID to Clipboard
+function copyOrderId(orderId) {
+    navigator.clipboard.writeText(orderId).then(() => {
+        showToast('Order ID copied to clipboard!', 'success');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy Order ID', 'error');
+    });
+}
+
+window.copyOrderId = copyOrderId;
