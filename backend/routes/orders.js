@@ -206,6 +206,38 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     
     await order.save();
     console.log('ORDER SAVED:', order._id, 'with ID:', orderId, 'WO:', workOrderNumber);
+    console.log('Customer ID for payment:', customerId);
+    
+    // Auto-create pending payment for this order
+    try {
+      const Payment = require('../models/Payment');
+      const paymentCount = await Payment.countDocuments();
+      const paymentId = `PAY-${String(paymentCount + 1).padStart(4, '0')}`;
+      
+      // Only create payment if we have a valid customer ID
+      if (!customerId) {
+        console.error('Cannot create payment: No customer ID available');
+        return res.status(201).json(order);
+      }
+      
+      const payment = new Payment({
+        paymentId,
+        order: order._id,
+        customer: customerId,
+        amount: amount,
+        status: 'pending',
+        description: `Payment for ${orderId} - ${req.body.service}`,
+        dueDate: new Date(req.body.endDate),
+        processedBy: req.user.userId
+      });
+      
+      await payment.save();
+      console.log('AUTO-CREATED PAYMENT:', payment._id, 'with ID:', paymentId, 'for order:', orderId);
+    } catch (paymentError) {
+      console.error('PAYMENT CREATION ERROR:', paymentError.message);
+      console.error('Payment error details:', paymentError);
+      // Don't fail the order creation if payment creation fails
+    }
     
     res.status(201).json(order);
   } catch (error) {
@@ -281,10 +313,23 @@ router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async 
       return res.status(404).json({ message: 'Order not found' });
     }
     
+    console.log('Order deleted:', order._id, 'orderId:', order.orderId);
+    
     // Clean up associated pipeline record
     if (order.pipelineRecordId) {
       const PipelineRecord = require('../models/PipelineRecord');
       await PipelineRecord.findByIdAndDelete(order.pipelineRecordId);
+      console.log('Associated pipeline record deleted:', order.pipelineRecordId);
+    }
+    
+    // Delete associated payments
+    try {
+      const Payment = require('../models/Payment');
+      const deletedPayments = await Payment.deleteMany({ order: order._id });
+      console.log('Deleted', deletedPayments.deletedCount, 'payment(s) associated with order:', order.orderId);
+    } catch (paymentError) {
+      console.error('Error deleting associated payments:', paymentError);
+      // Don't fail the order deletion if payment deletion fails
     }
     
     res.json({ message: 'Order deleted successfully' });

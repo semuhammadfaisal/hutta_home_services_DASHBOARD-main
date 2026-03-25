@@ -1,0 +1,359 @@
+/* Enhanced Vendor Categories Styles - Modern Version */
+
+.vendor-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    padding: 4px;
+}
+
+.vendor-category {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+    border-radius: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(0px);
+}
+
+/* Animated gradient border effect */
+.vendor-category::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 20px;
+    padding: 2px;
+    background: linear-gradient(135deg, transparent 0%, transparent 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.vendor-category:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.05);
+    border-color: transparent;
+}
+
+.vendor-category:hover::before {
+    opacity: 1;
+}
+
+/* Category-specific hover effects */
+.vendor-category.electrical:hover::before {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.vendor-category.plumbing:hover::before {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+}
+
+.vendor-category.civil:hover::before {
+    background: linear-gradient(135deg, #9ca3af, #6b7280);
+}
+
+.vendor-category.carpentry:hover::before {
+    background: linear-gradient(135deg, #fb923c, #f97316);
+}
+
+/* Active/click state */
+.vendor-category:active {
+    transform: translateY(-2px);
+    transition: transform 0.1s ease;
+}
+
+.vendor-category-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+}
+
+/* Icon styling with enhanced gradients and animations */
+.vendor-category-icon {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+/* Icon background gradients */
+.vendor-category.electrical .vendor-category-icon {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #d97706;
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.15);
+}
+
+.vendor-category.plumbing .vendor-category-icon {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #2563eb;
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
+}
+
+.vendor-category.civil .vendor-category-icon {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: #4b5563;
+    box-shadow: 0 4px 8px rgba(107, 114, 128, 0.1);
+}
+
+.vendor-category.carpentry .vendor-category-icon {
+    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+    color: #c2410c;
+    box-shadow: 0 4px 8px rgba(249, 115, 22, 0.15);
+}
+
+/* Hover icon animations */
+.vendor-category:hover .vendor-category-icon {
+    transform: scale(1.05) rotate(2deg);
+}
+
+.vendor-category.electrical:hover .vendor-category-icon {
+    background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.25);
+}
+
+.vendor-category.plumbing:hover .vendor-category-icon {
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.25);
+}
+
+.vendor-category.civil:hover .vendor-category-icon {
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    box-shadow: 0 8px 16px rgba(107, 114, 128, 0.2);
+}
+
+.vendor-category.carpentry:hover .vendor-category-icon {
+    background: linear-gradient(135deg, #fdba74 0%, #fb923c 100%);
+    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.25);
+}
+
+/* Label styling */
+.vendor-category-label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+    transition: color 0.2s ease;
+    position: relative;
+}
+
+.vendor-category:hover .vendor-category-label {
+    color: #1e293b;
+}
+
+/* Category-specific label hover colors */
+.vendor-category.electrical:hover .vendor-category-label {
+    color: #d97706;
+}
+
+.vendor-category.plumbing:hover .vendor-category-label {
+    color: #2563eb;
+}
+
+.vendor-category.civil:hover .vendor-category-label {
+    color: #4b5563;
+}
+
+.vendor-category.carpentry:hover .vendor-category-label {
+    color: #ea580c;
+}
+
+/* Count badge - enhanced design */
+.category-count {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #475569;
+    padding: 8px 14px;
+    border-radius: 40px;
+    font-size: 0.875rem;
+    font-weight: 800;
+    min-width: 44px;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    letter-spacing: -0.01em;
+    backdrop-filter: blur(4px);
+}
+
+/* Category-specific count badge hover effects */
+.vendor-category.electrical:hover .category-count {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+    border-color: transparent;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.vendor-category.plumbing:hover .category-count {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    color: white;
+    border-color: transparent;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.vendor-category.civil:hover .category-count {
+    background: linear-gradient(135deg, #9ca3af, #6b7280);
+    color: white;
+    border-color: transparent;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+.vendor-category.carpentry:hover .category-count {
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    color: white;
+    border-color: transparent;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .vendor-categories {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 2px;
+    }
+    
+    .vendor-category {
+        padding: 14px 16px;
+        border-radius: 16px;
+    }
+    
+    .vendor-category-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.25rem;
+        border-radius: 14px;
+    }
+    
+    .vendor-category-label {
+        font-size: 0.875rem;
+    }
+    
+    .category-count {
+        padding: 6px 12px;
+        min-width: 38px;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .vendor-categories {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .vendor-category {
+        padding: 12px 16px;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .vendor-category {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-color: #334155;
+    }
+    
+    .vendor-category-label {
+        color: #f1f5f9;
+    }
+    
+    .category-count {
+        background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+        color: #cbd5e1;
+        border-color: #475569;
+    }
+    
+    .vendor-category.electrical .vendor-category-icon {
+        background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+        color: #fbbf24;
+    }
+    
+    .vendor-category.plumbing .vendor-category-icon {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        color: #60a5fa;
+    }
+    
+    .vendor-category.civil .vendor-category-icon {
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        color: #9ca3af;
+    }
+    
+    .vendor-category.carpentry .vendor-category-icon {
+        background: linear-gradient(135deg, #431407 0%, #7c2d12 100%);
+        color: #fdba74;
+    }
+    
+    .vendor-category:hover .vendor-category-label {
+        color: #f1f5f9;
+    }
+}
+
+/* Animation for category items on load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.vendor-category {
+    animation: fadeInUp 0.4s ease-out forwards;
+    opacity: 0;
+}
+
+.vendor-category:nth-child(1) { animation-delay: 0.05s; }
+.vendor-category:nth-child(2) { animation-delay: 0.1s; }
+.vendor-category:nth-child(3) { animation-delay: 0.15s; }
+.vendor-category:nth-child(4) { animation-delay: 0.2s; }
+.vendor-category:nth-child(5) { animation-delay: 0.25s; }
+.vendor-category:nth-child(6) { animation-delay: 0.3s; }
+
+/* Focus states for accessibility */
+.vendor-category:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Optional: Add loading skeleton state */
+.vendor-categories.loading .vendor-category {
+    animation: shimmer 1.5s ease-in-out infinite;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    pointer-events: none;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}

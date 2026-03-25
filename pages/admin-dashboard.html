@@ -20,6 +20,9 @@
     <link rel="stylesheet" href="../assets/css/confirm-modal.css">
     <link rel="stylesheet" href="../assets/css/color-overrides.css">
     <link rel="stylesheet" href="../assets/css/dashboard-enhanced.css">
+    <link rel="stylesheet" href="../assets/css/custom-fields.css">
+    <link rel="stylesheet" href="../assets/css/leaderboard.css">
+    <link rel="stylesheet" href="../assets/css/vendor-categories.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -350,18 +353,17 @@
                 </div>
             </div>
 
-            <!-- Customer & Vendor Summary -->
+            <!-- Employee Leaderboard & Vendor Summary -->
             <div class="summary-grid">
-                <div class="summary-card">
-                    <h3>Customer Summary</h3>
-                    <div class="customer-types">
-                        <div class="customer-type">
-                            <span class="type-label">Recurring Customers</span>
-                            <span class="type-count" id="recurringCustomers">0</span>
-                        </div>
-                        <div class="customer-type">
-                            <span class="type-label">One-time Customers</span>
-                            <span class="type-count" id="onetimeCustomers">0</span>
+                <div class="summary-card leaderboard-card">
+                    <h3><i class="fas fa-trophy"></i> Employee Leaderboard</h3>
+                    <div class="leaderboard-list" id="employeeLeaderboard">
+                        <div class="leaderboard-item skeleton">
+                            <div class="rank">1</div>
+                            <div class="employee-info">
+                                <div class="employee-name">Loading...</div>
+                                <div class="employee-stats">$0</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -394,17 +396,50 @@
 
             <!-- Financial Summary -->
             <div class="financial-summary">
-                <h3>Financial Overview</h3>
-                <div class="financial-grid">
-                    <div class="financial-item">
-                        <span class="financial-label">Total Revenue</span>
-                        <span class="financial-value" id="totalRevenue">$0</span>
-                    </div>
-                    <div class="financial-item">
-                        <span class="financial-label">This Month</span>
-                        <span class="financial-value" id="thisMonthRevenue">$0</span>
+                <div class="financial-header">
+                    <h3>Financial Overview</h3>
+                    <div class="financial-date-filter">
+                        <input type="date" id="financialStartDate" class="date-input">
+                        <span style="margin: 0 8px; color: #6b7280;">to</span>
+                        <input type="date" id="financialEndDate" class="date-input">
+                        <button class="btn-filter" onclick="applyFinancialFilter()">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                        <button class="btn-reset" onclick="resetFinancialFilter()">
+                            <i class="fas fa-redo"></i>
+                        </button>
                     </div>
                 </div>
+                <div class="financial-grid">
+                    <div class="financial-item revenue">
+                        <div class="financial-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="financial-content">
+                            <span class="financial-label">Total Revenue</span>
+                            <span class="financial-value" id="financialRevenue">$0</span>
+                        </div>
+                    </div>
+                    <div class="financial-item cost">
+                        <div class="financial-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="financial-content">
+                            <span class="financial-label">Total Cost</span>
+                            <span class="financial-value" id="financialCost">$0</span>
+                        </div>
+                    </div>
+                    <div class="financial-item profit">
+                        <div class="financial-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="financial-content">
+                            <span class="financial-label">Total Profit</span>
+                            <span class="financial-value" id="financialProfit">$0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="financial-period-label" id="financialPeriodLabel">All Time</div>
             </div>
         </section>
 
@@ -465,7 +500,9 @@
                             <th>Status</th>
                             <th>Priority</th>
                             <th>Start Date</th>
-                            <th>Amount</th>
+                            <th>Revenue</th>
+                            <th>Cost</th>
+                            <th>Profit</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -674,6 +711,9 @@
                             <span id="profileStatus">-</span>
                         </div>
                     </div>
+                    <div class="info-grid" id="profileCustomFields" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                        <!-- Custom fields will be populated here -->
+                    </div>
                 </div>
                 
                 <div class="profile-stats-grid">
@@ -839,6 +879,9 @@
                             <label>Notes:</label>
                             <span id="detailVendorNotes">-</span>
                         </div>
+                    </div>
+                    <div class="info-grid" id="detailVendorCustomFields" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                        <!-- Custom fields will be populated here -->
                     </div>
                 </div>
                 
@@ -1971,6 +2014,13 @@
         <section id="calendar" class="content-section">
             <div class="page-header">
                 <h1><i class="fas fa-calendar-alt"></i> Calendar</h1>
+                <div class="calendar-filter-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="recurringFilterToggle" onchange="toggleRecurringFilter()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Show Recurring Orders Only</span>
+                </div>
             </div>
             
             <div class="calendar-layout">
@@ -2202,9 +2252,9 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="paymentMethod">Payment Method *</label>
-                            <select id="paymentMethod" required>
-                                <option value="">Select Method</option>
+                            <label for="paymentMethod">Payment Method</label>
+                            <select id="paymentMethod">
+                                <option value="">Not Set</option>
                                 <option value="cash">Cash</option>
                                 <option value="credit-card">Credit Card</option>
                                 <option value="debit-card">Debit Card</option>
@@ -2216,8 +2266,9 @@
                         <div class="form-group">
                             <label for="paymentStatus">Status</label>
                             <select id="paymentStatus">
-                                <option value="pending">Pending</option>
-                                <option value="completed" selected>Completed</option>
+                                <option value="pending" selected>Pending</option>
+                                <option value="received">Received</option>
+                                <option value="completed">Completed</option>
                                 <option value="failed">Failed</option>
                                 <option value="refunded">Refunded</option>
                                 <option value="cancelled">Cancelled</option>
@@ -2462,6 +2513,14 @@
                         <label for="vendorNotes">Notes</label>
                         <textarea id="vendorNotes" rows="3" placeholder="Additional notes about the vendor..."></textarea>
                     </div>
+                    
+                    <div class="form-group">
+                        <label>Custom Fields</label>
+                        <button type="button" class="btn-add-field" onclick="addVendorCustomField()">
+                            <i class="fas fa-plus"></i> Add Field
+                        </button>
+                    </div>
+                    <div id="vendorCustomFieldsContainer"></div>
                 </form>
             </div>
             
@@ -2550,6 +2609,14 @@
                         <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
                         <div id="customerDocsPreview" class="docs-preview"></div>
                     </div>
+                    
+                    <div class="form-group">
+                        <label>Custom Fields</label>
+                        <button type="button" class="btn-add-field" onclick="addCustomerCustomField()">
+                            <i class="fas fa-plus"></i> Add Field
+                        </button>
+                    </div>
+                    <div id="customerCustomFieldsContainer"></div>
                 </form>
             </div>
             
@@ -2717,6 +2784,10 @@
                             <div class="view-item">
                                 <label>Phone</label>
                                 <div id="viewPhone" class="view-value">-</div>
+                            </div>
+                            <div class="view-item">
+                                <label>Assigned Employee</label>
+                                <div id="viewEmployee" class="view-value">-</div>
                             </div>
                             <div class="view-item full-width">
                                 <label>Address</label>
@@ -3124,6 +3195,7 @@
     <script src="../assets/js/api-service.js"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
+    <script src="../assets/js/custom-fields.js"></script>
     <script src="../assets/js/csv-import.js"></script>
     <script src="../assets/js/login-script.js"></script>
     <script src="../assets/js/file-upload.js"></script>

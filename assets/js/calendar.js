@@ -1,6 +1,12 @@
 let currentDate = new Date();
 let cachedOrders = [];
 let cachedProjects = [];
+let showRecurringOnly = false;
+
+function toggleRecurringFilter() {
+    showRecurringOnly = document.getElementById('recurringFilterToggle').checked;
+    renderCalendar();
+}
 
 function getEventsForDate(year, month, day) {
     const events = [];
@@ -9,27 +15,35 @@ function getEventsForDate(year, month, day) {
         if (order.startDate) {
             const oDate = new Date(order.startDate);
             if (oDate.getFullYear() === year && oDate.getMonth() === month && oDate.getDate() === day) {
-                events.push({
-                    type: 'order',
-                    title: order.service || order.customer?.name || 'Order',
-                    id: order._id
-                });
+                // Check if order is recurring by looking at customerData
+                const isRecurring = order.customerData && order.customerData.customerType === 'recurring';
+                
+                if (!showRecurringOnly || isRecurring) {
+                    events.push({
+                        type: 'order',
+                        title: order.service || order.customer?.name || 'Order',
+                        id: order._id,
+                        isRecurring: isRecurring
+                    });
+                }
             }
         }
     });
     
-    cachedProjects.forEach(project => {
-        if (project.startDate) {
-            const pDate = new Date(project.startDate);
-            if (pDate.getFullYear() === year && pDate.getMonth() === month && pDate.getDate() === day) {
-                events.push({
-                    type: 'project',
-                    title: project.name || 'Project',
-                    id: project._id
-                });
+    if (!showRecurringOnly) {
+        cachedProjects.forEach(project => {
+            if (project.startDate) {
+                const pDate = new Date(project.startDate);
+                if (pDate.getFullYear() === year && pDate.getMonth() === month && pDate.getDate() === day) {
+                    events.push({
+                        type: 'project',
+                        title: project.name || 'Project',
+                        id: project._id
+                    });
+                }
             }
-        }
-    });
+        });
+    }
     
     return events;
 }
@@ -40,6 +54,27 @@ async function loadCalendarData() {
             window.APIService.getOrders(),
             window.APIService.getProjects()
         ]);
+        
+        // Fetch full customer data for each order to get customerType
+        const customerIds = [...new Set(cachedOrders.map(o => o.customerId).filter(Boolean))];
+        const customers = await Promise.all(
+            customerIds.map(id => window.APIService.getCustomer(id).catch(() => null))
+        );
+        
+        // Create a map of customer data
+        const customerMap = {};
+        customers.forEach(customer => {
+            if (customer) {
+                customerMap[customer._id] = customer;
+            }
+        });
+        
+        // Attach full customer data to orders
+        cachedOrders.forEach(order => {
+            if (order.customerId && customerMap[order.customerId]) {
+                order.customerData = customerMap[order.customerId];
+            }
+        });
     } catch (error) {
         console.error('Failed to load calendar data:', error);
         cachedOrders = [];
@@ -90,6 +125,16 @@ async function renderCalendar() {
             dayDiv.classList.add('today');
         }
         
+        // Make day clickable to add order
+        dayDiv.style.cursor = 'pointer';
+        dayDiv.onclick = (e) => {
+            // Only trigger if clicking on the day itself, not on events
+            if (e.target === dayDiv || e.target.classList.contains('calendar-day-number')) {
+                const selectedDate = new Date(year, month, day);
+                openOrderModalWithDate(selectedDate);
+            }
+        };
+        
         const dayNumber = document.createElement('div');
         dayNumber.className = 'calendar-day-number';
         dayNumber.textContent = day;
@@ -103,6 +148,9 @@ async function renderCalendar() {
             events.slice(0, 3).forEach(event => {
                 const eventDiv = document.createElement('div');
                 eventDiv.className = `calendar-event ${event.type}`;
+                if (event.isRecurring) {
+                    eventDiv.classList.add('recurring');
+                }
                 eventDiv.textContent = event.title;
                 eventDiv.title = event.title;
                 eventDiv.style.cursor = 'pointer';
@@ -242,3 +290,42 @@ async function showEventDetail(event) {
 function closeDetailPanel() {
     document.getElementById('calendarDetailPanel').style.display = 'none';
 }
+
+// Function to open order modal with pre-filled date
+function openOrderModalWithDate(date) {
+    // Format date as YYYY-MM-DD for input field
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    console.log('Opening order modal with date:', formattedDate);
+    
+    // Call the global showAddOrderModal function if it exists
+    if (typeof window.showAddOrderModal === 'function') {
+        window.showAddOrderModal();
+        
+        // Wait a bit for modal to open, then set the date
+        setTimeout(() => {
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            if (startDateInput) {
+                startDateInput.value = formattedDate;
+                console.log('Start date set to:', formattedDate);
+            }
+            
+            // Set end date to same day by default
+            if (endDateInput) {
+                endDateInput.value = formattedDate;
+                console.log('End date set to:', formattedDate);
+            }
+        }, 100);
+    } else {
+        console.error('showAddOrderModal function not found');
+        alert('Please navigate to the Orders section to create a new order.');
+    }
+}
+
+// Make function globally accessible
+window.openOrderModalWithDate = openOrderModalWithDate;

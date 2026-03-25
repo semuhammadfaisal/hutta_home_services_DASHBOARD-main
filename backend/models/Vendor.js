@@ -23,6 +23,12 @@ const phoneSchema = new mongoose.Schema({
   isPrimary: { type: Boolean, default: false }
 }, { _id: false });
 
+// Define custom field subdocument schema
+const customFieldSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  value: { type: String, default: '' }
+}, { _id: false });
+
 const vendorSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: String,
@@ -37,7 +43,8 @@ const vendorSchema = new mongoose.Schema({
   notes: String,
   documents: { type: [documentSchema], default: [] },
   emails: { type: [emailSchema], default: [] },
-  phones: { type: [phoneSchema], default: [] }
+  phones: { type: [phoneSchema], default: [] },
+  customFields: { type: [customFieldSchema], default: [] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Vendor', vendorSchema);

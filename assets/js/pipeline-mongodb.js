@@ -8,6 +8,7 @@ let filteredRecords = [];
 let draggedStage = null;
 let searchQuery = '';
 let newOrders = []; // Store new orders for suggestions
+let currentViewRecordId = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -96,7 +97,7 @@ async function fetchNewOrders() {
 }
 
 // Load and render stages
-function loadStages() {
+async function loadStages() {
     const container = document.getElementById('stagesContainer');
     if (!container) return;
     
@@ -108,10 +109,11 @@ function loadStages() {
     const suggestionsColumn = createNewOrdersSuggestionColumn();
     newContainer.appendChild(suggestionsColumn);
     
-    stages.forEach(stage => {
-        const stageColumn = createStageColumn(stage);
+    // Render stages with async record rendering
+    for (const stage of stages) {
+        const stageColumn = await createStageColumn(stage);
         newContainer.appendChild(stageColumn);
-    });
+    }
     
     // Add event delegation for all buttons
     newContainer.addEventListener('click', (e) => {
@@ -190,7 +192,7 @@ function loadStages() {
 }
 
 // Create stage column
-function createStageColumn(stage) {
+async function createStageColumn(stage) {
     const count = records.filter(r => r.stageId === stage._id).length;
     
     const column = document.createElement('div');
@@ -219,7 +221,7 @@ function createStageColumn(stage) {
     const stageBody = document.createElement('div');
     stageBody.className = 'stage-body';
     stageBody.dataset.stageId = stage._id;
-    stageBody.innerHTML = renderRecords(stage._id);
+    stageBody.innerHTML = await renderRecords(stage._id);
     stageBody.addEventListener('drop', drop);
     stageBody.addEventListener('dragover', allowDrop);
     stageBody.addEventListener('dragleave', dragLeave);
@@ -236,7 +238,7 @@ function createStageColumn(stage) {
 }
 
 // Render records
-function renderRecords(stageId) {
+async function renderRecords(stageId) {
     const stageRecords = filteredRecords.filter(r => r.stageId === stageId);
     if (stageRecords.length === 0) {
         const allRecordsInStage = records.filter(r => r.stageId === stageId).length;
@@ -245,7 +247,63 @@ function renderRecords(stageId) {
         }
         return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No records yet</div>';
     }
-    return stageRecords.map(record => {
+    
+    console.log('Rendering records for stage:', stageId, 'Total records:', stageRecords.length);
+    
+    // Fetch employee data for records with orderId
+    const recordsWithEmployees = await Promise.all(stageRecords.map(async (record) => {
+        let employeeName = null;
+        console.log('Processing record:', record._id, 'orderId:', record.orderId);
+        if (record.orderId) {
+            try {
+                const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+                if (session) {
+                    const sessionData = JSON.parse(session);
+                    const token = sessionData.token;
+                    console.log('Fetching order:', record.orderId);
+                    const response = await fetch(`${API_BASE_URL}/orders/${record.orderId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const order = await response.json();
+                        console.log('Order fetched:', order._id, 'employee:', order.employee);
+                        
+                        // Check if employee is an object with name or just an ID
+                        if (order.employee) {
+                            if (typeof order.employee === 'object' && order.employee.name) {
+                                employeeName = order.employee.name;
+                                console.log('Employee name found (object):', employeeName);
+                            } else if (typeof order.employee === 'string') {
+                                // Employee is just an ID, fetch employee details
+                                console.log('Employee is ID, fetching employee details:', order.employee);
+                                const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`, {
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                if (empResponse.ok) {
+                                    const employee = await empResponse.json();
+                                    employeeName = employee.name;
+                                    console.log('Employee name fetched:', employeeName);
+                                }
+                            }
+                        } else {
+                            console.log('No employee assigned to order');
+                        }
+                    } else {
+                        console.error('Failed to fetch order:', response.status);
+                    }
+                } else {
+                    console.log('No session found');
+                }
+            } catch (error) {
+                console.error('Error fetching employee for record:', record._id, error);
+            }
+        }
+        return { ...record, employeeName };
+    }));
+    
+    console.log('Records with employees:', recordsWithEmployees.map(r => ({ id: r._id, employee: r.employeeName })));
+    
+    return recordsWithEmployees.map(record => {
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         const displayTitle = record.orderIdDisplay || record.customerName;
         return `
@@ -264,6 +322,7 @@ function renderRecords(stageId) {
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}
             ${record.description ? `<div class="record-description">${record.description}</div>` : ''}
             <div class="record-footer">
+                ${record.employeeName ? `<span style="font-weight: 600; color: #3b82f6; font-size: 11px; margin-right: 8px;"><i class="fas fa-user-tie"></i> ${record.employeeName}</span>` : ''}
                 <span class="priority-badge priority-${record.priority}">${record.priority}</span>
                 <span class="record-time">${formatTime(record.createdAt)}</span>
             </div>
@@ -271,80 +330,7 @@ function renderRecords(stageId) {
     `}).join('');
 }
 
-// Stage Modal Functions
-function openStageModal() {
-    document.getElementById('stageModalTitle').textContent = 'Add Stage';
-    document.getElementById('stageForm').reset();
-    document.getElementById('stageId').value = '';
-    document.getElementById('stageModal').classList.add('show');
-}
-
-function closeStageModal() {
-    document.getElementById('stageModal').classList.remove('show');
-}
-
-function editStage(stageId) {
-    const stage = stages.find(s => s._id === stageId);
-    if (!stage) return;
-    
-    document.getElementById('stageModalTitle').textContent = 'Edit Stage';
-    document.getElementById('stageId').value = stage._id;
-    document.getElementById('stageName').value = stage.name;
-    document.getElementById('stageModal').classList.add('show');
-}
-
-async function saveStage(event) {
-    event.preventDefault();
-    
-    const id = document.getElementById('stageId').value;
-    const name = document.getElementById('stageName').value;
-    
-    try {
-        let response;
-        if (id) {
-            response = await fetch(`${API_BASE_URL}/stages/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
-        } else {
-            response = await fetch(`${API_BASE_URL}/stages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, position: stages.length + 1 })
-            });
-        }
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to save stage');
-        }
-        
-        closeStageModal();
-        await loadDataFromDB();
-    } catch (error) {
-        console.error('Error saving stage:', error);
-        alert('Error saving stage: ' + error.message);
-    }
-}
-
-async function deleteStage(stageId) {
-    const stageRecords = records.filter(r => r.stageId === stageId);
-    
-    if (stageRecords.length > 0) {
-        if (!confirm(`This stage has ${stageRecords.length} record(s). Delete anyway?`)) return;
-    }
-    
-    try {
-        await fetch(`${API_BASE_URL}/stages/${stageId}`, { method: 'DELETE' });
-        await loadDataFromDB();
-    } catch (error) {
-        alert('Error deleting stage: ' + error.message);
-    }
-}
-
-// Record View Modal Functions
-let currentViewRecordId = null;
+// Load and render stages
 
 function viewRecord(recordId) {
     const record = records.find(r => r._id === recordId);
@@ -370,7 +356,82 @@ function viewRecord(recordId) {
     document.getElementById('viewDescription').textContent = record.description || 'No description provided';
     document.getElementById('viewNotes').textContent = record.notes || 'No notes';
     
+    // Load employee info if order is linked
+    if (record.orderId) {
+        loadEmployeeForOrder(record.orderId);
+    } else {
+        const employeeEl = document.getElementById('viewEmployee');
+        if (employeeEl) employeeEl.textContent = 'Not assigned';
+    }
+    
     document.getElementById('viewRecordModal').classList.add('show');
+}
+
+async function loadEmployeeForOrder(orderId) {
+    console.log('loadEmployeeForOrder called with orderId:', orderId);
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        if (!session) {
+            console.log('No session found');
+            return;
+        }
+        
+        const sessionData = JSON.parse(session);
+        const token = sessionData.token;
+        
+        console.log('Fetching order details for:', orderId);
+        const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to load order:', response.status, response.statusText);
+            throw new Error('Failed to load order');
+        }
+        
+        const order = await response.json();
+        console.log('Order loaded:', order);
+        console.log('Order employee field:', order.employee);
+        
+        const employeeEl = document.getElementById('viewEmployee');
+        console.log('viewEmployee element:', employeeEl);
+        
+        if (employeeEl) {
+            // Check if employee is an object with name or just an ID
+            if (order.employee) {
+                if (typeof order.employee === 'object' && order.employee.name) {
+                    console.log('Setting employee name (object):', order.employee.name);
+                    employeeEl.textContent = order.employee.name;
+                } else if (typeof order.employee === 'string') {
+                    // Employee is just an ID, fetch employee details
+                    console.log('Employee is ID, fetching employee details:', order.employee);
+                    const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (empResponse.ok) {
+                        const employee = await empResponse.json();
+                        console.log('Employee fetched:', employee);
+                        employeeEl.textContent = employee.name;
+                    } else {
+                        console.error('Failed to fetch employee:', empResponse.status);
+                        employeeEl.textContent = 'Not assigned';
+                    }
+                } else {
+                    console.log('Employee field has unexpected type');
+                    employeeEl.textContent = 'Not assigned';
+                }
+            } else {
+                console.log('No employee assigned');
+                employeeEl.textContent = 'Not assigned';
+            }
+        } else {
+            console.error('viewEmployee element not found in DOM');
+        }
+    } catch (error) {
+        console.error('Error loading employee:', error);
+        const employeeEl = document.getElementById('viewEmployee');
+        if (employeeEl) employeeEl.textContent = '-';
+    }
 }
 
 function closeViewRecordModal() {

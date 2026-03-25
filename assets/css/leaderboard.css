@@ -1,0 +1,388 @@
+/* Employee Leaderboard Styles - Enhanced Version */
+
+.leaderboard-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.leaderboard-card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+}
+
+.leaderboard-card h3 {
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 0.75rem;
+}
+
+.leaderboard-card h3 i {
+    color: #f59e0b;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-radius: 14px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #f1f5f9;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.leaderboard-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.leaderboard-item:hover {
+    transform: translateX(4px);
+    border-color: #e2e8f0;
+    background: #fefefe;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.leaderboard-item:hover::before {
+    opacity: 1;
+}
+
+/* Top 3 Rank Styles */
+.leaderboard-item.rank-1 {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef9e3 100%);
+    border: 1px solid #fed7aa;
+    box-shadow: 0 2px 4px rgba(251, 191, 36, 0.1);
+}
+
+.leaderboard-item.rank-1:hover {
+    background: linear-gradient(135deg, #fef9e3 0%, #fef3c7 100%);
+    border-color: #fbbf24;
+    box-shadow: 0 8px 20px rgba(251, 191, 36, 0.15);
+}
+
+.leaderboard-item.rank-2 {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+}
+
+.leaderboard-item.rank-2:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-color: #cbd5e1;
+}
+
+.leaderboard-item.rank-3 {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border: 1px solid #fed7aa;
+}
+
+.leaderboard-item.rank-3:hover {
+    background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+    border-color: #fdba74;
+}
+
+/* Rank Badge */
+.leaderboard-item .rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #475569;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.leaderboard-item.rank-1 .rank {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #78350f;
+    font-size: 1.25rem;
+    font-weight: 900;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+    border: 2px solid #fef3c7;
+}
+
+.leaderboard-item.rank-2 .rank {
+    background: linear-gradient(135deg, #94a3b8, #64748b);
+    color: white;
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+    border: 2px solid #f1f5f9;
+}
+
+.leaderboard-item.rank-3 .rank {
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    color: white;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+    border: 2px solid #fff7ed;
+}
+
+/* Employee Info */
+.leaderboard-item .employee-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.leaderboard-item .employee-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.01em;
+}
+
+.leaderboard-item.rank-1 .employee-name {
+    font-weight: 800;
+    color: #78350f;
+}
+
+.leaderboard-item.rank-1 .employee-name::before {
+    content: "👑";
+    font-size: 1.125rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+    animation: subtle-bounce 2s ease-in-out infinite;
+}
+
+@keyframes subtle-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-2px);
+    }
+}
+
+.leaderboard-item .employee-stats {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.leaderboard-item .revenue-amount {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: #059669;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, #10b981, #059669);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+}
+
+.leaderboard-item.rank-1 .revenue-amount {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.25rem;
+}
+
+.leaderboard-item .order-count {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.leaderboard-item:hover .order-count {
+    background: white;
+    border-color: #cbd5e1;
+}
+
+/* Empty State */
+.leaderboard-empty {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #94a3b8;
+    background: #fafcff;
+    border-radius: 16px;
+    border: 2px dashed #e2e8f0;
+}
+
+.leaderboard-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    color: #cbd5e1;
+    transition: opacity 0.2s ease;
+}
+
+.leaderboard-empty:hover i {
+    opacity: 0.7;
+}
+
+.leaderboard-empty p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Skeleton Loading State */
+.leaderboard-item.skeleton {
+    animation: shimmer 1.5s ease-in-out infinite;
+    background: linear-gradient(
+        90deg,
+        #f1f5f9 0%,
+        #e2e8f0 50%,
+        #f1f5f9 100%
+    );
+    background-size: 200% 100%;
+    border: none;
+    pointer-events: none;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.leaderboard-item.skeleton .rank,
+.leaderboard-item.skeleton .employee-info,
+.leaderboard-item.skeleton .revenue-amount {
+    opacity: 0.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .leaderboard-card {
+        padding: 1rem;
+        border-radius: 16px;
+    }
+    
+    .leaderboard-card h3 {
+        font-size: 1.125rem;
+        margin-bottom: 1rem;
+    }
+    
+    .leaderboard-item {
+        padding: 10px 12px;
+        gap: 12px;
+    }
+    
+    .leaderboard-item .rank {
+        width: 36px;
+        height: 36px;
+        font-size: 0.875rem;
+    }
+    
+    .leaderboard-item .employee-name {
+        font-size: 0.875rem;
+    }
+    
+    .leaderboard-item .revenue-amount {
+        font-size: 1rem;
+    }
+    
+    .leaderboard-item.rank-1 .revenue-amount {
+        font-size: 1.125rem;
+    }
+    
+    .leaderboard-item .employee-stats {
+        gap: 8px;
+    }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    .leaderboard-card {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    
+    .leaderboard-card h3 {
+        color: #f1f5f9;
+        border-bottom-color: #334155;
+    }
+    
+    .leaderboard-item {
+        background: #0f172a;
+        border-color: #334155;
+    }
+    
+    .leaderboard-item:hover {
+        background: #1e293b;
+        border-color: #475569;
+    }
+    
+    .leaderboard-item .employee-name {
+        color: #f1f5f9;
+    }
+    
+    .leaderboard-item .employee-stats,
+    .leaderboard-item .order-count {
+        color: #94a3b8;
+    }
+    
+    .leaderboard-item .order-count {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    
+    .leaderboard-empty {
+        background: #0f172a;
+        border-color: #334155;
+    }
+}
+
+/* Match summary card styling */
+.summary-grid .leaderboard-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-grid .leaderboard-list {
+    flex: 1;
+}

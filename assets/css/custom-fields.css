@@ -1,0 +1,88 @@
+/* Custom Fields Styles */
+
+.custom-field-group {
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.btn-add-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 8px;
+}
+
+.btn-add-field:hover {
+    background: #2563eb;
+}
+
+.btn-add-field i {
+    font-size: 12px;
+}
+
+.btn-remove-field {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-remove-field:hover {
+    background: #dc2626;
+}
+
+.btn-remove-field i {
+    font-size: 14px;
+}
+
+.custom-field-name,
+.custom-field-value {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.custom-field-name:focus,
+.custom-field-value:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.custom-field-name::placeholder,
+.custom-field-value::placeholder {
+    color: #9ca3af;
+}
+
+/* Ensure form-row alignment for custom fields */
+.custom-field-group .form-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.custom-field-group .form-group {
+    margin-bottom: 0;
+}

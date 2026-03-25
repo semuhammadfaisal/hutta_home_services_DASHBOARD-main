@@ -5,7 +5,7 @@ const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get all payments
-router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const payments = await Payment.find()
       .populate('customer', 'name email')
@@ -20,7 +20,7 @@ router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 });
 
 // Get single payment
-router.get('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id)
       .populate('customer')
@@ -64,23 +64,53 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 // Update payment
 router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
+    const oldPayment = await Payment.findById(req.params.id);
+    if (!oldPayment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+    
     const payment = await Payment.findByIdAndUpdate(
       req.params.id, 
       req.body, 
       { new: true }
     )
     .populate('customer', 'name email')
-    .populate('order', 'orderId service')
+    .populate('order', 'orderId service pipelineStage')
     .populate('project', 'projectId name')
     .populate('processedBy', 'firstName lastName');
     
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
+    // If payment status changed to 'received' or 'completed', update pipeline stage
+    if ((req.body.status === 'received' || req.body.status === 'completed') && 
+        oldPayment.status !== 'received' && oldPayment.status !== 'completed') {
+      
+      if (payment.order) {
+        const Order = require('../models/Order');
+        const PipelineRecord = require('../models/PipelineRecord');
+        const Stage = require('../models/Stage');
+        
+        // Find 'Paid' stage
+        const paidStage = await Stage.findOne({ name: 'Paid' });
+        
+        if (paidStage && payment.order.pipelineRecordId) {
+          // Update pipeline record to 'Paid' stage
+          await PipelineRecord.findByIdAndUpdate(payment.order.pipelineRecordId, {
+            stageId: paidStage._id
+          });
+          
+          // Update order's pipelineStage field
+          await Order.findByIdAndUpdate(payment.order._id, {
+            pipelineStage: 'Paid'
+          });
+          
+          console.log(`Payment ${payment.paymentId} received - moved order to Paid stage`);
+        }
+      }
     }
     
     res.json(payment);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Update payment error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

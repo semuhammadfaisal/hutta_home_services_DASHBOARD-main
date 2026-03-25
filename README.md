@@ -119,3 +119,21 @@ The customer management system now supports:
 cd backend
 node remove-email-unique-index.js
 ```
+
+### Payment System Migration
+
+If you have existing orders, run the payment migration script to create payment records:
+
+```bash
+cd backend
+node migrate-orders-to-payments.js
+```
+
+This will:
+- Create payment records for all existing orders
+- Automatically link payments to customers
+- Set payment status based on order completion
+- Safe to run multiple times (won't create duplicates)
+
+**Documentation:**
+- 📘 Full Migration Guide: [PAYMENT_MIGRATION_GUIDE.md](backend/PAYMENT_MIGRATION_GUIDE.md)

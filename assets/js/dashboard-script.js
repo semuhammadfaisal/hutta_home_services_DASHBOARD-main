@@ -133,16 +133,16 @@ class DashboardManager {
             // Calculate stats from fresh orders data
             const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
             
-            // Calculate payments collected (orders in 'Paid' or 'Closed' pipeline stage)
-            const paidOrders = orders.filter(order => {
-                const stage = order.pipelineStage;
-                return stage === 'Paid' || stage === 'Closed';
-            });
-            const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+            // Calculate payments collected from Payment records with 'received' or 'completed' status
+            const receivedPayments = payments.filter(payment => 
+                payment.status === 'received' || payment.status === 'completed'
+            );
+            const paymentsCollected = receivedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
             
             console.log('Payment calculations:', {
                 totalOrders: orders.length,
-                paidOrders: paidOrders.length,
+                totalPayments: payments.length,
+                receivedPayments: receivedPayments.length,
                 paymentsCollected,
                 totalRevenue
             });
@@ -158,7 +158,7 @@ class DashboardManager {
             // Render all sections with fresh data
             this.renderKPIs(stats);
             this.renderVendorCategories(vendors);
-            this.renderCustomerSummary(customers);
+            this.renderEmployeeLeaderboard(orders, employees);
             this.renderFinancialOverview(orders, payments);
             this.renderWorkflowFromOrders(orders);
             this.renderOrdersTable(orders);
@@ -302,7 +302,7 @@ class DashboardManager {
         if (!ordersData || ordersData.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="orders-empty-state">
+                    <td colspan="11" class="orders-empty-state">
                         <i class="fas fa-clipboard-list"></i>
                         <h3>No Orders Found</h3>
                         <p>Start by creating your first order</p>
@@ -349,7 +349,9 @@ class DashboardManager {
                 <td><span class="order-status-badge ${statusClass}">${this.formatStatus(statusDisplay)}</span></td>
                 <td><span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span></td>
                 <td>${order.startDate ? this.formatDate(order.startDate) : 'N/A'}</td>
-                <td><span class="order-amount">$${order.amount?.toLocaleString() || '0'}</span></td>
+                <td><span class="order-amount" style="color: #10b981; font-weight: 600;">$${order.amount?.toLocaleString() || '0'}</span></td>
+                <td><span class="order-cost" style="color: #ef4444; font-weight: 600;">$${order.vendorCost?.toLocaleString() || '0'}</span></td>
+                <td><span class="order-profit" style="color: #3b82f6; font-weight: 600;">$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}</span></td>
                 <td>
                     <div class="order-actions">
                         <button class="action-btn view" onclick="viewOrder('${order._id || order.id}')" title="View Details">
@@ -413,21 +415,73 @@ class DashboardManager {
         return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     }
 
-    renderCustomerSummary(customers) {
-        const recurringCount = document.getElementById('recurringCustomers');
-        const oneTimeCount = document.getElementById('oneTimeCustomers');
+    renderEmployeeLeaderboard(orders, employees) {
+        const leaderboardContainer = document.getElementById('employeeLeaderboard');
         
-        if (!customers || customers.length === 0) {
-            if (recurringCount) recurringCount.textContent = '0';
-            if (oneTimeCount) oneTimeCount.textContent = '0';
+        if (!leaderboardContainer) return;
+        
+        if (!orders || orders.length === 0 || !employees || employees.length === 0) {
+            leaderboardContainer.innerHTML = `
+                <div class="leaderboard-empty">
+                    <i class="fas fa-users"></i>
+                    <p>No employee data available</p>
+                </div>
+            `;
             return;
         }
         
-        const recurring = customers.filter(c => c.customerType === 'recurring').length;
-        const oneTime = customers.filter(c => c.customerType === 'one-time').length;
+        // Calculate revenue for each employee
+        const employeeStats = employees.map(employee => {
+            const employeeOrders = orders.filter(order => 
+                order.employee && 
+                (order.employee._id === employee._id || order.employee === employee._id)
+            );
+            
+            const totalRevenue = employeeOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+            const orderCount = employeeOrders.length;
+            
+            return {
+                id: employee._id,
+                name: employee.name,
+                revenue: totalRevenue,
+                orderCount: orderCount
+            };
+        });
         
-        if (recurringCount) recurringCount.textContent = recurring;
-        if (oneTimeCount) oneTimeCount.textContent = oneTime;
+        // Sort by revenue (descending) and take top 5
+        const topEmployees = employeeStats
+            .filter(emp => emp.revenue > 0)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+        
+        if (topEmployees.length === 0) {
+            leaderboardContainer.innerHTML = `
+                <div class="leaderboard-empty">
+                    <i class="fas fa-chart-line"></i>
+                    <p>No revenue data yet</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Render leaderboard
+        leaderboardContainer.innerHTML = topEmployees.map((employee, index) => {
+            const rank = index + 1;
+            const rankClass = rank <= 3 ? `rank-${rank}` : '';
+            
+            return `
+                <div class="leaderboard-item ${rankClass}">
+                    <div class="rank">${rank}</div>
+                    <div class="employee-info">
+                        <div class="employee-name">${employee.name}</div>
+                        <div class="employee-stats">
+                            <span class="revenue-amount">$${employee.revenue.toLocaleString()}</span>
+                            <span class="order-count">${employee.orderCount} order${employee.orderCount !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     renderVendorCategories(vendors) {
@@ -456,25 +510,39 @@ class DashboardManager {
     }
 
     renderFinancialOverview(orders, payments) {
-        const totalRevenueEl = document.getElementById('totalRevenue');
-        const pendingPaymentsEl = document.getElementById('pendingPayments');
-        const thisMonthRevenueEl = document.getElementById('thisMonthRevenue');
+        const revenueEl = document.getElementById('financialRevenue');
+        const costEl = document.getElementById('financialCost');
+        const profitEl = document.getElementById('financialProfit');
+        const periodLabel = document.getElementById('financialPeriodLabel');
         
-        const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
-        const pendingPayments = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + (p.amount || 0), 0);
+        // Get date range from inputs
+        const startDateInput = document.getElementById('financialStartDate');
+        const endDateInput = document.getElementById('financialEndDate');
         
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const thisMonthRevenue = orders
-            .filter(order => {
+        let filteredOrders = orders;
+        let periodText = 'All Time';
+        
+        if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            endDate.setHours(23, 59, 59, 999);
+            
+            filteredOrders = orders.filter(order => {
                 const orderDate = new Date(order.createdAt);
-                return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-            })
-            .reduce((sum, order) => sum + (order.amount || 0), 0);
+                return orderDate >= startDate && orderDate <= endDate;
+            });
+            
+            periodText = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+        }
         
-        if (totalRevenueEl) totalRevenueEl.textContent = `$${totalRevenue.toLocaleString()}`;
-        if (pendingPaymentsEl) pendingPaymentsEl.textContent = `$${pendingPayments.toLocaleString()}`;
-        if (thisMonthRevenueEl) thisMonthRevenueEl.textContent = `$${thisMonthRevenue.toLocaleString()}`;
+        const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+        const totalCost = filteredOrders.reduce((sum, order) => sum + (order.vendorCost || 0), 0);
+        const totalProfit = totalRevenue - totalCost;
+        
+        if (revenueEl) revenueEl.textContent = `$${totalRevenue.toLocaleString()}`;
+        if (costEl) costEl.textContent = `$${totalCost.toLocaleString()}`;
+        if (profitEl) profitEl.textContent = `$${totalProfit.toLocaleString()}`;
+        if (periodLabel) periodLabel.textContent = periodText;
     }
 
 
@@ -1644,22 +1712,22 @@ async function refreshOrders() {
             // Refresh dashboard stats after order changes (debounced)
             clearTimeout(window.statsRefreshTimer);
             window.statsRefreshTimer = setTimeout(async () => {
-                const [orders, vendors, employees] = await Promise.all([
+                const [orders, vendors, employees, payments] = await Promise.all([
                     window.APIService.getOrders().catch(() => []),
                     window.APIService.getVendors().catch(() => []),
-                    window.APIService.getEmployees().catch(() => [])
+                    window.APIService.getEmployees().catch(() => []),
+                    window.APIService.getPayments().catch(() => [])
                 ]);
                 
                 // Calculate updated stats with fresh data
                 const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
-                const paidOrders = orders.filter(order => {
-                    const stage = order.pipelineStage;
-                    return stage === 'Paid' || stage === 'Closed';
-                });
-                const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
+                const receivedPayments = payments.filter(payment => 
+                    payment.status === 'received' || payment.status === 'completed'
+                );
+                const paymentsCollected = receivedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
                 
                 console.log('RefreshOrders - Payment calculations:', {
-                    paidOrders: paidOrders.length,
+                    receivedPayments: receivedPayments.length,
                     paymentsCollected
                 });
                 
@@ -1999,10 +2067,10 @@ async function savePayment() {
     const paymentData = {
         customer: document.getElementById('paymentCustomer').value,
         amount: parseFloat(document.getElementById('paymentAmount').value),
-        paymentMethod: document.getElementById('paymentMethod').value,
+        paymentMethod: document.getElementById('paymentMethod').value || null,
         status: document.getElementById('paymentStatus').value,
         order: document.getElementById('paymentOrder').value || null,
-        paymentDate: document.getElementById('paymentDate').value,
+        paymentDate: document.getElementById('paymentDate').value || null,
         dueDate: document.getElementById('paymentDueDate').value || null,
         transactionId: document.getElementById('paymentTransactionId').value,
         receiptNumber: document.getElementById('paymentReceiptNumber').value,
@@ -2021,6 +2089,13 @@ async function savePayment() {
         
         closePaymentModal();
         await refreshPayments();
+        
+        // Refresh dashboard KPIs if payment status changed to received/completed
+        if (paymentData.status === 'received' || paymentData.status === 'completed') {
+            if (window.dashboard && window.dashboard.renderDashboard) {
+                await window.dashboard.renderDashboard();
+            }
+        }
     } catch (error) {
         showToast('Failed to save payment: ' + error.message, 'error');
     }
@@ -2072,16 +2147,46 @@ async function refreshPayments() {
 function renderPaymentsTable(payments) {
     const tbody = document.getElementById('paymentsTableBody');
     
+    // Update stats
+    updatePaymentStats(payments);
+    
+    if (!payments || payments.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="payments-empty-state">
+                    <i class="fas fa-credit-card"></i>
+                    <h3>No Payments Found</h3>
+                    <p>Payments will be automatically created when orders are created</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
     tbody.innerHTML = payments.map(payment => `
         <tr>
-            <td>${payment.paymentId}</td>
-            <td>${payment.customer?.name || 'N/A'}</td>
-            <td>$${payment.amount.toLocaleString()}</td>
-            <td><span class="method-badge ${payment.paymentMethod}">${payment.paymentMethod.replace('-', ' ')}</span></td>
-            <td><span class="status-badge ${payment.status}">${payment.status}</span></td>
-            <td>${payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : 'N/A'}</td>
             <td>
-                ${payment.order ? `Order: ${payment.order.orderId}` : 'N/A'}
+                <div style="display: flex; flex-direction: column;">
+                    <strong>${payment.paymentId}</strong>
+                    ${payment.order ? `<small style="color: #6b7280; font-size: 11px;">Order: ${payment.order.orderId || payment.order}</small>` : ''}
+                </div>
+            </td>
+            <td>${payment.customer?.name || 'N/A'}</td>
+            <td><strong>$${payment.amount.toLocaleString()}</strong></td>
+            <td><span class="method-badge ${payment.paymentMethod || 'pending'}">${payment.paymentMethod ? payment.paymentMethod.replace('-', ' ') : 'Not Set'}</span></td>
+            <td>
+                <select class="payment-status-select status-${payment.status}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value)" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 13px; font-weight: 500; cursor: pointer;">
+                    <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
+                    <option value="received" ${payment.status === 'received' ? 'selected' : ''}>✅ Received</option>
+                    <option value="completed" ${payment.status === 'completed' ? 'selected' : ''}>✔️ Completed</option>
+                    <option value="failed" ${payment.status === 'failed' ? 'selected' : ''}>❌ Failed</option>
+                    <option value="refunded" ${payment.status === 'refunded' ? 'selected' : ''}>↩️ Refunded</option>
+                    <option value="cancelled" ${payment.status === 'cancelled' ? 'selected' : ''}>🚫 Cancelled</option>
+                </select>
+            </td>
+            <td>${payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : 'Not Paid'}</td>
+            <td>
+                ${payment.order ? `<span style="color: #6b7280;">${payment.order.orderId || payment.order}</span>` : 'N/A'}
             </td>
             <td>
                 <button class="btn-action" onclick="viewPayment('${payment._id}')" title="View">
@@ -2098,6 +2203,17 @@ function renderPaymentsTable(payments) {
     `).join('');
 }
 
+function updatePaymentStats(payments) {
+    const totalCount = document.getElementById('totalPaymentsCount');
+    const completedCount = document.getElementById('completedPaymentsCount');
+    
+    if (totalCount) totalCount.textContent = payments.length;
+    if (completedCount) {
+        const completed = payments.filter(p => p.status === 'received' || p.status === 'completed').length;
+        completedCount.textContent = completed;
+    }
+}
+
 // Load payments when payments section is shown
 function loadPaymentsSection() {
     refreshPayments();
@@ -2110,6 +2226,43 @@ window.deletePayment = deletePayment;
 window.showAddPaymentModal = showAddPaymentModal;
 window.closePaymentModal = closePaymentModal;
 window.savePayment = savePayment;
+
+// Quick update payment status from table
+async function quickUpdatePaymentStatus(paymentId, newStatus) {
+    try {
+        const payment = await window.APIService.getPayment(paymentId);
+        
+        // Update only the status
+        const updateData = {
+            ...payment,
+            status: newStatus,
+            // Set payment date if status is received/completed and not already set
+            paymentDate: (newStatus === 'received' || newStatus === 'completed') && !payment.paymentDate 
+                ? new Date().toISOString() 
+                : payment.paymentDate
+        };
+        
+        await window.APIService.updatePayment(paymentId, updateData);
+        showToast(`Payment status updated to ${newStatus}!`, 'success');
+        
+        // Refresh payments table
+        await refreshPayments();
+        
+        // Refresh dashboard if status changed to received/completed
+        if (newStatus === 'received' || newStatus === 'completed') {
+            if (window.dashboard && window.dashboard.renderDashboard) {
+                await window.dashboard.renderDashboard();
+            }
+        }
+    } catch (error) {
+        console.error('Quick status update error:', error);
+        showToast('Failed to update status: ' + error.message, 'error');
+        // Refresh to revert the dropdown
+        await refreshPayments();
+    }
+}
+
+window.quickUpdatePaymentStatus = quickUpdatePaymentStatus;
 
 // Employee Management Functions
 let currentEmployeeId = null;
@@ -2681,6 +2834,9 @@ async function editVendor(vendorId) {
             vendorPhoneCounter = vendor.phones.length;
         }
         
+        // Load custom fields
+        loadVendorCustomFields(vendor.customFields || []);
+        
         document.getElementById('vendorModal').classList.add('show');
     } catch (error) {
         alert('Failed to load vendor: ' + error.message);
@@ -2781,8 +2937,12 @@ async function saveVendor() {
         isActive: document.getElementById('vendorStatus').value === 'true',
         notes: document.getElementById('vendorNotes').value,
         emails: emails,
-        phones: phones
+        phones: phones,
+        customFields: getVendorCustomFields()
     };
+    
+    console.log('=== SAVING VENDOR ===');
+    console.log('Custom fields being saved:', vendorData.customFields);
     
     console.log('=== SAVING VENDOR ===');
     console.log('Emails being saved:', emails);
@@ -2874,6 +3034,9 @@ function closeVendorModal() {
         customInput.required = false;
         customInput.value = '';
     }
+    
+    // Clear custom fields
+    clearVendorCustomFields();
 }
 
 async function refreshVendors() {
@@ -3288,6 +3451,9 @@ async function editCustomer(customerId) {
             phoneCounter = customer.phones.length;
         }
         
+        // Load custom fields
+        loadCustomerCustomFields(customer.customFields || []);
+        
         document.getElementById('customerModal').classList.add('show');
     } catch (error) {
         alert('Failed to load customer: ' + error.message);
@@ -3400,8 +3566,12 @@ async function saveCustomer() {
         notes: document.getElementById('customerNotes').value,
         addresses: addresses,
         emails: emails,
-        phones: phones
+        phones: phones,
+        customFields: getCustomerCustomFields()
     };
+    
+    console.log('=== SAVING CUSTOMER ===');
+    console.log('Custom fields being saved:', customerData.customFields);
     
     // For backward compatibility, set primary address fields
     if (addresses.length > 0) {
@@ -3511,6 +3681,24 @@ async function showCustomerProfile(customerId) {
         document.getElementById('profileType').textContent = profileData.customer.customerType || '-';
         document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
         
+        // Display custom fields
+        console.log('Customer custom fields:', profileData.customer.customFields);
+        const customFieldsContainer = document.getElementById('profileCustomFields');
+        console.log('Custom fields container found:', customFieldsContainer);
+        if (profileData.customer.customFields && profileData.customer.customFields.length > 0) {
+            console.log('Displaying', profileData.customer.customFields.length, 'custom fields');
+            customFieldsContainer.innerHTML = profileData.customer.customFields.map(field => 
+                `<div class="info-item">
+                    <label>${field.name}:</label>
+                    <span>${field.value || '-'}</span>
+                </div>`
+            ).join('');
+            customFieldsContainer.style.display = 'grid';
+        } else {
+            console.log('No custom fields to display');
+            customFieldsContainer.style.display = 'none';
+        }
+        
         // Populate stats
         document.getElementById('profileTotalOrders').textContent = profileData.stats.totalOrders;
         document.getElementById('profileCompletedOrders').textContent = profileData.stats.completedOrders;
@@ -3595,6 +3783,9 @@ function closeCustomerModal() {
     if (fileInput) fileInput.value = '';
     if (filePreview) filePreview.innerHTML = '';
     if (window.uploadedFiles) window.uploadedFiles.customer = [];
+    
+    // Clear custom fields
+    clearCustomerCustomFields();
 }
 
 async function refreshCustomers() {
@@ -4135,6 +4326,24 @@ async function showVendorDetail(vendorId) {
             notesElement.textContent = notesText;
         }
         
+        // Display custom fields
+        console.log('Vendor custom fields:', vendor.customFields);
+        const customFieldsContainer = document.getElementById('detailVendorCustomFields');
+        console.log('Custom fields container found:', customFieldsContainer);
+        if (vendor.customFields && vendor.customFields.length > 0) {
+            console.log('Displaying', vendor.customFields.length, 'custom fields');
+            customFieldsContainer.innerHTML = vendor.customFields.map(field => 
+                `<div class="info-item">
+                    <label>${field.name}:</label>
+                    <span>${field.value || '-'}</span>
+                </div>`
+            ).join('');
+            customFieldsContainer.style.display = 'grid';
+        } else {
+            console.log('No custom fields to display');
+            customFieldsContainer.style.display = 'none';
+        }
+        
         const docsList = document.getElementById('vendorDocumentsList');
         if (vendor.documents && vendor.documents.length > 0) {
             docsList.innerHTML = vendor.documents.map(doc => `
@@ -4572,3 +4781,41 @@ function copyOrderId(orderId) {
 }
 
 window.copyOrderId = copyOrderId;
+
+// Financial Filter Functions
+async function applyFinancialFilter() {
+    const startDate = document.getElementById('financialStartDate').value;
+    const endDate = document.getElementById('financialEndDate').value;
+    
+    if (!startDate || !endDate) {
+        showToast('Please select both start and end dates', 'error');
+        return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+        showToast('Start date must be before end date', 'error');
+        return;
+    }
+    
+    // Refresh financial overview with date filter
+    if (window.dashboard) {
+        const [orders, payments] = await Promise.all([
+            window.APIService.getOrders().catch(() => []),
+            window.APIService.getPayments().catch(() => [])
+        ]);
+        window.dashboard.renderFinancialOverview(orders, payments);
+    }
+}
+
+function resetFinancialFilter() {
+    document.getElementById('financialStartDate').value = '';
+    document.getElementById('financialEndDate').value = '';
+    
+    // Refresh financial overview without filter
+    if (window.dashboard) {
+        window.dashboard.renderDashboard();
+    }
+}
+
+window.applyFinancialFilter = applyFinancialFilter;
+window.resetFinancialFilter = resetFinancialFilter;

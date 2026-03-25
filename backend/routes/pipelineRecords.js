@@ -132,6 +132,27 @@ router.patch('/:id/stage', async (req, res) => {
                     console.log(`Successfully updated order ${record.orderId} pipelineStage to: ${newStageName}`);
                     console.log('Updated order pipelineStage field:', updateResult.pipelineStage);
                     
+                    // Auto-update payment status to 'received' when order moves to 'Paid'
+                    if (newStageName === 'Paid') {
+                        console.log('Order moved to Paid, Closed - checking for payment to update');
+                        const Payment = require('../models/Payment');
+                        const payment = await Payment.findOne({ order: record.orderId });
+                        console.log('Found payment:', payment ? payment.paymentId : 'No payment found');
+                        if (payment) {
+                            console.log('Current payment status:', payment.status);
+                            if (payment.status !== 'received' && payment.status !== 'completed') {
+                                payment.status = 'received';
+                                payment.paymentDate = new Date();
+                                await payment.save();
+                                console.log(`✅ Auto-updated payment ${payment.paymentId} to 'received' for order in 'Paid, Closed' stage`);
+                            } else {
+                                console.log('Payment already marked as received/completed');
+                            }
+                        } else {
+                            console.log('⚠️ No payment found for order:', record.orderId);
+                        }
+                    }
+                    
                     // Force a small delay to ensure database write is committed
                     await new Promise(resolve => setTimeout(resolve, 500));
                     

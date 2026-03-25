@@ -33,6 +33,12 @@ const emailSchema = new mongoose.Schema({
   isPrimary: { type: Boolean, default: false }
 }, { _id: false });
 
+// Define custom field subdocument schema
+const customFieldSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  value: { type: String, default: '' }
+}, { _id: false });
+
 const customerSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: String,
@@ -57,7 +63,8 @@ const customerSchema = new mongoose.Schema({
   notes: String,
   totalOrders: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
-  documents: { type: [documentSchema], default: [] }
+  documents: { type: [documentSchema], default: [] },
+  customFields: { type: [customFieldSchema], default: [] }
 }, { timestamps: true });
 
 customerSchema.index({ email: 1, 'addresses.address': 1 });
