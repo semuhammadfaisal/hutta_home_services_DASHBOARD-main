@@ -4436,21 +4436,39 @@ function formatFileSize(bytes) {
 }
 
 function downloadDocument(url) {
-    // Ensure URL starts with /uploads/
-    const cleanUrl = url.startsWith('/') ? url : `/uploads/${url}`;
     const baseURL = window.location.hostname === 'localhost' 
         ? 'http://localhost:10000'
         : window.location.origin;
-    window.open(baseURL + cleanUrl, '_blank');
+    
+    // Extract filename from URL
+    let filename = url;
+    if (url.includes('/uploads/')) {
+        filename = url.split('/uploads/')[1];
+    } else if (url.startsWith('/')) {
+        filename = url.substring(1);
+    }
+    
+    // Use API endpoint for file download
+    const downloadUrl = `${baseURL}/api/files/download/${filename}`;
+    window.open(downloadUrl, '_blank');
 }
 
 function viewDocument(url) {
-    // Ensure URL starts with /uploads/
-    const cleanUrl = url.startsWith('/') ? url : `/uploads/${url}`;
     const baseURL = window.location.hostname === 'localhost' 
         ? 'http://localhost:10000'
         : window.location.origin;
-    window.open(baseURL + cleanUrl, '_blank');
+    
+    // Extract filename from URL
+    let filename = url;
+    if (url.includes('/uploads/')) {
+        filename = url.split('/uploads/')[1];
+    } else if (url.startsWith('/')) {
+        filename = url.substring(1);
+    }
+    
+    // Use API endpoint for file viewing
+    const viewUrl = `${baseURL}/api/files/view/${filename}`;
+    window.open(viewUrl, '_blank');
 }
 
 window.showVendorDetail = showVendorDetail;
