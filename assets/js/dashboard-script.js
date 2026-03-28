@@ -4436,11 +4436,17 @@ function formatFileSize(bytes) {
 }
 
 function downloadDocument(url) {
-    window.open('http://localhost:10000' + url, '_blank');
+    const baseURL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:10000'
+        : window.location.origin;
+    window.open(baseURL + url, '_blank');
 }
 
 function viewDocument(url) {
-    window.open('http://localhost:10000' + url, '_blank');
+    const baseURL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:10000'
+        : window.location.origin;
+    window.open(baseURL + url, '_blank');
 }
 
 window.showVendorDetail = showVendorDetail;
