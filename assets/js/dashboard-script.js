@@ -4436,17 +4436,21 @@ function formatFileSize(bytes) {
 }
 
 function downloadDocument(url) {
+    // Ensure URL starts with /uploads/
+    const cleanUrl = url.startsWith('/') ? url : `/uploads/${url}`;
     const baseURL = window.location.hostname === 'localhost' 
         ? 'http://localhost:10000'
         : window.location.origin;
-    window.open(baseURL + url, '_blank');
+    window.open(baseURL + cleanUrl, '_blank');
 }
 
 function viewDocument(url) {
+    // Ensure URL starts with /uploads/
+    const cleanUrl = url.startsWith('/') ? url : `/uploads/${url}`;
     const baseURL = window.location.hostname === 'localhost' 
         ? 'http://localhost:10000'
         : window.location.origin;
-    window.open(baseURL + url, '_blank');
+    window.open(baseURL + cleanUrl, '_blank');
 }
 
 window.showVendorDetail = showVendorDetail;
