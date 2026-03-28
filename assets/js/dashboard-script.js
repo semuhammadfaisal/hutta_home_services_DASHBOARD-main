@@ -2298,6 +2298,27 @@ async function editEmployee(employeeId) {
         document.getElementById('employeeStatus').value = employee.status || 'available';
         document.getElementById('employeeSkills').value = employee.skills ? employee.skills.join(', ') : '';
         
+        // Display existing documents with remove option
+        const docsPreview = document.getElementById('employeeDocsPreview');
+        if (employee.documents && employee.documents.length > 0) {
+            docsPreview.innerHTML = employee.documents.map((doc, index) => `
+                <div class="existing-doc-item" data-doc-index="${index}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                        <span style="font-size: 14px;">${doc.name}</span>
+                    </div>
+                    <button type="button" class="btn-remove-doc" onclick="removeExistingEmployeeDoc(${index})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            docsPreview.innerHTML = '';
+        }
+        
+        // Store original documents for comparison
+        window.currentEmployeeDocuments = employee.documents || [];
+        
         document.getElementById('employeeModal').classList.add('show');
     } catch (error) {
         alert('Failed to load employee: ' + error.message);
@@ -2332,8 +2353,13 @@ async function saveEmployee() {
         if (window.uploadedFiles && window.uploadedFiles.employee && window.uploadedFiles.employee.length > 0) {
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.employee);
             if (uploadedDocs && uploadedDocs.length > 0) {
-                employeeData.documents = uploadedDocs;
+                // Combine existing documents with newly uploaded ones
+                const existingDocs = window.currentEmployeeDocuments || [];
+                employeeData.documents = [...existingDocs, ...uploadedDocs];
             }
+        } else if (window.currentEmployeeDocuments) {
+            // No new uploads, just keep existing documents
+            employeeData.documents = window.currentEmployeeDocuments;
         }
         
         if (currentEmployeeId) {
@@ -2344,10 +2370,11 @@ async function saveEmployee() {
             showToast('Employee created successfully!', 'success');
         }
         
-        // Clear uploaded files
+        // Clear uploaded files and stored documents
         if (window.uploadedFiles) {
             window.uploadedFiles.employee = [];
         }
+        window.currentEmployeeDocuments = null;
         
         closeEmployeeModal();
         await refreshEmployees();
@@ -2612,6 +2639,37 @@ window.saveEmployee = saveEmployee;
 window.showEmployeeDetail = showEmployeeDetail;
 window.backToEmployees = backToEmployees;
 
+// Function to remove existing employee document
+window.removeExistingEmployeeDoc = function(index) {
+    if (confirm('Are you sure you want to remove this document?')) {
+        const docItem = document.querySelector(`[data-doc-index="${index}"]`);
+        if (docItem) {
+            docItem.remove();
+        }
+        // Remove from stored documents array
+        if (window.currentEmployeeDocuments) {
+            window.currentEmployeeDocuments.splice(index, 1);
+            // Re-render to update indices
+            const docsPreview = document.getElementById('employeeDocsPreview');
+            if (window.currentEmployeeDocuments.length > 0) {
+                docsPreview.innerHTML = window.currentEmployeeDocuments.map((doc, idx) => `
+                    <div class="existing-doc-item" data-doc-index="${idx}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                            <span style="font-size: 14px;">${doc.name}</span>
+                        </div>
+                        <button type="button" class="btn-remove-doc" onclick="removeExistingEmployeeDoc(${idx})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                docsPreview.innerHTML = '';
+            }
+        }
+    }
+};
+
 // Vendor Management Functions
 let currentVendorId = null;
 let vendorEmailCounter = 1;
@@ -2837,6 +2895,27 @@ async function editVendor(vendorId) {
         // Load custom fields
         loadVendorCustomFields(vendor.customFields || []);
         
+        // Display existing documents with remove option
+        const docsPreview = document.getElementById('vendorDocsPreview');
+        if (vendor.documents && vendor.documents.length > 0) {
+            docsPreview.innerHTML = vendor.documents.map((doc, index) => `
+                <div class="existing-doc-item" data-doc-index="${index}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                        <span style="font-size: 14px;">${doc.name}</span>
+                    </div>
+                    <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${index})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            docsPreview.innerHTML = '';
+        }
+        
+        // Store original documents for comparison
+        window.currentVendorDocuments = vendor.documents || [];
+        
         document.getElementById('vendorModal').classList.add('show');
     } catch (error) {
         alert('Failed to load vendor: ' + error.message);
@@ -2957,9 +3036,14 @@ async function saveVendor() {
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.vendor);
             console.log('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
-                vendorData.documents = uploadedDocs;
+                // Combine existing documents with newly uploaded ones
+                const existingDocs = window.currentVendorDocuments || [];
+                vendorData.documents = [...existingDocs, ...uploadedDocs];
                 console.log('Documents added to vendorData:', vendorData.documents);
             }
+        } else if (window.currentVendorDocuments) {
+            // No new uploads, just keep existing documents
+            vendorData.documents = window.currentVendorDocuments;
         }
         
         console.log('Final vendor data:', vendorData);
@@ -2974,10 +3058,11 @@ async function saveVendor() {
             showToast('Vendor created successfully!', 'success');
         }
         
-        // Clear uploaded files
+        // Clear uploaded files and stored documents
         if (window.uploadedFiles) {
             window.uploadedFiles.vendor = [];
         }
+        window.currentVendorDocuments = null;
         
         closeVendorModal();
         await refreshVendors();
@@ -3198,6 +3283,37 @@ window.addVendorEmail = addVendorEmail;
 window.removeVendorEmail = removeVendorEmail;
 window.addVendorPhone = addVendorPhone;
 window.removeVendorPhone = removeVendorPhone;
+
+// Function to remove existing vendor document
+window.removeExistingVendorDoc = function(index) {
+    if (confirm('Are you sure you want to remove this document?')) {
+        const docItem = document.querySelector(`[data-doc-index="${index}"]`);
+        if (docItem) {
+            docItem.remove();
+        }
+        // Remove from stored documents array
+        if (window.currentVendorDocuments) {
+            window.currentVendorDocuments.splice(index, 1);
+            // Re-render to update indices
+            const docsPreview = document.getElementById('vendorDocsPreview');
+            if (window.currentVendorDocuments.length > 0) {
+                docsPreview.innerHTML = window.currentVendorDocuments.map((doc, idx) => `
+                    <div class="existing-doc-item" data-doc-index="${idx}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                            <span style="font-size: 14px;">${doc.name}</span>
+                        </div>
+                        <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${idx})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                docsPreview.innerHTML = '';
+            }
+        }
+    }
+};
 
 // Customer Management Functions
 let currentCustomerId = null;
