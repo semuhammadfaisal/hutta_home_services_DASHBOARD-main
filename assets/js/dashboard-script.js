@@ -4440,17 +4440,23 @@ function downloadDocument(url) {
         ? 'http://localhost:10000'
         : window.location.origin;
     
-    // Extract filename from URL
+    // Extract just the filename from the URL
     let filename = url;
     if (url.includes('/uploads/')) {
         filename = url.split('/uploads/')[1];
-    } else if (url.startsWith('/')) {
-        filename = url.substring(1);
     }
     
-    // Use API endpoint for file download
-    const downloadUrl = `${baseURL}/api/files/download/${filename}`;
-    window.open(downloadUrl, '_blank');
+    // Use direct uploads path
+    const downloadUrl = `${baseURL}/uploads/${filename}`;
+    
+    // Create a temporary link and click it to trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function viewDocument(url) {
@@ -4458,16 +4464,14 @@ function viewDocument(url) {
         ? 'http://localhost:10000'
         : window.location.origin;
     
-    // Extract filename from URL
+    // Extract just the filename from the URL
     let filename = url;
     if (url.includes('/uploads/')) {
         filename = url.split('/uploads/')[1];
-    } else if (url.startsWith('/')) {
-        filename = url.substring(1);
     }
     
-    // Use API endpoint for file viewing
-    const viewUrl = `${baseURL}/api/files/view/${filename}`;
+    // Use direct uploads path
+    const viewUrl = `${baseURL}/uploads/${filename}`;
     window.open(viewUrl, '_blank');
 }
 

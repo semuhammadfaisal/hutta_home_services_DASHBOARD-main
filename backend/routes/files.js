@@ -5,6 +5,12 @@ const fs = require('fs');
 
 const uploadDir = path.join(__dirname, '../uploads');
 
+// Test endpoint
+router.get('/test', (req, res) => {
+    console.log('Files route test endpoint hit');
+    res.json({ message: 'Files route is working', uploadDir });
+});
+
 // Download file
 router.get('/download/:filename', (req, res) => {
     console.log('Download request for:', req.params.filename);
