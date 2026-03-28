@@ -80,6 +80,7 @@ try {
   app.use('/api/pipeline-records', require('./routes/pipelineRecords'));
   app.use('/api/pipeline-movements', require('./routes/pipelineMovements'));
   app.use('/api/upload', require('./routes/upload'));
+  app.use('/api/files', require('./routes/files'));
   console.log('✅ All routes loaded');
 } catch (error) {
   console.error('❌ Error loading routes:', error);
