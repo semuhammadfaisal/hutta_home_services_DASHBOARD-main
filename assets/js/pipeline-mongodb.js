@@ -28,19 +28,56 @@ async function loadDataFromDB() {
     try {
         console.log('Loading pipeline data from database...');
         
+        // Show loading overlay
+        showLoading('Loading pipeline data...');
+        
+        // Show loading state in pipeline container
+        const stagesContainer = document.getElementById('stagesContainer');
+        if (stagesContainer) {
+            stagesContainer.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                    <div class="loading-spinner" style="margin: 0 auto 20px;"></div>
+                    <div style="color: #6b7280; font-size: 14px; font-weight: 500;">Loading pipeline stages...</div>
+                    <div style="color: #9ca3af; font-size: 12px; margin-top: 8px;">Please wait while we fetch your data</div>
+                </div>
+            `;
+        }
+        
         // Fetch all data in parallel
+        updateLoadingMessage('Fetching stages and records...');
         await Promise.all([fetchStages(), fetchRecords(), fetchNewOrders()]);
         
         // Fetch all orders and employees in batch (much faster than per-record)
+        updateLoadingMessage('Loading orders and employees...');
         await Promise.all([fetchAllOrders(), fetchAllEmployees()]);
         
         console.log('Pipeline data loaded - Stages:', stages.length, 'Records:', records.length, 'New Orders:', newOrders.length);
         console.log('Cached data - Orders:', orderCache.size, 'Employees:', employeeCache.size);
         
+        updateLoadingMessage('Rendering pipeline...');
         loadStages();
         loadNewOrdersSuggestions();
+        
+        // Hide loading
+        hideLoading();
     } catch (error) {
         console.error('Error loading data:', error);
+        hideLoading();
+        
+        // Show error state
+        const stagesContainer = document.getElementById('stagesContainer');
+        if (stagesContainer) {
+            stagesContainer.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ef4444; margin-bottom: 16px;"></i>
+                    <div style="color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 8px;">Failed to Load Pipeline</div>
+                    <div style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">${error.message}</div>
+                    <button onclick="loadDataFromDB()" class="btn-primary" style="padding: 10px 20px;">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
     }
 }
 

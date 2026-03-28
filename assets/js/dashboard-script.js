@@ -943,6 +943,79 @@ window.onPipelineStageChange = async function() {
     }
 };
 
+// Loading Overlay Functions
+function showLoading(message = 'Loading...') {
+    let overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div style="text-align: center;">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">${message}</div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+    const loadingText = document.getElementById('loadingText');
+    if (loadingText) loadingText.textContent = message;
+    setTimeout(() => overlay.classList.add('show'), 10);
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+}
+
+function updateLoadingMessage(message) {
+    const loadingText = document.getElementById('loadingText');
+    if (loadingText) loadingText.textContent = message;
+}
+
+// Button Loading State
+function setButtonLoading(button, loading = true) {
+    if (loading) {
+        button.classList.add('loading');
+        button.disabled = true;
+        button.dataset.originalText = button.innerHTML;
+    } else {
+        button.classList.remove('loading');
+        button.disabled = false;
+        if (button.dataset.originalText) {
+            button.innerHTML = button.dataset.originalText;
+        }
+    }
+}
+
+// Table Loading State
+function setTableLoading(tableContainer, loading = true) {
+    if (loading) {
+        tableContainer.classList.add('table-loading');
+    } else {
+        tableContainer.classList.remove('table-loading');
+    }
+}
+
+// Card Loading State
+function setCardLoading(card, loading = true) {
+    if (loading) {
+        card.classList.add('card-loading');
+    } else {
+        card.classList.remove('card-loading');
+    }
+}
+
+// Global loading functions
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.updateLoadingMessage = updateLoadingMessage;
+window.setButtonLoading = setButtonLoading;
+window.setTableLoading = setTableLoading;
+window.setCardLoading = setCardLoading;
+
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Check if we're on the dashboard page
@@ -1535,7 +1608,10 @@ async function saveOrder() {
     
     const saveBtn = document.querySelector('#orderModal .btn-primary');
     if (saveBtn.disabled) return;
-    saveBtn.disabled = true;
+    
+    // Show button loading state
+    setButtonLoading(saveBtn, true);
+    showLoading(currentOrderId ? 'Updating order...' : 'Creating order...');
     
     // Determine customer data based on selection
     let customerData;
@@ -1604,9 +1680,11 @@ async function saveOrder() {
     
     try {
         if (currentOrderId) {
+            updateLoadingMessage('Updating order...');
             await window.APIService.updateOrder(currentOrderId, orderData);
             showToast('Order updated successfully!', 'success');
         } else {
+            updateLoadingMessage('Creating order...');
             await window.APIService.createOrder(orderData);
             showToast('Order created successfully!', 'success');
             
@@ -1631,7 +1709,8 @@ async function saveOrder() {
         console.error('Save order error:', error);
         showToast(error.message || 'Failed to save order', 'error');
     } finally {
-        saveBtn.disabled = false;
+        setButtonLoading(saveBtn, false);
+        hideLoading();
     }
 }
 
@@ -1706,6 +1785,10 @@ async function refreshOrders() {
         if (window.ordersRefreshing) return; // Prevent duplicate calls
         window.ordersRefreshing = true;
         
+        // Show table loading state
+        const tableContainer = document.querySelector('.orders-table-container');
+        if (tableContainer) setTableLoading(tableContainer, true);
+        
         const orders = await window.APIService.getOrders();
         window.dashboard.renderOrdersTable(orders);
         
@@ -1746,6 +1829,8 @@ async function refreshOrders() {
         console.error('Failed to refresh orders:', error);
     } finally {
         window.ordersRefreshing = false;
+        const tableContainer = document.querySelector('.orders-table-container');
+        if (tableContainer) setTableLoading(tableContainer, false);
     }
 }
 
@@ -2216,7 +2301,12 @@ function updatePaymentStats(payments) {
 
 // Load payments when payments section is shown
 function loadPaymentsSection() {
-    refreshPayments();
+    const tableContainer = document.querySelector('.payments-table-container');
+    if (tableContainer) setTableLoading(tableContainer, true);
+    
+    refreshPayments().finally(() => {
+        if (tableContainer) setTableLoading(tableContainer, false);
+    });
 }
 
 // Global functions for button clicks
@@ -2576,12 +2666,18 @@ let allEmployees = [];
 
 async function loadEmployeesSection() {
     try {
+        const tableContainer = document.querySelector('.employees-table-container');
+        if (tableContainer) setTableLoading(tableContainer, true);
+        
         allEmployees = await window.APIService.getEmployees();
         renderEmployeesTable(allEmployees);
         initializeEmployeeFilters();
     } catch (error) {
         console.error('Failed to load employees:', error);
         renderEmployeesTable([]);
+    } finally {
+        const tableContainer = document.querySelector('.employees-table-container');
+        if (tableContainer) setTableLoading(tableContainer, false);
     }
 }
 
@@ -2929,6 +3025,10 @@ async function saveVendor() {
         return;
     }
     
+    const saveBtn = document.querySelector('#vendorModal .btn-primary');
+    setButtonLoading(saveBtn, true);
+    showLoading(currentVendorId ? 'Updating vendor...' : 'Creating vendor...');
+    
     // Collect all emails
     const emails = [];
     
@@ -2995,6 +3095,8 @@ async function saveVendor() {
         if (!customCategory) {
             showToast('Please enter a category name', 'error');
             customCategoryInput.focus();
+            setButtonLoading(saveBtn, false);
+            hideLoading();
             return;
         }
         category = customCategory.toLowerCase().replace(/\s+/g, '-');
@@ -3033,6 +3135,7 @@ async function saveVendor() {
         // Upload documents if any
         if (window.uploadedFiles && window.uploadedFiles.vendor && window.uploadedFiles.vendor.length > 0) {
             console.log('Uploading vendor documents:', window.uploadedFiles.vendor.length, 'files');
+            updateLoadingMessage('Uploading documents...');
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.vendor);
             console.log('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
@@ -3051,9 +3154,11 @@ async function saveVendor() {
         console.log('Documents is array:', Array.isArray(vendorData.documents));
         
         if (currentVendorId) {
+            updateLoadingMessage('Updating vendor...');
             await window.APIService.updateVendor(currentVendorId, vendorData);
             showToast('Vendor updated successfully!', 'success');
         } else {
+            updateLoadingMessage('Creating vendor...');
             await window.APIService.createVendor(vendorData);
             showToast('Vendor created successfully!', 'success');
         }
@@ -3069,6 +3174,9 @@ async function saveVendor() {
     } catch (error) {
         console.error('Save vendor error:', error);
         showToast('Failed to save vendor: ' + error.message, 'error');
+    } finally {
+        setButtonLoading(saveBtn, false);
+        hideLoading();
     }
 }
 
@@ -3215,12 +3323,18 @@ let allVendors = [];
 
 async function loadVendorsSection() {
     try {
+        const tableContainer = document.querySelector('.vendors-table-container');
+        if (tableContainer) setTableLoading(tableContainer, true);
+        
         allVendors = await window.APIService.getVendors();
         renderVendorsTable(allVendors);
         initializeVendorFilters();
     } catch (error) {
         console.error('Failed to load vendors:', error);
         renderVendorsTable([]);
+    } finally {
+        const tableContainer = document.querySelector('.vendors-table-container');
+        if (tableContainer) setTableLoading(tableContainer, false);
     }
 }
 
@@ -3583,6 +3697,10 @@ async function saveCustomer() {
         return;
     }
     
+    const saveBtn = document.querySelector('#customerModal .btn-primary');
+    setButtonLoading(saveBtn, true);
+    showLoading(currentCustomerId ? 'Updating customer...' : 'Creating customer...');
+    
     // Collect all addresses
     const addresses = [];
     
@@ -3701,6 +3819,7 @@ async function saveCustomer() {
         // Upload documents if any
         if (window.uploadedFiles && window.uploadedFiles.customer && window.uploadedFiles.customer.length > 0) {
             console.log('Uploading customer documents:', window.uploadedFiles.customer.length, 'files');
+            updateLoadingMessage('Uploading documents...');
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.customer);
             console.log('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
@@ -3713,9 +3832,11 @@ async function saveCustomer() {
         }
         
         if (currentCustomerId) {
+            updateLoadingMessage('Updating customer...');
             await window.APIService.updateCustomer(currentCustomerId, customerData);
             showToast('Customer updated successfully!', 'success');
         } else {
+            updateLoadingMessage('Creating customer...');
             await window.APIService.createCustomer(customerData);
             showToast('Customer created successfully!', 'success');
         }
@@ -3729,6 +3850,9 @@ async function saveCustomer() {
         await refreshCustomers();
     } catch (error) {
         showToast('Failed to save customer: ' + error.message, 'error');
+    } finally {
+        setButtonLoading(saveBtn, false);
+        hideLoading();
     }
 }
 
@@ -3906,6 +4030,9 @@ function closeCustomerModal() {
 
 async function refreshCustomers() {
     try {
+        const tableContainer = document.querySelector('.customers-table-container');
+        if (tableContainer) setTableLoading(tableContainer, true);
+        
         const customers = await window.APIService.getCustomers();
         const orders = await window.APIService.getOrders();
         
@@ -3921,6 +4048,9 @@ async function refreshCustomers() {
         renderCustomersTable(customers);
     } catch (error) {
         console.error('Failed to refresh customers:', error);
+    } finally {
+        const tableContainer = document.querySelector('.customers-table-container');
+        if (tableContainer) setTableLoading(tableContainer, false);
     }
 }
 
@@ -3998,6 +4128,9 @@ let allCustomers = [];
 
 async function loadCustomersSection() {
     try {
+        const tableContainer = document.querySelector('.customers-table-container');
+        if (tableContainer) setTableLoading(tableContainer, true);
+        
         allCustomers = await window.APIService.getCustomers();
         const orders = await window.APIService.getOrders();
         
@@ -4015,6 +4148,9 @@ async function loadCustomersSection() {
     } catch (error) {
         console.error('Failed to load customers:', error);
         renderCustomersTable([]);
+    } finally {
+        const tableContainer = document.querySelector('.customers-table-container');
+        if (tableContainer) setTableLoading(tableContainer, false);
     }
 }
 
@@ -4123,6 +4259,10 @@ async function loadOrdersSection() {
         if (window.ordersLoading) return; // Prevent duplicate calls
         window.ordersLoading = true;
         
+        // Show loading state
+        const tableContainer = document.querySelector('.orders-table-container');
+        if (tableContainer) setTableLoading(tableContainer, true);
+        
         allOrders = await window.APIService.getOrders();
         console.log('Orders loaded:', allOrders.length);
         window.dashboard.renderOrdersTable(allOrders);
@@ -4132,6 +4272,8 @@ async function loadOrdersSection() {
         window.dashboard.renderOrdersTable([]);
     } finally {
         window.ordersLoading = false;
+        const tableContainer = document.querySelector('.orders-table-container');
+        if (tableContainer) setTableLoading(tableContainer, false);
     }
 }
 
@@ -4345,6 +4487,18 @@ document.head.appendChild(styleSheet);
 // Pipeline section loader
 function loadPipelineSection() {
     console.log('Loading pipeline section...');
+    
+    // Show loading state immediately
+    const stagesContainer = document.getElementById('stagesContainer');
+    if (stagesContainer) {
+        stagesContainer.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                <div class="loading-spinner" style="margin: 0 auto 20px;"></div>
+                <div style="color: #6b7280; font-size: 14px; font-weight: 500;">Initializing pipeline...</div>
+            </div>
+        `;
+    }
+    
     // The pipeline-mongodb.js script should already be loaded and initialized
     // Just make sure the data is loaded
     if (typeof loadDataFromDB === 'function') {
@@ -4352,6 +4506,15 @@ function loadPipelineSection() {
         loadDataFromDB();
     } else {
         console.error('Pipeline script not loaded or loadDataFromDB function not found');
+        if (stagesContainer) {
+            stagesContainer.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ef4444; margin-bottom: 16px;"></i>
+                    <div style="color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 8px;">Pipeline Not Available</div>
+                    <div style="color: #6b7280; font-size: 14px;">Pipeline script failed to load</div>
+                </div>
+            `;
+        }
     }
 }
 
