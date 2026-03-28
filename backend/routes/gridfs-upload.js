@@ -37,7 +37,10 @@ router.post('/', upload.array('documents', 10), async (req, res) => {
         const files = [];
         
         for (const file of req.files) {
-            const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '-' + file.originalname;
+            const timestamp = Date.now();
+            const random = Math.round(Math.random() * 1E9);
+            const ext = file.originalname.split('.').pop();
+            const filename = `${timestamp}-${random}.${ext}`;
             
             const uploadStream = gfsBucket.openUploadStream(filename, {
                 metadata: {
@@ -159,6 +162,42 @@ router.get('/list', async (req, res) => {
         });
     } catch (error) {
         console.error('List error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Serve file directly from GridFS (for /uploads/:filename)
+router.get('/:filename', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        console.log('Direct file request for:', filename);
+
+        const files = await gfsBucket.find({ filename }).toArray();
+        
+        if (!files || files.length === 0) {
+            console.log('File not found in GridFS:', filename);
+            return res.status(404).json({ message: 'File not found' });
+        }
+
+        const file = files[0];
+        
+        res.set({
+            'Content-Type': file.metadata.mimetype,
+            'Content-Disposition': 'inline',
+            'Content-Length': file.length
+        });
+
+        const downloadStream = gfsBucket.openDownloadStreamByName(filename);
+        downloadStream.pipe(res);
+        
+        downloadStream.on('error', (error) => {
+            console.error('Stream error:', error);
+            if (!res.headersSent) {
+                res.status(500).json({ message: 'Error streaming file' });
+            }
+        });
+    } catch (error) {
+        console.error('File serve error:', error);
         res.status(500).json({ message: error.message });
     }
 });
