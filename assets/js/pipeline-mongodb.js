@@ -248,62 +248,8 @@ async function renderRecords(stageId) {
         return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No records yet</div>';
     }
     
-    console.log('Rendering records for stage:', stageId, 'Total records:', stageRecords.length);
-    
-    // Fetch employee data for records with orderId
-    const recordsWithEmployees = await Promise.all(stageRecords.map(async (record) => {
-        let employeeName = null;
-        console.log('Processing record:', record._id, 'orderId:', record.orderId);
-        if (record.orderId) {
-            try {
-                const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-                if (session) {
-                    const sessionData = JSON.parse(session);
-                    const token = sessionData.token;
-                    console.log('Fetching order:', record.orderId);
-                    const response = await fetch(`${API_BASE_URL}/orders/${record.orderId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (response.ok) {
-                        const order = await response.json();
-                        console.log('Order fetched:', order._id, 'employee:', order.employee);
-                        
-                        // Check if employee is an object with name or just an ID
-                        if (order.employee) {
-                            if (typeof order.employee === 'object' && order.employee.name) {
-                                employeeName = order.employee.name;
-                                console.log('Employee name found (object):', employeeName);
-                            } else if (typeof order.employee === 'string') {
-                                // Employee is just an ID, fetch employee details
-                                console.log('Employee is ID, fetching employee details:', order.employee);
-                                const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`, {
-                                    headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                                if (empResponse.ok) {
-                                    const employee = await empResponse.json();
-                                    employeeName = employee.name;
-                                    console.log('Employee name fetched:', employeeName);
-                                }
-                            }
-                        } else {
-                            console.log('No employee assigned to order');
-                        }
-                    } else {
-                        console.error('Failed to fetch order:', response.status);
-                    }
-                } else {
-                    console.log('No session found');
-                }
-            } catch (error) {
-                console.error('Error fetching employee for record:', record._id, error);
-            }
-        }
-        return { ...record, employeeName };
-    }));
-    
-    console.log('Records with employees:', recordsWithEmployees.map(r => ({ id: r._id, employee: r.employeeName })));
-    
-    return recordsWithEmployees.map(record => {
+    // Render records without employee data (much faster)
+    return stageRecords.map(record => {
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         const displayTitle = record.orderIdDisplay || record.customerName;
         return `
@@ -322,7 +268,6 @@ async function renderRecords(stageId) {
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}
             ${record.description ? `<div class="record-description">${record.description}</div>` : ''}
             <div class="record-footer">
-                ${record.employeeName ? `<span style="font-weight: 600; color: #3b82f6; font-size: 11px; margin-right: 8px;"><i class="fas fa-user-tie"></i> ${record.employeeName}</span>` : ''}
                 <span class="priority-badge priority-${record.priority}">${record.priority}</span>
                 <span class="record-time">${formatTime(record.createdAt)}</span>
             </div>
