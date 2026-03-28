@@ -7,15 +7,28 @@ const uploadDir = path.join(__dirname, '../uploads');
 
 // Download file
 router.get('/download/:filename', (req, res) => {
+    console.log('Download request for:', req.params.filename);
     try {
         const filename = req.params.filename;
         const filePath = path.join(uploadDir, filename);
         
+        console.log('Looking for file at:', filePath);
+        console.log('File exists:', fs.existsSync(filePath));
+        
         if (!fs.existsSync(filePath)) {
+            console.log('File not found:', filePath);
             return res.status(404).json({ message: 'File not found' });
         }
         
-        res.download(filePath);
+        console.log('Sending file for download:', filename);
+        res.download(filePath, (err) => {
+            if (err) {
+                console.error('Download error:', err);
+                if (!res.headersSent) {
+                    res.status(500).json({ message: 'Error downloading file' });
+                }
+            }
+        });
     } catch (error) {
         console.error('Download error:', error);
         res.status(500).json({ message: error.message });
@@ -24,11 +37,16 @@ router.get('/download/:filename', (req, res) => {
 
 // View file (inline)
 router.get('/view/:filename', (req, res) => {
+    console.log('View request for:', req.params.filename);
     try {
         const filename = req.params.filename;
         const filePath = path.join(uploadDir, filename);
         
+        console.log('Looking for file at:', filePath);
+        console.log('File exists:', fs.existsSync(filePath));
+        
         if (!fs.existsSync(filePath)) {
+            console.log('File not found:', filePath);
             return res.status(404).json({ message: 'File not found' });
         }
         
@@ -44,10 +62,20 @@ router.get('/view/:filename', (req, res) => {
         };
         
         const contentType = mimeTypes[ext] || 'application/octet-stream';
+        console.log('Setting content type:', contentType);
+        
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Disposition', 'inline');
         
         const fileStream = fs.createReadStream(filePath);
+        fileStream.on('error', (err) => {
+            console.error('Stream error:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ message: 'Error reading file' });
+            }
+        });
+        
+        console.log('Streaming file:', filename);
         fileStream.pipe(res);
     } catch (error) {
         console.error('View error:', error);
