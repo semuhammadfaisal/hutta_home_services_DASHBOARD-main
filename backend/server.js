@@ -79,16 +79,13 @@ try {
   app.use('/api/stages', require('./routes/stages'));
   app.use('/api/pipeline-records', require('./routes/pipelineRecords'));
   app.use('/api/pipeline-movements', require('./routes/pipelineMovements'));
-  app.use('/api/upload', require('./routes/upload'));
-  app.use('/api/files', require('./routes/files'));
+  app.use('/api/upload', require('./routes/gridfs-upload'));
+  app.use('/uploads', require('./routes/gridfs-upload'));
   console.log('✅ All routes loaded');
 } catch (error) {
   console.error('❌ Error loading routes:', error);
   process.exit(1);
 }
-
-// Serve uploads folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..'), {
