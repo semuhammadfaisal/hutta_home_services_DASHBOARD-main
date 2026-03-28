@@ -5,6 +5,23 @@ const fs = require('fs');
 
 const uploadDir = path.join(__dirname, '../uploads');
 
+// Test endpoint - list all files
+router.get('/list', (req, res) => {
+    console.log('Listing files in uploads directory');
+    try {
+        if (!fs.existsSync(uploadDir)) {
+            return res.json({ message: 'Uploads directory does not exist', files: [] });
+        }
+        
+        const files = fs.readdirSync(uploadDir);
+        console.log('Files found:', files);
+        res.json({ uploadDir, files, count: files.length });
+    } catch (error) {
+        console.error('List error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Test endpoint
 router.get('/test', (req, res) => {
     console.log('Files route test endpoint hit');
