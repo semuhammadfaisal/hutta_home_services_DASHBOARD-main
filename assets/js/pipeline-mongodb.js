@@ -9,6 +9,8 @@ let draggedStage = null;
 let searchQuery = '';
 let newOrders = []; // Store new orders for suggestions
 let currentViewRecordId = null;
+let employeeCache = new Map(); // Cache employee data
+let orderCache = new Map(); // Cache order data
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -25,8 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadDataFromDB() {
     try {
         console.log('Loading pipeline data from database...');
+        
+        // Fetch all data in parallel
         await Promise.all([fetchStages(), fetchRecords(), fetchNewOrders()]);
+        
+        // Fetch all orders and employees in batch (much faster than per-record)
+        await Promise.all([fetchAllOrders(), fetchAllEmployees()]);
+        
         console.log('Pipeline data loaded - Stages:', stages.length, 'Records:', records.length, 'New Orders:', newOrders.length);
+        console.log('Cached data - Orders:', orderCache.size, 'Employees:', employeeCache.size);
+        
         loadStages();
         loadNewOrdersSuggestions();
     } catch (error) {
@@ -93,6 +103,64 @@ async function fetchNewOrders() {
     } catch (error) {
         console.error('Error fetching new orders:', error);
         newOrders = [];
+    }
+}
+
+// Fetch all orders in one batch call
+async function fetchAllOrders() {
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        if (!session) return;
+        
+        const sessionData = JSON.parse(session);
+        const token = sessionData.token;
+        
+        const response = await fetch(`${API_BASE_URL}/orders`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) return;
+        
+        const orders = await response.json();
+        
+        // Cache all orders by ID
+        orderCache.clear();
+        orders.forEach(order => {
+            orderCache.set(order._id, order);
+        });
+        
+        console.log('Orders cached:', orderCache.size);
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+    }
+}
+
+// Fetch all employees in one batch call
+async function fetchAllEmployees() {
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        if (!session) return;
+        
+        const sessionData = JSON.parse(session);
+        const token = sessionData.token;
+        
+        const response = await fetch(`${API_BASE_URL}/employees`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) return;
+        
+        const employees = await response.json();
+        
+        // Cache all employees by ID
+        employeeCache.clear();
+        employees.forEach(employee => {
+            employeeCache.set(employee._id, employee);
+        });
+        
+        console.log('Employees cached:', employeeCache.size);
+    } catch (error) {
+        console.error('Error fetching employees:', error);
     }
 }
 
@@ -248,8 +316,23 @@ async function renderRecords(stageId) {
         return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No records yet</div>';
     }
     
-    // Render records without employee data (much faster)
+    // Get employee names from cache (instant lookup, no API calls)
     return stageRecords.map(record => {
+        let employeeName = null;
+        
+        // If record has orderId, get employee from cached order data
+        if (record.orderId && orderCache.has(record.orderId)) {
+            const order = orderCache.get(record.orderId);
+            
+            if (order.employee) {
+                if (typeof order.employee === 'object' && order.employee.name) {
+                    employeeName = order.employee.name;
+                } else if (typeof order.employee === 'string' && employeeCache.has(order.employee)) {
+                    const employee = employeeCache.get(order.employee);
+                    employeeName = employee.name;
+                }
+            }
+        }
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         const displayTitle = record.orderIdDisplay || record.customerName;
         return `
@@ -268,6 +351,7 @@ async function renderRecords(stageId) {
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}
             ${record.description ? `<div class="record-description">${record.description}</div>` : ''}
             <div class="record-footer">
+                ${employeeName ? `<span style="font-weight: 600; color: #3b82f6; font-size: 11px; margin-right: 8px;"><i class="fas fa-user-tie"></i> ${employeeName}</span>` : ''}
                 <span class="priority-badge priority-${record.priority}">${record.priority}</span>
                 <span class="record-time">${formatTime(record.createdAt)}</span>
             </div>
@@ -315,9 +399,36 @@ function viewRecord(recordId) {
 async function loadEmployeeForOrder(orderId) {
     console.log('loadEmployeeForOrder called with orderId:', orderId);
     try {
+        const employeeEl = document.getElementById('viewEmployee');
+        if (!employeeEl) {
+            console.error('viewEmployee element not found in DOM');
+            return;
+        }
+        
+        // Try to get from cache first (instant)
+        if (orderCache.has(orderId)) {
+            const order = orderCache.get(orderId);
+            console.log('Order found in cache:', order);
+            
+            if (order.employee) {
+                if (typeof order.employee === 'object' && order.employee.name) {
+                    console.log('Setting employee name (object):', order.employee.name);
+                    employeeEl.textContent = order.employee.name;
+                    return;
+                } else if (typeof order.employee === 'string' && employeeCache.has(order.employee)) {
+                    const employee = employeeCache.get(order.employee);
+                    console.log('Setting employee name from cache:', employee.name);
+                    employeeEl.textContent = employee.name;
+                    return;
+                }
+            }
+        }
+        
+        // Fallback: fetch from API if not in cache
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
         if (!session) {
             console.log('No session found');
+            employeeEl.textContent = 'Not assigned';
             return;
         }
         
@@ -331,46 +442,37 @@ async function loadEmployeeForOrder(orderId) {
         
         if (!response.ok) {
             console.error('Failed to load order:', response.status, response.statusText);
-            throw new Error('Failed to load order');
+            employeeEl.textContent = 'Not assigned';
+            return;
         }
         
         const order = await response.json();
         console.log('Order loaded:', order);
-        console.log('Order employee field:', order.employee);
         
-        const employeeEl = document.getElementById('viewEmployee');
-        console.log('viewEmployee element:', employeeEl);
-        
-        if (employeeEl) {
-            // Check if employee is an object with name or just an ID
-            if (order.employee) {
-                if (typeof order.employee === 'object' && order.employee.name) {
-                    console.log('Setting employee name (object):', order.employee.name);
-                    employeeEl.textContent = order.employee.name;
-                } else if (typeof order.employee === 'string') {
-                    // Employee is just an ID, fetch employee details
-                    console.log('Employee is ID, fetching employee details:', order.employee);
-                    const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (empResponse.ok) {
-                        const employee = await empResponse.json();
-                        console.log('Employee fetched:', employee);
-                        employeeEl.textContent = employee.name;
-                    } else {
-                        console.error('Failed to fetch employee:', empResponse.status);
-                        employeeEl.textContent = 'Not assigned';
-                    }
+        if (order.employee) {
+            if (typeof order.employee === 'object' && order.employee.name) {
+                console.log('Setting employee name (object):', order.employee.name);
+                employeeEl.textContent = order.employee.name;
+            } else if (typeof order.employee === 'string') {
+                console.log('Employee is ID, fetching employee details:', order.employee);
+                const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (empResponse.ok) {
+                    const employee = await empResponse.json();
+                    console.log('Employee fetched:', employee);
+                    employeeEl.textContent = employee.name;
                 } else {
-                    console.log('Employee field has unexpected type');
+                    console.error('Failed to fetch employee:', empResponse.status);
                     employeeEl.textContent = 'Not assigned';
                 }
             } else {
-                console.log('No employee assigned');
+                console.log('Employee field has unexpected type');
                 employeeEl.textContent = 'Not assigned';
             }
         } else {
-            console.error('viewEmployee element not found in DOM');
+            console.log('No employee assigned');
+            employeeEl.textContent = 'Not assigned';
         }
     } catch (error) {
         console.error('Error loading employee:', error);
