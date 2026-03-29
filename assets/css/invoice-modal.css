@@ -1,0 +1,244 @@
+/* Invoice Edit Modal Styles */
+.invoice-edit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.invoice-edit-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 450px;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.invoice-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.invoice-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.invoice-modal-header h3 i {
+    color: #3b82f6;
+    font-size: 20px;
+}
+
+.invoice-modal-close {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+.invoice-modal-close:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.invoice-modal-body {
+    padding: 24px;
+}
+
+.invoice-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.invoice-input-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+.invoice-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s;
+    background: white;
+}
+
+.invoice-input-wrapper:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.invoice-prefix {
+    background: #f3f4f6;
+    color: #6b7280;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 15px;
+    border-right: 2px solid #e5e7eb;
+    user-select: none;
+}
+
+.invoice-number-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1f2937;
+    background: transparent;
+}
+
+.invoice-number-input::placeholder {
+    color: #9ca3af;
+}
+
+.invoice-help-text {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.invoice-help-text::before {
+    content: "ℹ️";
+    font-size: 14px;
+}
+
+.invoice-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+    border-radius: 0 0 12px 12px;
+}
+
+.btn-invoice-cancel,
+.btn-invoice-save {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-invoice-cancel {
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.btn-invoice-cancel:hover {
+    background: #f3f4f6;
+    color: #374151;
+    border-color: #9ca3af;
+}
+
+.btn-invoice-save {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-invoice-save:hover {
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-invoice-save:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-invoice-save:disabled:hover {
+    box-shadow: none;
+}
+
+/* Spinner animation */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .invoice-edit-modal {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .invoice-modal-header,
+    .invoice-modal-body,
+    .invoice-modal-footer {
+        padding: 16px;
+    }
+}

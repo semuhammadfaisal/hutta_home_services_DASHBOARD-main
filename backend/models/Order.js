@@ -6,7 +6,7 @@ const orderSchema = new mongoose.Schema({
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   customer: {
     name: { type: String, required: true },
-    email: { type: String, required: true },
+    email: { type: String },
     phone: String,
     address: String
   },

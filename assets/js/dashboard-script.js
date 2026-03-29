@@ -1441,7 +1441,7 @@ function handleCustomerSelect() {
         
         // Make fields required
         document.getElementById('customerName').required = true;
-        document.getElementById('customerEmail').required = false;
+        document.getElementById('customerEmail').required = true;
         document.getElementById('customerAddressSelect').required = false;
     } else {
         console.log('Showing address selection for existing customer');
@@ -1453,15 +1453,15 @@ function handleCustomerSelect() {
             newCustomerFields.style.display = 'none';
             customerAddressSelection.style.display = 'block';
             
-            // Populate customer info (for display/reference)
+            // Populate customer info (these fields will be used when saving)
             document.getElementById('customerName').value = customer.name;
             document.getElementById('customerEmail').value = customer.email;
             document.getElementById('customerPhone').value = customer.phone || '';
             
-            // Make fields not required (already exists)
+            // Make fields not required but keep them filled
             document.getElementById('customerName').required = false;
             document.getElementById('customerEmail').required = false;
-            document.getElementById('customerAddressSelect').required = false; // Address selection is now optional
+            document.getElementById('customerAddressSelect').required = false;
             
             // Populate address dropdown
             populateCustomerAddresses(customer);
@@ -1686,7 +1686,7 @@ async function saveOrder() {
         } else {
             updateLoadingMessage('Creating order...');
             await window.APIService.createOrder(orderData);
-            showToast('Order created successfully!', 'success');
+            showToast('Order created successfully! Payment record auto-created.', 'success');
             
             // If this was a new customer, refresh the customers list
             if (!selectedCustomerId || selectedCustomerId === 'new') {
@@ -1700,6 +1700,13 @@ async function saveOrder() {
                 } catch (error) {
                     console.log('Customer refresh failed:', error);
                 }
+            }
+            
+            // Refresh payments list to show the auto-created payment
+            try {
+                await refreshPayments();
+            } catch (error) {
+                console.log('Payment refresh failed:', error);
             }
         }
         
@@ -2131,6 +2138,7 @@ async function editPayment(paymentId) {
         document.getElementById('paymentOrder').value = payment.order?._id || '';
         document.getElementById('paymentDate').value = payment.paymentDate ? payment.paymentDate.split('T')[0] : '';
         document.getElementById('paymentDueDate').value = payment.dueDate ? payment.dueDate.split('T')[0] : '';
+        document.getElementById('paymentInvoiceNumber').value = payment.invoiceNumber ? payment.invoiceNumber.replace('INV-', '') : '';
         document.getElementById('paymentTransactionId').value = payment.transactionId || '';
         document.getElementById('paymentReceiptNumber').value = payment.receiptNumber || '';
         document.getElementById('paymentDescription').value = payment.description || '';
@@ -2157,6 +2165,7 @@ async function savePayment() {
         order: document.getElementById('paymentOrder').value || null,
         paymentDate: document.getElementById('paymentDate').value || null,
         dueDate: document.getElementById('paymentDueDate').value || null,
+        invoiceNumber: document.getElementById('paymentInvoiceNumber').value ? 'INV-' + document.getElementById('paymentInvoiceNumber').value : '',
         transactionId: document.getElementById('paymentTransactionId').value,
         receiptNumber: document.getElementById('paymentReceiptNumber').value,
         description: document.getElementById('paymentDescription').value,
@@ -2238,7 +2247,7 @@ function renderPaymentsTable(payments) {
     if (!payments || payments.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="payments-empty-state">
+                <td colspan="9" class="payments-empty-state">
                     <i class="fas fa-credit-card"></i>
                     <h3>No Payments Found</h3>
                     <p>Payments will be automatically created when orders are created</p>
@@ -2255,6 +2264,11 @@ function renderPaymentsTable(payments) {
                     <strong>${payment.paymentId}</strong>
                     ${payment.order ? `<small style="color: #6b7280; font-size: 11px;">Order: ${payment.order.orderId || payment.order}</small>` : ''}
                 </div>
+            </td>
+            <td>
+                <span style="color: #3b82f6; font-weight: 500; cursor: pointer;" onclick="editInvoiceNumber('${payment._id}', '${payment.invoiceNumber || ''}')" title="Click to edit invoice number">
+                    ${payment.invoiceNumber || '<span style="color: #9ca3af;">-</span>'}
+                </span>
             </td>
             <td>${payment.customer?.name || 'N/A'}</td>
             <td><strong>$${payment.amount.toLocaleString()}</strong></td>
@@ -2353,6 +2367,141 @@ async function quickUpdatePaymentStatus(paymentId, newStatus) {
 }
 
 window.quickUpdatePaymentStatus = quickUpdatePaymentStatus;
+
+// Inline edit invoice number
+async function editInvoiceNumber(paymentId, currentInvoice) {
+    // Remove INV- prefix if present for editing
+    const currentNumber = currentInvoice ? currentInvoice.replace('INV-', '') : '';
+    
+    // Create custom modal
+    const modal = document.createElement('div');
+    modal.className = 'invoice-edit-modal-overlay';
+    modal.innerHTML = `
+        <div class="invoice-edit-modal">
+            <div class="invoice-modal-header">
+                <h3><i class="fas fa-file-invoice"></i> Edit Invoice Number</h3>
+                <button class="invoice-modal-close" onclick="this.closest('.invoice-edit-modal-overlay').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="invoice-modal-body">
+                <div class="invoice-input-group">
+                    <label for="invoiceNumberInput">Invoice Number</label>
+                    <div class="invoice-input-wrapper">
+                        <span class="invoice-prefix">INV-</span>
+                        <input type="text" id="invoiceNumberInput" class="invoice-number-input" value="${currentNumber}" placeholder="000000" autofocus>
+                    </div>
+                    <small class="invoice-help-text">Enter only the number. "INV-" will be added automatically.</small>
+                </div>
+            </div>
+            <div class="invoice-modal-footer">
+                <button class="btn-invoice-cancel" onclick="this.closest('.invoice-edit-modal-overlay').remove()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-invoice-save" onclick="saveInvoiceNumber('${paymentId}')">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Focus input and select text
+    setTimeout(() => {
+        const input = document.getElementById('invoiceNumberInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+    
+    // Handle Enter key
+    modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveInvoiceNumber(paymentId);
+        } else if (e.key === 'Escape') {
+            modal.remove();
+        }
+    });
+    
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+async function saveInvoiceNumber(paymentId) {
+    const input = document.getElementById('invoiceNumberInput');
+    const modal = document.querySelector('.invoice-edit-modal-overlay');
+    const saveBtn = document.querySelector('.btn-invoice-save');
+    
+    if (!input) return;
+    
+    // Get the trimmed number
+    const trimmedNumber = input.value.trim();
+    
+    // Disable button and show loading
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
+    
+    try {
+        // Get the payment data
+        const payment = await window.APIService.getPayment(paymentId);
+        
+        console.log('Current payment data:', payment);
+        console.log('New invoice number:', trimmedNumber ? 'INV-' + trimmedNumber : '(empty)');
+        
+        // Update with new invoice number (add INV- prefix)
+        const updateData = {
+            customer: payment.customer._id || payment.customer,
+            amount: payment.amount,
+            paymentMethod: payment.paymentMethod,
+            status: payment.status,
+            order: payment.order?._id || payment.order || null,
+            paymentDate: payment.paymentDate,
+            dueDate: payment.dueDate,
+            invoiceNumber: trimmedNumber ? 'INV-' + trimmedNumber : '',
+            transactionId: payment.transactionId || '',
+            receiptNumber: payment.receiptNumber || '',
+            description: payment.description || '',
+            notes: payment.notes || ''
+        };
+        
+        console.log('Sending update data:', updateData);
+        
+        // Save to backend
+        const result = await window.APIService.updatePayment(paymentId, updateData);
+        
+        console.log('Update result:', result);
+        
+        // Close modal
+        if (modal) modal.remove();
+        
+        // Show success message
+        showToast('Invoice number updated successfully!', 'success');
+        
+        // Refresh the payments table
+        await refreshPayments();
+    } catch (error) {
+        console.error('Invoice number update error:', error);
+        showToast('Failed to update invoice number: ' + error.message, 'error');
+        
+        // Re-enable button
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+        }
+    }
+}
+
+window.editInvoiceNumber = editInvoiceNumber;
+window.saveInvoiceNumber = saveInvoiceNumber;
 
 // Employee Management Functions
 let currentEmployeeId = null;

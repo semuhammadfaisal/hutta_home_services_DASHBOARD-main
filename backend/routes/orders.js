@@ -211,12 +211,32 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     // Auto-create pending payment for this order
     try {
       const Payment = require('../models/Payment');
-      const paymentCount = await Payment.countDocuments();
-      const paymentId = `PAY-${String(paymentCount + 1).padStart(4, '0')}`;
       
       // Only create payment if we have a valid customer ID
       if (!customerId) {
         console.error('Cannot create payment: No customer ID available');
+        console.error('Customer data:', req.body.customer);
+        return res.status(201).json(order);
+      }
+      
+      // Generate unique payment ID (handle gaps from deleted payments)
+      let paymentId;
+      let paymentAttempts = 0;
+      const maxPaymentAttempts = 10;
+      
+      do {
+        const paymentCount = await Payment.countDocuments();
+        const timestamp = Date.now();
+        paymentId = `PAY-${String(paymentCount + 1 + paymentAttempts).padStart(4, '0')}`;
+        
+        const existingPayment = await Payment.findOne({ paymentId });
+        if (!existingPayment) break;
+        
+        paymentAttempts++;
+      } while (paymentAttempts < maxPaymentAttempts);
+      
+      if (paymentAttempts >= maxPaymentAttempts) {
+        console.error('Unable to generate unique payment ID');
         return res.status(201).json(order);
       }
       
@@ -225,6 +245,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
         order: order._id,
         customer: customerId,
         amount: amount,
+        paymentMethod: null, // Will be set later when payment is received
         status: 'pending',
         description: `Payment for ${orderId} - ${req.body.service}`,
         dueDate: new Date(req.body.endDate),
@@ -232,10 +253,12 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       });
       
       await payment.save();
-      console.log('AUTO-CREATED PAYMENT:', payment._id, 'with ID:', paymentId, 'for order:', orderId);
+      console.log('✅ AUTO-CREATED PAYMENT:', payment._id, 'with ID:', paymentId, 'for order:', orderId);
+      console.log('Payment details:', { paymentId, orderId, customerId, amount, status: 'pending' });
     } catch (paymentError) {
-      console.error('PAYMENT CREATION ERROR:', paymentError.message);
+      console.error('❌ PAYMENT CREATION ERROR:', paymentError.message);
       console.error('Payment error details:', paymentError);
+      console.error('Stack:', paymentError.stack);
       // Don't fail the order creation if payment creation fails
     }
     
