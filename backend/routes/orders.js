@@ -320,6 +320,41 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     }
     
     console.log('Order updated successfully:', order._id);
+    
+    // Update associated payment amount if order amount changed
+    if (updateData.amount !== undefined) {
+      try {
+        const Payment = require('../models/Payment');
+        const payment = await Payment.findOne({ order: order._id });
+        
+        if (payment) {
+          payment.amount = updateData.amount;
+          await payment.save();
+          console.log('✅ Updated payment amount:', payment.paymentId, 'to', updateData.amount);
+        }
+      } catch (paymentError) {
+        console.error('❌ Error updating payment amount:', paymentError.message);
+        // Don't fail the order update if payment update fails
+      }
+    }
+    
+    // Update associated pipeline record budget if order amount changed
+    if (updateData.amount !== undefined && order.pipelineRecordId) {
+      try {
+        const PipelineRecord = require('../models/PipelineRecord');
+        const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId);
+        
+        if (pipelineRecord) {
+          pipelineRecord.budget = updateData.amount;
+          await pipelineRecord.save();
+          console.log('✅ Updated pipeline record budget:', pipelineRecord._id, 'to', updateData.amount);
+        }
+      } catch (pipelineError) {
+        console.error('❌ Error updating pipeline record budget:', pipelineError.message);
+        // Don't fail the order update if pipeline update fails
+      }
+    }
+    
     res.json(order);
   } catch (error) {
     console.error('Update order error:', error);

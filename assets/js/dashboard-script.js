@@ -2291,9 +2291,6 @@ function renderPaymentsTable(payments) {
                 <button class="btn-action" onclick="viewPayment('${payment._id}')" title="View">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button class="btn-action" onclick="editPayment('${payment._id}')" title="Edit">
-                    <i class="fas fa-edit"></i>
-                </button>
                 <button class="btn-action delete" onclick="deletePayment('${payment._id}')" title="Delete">
                     <i class="fas fa-trash"></i>
                 </button>

@@ -81,6 +81,36 @@ router.put('/:id', async (req, res) => {
         if (req.body.notes !== undefined) record.notes = req.body.notes;
 
         const updatedRecord = await record.save();
+        
+        // Sync budget changes to linked Order and Payment
+        if (req.body.budget !== undefined && record.orderId) {
+            try {
+                const Order = require('../models/Order');
+                const Payment = require('../models/Payment');
+                
+                // Update order amount
+                const order = await Order.findById(record.orderId);
+                if (order) {
+                    order.amount = req.body.budget;
+                    // Recalculate profit
+                    order.profit = order.amount - (order.vendorCost || 0) - (order.processingFee || 0);
+                    await order.save();
+                    console.log('✅ Updated order amount:', order.orderId, 'to', req.body.budget);
+                    
+                    // Update payment amount
+                    const payment = await Payment.findOne({ order: record.orderId });
+                    if (payment) {
+                        payment.amount = req.body.budget;
+                        await payment.save();
+                        console.log('✅ Updated payment amount:', payment.paymentId, 'to', req.body.budget);
+                    }
+                }
+            } catch (syncError) {
+                console.error('❌ Error syncing budget to order/payment:', syncError.message);
+                // Don't fail the pipeline update if sync fails
+            }
+        }
+        
         res.json(updatedRecord);
     } catch (error) {
         res.status(400).json({ message: error.message });
