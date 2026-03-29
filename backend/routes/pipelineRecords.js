@@ -70,44 +70,56 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ message: 'Record not found' });
         }
 
+        console.log('Updating pipeline record:', req.params.id);
+        
         if (req.body.customerName) record.customerName = req.body.customerName;
         if (req.body.email !== undefined) record.email = req.body.email;
         if (req.body.phone !== undefined) record.phone = req.body.phone;
         if (req.body.priority) record.priority = req.body.priority;
-        if (req.body.budget !== undefined) record.budget = req.body.budget;
+        if (req.body.budget !== undefined) {
+            record.budget = parseFloat(req.body.budget) || 0;
+        }
         if (req.body.startDate !== undefined) record.startDate = req.body.startDate;
         if (req.body.address !== undefined) record.address = req.body.address;
         if (req.body.description !== undefined) record.description = req.body.description;
         if (req.body.notes !== undefined) record.notes = req.body.notes;
+        if (req.body.orderId && !record.orderId) record.orderId = req.body.orderId;
 
         const updatedRecord = await record.save();
         
         // Sync budget changes to linked Order and Payment
-        if (req.body.budget !== undefined && record.orderId) {
+        if (req.body.budget !== undefined) {
             try {
                 const Order = require('../models/Order');
                 const Payment = require('../models/Payment');
-                
-                // Update order amount
-                const order = await Order.findById(record.orderId);
+                const budgetAmount = parseFloat(req.body.budget) || 0;
+
+                // Find order by orderId ref OR by pipelineRecordId backlink
+                let order = record.orderId ? await Order.findById(record.orderId) : null;
+                if (!order) {
+                    order = await Order.findOne({ pipelineRecordId: record._id });
+                }
+
                 if (order) {
-                    order.amount = req.body.budget;
-                    // Recalculate profit
-                    order.profit = order.amount - (order.vendorCost || 0) - (order.processingFee || 0);
+                    const prevAmount = order.amount;
+                    order.amount = budgetAmount;
+                    order.profit = budgetAmount - (order.vendorCost || 0) - (order.processingFee || 0);
                     await order.save();
-                    console.log('✅ Updated order amount:', order.orderId, 'to', req.body.budget);
-                    
-                    // Update payment amount
-                    const payment = await Payment.findOne({ order: record.orderId });
+                    console.log(`✅ Updated order amount: ${order.orderId} from ${prevAmount} to ${budgetAmount}`);
+
+                    const payment = await Payment.findOne({ order: order._id });
                     if (payment) {
-                        payment.amount = req.body.budget;
+                        payment.amount = budgetAmount;
                         await payment.save();
-                        console.log('✅ Updated payment amount:', payment.paymentId, 'to', req.body.budget);
+                        console.log(`✅ Updated payment amount: ${payment.paymentId} to ${budgetAmount}`);
+                    } else {
+                        console.log('⚠️ No payment found for order:', order._id);
                     }
+                } else {
+                    console.log('⚠️ No linked order found for pipeline record:', record._id);
                 }
             } catch (syncError) {
                 console.error('❌ Error syncing budget to order/payment:', syncError.message);
-                // Don't fail the pipeline update if sync fails
             }
         }
         
