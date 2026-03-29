@@ -762,10 +762,11 @@ async function saveRecord(event) {
     try {
         let response;
         if (id) {
+            const editingRecord = records.find(r => r._id === id);
             response = await fetch(`${API_BASE_URL}/pipeline-records/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customerName, email, phone, priority, budget, startDate, address, description, notes })
+                body: JSON.stringify({ customerName, email, phone, priority, budget, startDate, address, description, notes, orderId: editingRecord?.orderId })
             });
         } else {
             // Get order details if orderId is selected
@@ -816,11 +817,12 @@ async function saveRecord(event) {
         
         console.log('Record saved successfully');
         closeRecordModal();
+        // Clear API cache so Orders and Payments fetch fresh data
+        if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
-        if (window.refreshCalendar) {
-            console.log('Refreshing calendar...');
-            await window.refreshCalendar();
-        }
+        if (window.refreshCalendar) await window.refreshCalendar();
+        if (typeof refreshOrders === 'function') refreshOrders();
+        if (typeof refreshPayments === 'function') refreshPayments();
         return false;
     } catch (error) {
         console.error('Error saving record:', error);
