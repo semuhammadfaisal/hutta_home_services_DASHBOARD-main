@@ -873,6 +873,7 @@ function dragLeave(event) {
 async function drop(event) {
     event.preventDefault();
     event.currentTarget.classList.remove('drag-over');
+    console.log('DROP FIRED - isNewOrder:', event.dataTransfer.getData('isNewOrder'), 'stageId:', event.currentTarget.dataset.stageId);
     
     const isNewOrder = event.dataTransfer.getData('isNewOrder') === 'true';
     const newStageId = event.currentTarget.dataset.stageId;
@@ -918,6 +919,39 @@ async function drop(event) {
             
             console.log('Pipeline record stage updated successfully');
             
+            // Auto-update linked payment record when moving to Paid/Close
+            if (/^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim()) && record.orderId) {
+                try {
+                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+                    if (session) {
+                        const token = JSON.parse(session).token;
+                        // Find payment linked to this order
+                        const paymentsRes = await fetch(`${API_BASE_URL}/payments`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (paymentsRes.ok) {
+                            const allPayments = await paymentsRes.json();
+                            const linked = allPayments.find(p =>
+                                (p.order?._id || p.order) === record.orderId &&
+                                p.status !== 'received' && p.status !== 'completed'
+                            );
+                            if (linked) {
+                                await fetch(`${API_BASE_URL}/payments/${linked._id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                    body: JSON.stringify({ ...linked, customer: linked.customer?._id || linked.customer, order: linked.order?._id || linked.order, status: 'received', paymentDate: linked.paymentDate || new Date().toISOString() })
+                                });
+                                console.log('Payment record auto-updated to received');
+                                if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
+                                if (typeof refreshPayments === 'function') refreshPayments();
+                            }
+                        }
+                    }
+                } catch (payErr) {
+                    console.warn('Failed to auto-update payment:', payErr);
+                }
+            }
+            
             // Try to log the movement (optional - don't fail if this doesn't work)
             try {
                 console.log('Logging pipeline movement...');
@@ -949,134 +983,14 @@ async function drop(event) {
             console.log('Reloading pipeline data...');
             await loadDataFromDB();
             
-            // Wait longer to ensure backend update is complete
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            // Refresh dashboard KPIs if moved to/from 'Paid' stage
-            if (newStageName === 'Paid' || oldStageName === 'Paid') {
-                console.log('=== DASHBOARD REFRESH TRIGGERED ===');
-                console.log('Stage change detected - from:', oldStageName, 'to:', newStageName);
-                console.log('Record orderId:', record.orderId);
-                
-                // Force clear any cached data first
-                if (window.dashboard && window.dashboard.clearCache) {
-                    console.log('Clearing dashboard cache...');
-                    window.dashboard.clearCache();
+            // Refresh dashboard KPIs if moved to/from a paid/close stage
+            if (/^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim()) || /^(paid|close|closed|complete|completed|won|done)$/i.test(oldStageName.trim())) {
+                if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
+                if (window.dashboard && window.dashboard.renderDashboard) {
+                    await window.dashboard.renderDashboard();
                 }
-                
-                // CRITICAL: Clear APIService cache to force fresh data
-                if (window.APIService && window.APIService.clearCache) {
-                    console.log('Clearing APIService cache...');
-                    window.APIService.clearCache();
-                }
-                
-                // Verify the backend update was successful before refreshing dashboard
-                console.log('Verifying backend update...');
-                try {
-                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-                    if (session) {
-                        const sessionData = JSON.parse(session);
-                        const token = sessionData.token;
-                        
-                        // Check if the order was actually updated
-                        const orderResponse = await fetch(`/api/orders/${record.orderId}`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        
-                        if (orderResponse.ok) {
-                            const updatedOrder = await orderResponse.json();
-                            console.log('Backend verification - Order pipelineStage:', updatedOrder.pipelineStage);
-                            
-                            if (updatedOrder.pipelineStage === newStageName) {
-                                console.log('✅ Backend update verified successfully');
-                            } else {
-                                console.log('❌ Backend update not yet reflected, waiting more...');
-                                await new Promise(resolve => setTimeout(resolve, 2000));
-                            }
-                        } else {
-                            console.error('Failed to verify order update:', orderResponse.status);
-                        }
-                    }
-                } catch (verifyError) {
-                    console.error('Error verifying backend update:', verifyError);
-                }
-                
-                // Check order data before refresh
-                console.log('Checking order data before refresh...');
-                try {
-                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-                    if (session) {
-                        const sessionData = JSON.parse(session);
-                        const token = sessionData.token;
-                        
-                        const response = await fetch('/api/orders', {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            const orders = await response.json();
-                            const updatedOrder = orders.find(o => o._id === record.orderId);
-                            console.log('Updated order found:', updatedOrder ? {
-                                id: updatedOrder._id,
-                                pipelineStage: updatedOrder.pipelineStage,
-                                amount: updatedOrder.amount
-                            } : 'NOT FOUND');
-                            
-                            const paidOrders = orders.filter(order => order.pipelineStage === 'Paid');
-                            const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
-                            console.log('Fresh data - Paid orders:', paidOrders.length, 'Payments collected:', paymentsCollected);
-                        } else {
-                            console.error('Failed to fetch orders:', response.status, response.statusText);
-                        }
-                    } else {
-                        console.error('No session found for authentication');
-                    }
-                } catch (err) {
-                    console.error('Error checking order data:', err);
-                }
-                
-                // Try multiple refresh methods with retries to ensure dashboard updates
-                console.log('Starting dashboard refresh with retries...');
-                
-                for (let attempt = 1; attempt <= 3; attempt++) {
-                    console.log(`Dashboard refresh attempt ${attempt}/3`);
-                    
-                    if (window.refreshDashboard) {
-                        console.log('Calling window.refreshDashboard...');
-                        await window.refreshDashboard();
-                    }
-                    if (window.refreshDashboardKPIs) {
-                        console.log('Calling window.refreshDashboardKPIs...');
-                        await window.refreshDashboardKPIs();
-                    }
-                    if (window.onPipelineStageChange) {
-                        console.log('Calling window.onPipelineStageChange...');
-                        await window.onPipelineStageChange();
-                    }
-                    if (window.dashboard && window.dashboard.renderDashboard) {
-                        console.log('Calling window.dashboard.renderDashboard...');
-                        await window.dashboard.renderDashboard();
-                    }
-                    
-                    // Wait between attempts
-                    if (attempt < 3) {
-                        console.log(`Waiting before attempt ${attempt + 1}...`);
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-                
-                // Additional delay and final check
-                await new Promise(resolve => setTimeout(resolve, 500));
-                console.log('=== DASHBOARD REFRESH COMPLETE ===');
-            } else {
-                console.log('Stage change detected but not to/from Paid stage:', oldStageName, '->', newStageName);
+                if (typeof refreshPayments === 'function') refreshPayments();
             }
-            
-            console.log('=== PIPELINE DROP COMPLETE ===');
         } catch (error) {
             console.error('Error moving record:', error);
             alert('Error moving record: ' + error.message);

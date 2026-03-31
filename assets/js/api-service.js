@@ -224,6 +224,20 @@ class APIService {
         return this.request('/orders');
     }
 
+    async getOrdersFresh() {
+        // Bypass cache - always fetch fresh data
+        const cacheKey = 'GET:/orders';
+        this.requestCache.delete(cacheKey);
+        return this.request('/orders');
+    }
+
+    async getPaymentsCollected() {
+        // Always fresh - bypass cache
+        const cacheKey = 'GET:/pipeline-records/kpi/payments-collected';
+        this.requestCache.delete(cacheKey);
+        return this.request('/pipeline-records/kpi/payments-collected');
+    }
+
     async createOrder(orderData) {
         return this.request('/orders', {
             method: 'POST',

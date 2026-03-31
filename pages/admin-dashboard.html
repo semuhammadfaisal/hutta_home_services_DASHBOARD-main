@@ -90,6 +90,12 @@
                 </a>
             </li>
             <li class="menu-item">
+                <a href="#recurring-calendar" data-section="recurring-calendar">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Recurring Calendar</span>
+                </a>
+            </li>
+            <li class="menu-item">
                 <a href="#orders" data-section="orders">
                     <i class="fas fa-clipboard-list"></i>
                     <span>Orders</span>
@@ -2016,13 +2022,7 @@
         <section id="calendar" class="content-section">
             <div class="page-header">
                 <h1><i class="fas fa-calendar-alt"></i> Calendar</h1>
-                <div class="calendar-filter-toggle">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="recurringFilterToggle" onchange="toggleRecurringFilter()">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="toggle-label">Show Recurring Orders Only</span>
-                </div>
+
             </div>
             
             <div class="calendar-layout">
@@ -2058,6 +2058,56 @@
                         </button>
                     </div>
                     <div class="detail-panel-body" id="detailPanelBody">
+                        <!-- Details will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recurring Calendar Section -->
+        <section id="recurring-calendar" class="content-section">
+            <div class="page-header">
+                <h1><i class="fas fa-calendar-check"></i> Recurring Calendar</h1>
+                <div class="header-actions">
+                    <button class="btn-primary" onclick="showAddOrderModal()">
+                        <i class="fas fa-plus"></i> New Recurring Order
+                    </button>
+                </div>
+            </div>
+            
+            <div class="calendar-layout">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button class="btn-secondary" onclick="previousRecurringMonth()">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <h2 id="recurringCalendarMonth">January 2024</h2>
+                        <button class="btn-secondary" onclick="nextRecurringMonth()">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="calendar-grid">
+                        <div class="calendar-day-header">Sunday</div>
+                        <div class="calendar-day-header">Monday</div>
+                        <div class="calendar-day-header">Tuesday</div>
+                        <div class="calendar-day-header">Wednesday</div>
+                        <div class="calendar-day-header">Thursday</div>
+                        <div class="calendar-day-header">Friday</div>
+                        <div class="calendar-day-header">Saturday</div>
+                    </div>
+                    
+                    <div class="calendar-grid" id="recurringCalendarDays"></div>
+                </div>
+                
+                <div class="calendar-detail-panel" id="recurringDetailPanel" style="display: none;">
+                    <div class="detail-panel-header">
+                        <h3 id="recurringDetailPanelTitle">Recurring Order Details</h3>
+                        <button class="btn-close" onclick="closeRecurringDetailPanel()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="detail-panel-body" id="recurringDetailPanelBody">
                         <!-- Details will be populated here -->
                     </div>
                 </div>
@@ -2159,6 +2209,36 @@
                         <div class="form-group">
                             <label for="endDate">End Date *</label>
                             <input type="date" id="endDate" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="orderType">Order Type *</label>
+                        <select id="orderType" required onchange="toggleRecurringFields()">
+                            <option value="one-time">One Time Order</option>
+                            <option value="recurring">Recurring Order</option>
+                        </select>
+                    </div>
+                    
+                    <div id="recurringFields" style="display: none;">
+                        <div class="form-group">
+                            <label for="recurringFrequency">Recurring Frequency *</label>
+                            <select id="recurringFrequency">
+                                <option value="weekly">Weekly</option>
+                                <option value="bi-weekly">Bi-Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="recurringEndDate">Recurring End Date</label>
+                            <input type="date" id="recurringEndDate">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="recurringNotes">Recurring Notes</label>
+                            <textarea id="recurringNotes" rows="2" placeholder="Notes about recurring schedule..."></textarea>
                         </div>
                     </div>
                     

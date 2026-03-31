@@ -62,6 +62,8 @@ class DashboardManager {
                     loadAccountingSection();
                 } else if (targetSection === 'users') {
                     loadUsersSection();
+                } else if (targetSection === 'recurring-calendar') {
+                    loadRecurringCalendarSection();
                 }
                 
                 // Update active menu item
@@ -111,12 +113,13 @@ class DashboardManager {
                 window.APIService.clearCache();
             }
             
-            const [orders, vendors, employees, customers, payments] = await Promise.all([
-                window.APIService.getOrders().catch(err => { console.error('Orders error:', err); return []; }),
+            const [orders, vendors, employees, customers, payments, kpi] = await Promise.all([
+                window.APIService.getOrdersFresh().catch(err => { console.error('Orders error:', err); return []; }),
                 window.APIService.getVendors().catch(() => []),
                 window.APIService.getEmployees().catch(() => []),
                 window.APIService.getCustomers().catch(() => []),
-                window.APIService.getPayments().catch(() => [])
+                window.APIService.getPayments().catch(() => []),
+                window.APIService.getPaymentsCollected().catch(() => ({ paymentsCollected: 0 }))
             ]);
             
             console.log('Dashboard data loaded:', { orders: orders.length, vendors: vendors.length, employees: employees.length });
@@ -126,26 +129,9 @@ class DashboardManager {
                 console.log('API Base URL:', window.APIService.baseURL);
                 console.log('Token available:', !!window.APIService.getToken());
             }
-            console.log('Orders with pipeline stages:', orders.filter(o => o.pipelineStage).map(o => ({ id: o._id, stage: o.pipelineStage, amount: o.amount })));
-            console.log('Orders without pipeline stages:', orders.filter(o => !o.pipelineStage).map(o => ({ id: o._id, amount: o.amount, status: o.status })));
-            console.log('All orders pipeline stage breakdown:', orders.map(o => ({ id: o._id, pipelineStage: o.pipelineStage, amount: o.amount })));
             
-            // Calculate stats from fresh orders data
             const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
-            
-            // Calculate payments collected from Payment records with 'received' or 'completed' status
-            const receivedPayments = payments.filter(payment => 
-                payment.status === 'received' || payment.status === 'completed'
-            );
-            const paymentsCollected = receivedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-            
-            console.log('Payment calculations:', {
-                totalOrders: orders.length,
-                totalPayments: payments.length,
-                receivedPayments: receivedPayments.length,
-                paymentsCollected,
-                totalRevenue
-            });
+            const paymentsCollected = kpi.paymentsCollected || 0;
             
             const stats = {
                 totalOrders: orders.length,
@@ -1548,6 +1534,13 @@ function showAddOrderModal() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').value = today;
     
+    // Reset order type and recurring fields
+    document.getElementById('orderType').value = 'one-time';
+    document.getElementById('recurringFrequency').value = 'weekly';
+    document.getElementById('recurringEndDate').value = '';
+    document.getElementById('recurringNotes').value = '';
+    toggleRecurringFields(); // Hide recurring fields by default
+    
     loadVendors();
     loadEmployees();
     loadOrderCustomers();
@@ -1584,6 +1577,19 @@ async function editOrder(orderId) {
         document.getElementById('priority').value = order.priority || 'medium';
         document.getElementById('description').value = order.description || '';
         document.getElementById('notes').value = order.notes || '';
+        
+        // Populate recurring order fields
+        document.getElementById('orderType').value = order.orderType || 'one-time';
+        
+        // Trigger toggle to show/hide recurring fields
+        toggleRecurringFields();
+        
+        // If recurring order, populate recurring fields
+        if (order.orderType === 'recurring') {
+            document.getElementById('recurringFrequency').value = order.recurringFrequency || 'weekly';
+            document.getElementById('recurringEndDate').value = order.recurringEndDate ? order.recurringEndDate.split('T')[0] : '';
+            document.getElementById('recurringNotes').value = order.recurringNotes || '';
+        }
         
         if (order.vendor) {
             document.getElementById('vendor').value = order.vendor._id || order.vendor;
@@ -1675,8 +1681,24 @@ async function saveOrder() {
         status: document.getElementById('status').value || 'new',
         priority: document.getElementById('priority').value || 'medium',
         description: document.getElementById('description').value || '',
-        notes: document.getElementById('notes').value || ''
+        notes: document.getElementById('notes').value || '',
+        // Recurring order fields
+        orderType: document.getElementById('orderType').value || 'one-time'
     };
+    
+    // Add recurring fields if orderType is 'recurring'
+    if (orderData.orderType === 'recurring') {
+        const recurringFrequency = document.getElementById('recurringFrequency').value;
+        if (!recurringFrequency) {
+            showToast('Recurring frequency is required for recurring orders', 'error');
+            setButtonLoading(saveBtn, false);
+            hideLoading();
+            return;
+        }
+        orderData.recurringFrequency = recurringFrequency;
+        orderData.recurringEndDate = document.getElementById('recurringEndDate').value || null;
+        orderData.recurringNotes = document.getElementById('recurringNotes').value || '';
+    }
     
     try {
         if (currentOrderId) {
@@ -1802,29 +1824,17 @@ async function refreshOrders() {
             // Refresh dashboard stats after order changes (debounced)
             clearTimeout(window.statsRefreshTimer);
             window.statsRefreshTimer = setTimeout(async () => {
-                const [orders, vendors, employees, payments] = await Promise.all([
+                const [orders, vendors, employees, kpi] = await Promise.all([
                     window.APIService.getOrders().catch(() => []),
                     window.APIService.getVendors().catch(() => []),
                     window.APIService.getEmployees().catch(() => []),
-                    window.APIService.getPayments().catch(() => [])
+                    window.APIService.getPaymentsCollected().catch(() => ({ paymentsCollected: 0 }))
                 ]);
-                
-                // Calculate updated stats with fresh data
-                const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
-                const receivedPayments = payments.filter(payment => 
-                    payment.status === 'received' || payment.status === 'completed'
-                );
-                const paymentsCollected = receivedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-                
-                console.log('RefreshOrders - Payment calculations:', {
-                    receivedPayments: receivedPayments.length,
-                    paymentsCollected
-                });
                 
                 const stats = {
                     totalOrders: orders.length,
-                    totalRevenue: totalRevenue,
-                    paymentsCollected: paymentsCollected,
+                    totalRevenue: orders.reduce((sum, order) => sum + (order.amount || 0), 0),
+                    paymentsCollected: kpi.paymentsCollected || 0,
                     totalVendors: vendors.length,
                     totalEmployees: employees.length
                 };
@@ -5276,3 +5286,63 @@ function resetFinancialFilter() {
 
 window.applyFinancialFilter = applyFinancialFilter;
 window.resetFinancialFilter = resetFinancialFilter;
+
+// Toggle recurring fields in order form
+function toggleRecurringFields() {
+    const orderType = document.getElementById('orderType').value;
+    const recurringFields = document.getElementById('recurringFields');
+    const recurringFrequency = document.getElementById('recurringFrequency');
+    
+    if (orderType === 'recurring') {
+        recurringFields.style.display = 'block';
+        recurringFrequency.required = true;
+    } else {
+        recurringFields.style.display = 'none';
+        recurringFrequency.required = false;
+        // Clear recurring fields when switching to one-time
+        document.getElementById('recurringFrequency').value = 'weekly';
+        document.getElementById('recurringEndDate').value = '';
+        document.getElementById('recurringNotes').value = '';
+    }
+}
+
+// Make function globally available
+window.toggleRecurringFields = toggleRecurringFields;
+
+// Recurring Calendar navigation functions
+// recurringCurrentMonth and recurringCurrentYear are declared in calendar.js
+
+function previousRecurringMonth() {
+    recurringCurrentMonth--;
+    if (recurringCurrentMonth < 0) {
+        recurringCurrentMonth = 11;
+        recurringCurrentYear--;
+    }
+    if (typeof window.renderRecurringCalendar === 'function') window.renderRecurringCalendar();
+}
+
+function nextRecurringMonth() {
+    recurringCurrentMonth++;
+    if (recurringCurrentMonth > 11) {
+        recurringCurrentMonth = 0;
+        recurringCurrentYear++;
+    }
+    if (typeof window.renderRecurringCalendar === 'function') window.renderRecurringCalendar();
+}
+
+function closeRecurringDetailPanel() {
+    const panel = document.getElementById('recurringDetailPanel');
+    if (panel) panel.style.display = 'none';
+}
+
+window.previousRecurringMonth = previousRecurringMonth;
+window.nextRecurringMonth = nextRecurringMonth;
+window.closeRecurringDetailPanel = closeRecurringDetailPanel;
+
+function loadRecurringCalendarSection() {
+    if (typeof window.renderRecurringCalendar === 'function') {
+        window.renderRecurringCalendar();
+    }
+}
+
+window.loadRecurringCalendarSection = loadRecurringCalendarSection;
