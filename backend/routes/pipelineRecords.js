@@ -2,6 +2,44 @@ const express = require('express');
 const router = express.Router();
 const PipelineRecord = require('../models/PipelineRecord');
 
+// KPI: payments collected = sum of budgets for records in Paid/Close stages + received/completed payments not already counted
+router.get('/kpi/payments-collected', async (req, res) => {
+    try {
+        const Stage = require('../models/Stage');
+        const Payment = require('../models/Payment');
+
+        // Find all stages whose name matches paid/close variants (case-insensitive)
+        const allStages = await Stage.find().lean();
+        const paidStageIds = allStages
+            .filter(s => /^(paid|close|closed|complete|completed|won|done)$/i.test(s.name.trim()))
+            .map(s => s._id);
+
+        console.log('Paid stage IDs:', paidStageIds, 'from stages:', allStages.map(s => s.name));
+
+        // Sum budgets of pipeline records in those stages
+        const pipelineResult = await PipelineRecord.aggregate([
+            { $match: { stageId: { $in: paidStageIds } } },
+            { $group: { _id: null, total: { $sum: '$budget' }, orderIds: { $push: '$orderId' } } }
+        ]);
+
+        const pipelineTotal = pipelineResult[0]?.total || 0;
+        const linkedOrderIds = (pipelineResult[0]?.orderIds || []).filter(Boolean);
+
+        // Also count received/completed payments NOT linked to a pipeline-counted order
+        const extraPayments = await Payment.find({
+            status: { $in: ['received', 'completed'] },
+            order: { $nin: linkedOrderIds }
+        }).lean();
+        const extraTotal = extraPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+        console.log('KPI result:', { pipelineTotal, extraTotal, total: pipelineTotal + extraTotal });
+        res.json({ paymentsCollected: pipelineTotal + extraTotal });
+    } catch (error) {
+        console.error('KPI error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Get all records
 router.get('/', async (req, res) => {
     try {
@@ -174,9 +212,9 @@ router.patch('/:id/stage', async (req, res) => {
                     console.log(`Successfully updated order ${record.orderId} pipelineStage to: ${newStageName}`);
                     console.log('Updated order pipelineStage field:', updateResult.pipelineStage);
                     
-                    // Auto-update payment status to 'received' when order moves to 'Paid'
-                    if (newStageName === 'Paid') {
-                        console.log('Order moved to Paid, Closed - checking for payment to update');
+                    // Auto-update payment status to 'received' when order moves to Paid/Close stage
+                    if (/^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim())) {
+                        console.log('Order moved to paid/close stage - checking for payment to update');
                         const Payment = require('../models/Payment');
                         const payment = await Payment.findOne({ order: record.orderId });
                         console.log('Found payment:', payment ? payment.paymentId : 'No payment found');
@@ -186,7 +224,7 @@ router.patch('/:id/stage', async (req, res) => {
                                 payment.status = 'received';
                                 payment.paymentDate = new Date();
                                 await payment.save();
-                                console.log(`✅ Auto-updated payment ${payment.paymentId} to 'received' for order in 'Paid, Closed' stage`);
+                                console.log(`✅ Auto-updated payment ${payment.paymentId} to 'received'`);
                             } else {
                                 console.log('Payment already marked as received/completed');
                             }
@@ -211,12 +249,31 @@ router.patch('/:id/stage', async (req, res) => {
             } catch (orderUpdateError) {
                 console.error('Error updating order pipelineStage:', orderUpdateError);
             }
+        } else if (!record.orderId && newStageName && /^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim())) {
+            // No linked order — try to find payment by budget amount match for manually-created records
+            console.log('No orderId on record, attempting payment lookup by budget for manual record');
+            try {
+                const Payment = require('../models/Payment');
+                const payments = await Payment.find({
+                    amount: record.budget,
+                    status: { $nin: ['received', 'completed'] }
+                }).lean();
+                if (payments.length === 1) {
+                    await Payment.findByIdAndUpdate(payments[0]._id, {
+                        status: 'received',
+                        paymentDate: new Date()
+                    });
+                    console.log(`✅ Auto-updated unlinked payment ${payments[0].paymentId || payments[0]._id} to 'received'`);
+                } else {
+                    console.log(`⚠️ Found ${payments.length} matching payments by budget — skipping ambiguous update`);
+                }
+            } catch (e) {
+                console.warn('Could not auto-update unlinked payment:', e.message);
+            }
         } else {
             console.log('No order update needed:', {
                 hasOrderId: !!record.orderId,
-                hasNewStageName: !!newStageName,
-                orderId: record.orderId,
-                newStageName: newStageName
+                hasNewStageName: !!newStageName
             });
         }
         

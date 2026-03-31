@@ -173,7 +173,8 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     const processingFee = Number(req.body.processingFee) || 0;
     const profit = amount - vendorCost - processingFee;
     
-    const order = new Order({
+    // Prepare order data
+    const orderData = {
       orderId,
       workOrderNumber,
       customerId,
@@ -193,8 +194,22 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       status: req.body.status || 'new',
       priority: req.body.priority || 'medium',
       description: req.body.description || '',
-      notes: req.body.notes || ''
-    });
+      notes: req.body.notes || '',
+      // Recurring order fields
+      orderType: req.body.orderType || 'one-time'
+    };
+    
+    // Add recurring fields only if orderType is 'recurring'
+    if (orderData.orderType === 'recurring') {
+      if (!req.body.recurringFrequency) {
+        return res.status(400).json({ message: 'Recurring frequency is required for recurring orders' });
+      }
+      orderData.recurringFrequency = req.body.recurringFrequency;
+      orderData.recurringEndDate = req.body.recurringEndDate ? new Date(req.body.recurringEndDate) : null;
+      orderData.recurringNotes = req.body.recurringNotes || '';
+    }
+    
+    const order = new Order(orderData);
     
     if (req.body.vendor && mongoose.Types.ObjectId.isValid(req.body.vendor)) {
       order.vendor = req.body.vendor;
@@ -308,6 +323,28 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     const vendorCost = updateData.vendorCost !== undefined ? updateData.vendorCost : (await Order.findById(req.params.id)).vendorCost;
     const processingFee = updateData.processingFee !== undefined ? updateData.processingFee : (await Order.findById(req.params.id)).processingFee;
     updateData.profit = amount - vendorCost - processingFee;
+    
+    // Handle recurring order fields
+    if (updateData.orderType) {
+      if (updateData.orderType === 'recurring') {
+        // Validate recurring frequency is provided
+        if (!updateData.recurringFrequency && !req.body.recurringFrequency) {
+          const existingOrder = await Order.findById(req.params.id);
+          if (!existingOrder.recurringFrequency) {
+            return res.status(400).json({ message: 'Recurring frequency is required for recurring orders' });
+          }
+        }
+        // Set recurring fields
+        if (req.body.recurringFrequency) updateData.recurringFrequency = req.body.recurringFrequency;
+        if (req.body.recurringEndDate) updateData.recurringEndDate = new Date(req.body.recurringEndDate);
+        if (req.body.recurringNotes !== undefined) updateData.recurringNotes = req.body.recurringNotes;
+      } else if (updateData.orderType === 'one-time') {
+        // Clear recurring fields when switching to one-time
+        updateData.recurringFrequency = null;
+        updateData.recurringEndDate = null;
+        updateData.recurringNotes = null;
+      }
+    }
     
     const order = await Order.findByIdAndUpdate(
       req.params.id, 
