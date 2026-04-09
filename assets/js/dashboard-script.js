@@ -1530,6 +1530,23 @@ function showAddOrderModal() {
     document.getElementById('customerName').required = true;
     document.getElementById('customerAddressSelect').required = false;
     
+    // Make customer fields editable (remove read-only)
+    document.getElementById('customerName').readOnly = false;
+    document.getElementById('customerEmail').readOnly = false;
+    document.getElementById('customerPhone').readOnly = false;
+    document.getElementById('customerAddress').readOnly = false;
+    
+    // Enable customer selection dropdown
+    document.getElementById('customerSearchInput').disabled = false;
+    document.getElementById('customerSearchInput').style.cursor = '';
+    document.getElementById('customerSearchInput').style.backgroundColor = '';
+    
+    // Remove read-only styling
+    document.getElementById('customerName').style.cssText = '';
+    document.getElementById('customerEmail').style.cssText = '';
+    document.getElementById('customerPhone').style.cssText = '';
+    document.getElementById('customerAddress').style.cssText = '';
+    
     // Set default dates
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').value = today;
@@ -1559,13 +1576,32 @@ async function editOrder(orderId) {
         await loadEmployees();
         await loadOrderCustomers();
         
-        // Populate form
+        // Populate form - make customer fields read-only
         document.getElementById('customerSelect').value = 'new';
         document.getElementById('newCustomerFields').style.display = 'block';
         document.getElementById('customerName').value = order.customer.name || '';
         document.getElementById('customerEmail').value = order.customer.email || '';
         document.getElementById('customerPhone').value = order.customer.phone || '';
         document.getElementById('customerAddress').value = order.customer.address || '';
+        
+        // Make customer fields read-only
+        document.getElementById('customerName').readOnly = true;
+        document.getElementById('customerEmail').readOnly = true;
+        document.getElementById('customerPhone').readOnly = true;
+        document.getElementById('customerAddress').readOnly = true;
+        
+        // Disable customer selection dropdown
+        document.getElementById('customerSearchInput').disabled = true;
+        document.getElementById('customerSearchInput').style.cursor = 'not-allowed';
+        document.getElementById('customerSearchInput').style.backgroundColor = '#f3f4f6';
+        
+        // Add visual styling to indicate read-only
+        const readOnlyStyle = 'background-color: #f3f4f6; cursor: not-allowed;';
+        document.getElementById('customerName').style.cssText = readOnlyStyle;
+        document.getElementById('customerEmail').style.cssText = readOnlyStyle;
+        document.getElementById('customerPhone').style.cssText = readOnlyStyle;
+        document.getElementById('customerAddress').style.cssText = readOnlyStyle;
+        
         document.getElementById('service').value = order.service || '';
         document.getElementById('amount').value = order.amount || '';
         document.getElementById('vendorCost').value = order.vendorCost || '';
@@ -1615,9 +1651,12 @@ async function saveOrder() {
     const saveBtn = document.querySelector('#orderModal .btn-primary');
     if (saveBtn.disabled) return;
     
+    // Check if we're editing a pipeline record
+    const isPipelineEdit = window.currentPipelineRecordId && !currentOrderId;
+    
     // Show button loading state
     setButtonLoading(saveBtn, true);
-    showLoading(currentOrderId ? 'Updating order...' : 'Creating order...');
+    showLoading(currentOrderId ? 'Updating order...' : (isPipelineEdit ? 'Updating pipeline record...' : 'Creating order...'));
     
     // Determine customer data based on selection
     let customerData;
@@ -1667,6 +1706,62 @@ async function saveOrder() {
         };
     }
     
+    // If editing pipeline record, update it instead of creating/updating order
+    if (isPipelineEdit) {
+        try {
+            const pipelineData = {
+                customerName: customerData.name,
+                email: customerData.email,
+                phone: customerData.phone,
+                address: customerData.address,
+                priority: document.getElementById('priority').value || 'medium',
+                budget: parseFloat(document.getElementById('amount').value) || 0,
+                startDate: document.getElementById('startDate').value,
+                description: document.getElementById('description').value || '',
+                notes: document.getElementById('notes').value || ''
+            };
+            
+            const response = await fetch(`${window.API_BASE_URL || 'http://localhost:3000/api'}/pipeline-records/${window.currentPipelineRecordId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pipelineData)
+            });
+            
+            if (!response.ok) throw new Error('Failed to update pipeline record');
+            
+            showToast('Pipeline record updated successfully!', 'success');
+            closeOrderModal();
+            
+            // Store the record ID to reopen view modal
+            const recordIdToView = window.currentPipelineRecordId;
+            
+            // Clear pipeline record ID
+            window.currentPipelineRecordId = null;
+            
+            // Refresh pipeline
+            if (typeof window.loadDataFromDB === 'function') {
+                await window.loadDataFromDB();
+            }
+            
+            // Reopen the view modal with updated data
+            if (typeof window.viewRecord === 'function') {
+                setTimeout(() => {
+                    window.viewRecord(recordIdToView);
+                }, 100);
+            }
+            
+            setButtonLoading(saveBtn, false);
+            hideLoading();
+            return;
+        } catch (error) {
+            console.error('Error updating pipeline record:', error);
+            showToast('Failed to update pipeline record: ' + error.message, 'error');
+            setButtonLoading(saveBtn, false);
+            hideLoading();
+            return;
+        }
+    }
+    
     const orderData = {
         customer: customerData,
         service: document.getElementById('service').value,
@@ -1705,6 +1800,24 @@ async function saveOrder() {
             updateLoadingMessage('Updating order...');
             await window.APIService.updateOrder(currentOrderId, orderData);
             showToast('Order updated successfully!', 'success');
+            
+            // If this order was edited from pipeline, store the pipeline record ID
+            const pipelineRecordId = window.currentPipelineRecordId;
+            
+            closeOrderModal();
+            
+            // If edited from pipeline, refresh pipeline and reopen view modal
+            if (pipelineRecordId) {
+                if (typeof window.loadDataFromDB === 'function') {
+                    await window.loadDataFromDB();
+                }
+                // Reopen the view modal with updated data
+                if (typeof window.viewRecord === 'function') {
+                    setTimeout(() => {
+                        window.viewRecord(pipelineRecordId);
+                    }, 100);
+                }
+            }
         } else {
             updateLoadingMessage('Creating order...');
             await window.APIService.createOrder(orderData);
@@ -1730,10 +1843,29 @@ async function saveOrder() {
             } catch (error) {
                 console.log('Payment refresh failed:', error);
             }
+            
+            closeOrderModal();
         }
         
-        closeOrderModal();
+        // Clear API cache to ensure fresh data everywhere
+        if (window.APIService && window.APIService.clearCache) {
+            window.APIService.clearCache();
+        }
+        
+        // Refresh orders tab
         await refreshOrders();
+        
+        // Refresh pipeline if it's loaded
+        if (typeof loadDataFromDB === 'function') {
+            console.log('Refreshing pipeline after order save...');
+            await loadDataFromDB();
+        }
+        
+        // Refresh dashboard KPIs
+        if (window.dashboard && window.dashboard.renderDashboard) {
+            console.log('Refreshing dashboard after order save...');
+            await window.dashboard.renderDashboard();
+        }
     } catch (error) {
         console.error('Save order error:', error);
         showToast(error.message || 'Failed to save order', 'error');
@@ -1761,29 +1893,87 @@ function viewOrder(orderId) {
     showOrderDetail(orderId);
 }
 
-async function showOrderDetail(orderId) {
+async function showOrderDetail(orderId, fromPipeline = false) {
     try {
         const order = await window.APIService.getOrder(orderId);
         
+        // If opened from pipeline, show modal instead of full page
+        if (fromPipeline) {
+            // Populate modal fields
+            document.getElementById('modalOrderDetailTitle').textContent = `Order Details - ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
+            document.getElementById('modalDetailOrderId').textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
+            document.getElementById('modalDetailOrderStatus').innerHTML = `<span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>`;
+            document.getElementById('modalDetailOrderPriority').innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
+            document.getElementById('modalDetailOrderRevenue').textContent = order.amount ? `$${order.amount.toLocaleString()}` : '-';
+            document.getElementById('modalDetailOrderCost').textContent = order.vendorCost ? `$${order.vendorCost.toLocaleString()}` : '-';
+            document.getElementById('modalDetailOrderProfit').textContent = order.amount && order.vendorCost ? `$${(order.amount - order.vendorCost).toLocaleString()}` : '-';
+            document.getElementById('modalDetailOrderService').textContent = order.service || '-';
+            document.getElementById('modalDetailOrderVendor').textContent = order.vendor?.name || '-';
+            document.getElementById('modalDetailOrderStartDate').textContent = order.startDate ? new Date(order.startDate).toLocaleDateString() : '-';
+            document.getElementById('modalDetailOrderEndDate').textContent = order.endDate ? new Date(order.endDate).toLocaleDateString() : '-';
+            document.getElementById('modalDetailOrderCustomerName').textContent = order.customer?.name || '-';
+            document.getElementById('modalDetailOrderCustomerEmail').textContent = order.customer?.email || '-';
+            document.getElementById('modalDetailOrderCustomerPhone').textContent = order.customer?.phone || '-';
+            document.getElementById('modalDetailOrderCustomerAddress').textContent = order.customer?.address || '-';
+            document.getElementById('modalDetailOrderDescription').textContent = order.description || 'No description provided';
+            document.getElementById('modalDetailOrderNotes').textContent = order.notes || 'No notes';
+            
+            // Show modal
+            document.getElementById('orderDetailModal').classList.add('show');
+            return;
+        }
+        
+        // Store the source for back navigation
+        window.orderDetailSource = fromPipeline ? 'pipeline' : 'orders';
+        
+        // Update back button text and function
+        const backButton = document.querySelector('#order-detail .btn-secondary');
+        if (backButton) {
+            if (fromPipeline) {
+                backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Pipeline';
+                backButton.onclick = () => showSection('pipeline');
+            } else {
+                backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Orders';
+                backButton.onclick = backToOrders;
+            }
+        }
+        
         document.getElementById('orderDetailTitle').textContent = `Order ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
-        document.getElementById('detailOrderId').textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
-        document.getElementById('detailOrderStatus').innerHTML = `<span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>`;
-        document.getElementById('detailOrderPriority').innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
-        document.getElementById('detailOrderRevenue').textContent = '$' + (order.amount?.toLocaleString() || '0');
-        document.getElementById('detailOrderCost').textContent = '$' + (order.vendorCost?.toLocaleString() || '0');
-        document.getElementById('detailOrderProfit').textContent = '$' + (order.profit?.toLocaleString() || '0');
-        document.getElementById('detailOrderService').textContent = order.service || '-';
-        document.getElementById('detailOrderVendor').textContent = order.vendor?.name || 'N/A';
-        document.getElementById('detailOrderStartDate').textContent = order.startDate ? new Date(order.startDate).toLocaleDateString() : '-';
-        document.getElementById('detailOrderEndDate').textContent = order.endDate ? new Date(order.endDate).toLocaleDateString() : '-';
+        const detailOrderId = document.getElementById('detailOrderId');
+        const detailOrderStatus = document.getElementById('detailOrderStatusValue');
+        const detailOrderPriority = document.getElementById('detailOrderPriority');
+        const detailOrderRevenue = document.getElementById('detailOrderRevenue');
+        const detailOrderCost = document.getElementById('detailOrderCost');
+        const detailOrderProfit = document.getElementById('detailOrderProfit');
+        const detailOrderService = document.getElementById('detailOrderService');
+        const detailOrderVendor = document.getElementById('detailOrderVendor');
+        const detailOrderStartDate = document.getElementById('detailOrderStartDate');
+        const detailOrderEndDate = document.getElementById('detailOrderEndDate');
+        const detailOrderCustomerName = document.getElementById('detailOrderCustomerName');
+        const detailOrderCustomerEmail = document.getElementById('detailOrderCustomerEmail');
+        const detailOrderCustomerPhone = document.getElementById('detailOrderCustomerPhone');
+        const detailOrderCustomerAddress = document.getElementById('detailOrderCustomerAddress');
+        const detailOrderDescription = document.getElementById('detailOrderDescription');
+        const detailOrderNotes = document.getElementById('detailOrderNotes');
         
-        document.getElementById('detailOrderCustomerName').textContent = order.customer?.name || order.customer || '-';
-        document.getElementById('detailOrderCustomerEmail').textContent = order.customer?.email || '-';
-        document.getElementById('detailOrderCustomerPhone').textContent = order.customer?.phone || '-';
-        document.getElementById('detailOrderCustomerAddress').textContent = order.customer?.address || '-';
+        if (detailOrderId) detailOrderId.textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
+        if (detailOrderStatus) detailOrderStatus.innerHTML = `<span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>`;
+        if (detailOrderPriority) detailOrderPriority.innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
+        if (detailOrderRevenue) detailOrderRevenue.textContent = '$' + (order.amount?.toLocaleString() || '0');
+        if (detailOrderCost) detailOrderCost.textContent = '$' + (order.vendorCost?.toLocaleString() || '0');
+        if (detailOrderProfit) detailOrderProfit.textContent = '$' + (order.profit?.toLocaleString() || '0');
+        if (detailOrderService) detailOrderService.textContent = order.service || '-';
+        if (detailOrderVendor) detailOrderVendor.textContent = order.vendor?.name || 'N/A';
+        if (detailOrderStartDate) detailOrderStartDate.textContent = order.startDate ? new Date(order.startDate).toLocaleDateString() : '-';
+        if (detailOrderEndDate) detailOrderEndDate.textContent = order.endDate ? new Date(order.endDate).toLocaleDateString() : '-';
         
-        document.getElementById('detailOrderDescription').textContent = order.description || 'No description provided';
-        document.getElementById('detailOrderNotes').textContent = order.notes || 'No notes';
+        if (detailOrderCustomerName) detailOrderCustomerName.textContent = order.customer?.name || order.customer || '-';
+        if (detailOrderCustomerEmail) detailOrderCustomerEmail.textContent = order.customer?.email || '-';
+        if (detailOrderCustomerPhone) detailOrderCustomerPhone.textContent = order.customer?.phone || '-';
+        if (detailOrderCustomerAddress) detailOrderCustomerAddress.textContent = order.customer?.address || '-';
+        
+        if (detailOrderDescription) detailOrderDescription.textContent = order.description || 'No description provided';
+        if (detailOrderNotes) detailOrderNotes.textContent = order.notes || 'No notes';
         
         showSection('order-detail');
     } catch (error) {
@@ -1796,8 +1986,13 @@ function backToOrders() {
     showSection('orders');
 }
 
+function closeOrderDetailModal() {
+    document.getElementById('orderDetailModal').classList.remove('show');
+}
+
 window.showOrderDetail = showOrderDetail;
 window.backToOrders = backToOrders;
+window.closeOrderDetailModal = closeOrderDetailModal;
 
 function closeOrderModal() {
     document.getElementById('orderModal').classList.remove('show');
@@ -1807,6 +2002,24 @@ function closeOrderModal() {
     inputs.forEach(input => input.disabled = false);
     
     document.querySelector('.modal-footer .btn-primary').style.display = 'inline-block';
+    
+    // Clear pipeline record ID
+    window.currentPipelineRecordId = null;
+    
+    // Reset customer fields to editable state
+    document.getElementById('customerName').readOnly = false;
+    document.getElementById('customerEmail').readOnly = false;
+    document.getElementById('customerPhone').readOnly = false;
+    document.getElementById('customerAddress').readOnly = false;
+    document.getElementById('customerSearchInput').disabled = false;
+    document.getElementById('customerSearchInput').style.cursor = '';
+    document.getElementById('customerSearchInput').style.backgroundColor = '';
+    
+    // Remove read-only styling
+    document.getElementById('customerName').style.cssText = '';
+    document.getElementById('customerEmail').style.cssText = '';
+    document.getElementById('customerPhone').style.cssText = '';
+    document.getElementById('customerAddress').style.cssText = '';
 }
 
 async function refreshOrders() {
@@ -3606,7 +3819,7 @@ function addEmailAddress() {
             <i class="fas fa-times"></i> Remove
         </button>
         <div class="form-group">
-            <label for="customerEmailField_${emailCounter}">Email ${emailCounter + 1}</label>
+            <label for="customerEmailField_${emailCounter}">Email ${emailCounter + 2}</label>
             <input type="email" id="customerEmailField_${emailCounter}" class="customer-email-field">
         </div>
     `;
@@ -3637,7 +3850,7 @@ function addPhoneNumber() {
             <i class="fas fa-times"></i> Remove
         </button>
         <div class="form-group">
-            <label for="customerPhoneField_${phoneCounter}">Phone ${phoneCounter + 1}</label>
+            <label for="customerPhoneField_${phoneCounter}">Phone ${phoneCounter + 2}</label>
             <input type="tel" id="customerPhoneField_${phoneCounter}" class="customer-phone-field">
         </div>
     `;
@@ -3668,7 +3881,7 @@ function addPhysicalAddress() {
             <i class="fas fa-times"></i> Remove
         </button>
         <div class="form-group">
-            <label for="customerAddressField_${addressCounter}">Address ${addressCounter + 1}</label>
+            <label for="customerAddressField_${addressCounter}">Address ${addressCounter + 2}</label>
             <textarea id="customerAddressField_${addressCounter}" class="customer-address-field" rows="2"></textarea>
         </div>
     `;
@@ -3686,9 +3899,9 @@ function removePhysicalAddress(index) {
 
 function showAddCustomerModal() {
     currentCustomerId = null;
-    addressCounter = 1;
-    emailCounter = 1;
-    phoneCounter = 1;
+    addressCounter = 0;
+    emailCounter = 0;
+    phoneCounter = 0;
     document.getElementById('customerModalTitle').textContent = 'Add New Customer';
     document.getElementById('customerForm').reset();
     
@@ -3699,6 +3912,9 @@ function showAddCustomerModal() {
     addressContainer.innerHTML = '';
     emailContainer.innerHTML = '';
     phoneContainer.innerHTML = '';
+    
+    // Clear custom fields
+    clearCustomerCustomFields();
     
     document.getElementById('customerModal').classList.add('show');
 }
@@ -3712,16 +3928,16 @@ async function editCustomer(customerId) {
         
         // Populate basic fields
         document.getElementById('customerNameField').value = customer.name || '';
-        document.getElementById('customerEmailField').value = customer.email || '';
-        document.getElementById('customerPhoneField').value = customer.phone || '';
         document.getElementById('customerType').value = customer.customerType || 'one-time';
         document.getElementById('customerStatus').value = customer.status || 'active';
         document.getElementById('customerNotes').value = customer.notes || '';
         
-        // Reset and populate addresses, emails, and phones
-        addressCounter = 1;
-        emailCounter = 1;
-        phoneCounter = 1;
+        // Reset counters
+        addressCounter = 0;
+        emailCounter = 0;
+        phoneCounter = 0;
+        
+        // Clear containers
         const addressContainer = document.getElementById('addressesContainer');
         const emailContainer = document.getElementById('emailsContainer');
         const phoneContainer = document.getElementById('phonesContainer');
@@ -3729,112 +3945,100 @@ async function editCustomer(customerId) {
         emailContainer.innerHTML = '';
         phoneContainer.innerHTML = '';
         
+        // Clear the primary address field (outside container)
+        document.getElementById('customerAddressField_0').value = '';
+        
+        // Populate primary email
+        document.getElementById('customerEmailField').value = customer.email || (customer.emails && customer.emails.length > 0 ? customer.emails[0].address : '');
+        
+        // Populate primary phone
+        document.getElementById('customerPhoneField').value = customer.phone || (customer.phones && customer.phones.length > 0 ? customer.phones[0].number : '');
+        
+        // Populate primary address
         if (customer.addresses && customer.addresses.length > 0) {
-            customer.addresses.forEach((addr, index) => {
+            document.getElementById('customerAddressField_0').value = customer.addresses[0].address || '';
+            
+            // Add additional addresses (skip first one as it's already in primary field)
+            for (let i = 1; i < customer.addresses.length; i++) {
+                const addr = customer.addresses[i];
                 const addressGroup = document.createElement('div');
                 addressGroup.className = 'address-group';
-                addressGroup.setAttribute('data-address-index', index);
-                if (index > 0) {
-                    addressGroup.style.marginTop = '20px';
-                    addressGroup.style.paddingTop = '20px';
-                    addressGroup.style.borderTop = '1px solid #e5e7eb';
-                    addressGroup.style.position = 'relative';
-                }
+                addressGroup.setAttribute('data-address-index', addressCounter);
+                addressGroup.style.marginTop = '20px';
+                addressGroup.style.paddingTop = '20px';
+                addressGroup.style.borderTop = '1px solid #e5e7eb';
+                addressGroup.style.position = 'relative';
                 
                 addressGroup.innerHTML = `
-                    ${index > 0 ? `<button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                    <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${addressCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
                         <i class="fas fa-times"></i> Remove
-                    </button>` : ''}
+                    </button>
                     <div class="form-group">
-                        <label for="customerAddressField_${index}">Address${index > 0 ? ' ' + (index + 1) : ''}</label>
-                        <textarea id="customerAddressField_${index}" class="customer-address-field" rows="2">${addr.address || ''}</textarea>
+                        <label for="customerAddressField_${addressCounter}">Address ${i + 1}</label>
+                        <textarea id="customerAddressField_${addressCounter}" class="customer-address-field" rows="2">${addr.address || ''}</textarea>
                     </div>
                 `;
                 
                 addressContainer.appendChild(addressGroup);
-            });
-            addressCounter = customer.addresses.length;
-        } else {
-            // No addresses, show default empty address
-            addressContainer.innerHTML = `
-                <div class="address-group" data-address-index="0">
-                    <div class="form-group">
-                        <label for="customerAddressField_0">Address</label>
-                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2">${customer.address || ''}</textarea>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="customerCity_0">City</label>
-                            <input type="text" id="customerCity_0" class="customer-city-field" value="${customer.city || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label for="customerState_0">State</label>
-                            <input type="text" id="customerState_0" class="customer-state-field" value="${customer.state || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label for="customerZip_0">Zip Code</label>
-                            <input type="text" id="customerZip_0" class="customer-zip-field" value="${customer.zipCode || ''}">
-                        </div>
-                    </div>
-                </div>
-            `;
+                addressCounter++;
+            }
+        } else if (customer.address) {
+            // Backward compatibility: use old address field
+            document.getElementById('customerAddressField_0').value = customer.address;
         }
         
-        // Populate emails
-        if (customer.emails && customer.emails.length > 0) {
-            customer.emails.forEach((email, index) => {
+        // Populate additional emails (skip first one as it's already in primary field)
+        if (customer.emails && customer.emails.length > 1) {
+            for (let i = 1; i < customer.emails.length; i++) {
+                const email = customer.emails[i];
                 const emailGroup = document.createElement('div');
                 emailGroup.className = 'email-group';
-                emailGroup.setAttribute('data-email-index', index);
-                if (index > 0) {
-                    emailGroup.style.marginTop = '20px';
-                    emailGroup.style.paddingTop = '20px';
-                    emailGroup.style.borderTop = '1px solid #e5e7eb';
-                    emailGroup.style.position = 'relative';
-                }
+                emailGroup.setAttribute('data-email-index', emailCounter);
+                emailGroup.style.marginTop = '20px';
+                emailGroup.style.paddingTop = '20px';
+                emailGroup.style.borderTop = '1px solid #e5e7eb';
+                emailGroup.style.position = 'relative';
                 
                 emailGroup.innerHTML = `
-                    ${index > 0 ? `<button type="button" class="btn-remove-email" onclick="removeEmailAddress(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                    <button type="button" class="btn-remove-email" onclick="removeEmailAddress(${emailCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
                         <i class="fas fa-times"></i> Remove
-                    </button>` : ''}
+                    </button>
                     <div class="form-group">
-                        <label for="customerEmailField_${index}">Email${index > 0 ? ' ' + (index + 1) : ''}</label>
-                        <input type="email" id="customerEmailField_${index}" class="customer-email-field" value="${email.address || ''}">
+                        <label for="customerEmailField_${emailCounter}">Email ${i + 1}</label>
+                        <input type="email" id="customerEmailField_${emailCounter}" class="customer-email-field" value="${email.address || ''}">
                     </div>
                 `;
                 
                 emailContainer.appendChild(emailGroup);
-            });
-            emailCounter = customer.emails.length;
+                emailCounter++;
+            }
         }
         
-        // Populate phones
-        if (customer.phones && customer.phones.length > 0) {
-            customer.phones.forEach((phone, index) => {
+        // Populate additional phones (skip first one as it's already in primary field)
+        if (customer.phones && customer.phones.length > 1) {
+            for (let i = 1; i < customer.phones.length; i++) {
+                const phone = customer.phones[i];
                 const phoneGroup = document.createElement('div');
                 phoneGroup.className = 'phone-group';
-                phoneGroup.setAttribute('data-phone-index', index);
-                if (index > 0) {
-                    phoneGroup.style.marginTop = '20px';
-                    phoneGroup.style.paddingTop = '20px';
-                    phoneGroup.style.borderTop = '1px solid #e5e7eb';
-                    phoneGroup.style.position = 'relative';
-                }
+                phoneGroup.setAttribute('data-phone-index', phoneCounter);
+                phoneGroup.style.marginTop = '20px';
+                phoneGroup.style.paddingTop = '20px';
+                phoneGroup.style.borderTop = '1px solid #e5e7eb';
+                phoneGroup.style.position = 'relative';
                 
                 phoneGroup.innerHTML = `
-                    ${index > 0 ? `<button type="button" class="btn-remove-phone" onclick="removePhoneNumber(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                    <button type="button" class="btn-remove-phone" onclick="removePhoneNumber(${phoneCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
                         <i class="fas fa-times"></i> Remove
-                    </button>` : ''}
+                    </button>
                     <div class="form-group">
-                        <label for="customerPhoneField_${index}">Phone${index > 0 ? ' ' + (index + 1) : ''}</label>
-                        <input type="tel" id="customerPhoneField_${index}" class="customer-phone-field" value="${phone.number || ''}">
+                        <label for="customerPhoneField_${phoneCounter}">Phone ${i + 1}</label>
+                        <input type="tel" id="customerPhoneField_${phoneCounter}" class="customer-phone-field" value="${phone.number || ''}">
                     </div>
                 `;
                 
                 phoneContainer.appendChild(phoneGroup);
-            });
-            phoneCounter = customer.phones.length;
+                phoneCounter++;
+            }
         }
         
         // Load custom fields

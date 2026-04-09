@@ -2827,108 +2827,6 @@
     </div>
 
     <!-- Record View Modal -->
-    <div class="modal-overlay" id="viewRecordModal">
-        <div class="modal-content" style="max-width: 700px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-eye"></i> Record Details</h2>
-                <button class="modal-close" onclick="closeViewRecordModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="view-record-content">
-                    <div class="view-section">
-                        <h3><i class="fas fa-info-circle"></i> Project Information</h3>
-                        <div class="view-grid">
-                            <div class="view-item">
-                                <label>Project Name</label>
-                                <div id="viewProjectName" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Priority</label>
-                                <div id="viewPriority" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Budget</label>
-                                <div id="viewBudget" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Current Stage</label>
-                                <div id="viewStage" class="view-value">-</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="view-section">
-                        <h3><i class="fas fa-user"></i> Customer Information</h3>
-                        <div class="view-grid">
-                            <div class="view-item">
-                                <label>Customer Name</label>
-                                <div id="viewCustomerName" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Email</label>
-                                <div id="viewEmail" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Phone</label>
-                                <div id="viewPhone" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Assigned Employee</label>
-                                <div id="viewEmployee" class="view-value">-</div>
-                            </div>
-                            <div class="view-item full-width">
-                                <label>Address</label>
-                                <div id="viewAddress" class="view-value">-</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="view-section">
-                        <h3><i class="fas fa-calendar"></i> Timeline</h3>
-                        <div class="view-grid">
-                            <div class="view-item">
-                                <label>Start Date</label>
-                                <div id="viewStartDate" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Start Time</label>
-                                <div id="viewStartTime" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Created</label>
-                                <div id="viewCreated" class="view-value">-</div>
-                            </div>
-                            <div class="view-item">
-                                <label>Last Updated</label>
-                                <div id="viewUpdated" class="view-value">-</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="view-section">
-                        <h3><i class="fas fa-align-left"></i> Description</h3>
-                        <div id="viewDescription" class="view-text">-</div>
-                    </div>
-                    
-                    <div class="view-section">
-                        <h3><i class="fas fa-sticky-note"></i> Notes</h3>
-                        <div id="viewNotes" class="view-text">-</div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeViewRecordModal()">
-                    <i class="fas fa-times"></i> Close
-                </button>
-                <button type="button" class="btn-primary" onclick="editFromView()">
-                    <i class="fas fa-edit"></i> Edit Record
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Record Modal -->
     <div class="modal-overlay" id="recordModal">
         <div class="modal-content" style="max-width: 700px;">
@@ -3306,3 +3204,101 @@
 
 
 
+
+    <!-- Order Detail Modal -->
+    <div class="modal-overlay" id="orderDetailModal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 id="modalOrderDetailTitle">Order Details</h2>
+                <button class="modal-close" onclick="closeOrderDetailModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-container" style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="detail-info-card">
+                        <h3>Order Information</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Order ID:</label>
+                                <span id="modalDetailOrderId">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Status:</label>
+                                <span id="modalDetailOrderStatus">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Priority:</label>
+                                <span id="modalDetailOrderPriority">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Revenue:</label>
+                                <span id="modalDetailOrderRevenue">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Cost:</label>
+                                <span id="modalDetailOrderCost">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Profit:</label>
+                                <span id="modalDetailOrderProfit">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Service:</label>
+                                <span id="modalDetailOrderService">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Vendor:</label>
+                                <span id="modalDetailOrderVendor">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Start Date:</label>
+                                <span id="modalDetailOrderStartDate">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>End Date:</label>
+                                <span id="modalDetailOrderEndDate">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-info-card">
+                        <h3>Customer Information</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Name:</label>
+                                <span id="modalDetailOrderCustomerName">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Email:</label>
+                                <span id="modalDetailOrderCustomerEmail">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Phone:</label>
+                                <span id="modalDetailOrderCustomerPhone">-</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <label>Address:</label>
+                                <span id="modalDetailOrderCustomerAddress">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-info-card">
+                        <h3>Description & Notes</h3>
+                        <div class="info-item full-width">
+                            <label>Description:</label>
+                            <p id="modalDetailOrderDescription" style="margin-top: 8px; line-height: 1.6;">-</p>
+                        </div>
+                        <div class="info-item full-width" style="margin-top: 16px;">
+                            <label>Notes:</label>
+                            <p id="modalDetailOrderNotes" style="margin-top: 8px; line-height: 1.6;">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeOrderDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>

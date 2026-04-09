@@ -292,7 +292,18 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
 // Update order
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
-    console.log('Updating order:', req.params.id, 'with data:', JSON.stringify(req.body, null, 2));
+    console.log('=== ORDER UPDATE ===');
+    console.log('Order ID:', req.params.id);
+    console.log('Update data:', JSON.stringify(req.body, null, 2));
+    
+    // Get existing order first
+    const existingOrder = await Order.findById(req.params.id);
+    if (!existingOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    // Track what changed for syncing
+    const changes = {};
     
     // Prepare update data
     const updateData = {
@@ -302,6 +313,9 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     // Convert dates if provided
     if (req.body.startDate) {
       updateData.startDate = new Date(req.body.startDate);
+      if (existingOrder.startDate?.getTime() !== updateData.startDate.getTime()) {
+        changes.startDate = updateData.startDate;
+      }
     }
     if (req.body.endDate) {
       updateData.endDate = new Date(req.body.endDate);
@@ -310,6 +324,9 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     // Convert numbers if provided
     if (req.body.amount) {
       updateData.amount = parseFloat(req.body.amount);
+      if (existingOrder.amount !== updateData.amount) {
+        changes.amount = updateData.amount;
+      }
     }
     if (req.body.vendorCost) {
       updateData.vendorCost = parseFloat(req.body.vendorCost);
@@ -319,10 +336,37 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     }
     
     // Calculate profit: amount - vendorCost - processingFee
-    const amount = updateData.amount || (await Order.findById(req.params.id)).amount;
-    const vendorCost = updateData.vendorCost !== undefined ? updateData.vendorCost : (await Order.findById(req.params.id)).vendorCost;
-    const processingFee = updateData.processingFee !== undefined ? updateData.processingFee : (await Order.findById(req.params.id)).processingFee;
+    const amount = updateData.amount || existingOrder.amount;
+    const vendorCost = updateData.vendorCost !== undefined ? updateData.vendorCost : existingOrder.vendorCost;
+    const processingFee = updateData.processingFee !== undefined ? updateData.processingFee : existingOrder.processingFee;
     updateData.profit = amount - vendorCost - processingFee;
+    
+    // Track customer changes
+    if (req.body.customer) {
+      if (req.body.customer.name && req.body.customer.name !== existingOrder.customer?.name) {
+        changes.customerName = req.body.customer.name;
+      }
+      if (req.body.customer.email !== undefined && req.body.customer.email !== existingOrder.customer?.email) {
+        changes.email = req.body.customer.email;
+      }
+      if (req.body.customer.phone !== undefined && req.body.customer.phone !== existingOrder.customer?.phone) {
+        changes.phone = req.body.customer.phone;
+      }
+      if (req.body.customer.address !== undefined && req.body.customer.address !== existingOrder.customer?.address) {
+        changes.address = req.body.customer.address;
+      }
+    }
+    
+    // Track other changes
+    if (req.body.priority && req.body.priority !== existingOrder.priority) {
+      changes.priority = req.body.priority;
+    }
+    if (req.body.description !== undefined && req.body.description !== existingOrder.description) {
+      changes.description = req.body.description;
+    }
+    if (req.body.notes !== undefined && req.body.notes !== existingOrder.notes) {
+      changes.notes = req.body.notes;
+    }
     
     // Handle recurring order fields
     if (updateData.orderType) {
@@ -350,48 +394,55 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
       req.params.id, 
       updateData, 
       { new: true, runValidators: true }
-    ).populate('vendor');
+    ).populate('vendor').populate('employee');
     
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
+    console.log('Order updated successfully:', order.orderId);
     
-    console.log('Order updated successfully:', order._id);
-    
-    // Update associated payment amount if order amount changed
-    if (updateData.amount !== undefined) {
+    // Sync changes to Payment
+    if (changes.amount !== undefined) {
       try {
         const Payment = require('../models/Payment');
         const payment = await Payment.findOne({ order: order._id });
         
         if (payment) {
-          payment.amount = updateData.amount;
+          payment.amount = changes.amount;
           await payment.save();
-          console.log('✅ Updated payment amount:', payment.paymentId, 'to', updateData.amount);
+          console.log('✅ Synced payment amount:', payment.paymentId, 'to', changes.amount);
         }
       } catch (paymentError) {
-        console.error('❌ Error updating payment amount:', paymentError.message);
-        // Don't fail the order update if payment update fails
+        console.error('❌ Error syncing payment amount:', paymentError.message);
       }
     }
     
-    // Update associated pipeline record budget if order amount changed
-    if (updateData.amount !== undefined && order.pipelineRecordId) {
+    // Sync ALL changes to Pipeline Record
+    if (Object.keys(changes).length > 0 && order.pipelineRecordId) {
       try {
         const PipelineRecord = require('../models/PipelineRecord');
         const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId);
         
         if (pipelineRecord) {
-          pipelineRecord.budget = updateData.amount;
+          console.log('Found linked pipeline record:', pipelineRecord._id);
+          
+          // Sync all changed fields
+          if (changes.customerName) pipelineRecord.customerName = changes.customerName;
+          if (changes.email !== undefined) pipelineRecord.email = changes.email;
+          if (changes.phone !== undefined) pipelineRecord.phone = changes.phone;
+          if (changes.address !== undefined) pipelineRecord.address = changes.address;
+          if (changes.priority) pipelineRecord.priority = changes.priority;
+          if (changes.amount !== undefined) pipelineRecord.budget = changes.amount;
+          if (changes.startDate) pipelineRecord.startDate = changes.startDate;
+          if (changes.description !== undefined) pipelineRecord.description = changes.description;
+          if (changes.notes !== undefined) pipelineRecord.notes = changes.notes;
+          
           await pipelineRecord.save();
-          console.log('✅ Updated pipeline record budget:', pipelineRecord._id, 'to', updateData.amount);
+          console.log('✅ Synced changes to pipeline record:', pipelineRecord._id, changes);
         }
       } catch (pipelineError) {
-        console.error('❌ Error updating pipeline record budget:', pipelineError.message);
-        // Don't fail the order update if pipeline update fails
+        console.error('❌ Error syncing to pipeline record:', pipelineError.message);
       }
     }
     
+    console.log('=== ORDER UPDATE COMPLETE ===');
     res.json(order);
   } catch (error) {
     console.error('Update order error:', error);
@@ -412,9 +463,13 @@ router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async 
     
     // Clean up associated pipeline record
     if (order.pipelineRecordId) {
-      const PipelineRecord = require('../models/PipelineRecord');
-      await PipelineRecord.findByIdAndDelete(order.pipelineRecordId);
-      console.log('Associated pipeline record deleted:', order.pipelineRecordId);
+      try {
+        const PipelineRecord = require('../models/PipelineRecord');
+        await PipelineRecord.findByIdAndDelete(order.pipelineRecordId);
+        console.log('✅ Associated pipeline record deleted:', order.pipelineRecordId);
+      } catch (pipelineError) {
+        console.error('❌ Error deleting pipeline record:', pipelineError.message);
+      }
     }
     
     // Delete associated payments

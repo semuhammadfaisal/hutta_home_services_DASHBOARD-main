@@ -231,6 +231,7 @@
     line-height: 20px;
 }
 
+/* Stage count badge only */
 .stage-count {
     display: flex;
     align-items: center;
@@ -249,27 +250,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.btn-add-record {
-    background: #10b981;
-    color: white;
-    border: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.btn-add-record:hover {
-    background: #059669;
-    transform: scale(1.1);
 }
 
 .stage-actions {

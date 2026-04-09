@@ -8,7 +8,6 @@ let filteredRecords = [];
 let draggedStage = null;
 let searchQuery = '';
 let newOrders = []; // Store new orders for suggestions
-let currentViewRecordId = null;
 let employeeCache = new Map(); // Cache employee data
 let orderCache = new Map(); // Cache order data
 
@@ -224,17 +223,6 @@ async function loadStages() {
     newContainer.addEventListener('click', (e) => {
         console.log('Click detected:', e.target);
         
-        // Add record button
-        const addBtn = e.target.closest('.btn-add-record');
-        if (addBtn) {
-            console.log('Add button clicked, stageId:', addBtn.dataset.stageId);
-            e.stopPropagation();
-            e.preventDefault();
-            const stageId = addBtn.dataset.stageId;
-            openRecordModal(stageId);
-            return;
-        }
-        
         // Edit stage button
         const editStageBtn = e.target.closest('.edit-stage-btn');
         if (editStageBtn) {
@@ -265,7 +253,21 @@ async function loadStages() {
         const viewBtn = e.target.closest('.record-view-btn');
         if (viewBtn) {
             e.stopPropagation();
-            viewRecord(viewBtn.dataset.recordId);
+            const recordId = viewBtn.dataset.recordId;
+            const record = records.find(r => r._id === recordId);
+            
+            // If record has linked order, open order detail page
+            if (record && record.orderId) {
+                if (typeof window.showOrderDetail === 'function') {
+                    window.showOrderDetail(record.orderId, true); // true = from pipeline
+                } else {
+                    console.error('showOrderDetail function not found');
+                    viewRecord(recordId);
+                }
+            } else {
+                // No linked order, show pipeline view modal
+                viewRecord(recordId);
+            }
             return;
         }
         
@@ -319,7 +321,6 @@ async function createStageColumn(stage) {
         </div>
         <div class="stage-count">
             <span class="count-badge">${count}</span>
-            <button class="btn-add-record" data-stage-id="${stage._id}" title="Add Record">+</button>
         </div>
     `;
     
@@ -397,41 +398,6 @@ async function renderRecords(stageId) {
 }
 
 // Load and render stages
-
-function viewRecord(recordId) {
-    const record = records.find(r => r._id === recordId);
-    if (!record) return;
-    
-    currentViewRecordId = recordId;
-    const stage = stages.find(s => s._id === record.stageId);
-    
-    document.getElementById('viewProjectName').textContent = record.customerName || '-';
-    document.getElementById('viewCustomerName').textContent = record.customerName || '-';
-    document.getElementById('viewEmail').textContent = record.email || '-';
-    document.getElementById('viewPhone').textContent = record.phone || '-';
-    document.getElementById('viewAddress').textContent = record.address || '-';
-    
-    const priorityEl = document.getElementById('viewPriority');
-    priorityEl.innerHTML = `<span class="priority-badge priority-${record.priority}">${record.priority}</span>`;
-    
-    document.getElementById('viewBudget').textContent = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '-';
-    document.getElementById('viewStage').textContent = stage ? stage.name : '-';
-    document.getElementById('viewStartDate').textContent = record.startDate ? new Date(record.startDate).toLocaleDateString() : '-';
-    document.getElementById('viewCreated').textContent = new Date(record.createdAt).toLocaleString();
-    document.getElementById('viewUpdated').textContent = new Date(record.updatedAt).toLocaleString();
-    document.getElementById('viewDescription').textContent = record.description || 'No description provided';
-    document.getElementById('viewNotes').textContent = record.notes || 'No notes';
-    
-    // Load employee info if order is linked
-    if (record.orderId) {
-        loadEmployeeForOrder(record.orderId);
-    } else {
-        const employeeEl = document.getElementById('viewEmployee');
-        if (employeeEl) employeeEl.textContent = 'Not assigned';
-    }
-    
-    document.getElementById('viewRecordModal').classList.add('show');
-}
 
 async function loadEmployeeForOrder(orderId) {
     console.log('loadEmployeeForOrder called with orderId:', orderId);
@@ -515,18 +481,6 @@ async function loadEmployeeForOrder(orderId) {
         console.error('Error loading employee:', error);
         const employeeEl = document.getElementById('viewEmployee');
         if (employeeEl) employeeEl.textContent = '-';
-    }
-}
-
-function closeViewRecordModal() {
-    document.getElementById('viewRecordModal').classList.remove('show');
-    currentViewRecordId = null;
-}
-
-function editFromView() {
-    closeViewRecordModal();
-    if (currentViewRecordId) {
-        editRecord(currentViewRecordId);
     }
 }
 
@@ -706,23 +660,54 @@ function closeRecordModal() {
     if (modal) modal.classList.remove('show');
 }
 
-function editRecord(recordId) {
+async function editRecord(recordId) {
     const record = records.find(r => r._id === recordId);
     if (!record) return;
     
-    document.getElementById('recordModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Record';
-    document.getElementById('recordId').value = record._id;
-    document.getElementById('recordStageId').value = record.stageId;
-    document.getElementById('recordCustomerName').value = record.customerName;
-    document.getElementById('recordEmail').value = record.email || '';
-    document.getElementById('recordPhone').value = record.phone || '';
-    document.getElementById('recordPriority').value = record.priority;
-    document.getElementById('recordBudget').value = record.budget || '';
-    document.getElementById('recordStartDate').value = record.startDate ? record.startDate.split('T')[0] : '';
-    document.getElementById('recordAddress').value = record.address || '';
-    document.getElementById('recordDescription').value = record.description || '';
-    document.getElementById('recordNotes').value = record.notes || '';
-    document.getElementById('recordModal').classList.add('show');
+    // If record has linked order, edit the order directly
+    if (record.orderId) {
+        if (typeof window.editOrder === 'function') {
+            await window.editOrder(record.orderId);
+            // Store pipeline record ID for later use
+            window.currentPipelineRecordId = recordId;
+        }
+        return;
+    }
+    
+    // Otherwise use order modal with pipeline data
+    window.currentOrderId = null;
+    window.currentPipelineRecordId = recordId;
+    
+    document.getElementById('orderModalTitle').textContent = 'Edit Pipeline Record';
+    
+    // Load vendors and employees
+    if (typeof window.loadVendors === 'function') await window.loadVendors();
+    if (typeof window.loadEmployees === 'function') await window.loadEmployees();
+    if (typeof window.loadOrderCustomers === 'function') await window.loadOrderCustomers();
+    
+    // Populate order form with pipeline record data
+    document.getElementById('customerSelect').value = 'new';
+    document.getElementById('newCustomerFields').style.display = 'block';
+    document.getElementById('customerName').value = record.customerName || '';
+    document.getElementById('customerEmail').value = record.email || '';
+    document.getElementById('customerPhone').value = record.phone || '';
+    document.getElementById('customerAddress').value = record.address || '';
+    document.getElementById('service').value = '';
+    document.getElementById('amount').value = record.budget || '';
+    document.getElementById('vendorCost').value = '';
+    document.getElementById('processingFee').value = '';
+    document.getElementById('profit').value = '';
+    document.getElementById('startDate').value = record.startDate ? record.startDate.split('T')[0] : '';
+    document.getElementById('endDate').value = '';
+    document.getElementById('status').value = 'new';
+    document.getElementById('priority').value = record.priority || 'medium';
+    document.getElementById('description').value = record.description || '';
+    document.getElementById('notes').value = record.notes || '';
+    document.getElementById('orderType').value = 'one-time';
+    
+    if (typeof window.toggleRecurringFields === 'function') window.toggleRecurringFields();
+    
+    document.getElementById('orderModal').classList.add('show');
 }
 
 async function saveRecord(event) {
@@ -768,6 +753,64 @@ async function saveRecord(event) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ customerName, email, phone, priority, budget, startDate, address, description, notes, orderId: editingRecord?.orderId })
             });
+            
+            // If this pipeline record has a linked order, update the order too
+            if (editingRecord?.orderId) {
+                try {
+                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+                    if (session) {
+                        const sessionData = JSON.parse(session);
+                        const token = sessionData.token;
+                        
+                        // Get the current order data
+                        const orderResponse = await fetch(`${API_BASE_URL}/orders/${editingRecord.orderId}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (orderResponse.ok) {
+                            const currentOrder = await orderResponse.json();
+                            
+                            // Update order with new data from pipeline
+                            const orderUpdateData = {
+                                ...currentOrder,
+                                customer: {
+                                    ...currentOrder.customer,
+                                    name: customerName,
+                                    email: email || currentOrder.customer?.email,
+                                    phone: phone || currentOrder.customer?.phone,
+                                    address: address || currentOrder.customer?.address
+                                },
+                                amount: budget || currentOrder.amount,
+                                startDate: startDate || currentOrder.startDate,
+                                endDate: startDate || currentOrder.endDate,
+                                description: description || currentOrder.description,
+                                notes: notes || currentOrder.notes,
+                                priority: priority || currentOrder.priority
+                            };
+                            
+                            // Update the order
+                            await fetch(`${API_BASE_URL}/orders/${editingRecord.orderId}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify(orderUpdateData)
+                            });
+                            
+                            console.log('Linked order updated successfully');
+                            
+                            // Clear order cache
+                            if (orderCache.has(editingRecord.orderId)) {
+                                orderCache.delete(editingRecord.orderId);
+                            }
+                        }
+                    }
+                } catch (orderUpdateError) {
+                    console.warn('Failed to update linked order:', orderUpdateError);
+                    // Don't fail the whole operation if order update fails
+                }
+            }
         } else {
             // Get order details if orderId is selected
             let orderIdDisplay = '';
@@ -817,12 +860,37 @@ async function saveRecord(event) {
         
         console.log('Record saved successfully');
         closeRecordModal();
-        // Clear API cache so Orders and Payments fetch fresh data
+        
+        // Clear API cache and refresh all related views
         if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
+        
+        // Reload pipeline data
         await loadDataFromDB();
-        if (window.refreshCalendar) await window.refreshCalendar();
-        if (typeof refreshOrders === 'function') refreshOrders();
-        if (typeof refreshPayments === 'function') refreshPayments();
+        
+        // Refresh orders tab if it's loaded
+        if (typeof refreshOrders === 'function') {
+            console.log('Refreshing orders tab...');
+            await refreshOrders();
+        }
+        
+        // Refresh payments tab if it's loaded
+        if (typeof refreshPayments === 'function') {
+            console.log('Refreshing payments tab...');
+            await refreshPayments();
+        }
+        
+        // Refresh calendar if it's loaded
+        if (window.refreshCalendar) {
+            console.log('Refreshing calendar...');
+            await window.refreshCalendar();
+        }
+        
+        // Refresh dashboard KPIs
+        if (window.dashboard && window.dashboard.renderDashboard) {
+            console.log('Refreshing dashboard...');
+            await window.dashboard.renderDashboard();
+        }
+        
         return false;
     } catch (error) {
         console.error('Error saving record:', error);
@@ -1330,7 +1398,20 @@ function closeExpandedStage() {
 
 function viewRecordFromExpanded(recordId) {
     closeExpandedStage();
-    viewRecord(recordId);
+    const record = records.find(r => r._id === recordId);
+    
+    // If record has linked order, open order detail page
+    if (record && record.orderId) {
+        if (typeof window.showOrderDetail === 'function') {
+            window.showOrderDetail(record.orderId, true); // true = from pipeline
+        } else {
+            console.error('showOrderDetail function not found');
+            viewRecord(recordId);
+        }
+    } else {
+        // No linked order, show pipeline view modal
+        viewRecord(recordId);
+    }
 }
 
 function editRecordFromExpanded(recordId) {
@@ -1672,3 +1753,4 @@ window.createPipelineRecordFromOrder = createPipelineRecordFromOrder;
 window.loadNewOrdersSuggestions = loadNewOrdersSuggestions;
 window.expandNewOrders = expandNewOrders;
 window.collapseNewOrders = collapseNewOrders;
+
