@@ -10,12 +10,37 @@ const router = express.Router();
 // Get dashboard stats - MUST be before /:id route
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    const totalOrders = await Order.countDocuments();
-    const activeProjects = await Order.countDocuments({ status: 'in-progress' });
-    const completedProjects = await Order.countDocuments({ status: 'completed' });
-    const newOrders = await Order.countDocuments({ status: 'new' });
+    // Get NO BID stages to exclude from calculations
+    const Stage = require('../models/Stage');
+    const PipelineRecord = require('../models/PipelineRecord');
     
-    // Calculate monthly revenue (current month)
+    const noBidStages = await Stage.find({ isNoBid: true }).select('_id').lean();
+    const noBidStageIds = noBidStages.map(s => s._id.toString());
+    
+    // Get orders in NO BID stages
+    const noBidRecords = await PipelineRecord.find({ 
+      stageId: { $in: noBidStageIds } 
+    }).select('orderId').lean();
+    const noBidOrderIds = noBidRecords.map(r => r.orderId).filter(Boolean);
+    
+    // Exclude NO BID orders from all counts
+    const totalOrders = await Order.countDocuments({
+      _id: { $nin: noBidOrderIds }
+    });
+    const activeProjects = await Order.countDocuments({ 
+      status: 'in-progress',
+      _id: { $nin: noBidOrderIds }
+    });
+    const completedProjects = await Order.countDocuments({ 
+      status: 'completed',
+      _id: { $nin: noBidOrderIds }
+    });
+    const newOrders = await Order.countDocuments({ 
+      status: 'new',
+      _id: { $nin: noBidOrderIds }
+    });
+    
+    // Calculate monthly revenue (current month) - exclude NO BID orders
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -24,7 +49,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
       { 
         $match: { 
           createdAt: { $gte: startOfMonth },
-          status: { $in: ['completed', 'in-progress'] }
+          status: { $in: ['completed', 'in-progress'] },
+          _id: { $nin: noBidOrderIds }
         } 
       },
       { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -32,8 +58,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
     
     const monthlyRevenue = monthlyRevenueResult[0]?.total || 0;
     
-    // Count distinct vendors from orders
-    const vendorsCount = await Order.distinct('vendor').then(vendors => 
+    // Count distinct vendors from orders (exclude NO BID)
+    const vendorsCount = await Order.distinct('vendor', {
+      _id: { $nin: noBidOrderIds }
+    }).then(vendors => 
       vendors.filter(v => v != null).length
     );
     
@@ -68,29 +96,53 @@ router.get('/', authenticateToken, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     
+    // Filter out orders in NO BID stage
+    const Stage = require('../models/Stage');
+    const PipelineRecord = require('../models/PipelineRecord');
+    
+    const noBidStages = await Stage.find({ isNoBid: true }).select('_id').lean();
+    const noBidStageIds = noBidStages.map(s => s._id.toString());
+    
+    const visibleOrders = [];
+    
     // For orders without pipelineStage, try to populate from pipeline records
     for (let order of orders) {
       if (!order.pipelineStage && order.pipelineRecordId) {
         try {
-          const PipelineRecord = require('../models/PipelineRecord');
-          const Stage = require('../models/Stage');
-          
           const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId).lean();
           if (pipelineRecord && pipelineRecord.stageId) {
-            const stage = await Stage.findById(pipelineRecord.stageId).select('name').lean();
+            const stage = await Stage.findById(pipelineRecord.stageId).select('name isNoBid').lean();
             if (stage) {
               order.pipelineStage = stage.name;
               // Update order with pipelineStage for future efficiency
               await Order.findByIdAndUpdate(order._id, { pipelineStage: stage.name });
+              
+              // Skip if in NO BID stage
+              if (stage.isNoBid) continue;
             }
           }
         } catch (err) {
           console.log('Pipeline stage lookup failed for order:', order._id);
         }
       }
+      
+      // Check if order is in NO BID stage by checking pipeline record
+      if (order.pipelineRecordId) {
+        try {
+          const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId).lean();
+          if (pipelineRecord && pipelineRecord.stageId) {
+            const isNoBid = noBidStageIds.includes(pipelineRecord.stageId.toString());
+            if (isNoBid) continue; // Skip NO BID orders
+          }
+        } catch (err) {
+          console.log('NO BID check failed for order:', order._id);
+        }
+      }
+      
+      visibleOrders.push(order);
     }
     
-    res.json(orders);
+    res.json(visibleOrders);
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

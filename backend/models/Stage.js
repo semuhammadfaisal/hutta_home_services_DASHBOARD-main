@@ -13,6 +13,10 @@ const stageSchema = new mongoose.Schema({
     description: {
         type: String,
         trim: true
+    },
+    isNoBid: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

@@ -46,7 +46,46 @@ hutta_home_ervices/
 
 ## Recent Updates
 
-### Employee Order Assignment (Latest)
+### NO BID Stage Feature (Latest)
+
+The pipeline now supports NO BID stages for tracking lost or declined opportunities:
+
+1. **Hidden from Orders Tab**
+   - Orders in NO BID stages don't appear in the Orders tab
+   - Keeps your active orders list clean and focused
+   - Orders remain visible in Pipeline view for tracking
+
+2. **Excluded from Calculations**
+   - NO BID orders don't count in dashboard KPIs
+   - Revenue calculations exclude NO BID amounts
+   - Accurate metrics for active opportunities only
+
+3. **Visual Indicators**
+   - Distinctive red color scheme
+   - Ban icon (🚫) for easy identification
+   - Create multiple NO BID stages (Lost, Declined, etc.)
+
+4. **Reversible**
+   - Drag order from NO BID to another stage
+   - Order becomes visible and counted again
+   - No data loss
+
+**Documentation:**
+- 🚀 **Quick Start:** [NO_BID_QUICK_START.md](NO_BID_QUICK_START.md) ← **Start here!**
+- 📘 Full Guide: [NO_BID_STAGE_GUIDE.md](NO_BID_STAGE_GUIDE.md)
+- 💳 Payments Behavior: [NO_BID_PAYMENTS_BEHAVIOR.md](NO_BID_PAYMENTS_BEHAVIOR.md)
+- 🔧 Troubleshooting: [NO_BID_TROUBLESHOOTING.md](NO_BID_TROUBLESHOOTING.md)
+- 📋 Implementation: [NO_BID_IMPLEMENTATION.md](NO_BID_IMPLEMENTATION.md)
+- 🎨 Visual Guide: [NO_BID_VISUAL_GUIDE.md](NO_BID_VISUAL_GUIDE.md)
+
+**Quick Setup:**
+```bash
+cd backend
+node create-no-bid-stage.js
+# Restart server and refresh browser
+```
+
+### Employee Order Assignment
 
 The order management system now supports:
 

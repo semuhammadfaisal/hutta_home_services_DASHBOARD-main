@@ -271,25 +271,25 @@
                     </div>
                 </div>
                 
-                <div class="kpi-card employees-card">
-                    <div class="kpi-icon employees">
-                        <i class="fas fa-user-tie"></i>
+                <div class="kpi-card customers-card">
+                    <div class="kpi-icon customers">
+                        <i class="fas fa-users"></i>
                     </div>
                     <div class="kpi-content">
                         <div class="kpi-main">
-                            <h3 id="totalEmployees">0</h3>
-                            <p>Employees</p>
+                            <h3 id="totalCustomers">0</h3>
+                            <p>Customers</p>
                         </div>
                         <div class="kpi-trend">
                             <span class="kpi-change positive">
-                                <i class="fas fa-plus"></i>
-                                +2
+                                <i class="fas fa-arrow-up"></i>
+                                +5%
                             </span>
-                            <span class="kpi-period">new hires</span>
+                            <span class="kpi-period">vs last month</span>
                         </div>
                     </div>
                     <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="employees"></div>
+                        <div class="mini-chart" data-chart="customers"></div>
                     </div>
                 </div>
             </div>
@@ -681,6 +681,28 @@
                         <!-- Customers will be populated by JavaScript -->
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Top Customers Report -->
+            <div class="top-customers-report" style="margin-top: 40px;">
+                <div class="report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 24px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 16px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); border: 1px solid rgba(0, 86, 184, 0.1);">
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #0f172a;"><i class="fas fa-trophy" style="color: #0056B8; margin-right: 12px;"></i>Top Customers</h2>
+                    <div class="date-filter" style="display: flex; align-items: center; gap: 12px;">
+                        <input type="date" id="topCustomersStartDate" class="date-input" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 500;">
+                        <span style="color: #6b7280;">to</span>
+                        <input type="date" id="topCustomersEndDate" class="date-input" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 500;">
+                        <button class="btn-primary" onclick="filterTopCustomers()" style="padding: 12px 20px; white-space: nowrap;">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                        <button class="btn-secondary" onclick="resetTopCustomersFilter()" style="padding: 12px 16px;">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="top-customers-grid" id="topCustomersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+                    <!-- Top customers will be populated here -->
+                </div>
             </div>
         </section>
 
@@ -1119,9 +1141,6 @@
         <section id="payments" class="content-section">
             <div class="page-header">
                 <h1>Payments Management</h1>
-                <button class="btn-primary" onclick="showAddPaymentModal()">
-                    <i class="fas fa-plus"></i> Record Payment
-                </button>
             </div>
             
             <!-- Payments Toolbar -->
@@ -2201,23 +2220,23 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="startDate">Start Date *</label>
-                            <input type="date" id="startDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="endDate">End Date *</label>
-                            <input type="date" id="endDate" required>
-                        </div>
-                    </div>
-                    
                     <div class="form-group">
                         <label for="orderType">Order Type *</label>
                         <select id="orderType" required onchange="toggleRecurringFields()">
                             <option value="one-time">One Time Order</option>
                             <option value="recurring">Recurring Order</option>
                         </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startDate">Start Date *</label>
+                            <input type="date" id="startDate" required>
+                        </div>
+                        <div class="form-group" id="endDateGroup">
+                            <label for="endDate">End Date *</label>
+                            <input type="date" id="endDate" required>
+                        </div>
                     </div>
                     
                     <div id="recurringFields" style="display: none;">
@@ -2632,18 +2651,17 @@
             
             <div class="modal-body">
                 <form id="customerForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="customerNameField">Customer Name *</label>
-                            <input type="text" id="customerNameField" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="customerEmailField">Email</label>
-                            <input type="email" id="customerEmailField">
-                            <button type="button" class="btn-add-field" onclick="addEmailAddress()">
-                                <i class="fas fa-plus"></i> Add Email
-                            </button>
-                        </div>
+                    <div class="form-group">
+                        <label for="customerNameField">Customer Name *</label>
+                        <input type="text" id="customerNameField" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="customerEmailField">Email</label>
+                        <input type="email" id="customerEmailField">
+                        <button type="button" class="btn-add-field" onclick="addEmailAddress()">
+                            <i class="fas fa-plus"></i> Add Email
+                        </button>
                     </div>
                     
                     <!-- Additional emails will be inserted here -->
@@ -2660,12 +2678,21 @@
                     <!-- Additional phones will be inserted here -->
                     <div id="phonesContainer"></div>
                     
-                    <div class="form-group">
-                        <label for="customerType">Customer Type</label>
-                        <select id="customerType">
-                            <option value="one-time">One-time</option>
-                            <option value="recurring">Recurring</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerType">Customer Type</label>
+                            <select id="customerType">
+                                <option value="one-time">One-time</option>
+                                <option value="recurring">Recurring</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="customerStatus">Status</label>
+                            <select id="customerStatus">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -2680,32 +2707,24 @@
                     <div id="addressesContainer"></div>
                     
                     <div class="form-group">
-                        <label for="customerStatus">Status</label>
-                        <select id="customerStatus">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
                         <label for="customerNotes">Notes</label>
                         <textarea id="customerNotes" rows="3"></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="customerDocs"><i class="fas fa-file-upload"></i> Documents (PDF, Word, etc.)</label>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="customerDocs"><i class="fas fa-file-upload"></i> Documents</label>
                         <input type="file" id="customerDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
                         <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
                         <div id="customerDocsPreview" class="docs-preview"></div>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: 1 / -1;">
                         <label>Custom Fields</label>
                         <button type="button" class="btn-add-field" onclick="addCustomerCustomField()">
                             <i class="fas fa-plus"></i> Add Field
                         </button>
+                        <div id="customerCustomFieldsContainer"></div>
                     </div>
-                    <div id="customerCustomFieldsContainer"></div>
                 </form>
             </div>
             
@@ -3190,6 +3209,7 @@
     <script src="../assets/js/pipeline-mongodb.js"></script>
     <script src="../assets/js/accounting-system.js"></script>
     <script src="../assets/js/calendar.js"></script>
+    <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/dashboard-script.js"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
 </body>

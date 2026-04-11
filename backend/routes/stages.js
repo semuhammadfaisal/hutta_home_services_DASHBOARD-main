@@ -17,7 +17,8 @@ router.post('/', async (req, res) => {
     const stage = new Stage({
         name: req.body.name,
         position: req.body.position,
-        description: req.body.description
+        description: req.body.description,
+        isNoBid: req.body.isNoBid || false
     });
 
     try {
@@ -39,6 +40,7 @@ router.put('/:id', async (req, res) => {
         if (req.body.name) stage.name = req.body.name;
         if (req.body.position) stage.position = req.body.position;
         if (req.body.description !== undefined) stage.description = req.body.description;
+        if (req.body.isNoBid !== undefined) stage.isNoBid = req.body.isNoBid;
 
         const updatedStage = await stage.save();
         res.json(updatedStage);

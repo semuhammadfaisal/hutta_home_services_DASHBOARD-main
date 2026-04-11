@@ -3,6 +3,7 @@ const router = express.Router();
 const PipelineRecord = require('../models/PipelineRecord');
 
 // KPI: payments collected = sum of budgets for records in Paid/Close stages + received/completed payments not already counted
+// Exclude NO BID stages from calculations
 router.get('/kpi/payments-collected', async (req, res) => {
     try {
         const Stage = require('../models/Stage');
@@ -11,7 +12,7 @@ router.get('/kpi/payments-collected', async (req, res) => {
         // Find all stages whose name matches paid/close variants (case-insensitive)
         const allStages = await Stage.find().lean();
         const paidStageIds = allStages
-            .filter(s => /^(paid|close|closed|complete|completed|won|done)$/i.test(s.name.trim()))
+            .filter(s => /^(paid|close|closed|complete|completed|won|done)$/i.test(s.name.trim()) && !s.isNoBid)
             .map(s => s._id);
 
         console.log('Paid stage IDs:', paidStageIds, 'from stages:', allStages.map(s => s.name));

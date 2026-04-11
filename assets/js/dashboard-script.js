@@ -122,9 +122,9 @@ class DashboardManager {
                 window.APIService.getPaymentsCollected().catch(() => ({ paymentsCollected: 0 }))
             ]);
             
-            console.log('Dashboard data loaded:', { orders: orders.length, vendors: vendors.length, employees: employees.length });
+            console.log('Dashboard data loaded:', { orders: orders.length, vendors: vendors.length, employees: employees.length, customers: customers.length });
             
-            if (orders.length === 0 && vendors.length === 0 && employees.length === 0) {
+            if (orders.length === 0 && vendors.length === 0 && employees.length === 0 && customers.length === 0) {
                 console.warn('⚠️ All data arrays are empty - possible server connection issue');
                 console.log('API Base URL:', window.APIService.baseURL);
                 console.log('Token available:', !!window.APIService.getToken());
@@ -138,7 +138,7 @@ class DashboardManager {
                 totalRevenue: totalRevenue,
                 paymentsCollected: paymentsCollected,
                 totalVendors: vendors.length,
-                totalEmployees: employees.length
+                totalCustomers: customers.length
             };
             
             // Render all sections with fresh data
@@ -206,20 +206,20 @@ class DashboardManager {
         const totalRevenueEl = document.getElementById('totalRevenue');
         const paymentsCollectedEl = document.getElementById('paymentsCollected');
         const totalVendorsEl = document.getElementById('totalVendors');
-        const totalEmployeesEl = document.getElementById('totalEmployees');
+        const totalCustomersEl = document.getElementById('totalCustomers');
         
         if (stats) {
             if (totalOrdersEl) totalOrdersEl.textContent = stats.totalOrders || 0;
             if (totalRevenueEl) totalRevenueEl.textContent = `$${(stats.totalRevenue || 0).toLocaleString()}`;
             if (paymentsCollectedEl) paymentsCollectedEl.textContent = `$${(stats.paymentsCollected || 0).toLocaleString()}`;
             if (totalVendorsEl) totalVendorsEl.textContent = stats.totalVendors || 0;
-            if (totalEmployeesEl) totalEmployeesEl.textContent = stats.totalEmployees || 0;
+            if (totalCustomersEl) totalCustomersEl.textContent = stats.totalCustomers || 0;
         } else {
             if (totalOrdersEl) totalOrdersEl.textContent = '0';
             if (totalRevenueEl) totalRevenueEl.textContent = '$0';
             if (paymentsCollectedEl) paymentsCollectedEl.textContent = '$0';
             if (totalVendorsEl) totalVendorsEl.textContent = '0';
-            if (totalEmployeesEl) totalEmployeesEl.textContent = '0';
+            if (totalCustomersEl) totalCustomersEl.textContent = '0';
         }
     }
 
@@ -1461,21 +1461,7 @@ function populateCustomerAddresses(customer) {
     const addressSelect = document.getElementById('customerAddressSelect');
     addressSelect.innerHTML = '<option value="">-- Select Address --</option>';
     
-    // Add primary address (backward compatibility)
-    if (customer.address) {
-        const addressOption = document.createElement('option');
-        addressOption.value = JSON.stringify({
-            address: customer.address,
-            city: customer.city || '',
-            state: customer.state || '',
-            zipCode: customer.zipCode || '',
-            label: 'Primary Address'
-        });
-        addressOption.textContent = `Primary Address: ${customer.address}`;
-        addressSelect.appendChild(addressOption);
-    }
-    
-    // Add additional addresses from addresses array
+    // Add addresses from addresses array (preferred method)
     if (customer.addresses && customer.addresses.length > 0) {
         customer.addresses.forEach((addr, index) => {
             if (addr.address) {
@@ -1493,6 +1479,18 @@ function populateCustomerAddresses(customer) {
                 addressSelect.appendChild(addressOption);
             }
         });
+    } else if (customer.address) {
+        // Fallback: Add primary address only if addresses array is empty (backward compatibility)
+        const addressOption = document.createElement('option');
+        addressOption.value = JSON.stringify({
+            address: customer.address,
+            city: customer.city || '',
+            state: customer.state || '',
+            zipCode: customer.zipCode || '',
+            label: 'Primary Address'
+        });
+        addressOption.textContent = `Primary Address: ${customer.address}`;
+        addressSelect.appendChild(addressOption);
     }
     
     // If no addresses found, show message
@@ -1772,7 +1770,7 @@ async function saveOrder() {
         vendor: document.getElementById('vendor').value || null,
         employee: document.getElementById('employee').value || null,
         startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
+        endDate: document.getElementById('orderType').value === 'recurring' ? null : document.getElementById('endDate').value,
         status: document.getElementById('status').value || 'new',
         priority: document.getElementById('priority').value || 'medium',
         description: document.getElementById('description').value || '',
@@ -2037,10 +2035,11 @@ async function refreshOrders() {
             // Refresh dashboard stats after order changes (debounced)
             clearTimeout(window.statsRefreshTimer);
             window.statsRefreshTimer = setTimeout(async () => {
-                const [orders, vendors, employees, kpi] = await Promise.all([
+                const [orders, vendors, employees, customers, kpi] = await Promise.all([
                     window.APIService.getOrders().catch(() => []),
                     window.APIService.getVendors().catch(() => []),
                     window.APIService.getEmployees().catch(() => []),
+                    window.APIService.getCustomers().catch(() => []),
                     window.APIService.getPaymentsCollected().catch(() => ({ paymentsCollected: 0 }))
                 ]);
                 
@@ -2049,7 +2048,7 @@ async function refreshOrders() {
                     totalRevenue: orders.reduce((sum, order) => sum + (order.amount || 0), 0),
                     paymentsCollected: kpi.paymentsCollected || 0,
                     totalVendors: vendors.length,
-                    totalEmployees: employees.length
+                    totalCustomers: customers.length
                 };
                 
                 window.dashboard.renderKPIs(stats);
@@ -3868,21 +3867,24 @@ function removePhoneNumber(index) {
 
 function addPhysicalAddress() {
     const container = document.getElementById('addressesContainer');
+    const currentIndex = addressCounter;
     const newAddressGroup = document.createElement('div');
     newAddressGroup.className = 'address-group';
-    newAddressGroup.setAttribute('data-address-index', addressCounter);
+    newAddressGroup.setAttribute('data-address-index', currentIndex);
     newAddressGroup.style.marginTop = '20px';
     newAddressGroup.style.paddingTop = '20px';
     newAddressGroup.style.borderTop = '1px solid #e5e7eb';
     newAddressGroup.style.position = 'relative';
     
+    const addressNumber = container.querySelectorAll('.address-group').length + 2;
+    
     newAddressGroup.innerHTML = `
-        <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${addressCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
+        <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${currentIndex})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
             <i class="fas fa-times"></i> Remove
         </button>
         <div class="form-group">
-            <label for="customerAddressField_${addressCounter}">Address ${addressCounter + 2}</label>
-            <textarea id="customerAddressField_${addressCounter}" class="customer-address-field" rows="2"></textarea>
+            <label for="customerAddressField_${currentIndex}">Address ${addressNumber}</label>
+            <textarea id="customerAddressField_${currentIndex}" class="customer-address-field" rows="2"></textarea>
         </div>
     `;
     
@@ -3899,9 +3901,9 @@ function removePhysicalAddress(index) {
 
 function showAddCustomerModal() {
     currentCustomerId = null;
-    addressCounter = 0;
-    emailCounter = 0;
-    phoneCounter = 0;
+    addressCounter = 1;
+    emailCounter = 1;
+    phoneCounter = 1;
     document.getElementById('customerModalTitle').textContent = 'Add New Customer';
     document.getElementById('customerForm').reset();
     
@@ -3933,9 +3935,9 @@ async function editCustomer(customerId) {
         document.getElementById('customerNotes').value = customer.notes || '';
         
         // Reset counters
-        addressCounter = 0;
-        emailCounter = 0;
-        phoneCounter = 0;
+        addressCounter = 1;
+        emailCounter = 1;
+        phoneCounter = 1;
         
         // Clear containers
         const addressContainer = document.getElementById('addressesContainer');
@@ -3961,21 +3963,22 @@ async function editCustomer(customerId) {
             // Add additional addresses (skip first one as it's already in primary field)
             for (let i = 1; i < customer.addresses.length; i++) {
                 const addr = customer.addresses[i];
+                const currentIndex = addressCounter;
                 const addressGroup = document.createElement('div');
                 addressGroup.className = 'address-group';
-                addressGroup.setAttribute('data-address-index', addressCounter);
+                addressGroup.setAttribute('data-address-index', currentIndex);
                 addressGroup.style.marginTop = '20px';
                 addressGroup.style.paddingTop = '20px';
                 addressGroup.style.borderTop = '1px solid #e5e7eb';
                 addressGroup.style.position = 'relative';
                 
                 addressGroup.innerHTML = `
-                    <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${addressCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
+                    <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${currentIndex})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
                         <i class="fas fa-times"></i> Remove
                     </button>
                     <div class="form-group">
-                        <label for="customerAddressField_${addressCounter}">Address ${i + 1}</label>
-                        <textarea id="customerAddressField_${addressCounter}" class="customer-address-field" rows="2">${addr.address || ''}</textarea>
+                        <label for="customerAddressField_${currentIndex}">Address ${i + 1}</label>
+                        <textarea id="customerAddressField_${currentIndex}" class="customer-address-field" rows="2">${addr.address || ''}</textarea>
                     </div>
                 `;
                 
@@ -5550,3 +5553,34 @@ function loadRecurringCalendarSection() {
 }
 
 window.loadRecurringCalendarSection = loadRecurringCalendarSection;
+
+
+// Toggle Recurring Fields Function
+function toggleRecurringFields() {
+    const orderType = document.getElementById('orderType').value;
+    const recurringFields = document.getElementById('recurringFields');
+    const endDateGroup = document.getElementById('endDateGroup');
+    const endDateInput = document.getElementById('endDate');
+
+    if (orderType === 'recurring') {
+        recurringFields.style.display = 'block';
+        if (endDateGroup) {
+            endDateGroup.style.display = 'none';
+        }
+        if (endDateInput) {
+            endDateInput.required = false;
+        }
+    } else {
+        recurringFields.style.display = 'none';
+        if (endDateGroup) {
+            endDateGroup.style.display = 'block';
+        }
+        if (endDateInput) {
+            endDateInput.required = true;
+        }
+    }
+}
+
+window.toggleRecurringFields = toggleRecurringFields;
+
+

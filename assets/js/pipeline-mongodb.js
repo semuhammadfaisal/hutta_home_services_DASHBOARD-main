@@ -10,6 +10,7 @@ let searchQuery = '';
 let newOrders = []; // Store new orders for suggestions
 let employeeCache = new Map(); // Cache employee data
 let orderCache = new Map(); // Cache order data
+let autoScrollInterval = null; // For auto-scroll during drag
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,43 +28,40 @@ async function loadDataFromDB() {
     try {
         console.log('Loading pipeline data from database...');
         
-        // Show loading overlay
-        showLoading('Loading pipeline data...');
+        // Fetch all data in parallel - NO loading overlay for speed
+        const [stagesData, recordsData, ordersData, employeesData] = await Promise.all([
+            fetch(`${API_BASE_URL}/stages`).then(r => r.json()),
+            fetch(`${API_BASE_URL}/pipeline-records`).then(r => r.json()),
+            fetchAllOrdersData(),
+            fetchAllEmployeesData()
+        ]);
         
-        // Show loading state in pipeline container
-        const stagesContainer = document.getElementById('stagesContainer');
-        if (stagesContainer) {
-            stagesContainer.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
-                    <div class="loading-spinner" style="margin: 0 auto 20px;"></div>
-                    <div style="color: #6b7280; font-size: 14px; font-weight: 500;">Loading pipeline stages...</div>
-                    <div style="color: #9ca3af; font-size: 12px; margin-top: 8px;">Please wait while we fetch your data</div>
-                </div>
-            `;
-        }
+        stages = stagesData;
+        records = recordsData;
+        filteredRecords = [...records];
         
-        // Fetch all data in parallel
-        updateLoadingMessage('Fetching stages and records...');
-        await Promise.all([fetchStages(), fetchRecords(), fetchNewOrders()]);
+        // Cache orders and employees
+        orderCache.clear();
+        employeeCache.clear();
+        if (ordersData) ordersData.forEach(o => orderCache.set(o._id, o));
+        if (employeesData) employeesData.forEach(e => employeeCache.set(e._id, e));
         
-        // Fetch all orders and employees in batch (much faster than per-record)
-        updateLoadingMessage('Loading orders and employees...');
-        await Promise.all([fetchAllOrders(), fetchAllEmployees()]);
+        // Calculate new orders from cached data
+        const ordersInPipeline = records.map(r => r.orderId).filter(Boolean);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        newOrders = (ordersData || []).filter(order => {
+            const isNotInPipeline = !ordersInPipeline.includes(order._id);
+            const isRecent = new Date(order.createdAt) > thirtyDaysAgo;
+            return isNotInPipeline && isRecent;
+        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        console.log('Pipeline data loaded - Stages:', stages.length, 'Records:', records.length, 'New Orders:', newOrders.length);
-        console.log('Cached data - Orders:', orderCache.size, 'Employees:', employeeCache.size);
+        console.log('Pipeline loaded:', stages.length, 'stages,', records.length, 'records');
         
-        updateLoadingMessage('Rendering pipeline...');
         loadStages();
         loadNewOrdersSuggestions();
-        
-        // Hide loading
-        hideLoading();
     } catch (error) {
         console.error('Error loading data:', error);
-        hideLoading();
-        
-        // Show error state
         const stagesContainer = document.getElementById('stagesContainer');
         if (stagesContainer) {
             stagesContainer.innerHTML = `
@@ -83,144 +81,58 @@ async function loadDataFromDB() {
 // Make function globally accessible
 window.loadDataFromDB = loadDataFromDB;
 
-// Fetch stages from MongoDB
-async function fetchStages() {
-    const response = await fetch(`${API_BASE_URL}/stages`);
-    stages = await response.json();
-}
-
-// Fetch records from MongoDB
-async function fetchRecords() {
-    const response = await fetch(`${API_BASE_URL}/pipeline-records`);
-    records = await response.json();
-    filteredRecords = [...records];
-}
-
-// Fetch new orders (orders without pipeline records)
-async function fetchNewOrders() {
+// Fetch all orders data
+async function fetchAllOrdersData() {
     try {
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) {
-            newOrders = [];
-            return;
-        }
-        
-        const sessionData = JSON.parse(session);
-        const token = sessionData.token;
-        
-        const response = await fetch(`${API_BASE_URL}/orders`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            newOrders = [];
-            return;
-        }
-        
-        const allOrders = await response.json();
-        
-        // Filter orders that don't have pipeline records yet
-        // Get all order IDs that are already in pipeline
-        const ordersInPipeline = records.map(r => r.orderId).filter(Boolean);
-        
-        // Filter new orders (created in last 30 days and not in pipeline)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        newOrders = allOrders.filter(order => {
-            const isNotInPipeline = !ordersInPipeline.includes(order._id);
-            const isRecent = new Date(order.createdAt) > thirtyDaysAgo;
-            return isNotInPipeline && isRecent;
-        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Most recent first
-        
-        console.log('New orders found:', newOrders.length);
-    } catch (error) {
-        console.error('Error fetching new orders:', error);
-        newOrders = [];
-    }
-}
-
-// Fetch all orders in one batch call
-async function fetchAllOrders() {
-    try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) return;
-        
-        const sessionData = JSON.parse(session);
-        const token = sessionData.token;
-        
+        if (!session) return [];
+        const token = JSON.parse(session).token;
         const response = await fetch(`${API_BASE_URL}/orders`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        if (!response.ok) return;
-        
-        const orders = await response.json();
-        
-        // Cache all orders by ID
-        orderCache.clear();
-        orders.forEach(order => {
-            orderCache.set(order._id, order);
-        });
-        
-        console.log('Orders cached:', orderCache.size);
+        return response.ok ? await response.json() : [];
     } catch (error) {
         console.error('Error fetching orders:', error);
+        return [];
     }
 }
 
-// Fetch all employees in one batch call
-async function fetchAllEmployees() {
+// Fetch all employees data
+async function fetchAllEmployeesData() {
     try {
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) return;
-        
-        const sessionData = JSON.parse(session);
-        const token = sessionData.token;
-        
+        if (!session) return [];
+        const token = JSON.parse(session).token;
         const response = await fetch(`${API_BASE_URL}/employees`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        if (!response.ok) return;
-        
-        const employees = await response.json();
-        
-        // Cache all employees by ID
-        employeeCache.clear();
-        employees.forEach(employee => {
-            employeeCache.set(employee._id, employee);
-        });
-        
-        console.log('Employees cached:', employeeCache.size);
+        return response.ok ? await response.json() : [];
     } catch (error) {
         console.error('Error fetching employees:', error);
+        return [];
     }
 }
 
 // Load and render stages
-async function loadStages() {
+function loadStages() {
     const container = document.getElementById('stagesContainer');
     if (!container) return;
     
-    // Remove old event listeners by cloning
-    const newContainer = container.cloneNode(false);
-    container.parentNode.replaceChild(newContainer, container);
+    // Clear container
+    container.innerHTML = '';
     
     // Add new orders suggestion column first
     const suggestionsColumn = createNewOrdersSuggestionColumn();
-    newContainer.appendChild(suggestionsColumn);
+    container.appendChild(suggestionsColumn);
     
-    // Render stages with async record rendering
+    // Render stages synchronously (much faster)
     for (const stage of stages) {
-        const stageColumn = await createStageColumn(stage);
-        newContainer.appendChild(stageColumn);
+        const stageColumn = createStageColumn(stage);
+        container.appendChild(stageColumn);
     }
     
     // Add event delegation for all buttons
-    newContainer.addEventListener('click', (e) => {
+    container.addEventListener('click', (e) => {
         console.log('Click detected:', e.target);
         
         // Edit stage button
@@ -289,7 +201,7 @@ async function loadStages() {
     });
     
     // Add drag event delegation
-    newContainer.addEventListener('dragstart', (e) => {
+    container.addEventListener('dragstart', (e) => {
         if (e.target.classList.contains('record-card') || e.target.classList.contains('new-order-card')) {
             drag(e);
         }
@@ -299,20 +211,30 @@ async function loadStages() {
 }
 
 // Create stage column
-async function createStageColumn(stage) {
+function createStageColumn(stage) {
     const count = records.filter(r => r.stageId === stage._id).length;
     
     const column = document.createElement('div');
     column.className = 'stage-column';
+    if (stage.isNoBid) {
+        column.classList.add('no-bid-stage');
+        column.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+        column.style.border = '2px dashed #dc2626';
+    }
     column.draggable = true;
     column.dataset.stageId = stage._id;
     
     const stageHeader = document.createElement('div');
     stageHeader.className = 'stage-header';
+    if (stage.isNoBid) {
+        stageHeader.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+    }
     stageHeader.draggable = false;
     stageHeader.innerHTML = `
         <div class="stage-title">
-            <h3>${stage.name}</h3>
+            <h3 style="${stage.isNoBid ? 'color: white;' : ''}">
+                ${stage.isNoBid ? '<i class="fas fa-ban" style="margin-right: 6px;"></i>' : ''}${stage.name}
+            </h3>
             <div class="stage-actions">
                 <button class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
                 <button class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
@@ -320,14 +242,17 @@ async function createStageColumn(stage) {
             </div>
         </div>
         <div class="stage-count">
-            <span class="count-badge">${count}</span>
+            <span class="count-badge" style="${stage.isNoBid ? 'background: rgba(255,255,255,0.2); color: white;' : ''}">${count}</span>
         </div>
     `;
     
     const stageBody = document.createElement('div');
     stageBody.className = 'stage-body';
+    if (stage.isNoBid) {
+        stageBody.style.background = '#fef2f2';
+    }
     stageBody.dataset.stageId = stage._id;
-    stageBody.innerHTML = await renderRecords(stage._id);
+    stageBody.innerHTML = renderRecords(stage._id);
     stageBody.addEventListener('drop', drop);
     stageBody.addEventListener('dragover', allowDrop);
     stageBody.addEventListener('dragleave', dragLeave);
@@ -344,7 +269,7 @@ async function createStageColumn(stage) {
 }
 
 // Render records
-async function renderRecords(stageId) {
+function renderRecords(stageId) {
     const stageRecords = filteredRecords.filter(r => r.stageId === stageId);
     if (stageRecords.length === 0) {
         const allRecordsInStage = records.filter(r => r.stageId === stageId).length;
@@ -915,33 +840,49 @@ async function deleteRecord(recordId) {
     }
 }
 
-// Drag and Drop
+// Drag and Drop with smooth animations (optimized)
 function drag(event) {
     if (event.target.classList.contains('new-order-card')) {
-        console.log('Drag started for new order:', event.target.dataset.orderId);
         event.dataTransfer.setData('orderId', event.target.dataset.orderId);
         event.dataTransfer.setData('isNewOrder', 'true');
     } else {
-        console.log('Drag started for record:', event.target.dataset.recordId);
         event.dataTransfer.setData('recordId', event.target.dataset.recordId);
         event.dataTransfer.setData('isNewOrder', 'false');
     }
+    
+    // Add dragging class
     event.target.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
 }
 
 function allowDrop(event) {
     event.preventDefault();
-    event.currentTarget.classList.add('drag-over');
+    event.dataTransfer.dropEffect = 'move';
+    
+    // Add drag-over class
+    const target = event.currentTarget;
+    if (!target.classList.contains('drag-over')) {
+        target.classList.add('drag-over');
+    }
 }
 
 function dragLeave(event) {
-    event.currentTarget.classList.remove('drag-over');
+    // Only remove if actually leaving the element
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+    
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+        event.currentTarget.classList.remove('drag-over');
+    }
 }
 
 async function drop(event) {
     event.preventDefault();
-    event.currentTarget.classList.remove('drag-over');
-    console.log('DROP FIRED - isNewOrder:', event.dataTransfer.getData('isNewOrder'), 'stageId:', event.currentTarget.dataset.stageId);
+    const dropTarget = event.currentTarget;
+    dropTarget.classList.remove('drag-over');
+    
+    console.log('DROP FIRED - isNewOrder:', event.dataTransfer.getData('isNewOrder'), 'stageId:', dropTarget.dataset.stageId);
     
     const isNewOrder = event.dataTransfer.getData('isNewOrder') === 'true';
     const newStageId = event.currentTarget.dataset.stageId;
@@ -1067,20 +1008,24 @@ async function drop(event) {
     
     }
     
+    
+    // Remove dragging class from all elements
     document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
 }
 
-// Stage Reordering
+// Stage Reordering with smooth animations
 function stageColumnDragStart(event) {
     if (event.target.classList.contains('stage-column')) {
         draggedStage = event.target;
-        event.target.style.opacity = '0.5';
+        event.target.classList.add('reordering');
+        event.dataTransfer.effectAllowed = 'move';
     }
 }
 
 function stageColumnDragOver(event) {
     if (event.target.classList.contains('stage-column') && draggedStage) {
         event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
     }
 }
 
@@ -1093,7 +1038,7 @@ function stageColumnDrop(event) {
 
 function stageColumnDragEnd(event) {
     if (event.target.classList.contains('stage-column')) {
-        event.target.style.opacity = '1';
+        event.target.classList.remove('reordering');
         draggedStage = null;
     }
 }
@@ -1753,4 +1698,101 @@ window.createPipelineRecordFromOrder = createPipelineRecordFromOrder;
 window.loadNewOrdersSuggestions = loadNewOrdersSuggestions;
 window.expandNewOrders = expandNewOrders;
 window.collapseNewOrders = collapseNewOrders;
+
+// Stage Management Functions
+function openStageModal() {
+    const modal = document.getElementById('stageModal');
+    if (!modal) return;
+    
+    document.getElementById('stageModalTitle').textContent = 'Add Stage';
+    document.getElementById('stageForm').reset();
+    document.getElementById('stageId').value = '';
+    const isNoBidCheckbox = document.getElementById('stageIsNoBid');
+    if (isNoBidCheckbox) isNoBidCheckbox.checked = false;
+    modal.classList.add('show');
+}
+
+function closeStageModal() {
+    const modal = document.getElementById('stageModal');
+    if (modal) modal.classList.remove('show');
+}
+
+async function saveStage(event) {
+    if (event) event.preventDefault();
+    
+    const id = document.getElementById('stageId').value;
+    const name = document.getElementById('stageName').value.trim();
+    const isNoBid = document.getElementById('stageIsNoBid')?.checked || false;
+    
+    if (!name) {
+        alert('Stage name is required');
+        return;
+    }
+    
+    try {
+        const url = id ? `${API_BASE_URL}/stages/${id}` : `${API_BASE_URL}/stages`;
+        const method = id ? 'PUT' : 'POST';
+        
+        // Calculate position for new stages (add to end)
+        const position = id ? undefined : stages.length + 1;
+        
+        const body = { name, isNoBid };
+        if (position !== undefined) body.position = position;
+        
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to save stage');
+        }
+        
+        closeStageModal();
+        await loadDataFromDB();
+    } catch (error) {
+        console.error('Error saving stage:', error);
+        alert('Error saving stage: ' + error.message);
+    }
+}
+
+function editStage(stageId) {
+    const stage = stages.find(s => s._id === stageId);
+    if (!stage) return;
+    
+    document.getElementById('stageModalTitle').textContent = 'Edit Stage';
+    document.getElementById('stageId').value = stage._id;
+    document.getElementById('stageName').value = stage.name;
+    const isNoBidCheckbox = document.getElementById('stageIsNoBid');
+    if (isNoBidCheckbox) isNoBidCheckbox.checked = stage.isNoBid || false;
+    document.getElementById('stageModal').classList.add('show');
+}
+
+async function deleteStage(stageId) {
+    const stage = stages.find(s => s._id === stageId);
+    if (!stage) return;
+    
+    const recordCount = records.filter(r => r.stageId === stageId).length;
+    if (recordCount > 0) {
+        alert(`Cannot delete stage "${stage.name}" because it contains ${recordCount} record(s). Please move or delete the records first.`);
+        return;
+    }
+    
+    if (!confirm(`Delete stage "${stage.name}"?`)) return;
+    
+    try {
+        await fetch(`${API_BASE_URL}/stages/${stageId}`, { method: 'DELETE' });
+        await loadDataFromDB();
+    } catch (error) {
+        alert('Error deleting stage: ' + error.message);
+    }
+}
+
+window.openStageModal = openStageModal;
+window.closeStageModal = closeStageModal;
+window.saveStage = saveStage;
+window.editStage = editStage;
+window.deleteStage = deleteStage;
 
