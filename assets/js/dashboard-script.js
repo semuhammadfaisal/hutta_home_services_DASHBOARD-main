@@ -307,7 +307,7 @@ class DashboardManager {
             const statusClass = order.pipelineStage ? 'pipeline' : order.status;
             
             return `
-            <tr>
+            <tr style="cursor: pointer;" onclick="viewOrder('${order._id || order.id}')">
                 <td>
                     <div class="order-id">
                         <div class="order-icon">
@@ -316,7 +316,7 @@ class DashboardManager {
                         <div class="order-info">
                             <div class="order-number" style="display: flex; align-items: center; gap: 8px;">
                                 <span>${orderNumber}</span>
-                                <button class="btn-copy-order-id" onclick="copyOrderId('${orderNumber}')" title="Copy Order ID" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.2s;">
+                                <button class="btn-copy-order-id" onclick="event.stopPropagation(); copyOrderId('${orderNumber}')" title="Copy Order ID" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.2s;">
                                     <i class="fas fa-copy" style="font-size: 12px;"></i>
                                 </button>
                             </div>
@@ -338,11 +338,8 @@ class DashboardManager {
                 <td><span class="order-amount" style="color: #10b981; font-weight: 600;">$${order.amount?.toLocaleString() || '0'}</span></td>
                 <td><span class="order-cost" style="color: #ef4444; font-weight: 600;">$${order.vendorCost?.toLocaleString() || '0'}</span></td>
                 <td><span class="order-profit" style="color: #3b82f6; font-weight: 600;">$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}</span></td>
-                <td>
+                <td onclick="event.stopPropagation()">
                     <div class="order-actions">
-                        <button class="action-btn view" onclick="viewOrder('${order._id || order.id}')" title="View Details">
-                            <i class="fas fa-eye"></i>
-                        </button>
                         <button class="action-btn edit" onclick="editOrder('${order._id || order.id}')" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -1554,6 +1551,10 @@ function showAddOrderModal() {
     document.getElementById('recurringFrequency').value = 'weekly';
     document.getElementById('recurringEndDate').value = '';
     document.getElementById('recurringNotes').value = '';
+    document.getElementById('recurringCustomDays').value = '';
+    if (document.getElementById('customDaysGroup')) {
+        document.getElementById('customDaysGroup').style.display = 'none';
+    }
     toggleRecurringFields(); // Hide recurring fields by default
     
     loadVendors();
@@ -1623,6 +1624,12 @@ async function editOrder(orderId) {
             document.getElementById('recurringFrequency').value = order.recurringFrequency || 'weekly';
             document.getElementById('recurringEndDate').value = order.recurringEndDate ? order.recurringEndDate.split('T')[0] : '';
             document.getElementById('recurringNotes').value = order.recurringNotes || '';
+            
+            // Handle custom frequency
+            if (order.recurringFrequency === 'custom' && order.recurringCustomDays) {
+                document.getElementById('recurringCustomDays').value = order.recurringCustomDays;
+                toggleCustomDaysField();
+            }
         }
         
         if (order.vendor) {
@@ -1788,6 +1795,19 @@ async function saveOrder() {
             hideLoading();
             return;
         }
+        
+        // Validate custom frequency
+        if (recurringFrequency === 'custom') {
+            const customDays = document.getElementById('recurringCustomDays').value;
+            if (!customDays || customDays < 1) {
+                showToast('Please enter number of days for custom frequency', 'error');
+                setButtonLoading(saveBtn, false);
+                hideLoading();
+                return;
+            }
+            orderData.recurringCustomDays = parseInt(customDays);
+        }
+        
         orderData.recurringFrequency = recurringFrequency;
         orderData.recurringEndDate = document.getElementById('recurringEndDate').value || null;
         orderData.recurringNotes = document.getElementById('recurringNotes').value || '';
@@ -2482,10 +2502,7 @@ function renderPaymentsTable(payments) {
     tbody.innerHTML = payments.map(payment => `
         <tr>
             <td>
-                <div style="display: flex; flex-direction: column;">
-                    <strong>${payment.paymentId}</strong>
-                    ${payment.order ? `<small style="color: #6b7280; font-size: 11px;">Order: ${payment.order.orderId || payment.order}</small>` : ''}
-                </div>
+                ${payment.order ? `<strong>${payment.order.orderId || payment.order}</strong>` : '<span style="color: #9ca3af;">-</span>'}
             </td>
             <td>
                 <span style="color: #3b82f6; font-weight: 500; cursor: pointer;" onclick="editInvoiceNumber('${payment._id}', '${payment.invoiceNumber || ''}')" title="Click to edit invoice number">
@@ -2987,7 +3004,7 @@ function renderEmployeesTable(employees) {
         const employeeId = `#${employee._id.substring(0, 8).toUpperCase()}`;
         
         return `
-        <tr>
+        <tr style="cursor: pointer;" onclick="viewEmployee('${employee._id}')">
             <td>
                 <span class="employee-avatar">${initials}</span>
                 <div class="employee-info">
@@ -2995,17 +3012,14 @@ function renderEmployeesTable(employees) {
                     <div class="employee-id">${employeeId}</div>
                 </div>
             </td>
-            <td><a href="mailto:${employee.email}" class="customer-email">${employee.email}</a></td>
+            <td><a href="mailto:${employee.email}" class="customer-email" onclick="event.stopPropagation()">${employee.email}</a></td>
             <td><span class="customer-phone">${employee.phone || 'N/A'}</span></td>
             <td><span class="employee-role-badge">${employee.role.replace('-', ' ')}</span></td>
             <td>${employee.department || 'N/A'}</td>
             <td><span class="employee-status-badge ${employee.status}">${employee.status.replace('-', ' ')}</span></td>
             <td>${employee.hireDate ? new Date(employee.hireDate).toLocaleDateString() : 'N/A'}</td>
-            <td>
+            <td onclick="event.stopPropagation()">
                 <div class="employee-actions">
-                    <button class="action-btn view" onclick="viewEmployee('${employee._id}')" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
                     <button class="action-btn edit" onclick="editEmployee('${employee._id}')" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -3644,7 +3658,7 @@ function renderVendorsTable(vendors) {
         const stars = '★'.repeat(vendor.rating) + '☆'.repeat(5 - vendor.rating);
         
         return `
-        <tr>
+        <tr style="cursor: pointer;" onclick="showVendorDetail('${vendor._id}')">
             <td>
                 <span class="vendor-avatar">${initials}</span>
                 <div class="vendor-info">
@@ -3652,16 +3666,13 @@ function renderVendorsTable(vendors) {
                     <div class="vendor-id">${vendorId}</div>
                 </div>
             </td>
-            <td><a href="mailto:${vendor.email}" class="customer-email">${vendor.email}</a></td>
+            <td><a href="mailto:${vendor.email}" class="customer-email" onclick="event.stopPropagation()">${vendor.email}</a></td>
             <td><span class="customer-phone">${vendor.phone || 'N/A'}</span></td>
             <td><span class="vendor-category-badge ${vendor.category}">${vendor.category}</span></td>
             <td><div class="vendor-rating">${stars.split('').map(s => `<span class="${s === '★' ? 'star-filled' : 'star-empty'}">${s}</span>`).join('')}</div></td>
             <td><span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span></td>
-            <td>
+            <td onclick="event.stopPropagation()">
                 <div class="vendor-actions">
-                    <button class="action-btn view" onclick="showVendorDetail('${vendor._id}')" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
                     <button class="action-btn edit" onclick="editVendor('${vendor._id}')" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -4441,7 +4452,7 @@ function renderCustomersTable(customers) {
         const customerId = `#${customer._id.substring(0, 8).toUpperCase()}`;
         
         return `
-        <tr>
+        <tr style="cursor: pointer;" onclick="viewCustomer('${customer._id}')">
             <td>
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div class="customer-avatar">${initials}</div>
@@ -4451,17 +4462,14 @@ function renderCustomersTable(customers) {
                     </div>
                 </div>
             </td>
-            <td><a href="mailto:${customer.email}" class="customer-email">${customer.email}</a></td>
+            <td><a href="mailto:${customer.email}" class="customer-email" onclick="event.stopPropagation()">${customer.email}</a></td>
             <td><span class="customer-phone">${customer.phone || 'N/A'}</span></td>
             <td>${customer.city || 'N/A'}</td>
             <td><span class="customer-type-badge ${customer.customerType}">${customer.customerType}</span></td>
             <td><span class="customer-status-badge ${customer.status}">${customer.status}</span></td>
             <td><span class="customer-orders-count">${customer.totalOrders || 0}</span></td>
-            <td>
+            <td onclick="event.stopPropagation()">
                 <div class="customer-actions">
-                    <button class="action-btn view" onclick="viewCustomer('${customer._id}')" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
                     <button class="action-btn edit" onclick="editCustomer('${customer._id}')" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -5510,6 +5518,10 @@ function toggleRecurringFields() {
         document.getElementById('recurringFrequency').value = 'weekly';
         document.getElementById('recurringEndDate').value = '';
         document.getElementById('recurringNotes').value = '';
+        document.getElementById('recurringCustomDays').value = '';
+        if (document.getElementById('customDaysGroup')) {
+            document.getElementById('customDaysGroup').style.display = 'none';
+        }
     }
 }
 

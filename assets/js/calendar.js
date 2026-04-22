@@ -357,7 +357,7 @@ function getRecurringEventsForDate(year, month, day) {
             if (endDate && targetDate > endDate) return;
             
             // Check if this date matches the recurrence pattern
-            if (isRecurringMatch(startDate, targetDate, order.recurringFrequency)) {
+            if (isRecurringMatch(startDate, targetDate, order.recurringFrequency, order.recurringCustomDays)) {
                 events.push({
                     type: 'recurring-order',
                     title: order.orderId || order.service || 'Recurring Order',
@@ -373,7 +373,7 @@ function getRecurringEventsForDate(year, month, day) {
     return events;
 }
 
-function isRecurringMatch(startDate, targetDate, frequency) {
+function isRecurringMatch(startDate, targetDate, frequency, customDays) {
     const start = new Date(startDate);
     const target = new Date(targetDate);
     start.setHours(0, 0, 0, 0);
@@ -385,6 +385,11 @@ function isRecurringMatch(startDate, targetDate, frequency) {
     const daysDiff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
     
     switch (frequency) {
+        case 'custom':
+            // Custom frequency: every X days
+            if (!customDays || customDays < 1) return false;
+            return daysDiff % customDays === 0;
+            
         case 'weekly':
             // Same day of week, every 7 days
             return daysDiff % 7 === 0 && start.getDay() === target.getDay();
@@ -527,8 +532,21 @@ async function showRecurringEventDetail(event) {
             'weekly': 'Weekly',
             'bi-weekly': 'Bi-Weekly',
             'monthly': 'Monthly',
-            'yearly': 'Yearly'
+            'yearly': 'Yearly',
+            'custom': 'Custom'
         };
+        
+        // Determine frequency display
+        let frequencyDisplay;
+        if (data.recurringFrequency === 'custom') {
+            if (data.recurringCustomDays && data.recurringCustomDays > 0) {
+                frequencyDisplay = `Every ${data.recurringCustomDays} day${data.recurringCustomDays > 1 ? 's' : ''}`;
+            } else {
+                frequencyDisplay = 'Custom (days not specified)';
+            }
+        } else {
+            frequencyDisplay = frequencyLabels[data.recurringFrequency] || data.recurringFrequency;
+        }
         
         body.innerHTML = `
             <div class="detail-badge recurring">Recurring Order</div>
@@ -540,9 +558,15 @@ async function showRecurringEventDetail(event) {
                 <label>Customer</label>
                 <div class="value">${data.customer?.name || data.customer}</div>
             </div>
+            ${data.customer?.address ? `
+            <div class="detail-item">
+                <label>Address</label>
+                <div class="value">${data.customer.address}</div>
+            </div>
+            ` : ''}
             <div class="detail-item">
                 <label>Frequency</label>
-                <div class="value">${frequencyLabels[data.recurringFrequency] || data.recurringFrequency}</div>
+                <div class="value">${frequencyDisplay}</div>
             </div>
             <div class="detail-item">
                 <label>Amount</label>

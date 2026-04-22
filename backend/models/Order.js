@@ -27,7 +27,8 @@ const orderSchema = new mongoose.Schema({
   pipelineStage: { type: String }, // Store pipeline stage name directly for efficient KPI calculations
   // Recurring order fields
   orderType: { type: String, enum: ['one-time', 'recurring'], default: 'one-time' },
-  recurringFrequency: { type: String, enum: ['weekly', 'bi-weekly', 'monthly', 'yearly'] },
+  recurringFrequency: { type: String, enum: ['weekly', 'bi-weekly', 'monthly', 'yearly', 'custom'] },
+  recurringCustomDays: { type: Number },
   recurringEndDate: { type: Date },
   recurringNotes: String
 }, { timestamps: true });

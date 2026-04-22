@@ -259,6 +259,11 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       orderData.recurringFrequency = req.body.recurringFrequency;
       orderData.recurringEndDate = req.body.recurringEndDate ? new Date(req.body.recurringEndDate) : null;
       orderData.recurringNotes = req.body.recurringNotes || '';
+      
+      // Add custom days if frequency is custom
+      if (req.body.recurringFrequency === 'custom' && req.body.recurringCustomDays) {
+        orderData.recurringCustomDays = Number(req.body.recurringCustomDays);
+      }
     }
     
     const order = new Order(orderData);
@@ -434,11 +439,20 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
         if (req.body.recurringFrequency) updateData.recurringFrequency = req.body.recurringFrequency;
         if (req.body.recurringEndDate) updateData.recurringEndDate = new Date(req.body.recurringEndDate);
         if (req.body.recurringNotes !== undefined) updateData.recurringNotes = req.body.recurringNotes;
+        
+        // Handle custom days
+        if (req.body.recurringFrequency === 'custom' && req.body.recurringCustomDays) {
+          updateData.recurringCustomDays = Number(req.body.recurringCustomDays);
+        } else if (req.body.recurringFrequency && req.body.recurringFrequency !== 'custom') {
+          // Clear custom days if switching from custom to another frequency
+          updateData.recurringCustomDays = null;
+        }
       } else if (updateData.orderType === 'one-time') {
         // Clear recurring fields when switching to one-time
         updateData.recurringFrequency = null;
         updateData.recurringEndDate = null;
         updateData.recurringNotes = null;
+        updateData.recurringCustomDays = null;
       }
     }
     
