@@ -4,18 +4,95 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
+function normalizeMilestones(milestones = [], paymentAmount = 0) {
+  if (!Array.isArray(milestones)) return [];
+
+  const normalized = milestones.map((milestone, index) => {
+    const amount = Number(milestone.amount || 0);
+    const rawStatus = milestone.status || 'pending';
+    const status = ['pending', 'received', 'completed', 'failed', 'cancelled'].includes(rawStatus)
+      ? rawStatus
+      : 'pending';
+
+    return {
+      _id: milestone._id,
+      title: String(milestone.title || `Milestone ${index + 1}`).trim(),
+      amount,
+      dueDate: milestone.dueDate || null,
+      receivedDate: milestone.receivedDate || ((status === 'received' || status === 'completed') ? new Date() : null),
+      status,
+      notes: String(milestone.notes || '').trim()
+    };
+  }).filter(milestone => milestone.title && milestone.amount >= 0);
+
+  const totalMilestoneAmount = normalized.reduce((sum, milestone) => sum + milestone.amount, 0);
+  if (normalized.length && totalMilestoneAmount - Number(paymentAmount || 0) > 0.009) {
+    const error = new Error('Milestone total cannot exceed payment amount');
+    error.status = 400;
+    throw error;
+  }
+
+  return normalized;
+}
+
+function buildPaymentPayload(body, existingPayment = null) {
+  const payload = { ...body };
+  const paymentAmount = Number(body.amount ?? existingPayment?.amount ?? 0);
+
+  if (body.amount !== undefined) {
+    payload.amount = paymentAmount;
+  }
+
+  if (body.milestones !== undefined || existingPayment?.milestones?.length) {
+    const sourceMilestones = body.milestones !== undefined ? body.milestones : existingPayment?.milestones || [];
+    const milestones = normalizeMilestones(sourceMilestones, paymentAmount);
+    const receivedMilestones = milestones.filter(m => m.status === 'received' || m.status === 'completed');
+    const completedMilestones = milestones.filter(m => m.status === 'completed');
+    const receivedAmount = receivedMilestones.reduce((sum, milestone) => sum + milestone.amount, 0);
+
+    payload.milestones = milestones;
+
+    if (milestones.length) {
+      if (completedMilestones.length === milestones.length) {
+        payload.status = 'completed';
+      } else if (receivedMilestones.length > 0) {
+        payload.status = 'received';
+      } else if (milestones.some(m => m.status === 'failed')) {
+        payload.status = 'failed';
+      } else if (milestones.some(m => m.status === 'cancelled') && milestones.every(m => m.status === 'cancelled' || m.status === 'pending')) {
+        payload.status = 'cancelled';
+      } else {
+        payload.status = 'pending';
+      }
+
+      if (receivedAmount > 0) {
+        payload.paymentDate = receivedMilestones
+          .map(m => m.receivedDate)
+          .filter(Boolean)
+          .sort((a, b) => new Date(a) - new Date(b))[0] || payload.paymentDate || existingPayment?.paymentDate || null;
+      } else if (!body.paymentDate) {
+        payload.paymentDate = null;
+      }
+    }
+  }
+
+  return payload;
+}
+
 // Get all payments
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const payments = await Payment.find()
       .populate('customer', 'name email')
-      .populate('order', 'orderId service')
+      .populate('order', 'orderId service employee vendor')
+      .populate({ path: 'order', populate: { path: 'employee', select: 'name email phone' } })
+      .populate({ path: 'order', populate: { path: 'vendor', select: 'name email phone' } })
       .populate('project', 'projectId name')
       .populate('processedBy', 'firstName lastName')
       .sort({ createdAt: -1 });
     res.json(payments);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(error.status || 500).json({ message: error.message || 'Server error' });
   }
 });
 
@@ -24,7 +101,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id)
       .populate('customer')
-      .populate('order')
+      .populate({ path: 'order', populate: { path: 'employee', select: 'name email phone' } })
+      .populate({ path: 'order', populate: { path: 'vendor', select: 'name email phone' } })
       .populate('project')
       .populate('processedBy');
     if (!payment) {
@@ -41,9 +119,10 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const paymentCount = await Payment.countDocuments();
     const paymentId = `PAY-${String(paymentCount + 1).padStart(4, '0')}`;
-    
-    const payment = new Payment({ 
-      ...req.body, 
+
+    const paymentPayload = buildPaymentPayload(req.body);
+    const payment = new Payment({
+      ...paymentPayload,
       paymentId,
       processedBy: req.user.userId 
     });
@@ -62,16 +141,20 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 });
 
 // Update payment
-router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
+router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
+    console.log('Update payment request from user:', req.user);
+    console.log('Request body:', req.body);
+    
     const oldPayment = await Payment.findById(req.params.id);
     if (!oldPayment) {
       return res.status(404).json({ message: 'Payment not found' });
     }
-    
+
+    const updatePayload = buildPaymentPayload(req.body, oldPayment);
     const payment = await Payment.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
+      updatePayload,
       { new: true }
     )
     .populate('customer', 'name email')
@@ -80,7 +163,7 @@ router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => 
     .populate('processedBy', 'firstName lastName');
     
     // If payment status changed to 'received' or 'completed', update pipeline stage
-    if ((req.body.status === 'received' || req.body.status === 'completed') && 
+    if ((updatePayload.status === 'received' || updatePayload.status === 'completed') && 
         oldPayment.status !== 'received' && oldPayment.status !== 'completed') {
       
       if (payment.order) {
@@ -107,10 +190,11 @@ router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => 
       }
     }
     
+    console.log('Payment updated successfully');
     res.json(payment);
   } catch (error) {
     console.error('Update payment error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(error.status || 500).json({ message: error.message || 'Server error', error: error.message });
   }
 });
 

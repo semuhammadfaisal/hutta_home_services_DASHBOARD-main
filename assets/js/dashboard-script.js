@@ -2500,11 +2500,11 @@ function renderPaymentsTable(payments) {
     }
     
     tbody.innerHTML = payments.map(payment => `
-        <tr>
+        <tr onclick="showPaymentDetail('${payment._id}')" style="cursor: pointer;">
             <td>
                 ${payment.order ? `<strong>${payment.order.orderId || payment.order}</strong>` : '<span style="color: #9ca3af;">-</span>'}
             </td>
-            <td>
+            <td onclick="event.stopPropagation();">
                 <span style="color: #3b82f6; font-weight: 500; cursor: pointer;" onclick="editInvoiceNumber('${payment._id}', '${payment.invoiceNumber || ''}')" title="Click to edit invoice number">
                     ${payment.invoiceNumber || '<span style="color: #9ca3af;">-</span>'}
                 </span>
@@ -2512,7 +2512,7 @@ function renderPaymentsTable(payments) {
             <td>${payment.customer?.name || 'N/A'}</td>
             <td><strong>$${payment.amount.toLocaleString()}</strong></td>
             <td><span class="method-badge ${payment.paymentMethod || 'pending'}">${payment.paymentMethod ? payment.paymentMethod.replace('-', ' ') : 'Not Set'}</span></td>
-            <td>
+            <td onclick="event.stopPropagation();">
                 <select class="payment-status-select status-${payment.status}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value)" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 13px; font-weight: 500; cursor: pointer;">
                     <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
                     <option value="received" ${payment.status === 'received' ? 'selected' : ''}>✅ Received</option>
@@ -2526,8 +2526,8 @@ function renderPaymentsTable(payments) {
             <td>
                 ${payment.order ? `<span style="color: #6b7280;">${payment.order.orderId || payment.order}</span>` : 'N/A'}
             </td>
-            <td>
-                <button class="btn-action" onclick="viewPayment('${payment._id}')" title="View">
+            <td onclick="event.stopPropagation();">
+                <button class="btn-action" onclick="showPaymentDetail('${payment._id}')" title="View">
                     <i class="fas fa-eye"></i>
                 </button>
                 <button class="btn-action delete" onclick="deletePayment('${payment._id}')" title="Delete">
@@ -2738,6 +2738,790 @@ async function saveInvoiceNumber(paymentId) {
 
 window.editInvoiceNumber = editInvoiceNumber;
 window.saveInvoiceNumber = saveInvoiceNumber;
+
+// Payment Detail View
+function formatPaymentCurrency(value) {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 2
+    }).format(amount);
+}
+
+function formatPaymentDate(value, fallback = '-') {
+    if (!value) return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    }).format(date);
+}
+
+function formatPaymentDateTime(value, fallback = '-') {
+    if (!value) return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    }).format(date);
+}
+
+function formatPaymentLabel(value) {
+    if (!value) return 'Not Set';
+    return value
+        .split('-')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+}
+
+function escapePaymentHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function closePaymentDetailOnEscape(event) {
+    if (event.key === 'Escape') {
+        closePaymentDetail();
+    }
+}
+
+let currentPaymentDetailData = null;
+let paymentMilestoneKeyCounter = 0;
+
+function createPaymentMilestoneClientKey() {
+    paymentMilestoneKeyCounter += 1;
+    return `milestone-${Date.now()}-${paymentMilestoneKeyCounter}`;
+}
+
+function ensurePaymentMilestoneClientKeys(payment) {
+    if (!payment) return;
+    payment.milestones = Array.isArray(payment.milestones) ? payment.milestones : [];
+    payment.milestones = payment.milestones.map((milestone) => ({
+        ...milestone,
+        clientKey: milestone.clientKey || milestone._id || createPaymentMilestoneClientKey()
+    }));
+}
+
+function calculatePaymentMilestoneSummary(payment) {
+    const milestones = Array.isArray(payment?.milestones) ? payment.milestones : [];
+    const totalAmount = Number(payment?.amount || 0);
+    const receivedAmount = milestones
+        .filter(milestone => milestone.status === 'received' || milestone.status === 'completed')
+        .reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0);
+    const remainingAmount = Math.max(totalAmount - receivedAmount, 0);
+    const progress = totalAmount > 0 ? Math.min((receivedAmount / totalAmount) * 100, 100) : 0;
+
+    return {
+        milestones,
+        totalAmount,
+        receivedAmount,
+        remainingAmount,
+        progress
+    };
+}
+
+function renderPaymentMilestoneRows(payment) {
+    const container = document.getElementById('paymentMilestoneList');
+    if (!container) return;
+
+    ensurePaymentMilestoneClientKeys(payment);
+    const milestones = Array.isArray(payment?.milestones) ? payment.milestones : [];
+    if (!milestones.length) {
+        container.innerHTML = `
+            <div class="payment-milestone-empty">
+                <i class="fas fa-flag-checkered"></i>
+                <div>
+                    <strong>No milestones yet</strong>
+                    <p>Split this payment into milestone amounts for partial collections.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = milestones.map((milestone, index) => `
+        <div class="payment-milestone-row status-${escapePaymentHtml(milestone.status || 'pending')}" data-client-key="${escapePaymentHtml(milestone.clientKey)}">
+            <div class="payment-milestone-row-head">
+                <div class="payment-milestone-row-title">
+                    <span class="payment-milestone-step">Milestone ${index + 1}</span>
+                    <span class="payment-milestone-status-chip status-${escapePaymentHtml(milestone.status || 'pending')}">${escapePaymentHtml(formatPaymentLabel(milestone.status || 'pending'))}</span>
+                </div>
+                <button type="button" class="payment-milestone-remove" onclick="removePaymentMilestone('${escapePaymentHtml(milestone.clientKey)}')" title="Remove milestone">
+                    <i class="fas fa-trash"></i>
+                    <span>Delete</span>
+                </button>
+            </div>
+            <div class="payment-milestone-row-top">
+                <div class="payment-milestone-title-wrap">
+                    <label class="payment-milestone-label">Milestone Title</label>
+                    <input type="text" class="payment-milestone-input" data-field="title" value="${escapePaymentHtml(milestone.title || '')}" placeholder="Deposit, Phase 1, Final Payment">
+                </div>
+                <div>
+                    <label class="payment-milestone-label">Amount</label>
+                    <input type="number" class="payment-milestone-input" data-field="amount" min="0" step="0.01" value="${Number(milestone.amount || 0)}" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="payment-milestone-label">Status</label>
+                    <select class="payment-milestone-select" data-field="status">
+                        <option value="pending" ${milestone.status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="received" ${milestone.status === 'received' ? 'selected' : ''}>Received</option>
+                        <option value="completed" ${milestone.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        <option value="failed" ${milestone.status === 'failed' ? 'selected' : ''}>Failed</option>
+                        <option value="cancelled" ${milestone.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                    </select>
+                </div>
+            </div>
+            <div class="payment-milestone-row-bottom">
+                <div>
+                    <label class="payment-milestone-label">Due Date</label>
+                    <input type="date" class="payment-milestone-input" data-field="dueDate" value="${milestone.dueDate ? String(milestone.dueDate).split('T')[0] : ''}">
+                </div>
+                <div>
+                    <label class="payment-milestone-label">Received Date</label>
+                    <input type="date" class="payment-milestone-input" data-field="receivedDate" value="${milestone.receivedDate ? String(milestone.receivedDate).split('T')[0] : ''}">
+                </div>
+                <div class="payment-milestone-notes-wrap">
+                    <label class="payment-milestone-label">Notes</label>
+                    <textarea class="payment-milestone-textarea" data-field="notes" rows="2" placeholder="Optional note for this milestone">${escapePaymentHtml(milestone.notes || '')}</textarea>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function syncPaymentMilestoneDraftFromDom() {
+    if (!currentPaymentDetailData) return;
+
+    const rows = document.querySelectorAll('#paymentMilestoneList .payment-milestone-row');
+    const milestoneMap = new Map((currentPaymentDetailData.milestones || []).map((milestone) => [milestone.clientKey, milestone]));
+    currentPaymentDetailData.milestones = Array.from(rows).map((row, index) => {
+        const clientKey = row.dataset.clientKey;
+        const existingMilestone = milestoneMap.get(clientKey) || {};
+        const getValue = (field) => row.querySelector(`[data-field="${field}"]`)?.value || '';
+        const status = getValue('status') || 'pending';
+        const receivedDate = getValue('receivedDate');
+
+        return {
+            _id: existingMilestone._id,
+            clientKey,
+            title: getValue('title').trim() || `Milestone ${index + 1}`,
+            amount: Number(getValue('amount') || 0),
+            status,
+            dueDate: getValue('dueDate') || null,
+            receivedDate: receivedDate || ((status === 'received' || status === 'completed') ? new Date().toISOString().split('T')[0] : null),
+            notes: getValue('notes').trim()
+        };
+    });
+}
+
+function refreshPaymentMilestoneSummary() {
+    if (!currentPaymentDetailData) return;
+
+    syncPaymentMilestoneDraftFromDom();
+    const summary = calculatePaymentMilestoneSummary(currentPaymentDetailData);
+    const receivedEl = document.getElementById('paymentReceivedAmount');
+    const remainingEl = document.getElementById('paymentRemainingAmount');
+    const progressEl = document.getElementById('paymentMilestoneProgress');
+    const progressBarEl = document.getElementById('paymentMilestoneProgressBar');
+    const countEl = document.getElementById('paymentMilestoneCount');
+
+    if (receivedEl) receivedEl.textContent = formatPaymentCurrency(summary.receivedAmount);
+    if (remainingEl) remainingEl.textContent = formatPaymentCurrency(summary.remainingAmount);
+    if (progressEl) progressEl.textContent = `${Math.round(summary.progress)}% Collected`;
+    if (progressBarEl) progressBarEl.style.width = `${summary.progress}%`;
+    if (countEl) countEl.textContent = `${summary.milestones.length} milestone${summary.milestones.length === 1 ? '' : 's'}`;
+}
+
+function bindPaymentMilestoneInputs() {
+    document.querySelectorAll('#paymentMilestoneList [data-field]').forEach((field) => {
+        field.addEventListener('input', refreshPaymentMilestoneSummary);
+        field.addEventListener('change', refreshPaymentMilestoneSummary);
+    });
+}
+
+function rerenderPaymentMilestones() {
+    if (!currentPaymentDetailData) return;
+    ensurePaymentMilestoneClientKeys(currentPaymentDetailData);
+    renderPaymentMilestoneRows(currentPaymentDetailData);
+    bindPaymentMilestoneInputs();
+    refreshPaymentMilestoneSummary();
+}
+
+function addPaymentMilestone() {
+    if (!currentPaymentDetailData) return;
+    syncPaymentMilestoneDraftFromDom();
+    currentPaymentDetailData.milestones = currentPaymentDetailData.milestones || [];
+    currentPaymentDetailData.milestones.push({
+        clientKey: createPaymentMilestoneClientKey(),
+        title: `Milestone ${currentPaymentDetailData.milestones.length + 1}`,
+        amount: 0,
+        dueDate: null,
+        receivedDate: null,
+        status: 'pending',
+        notes: ''
+    });
+    rerenderPaymentMilestones();
+}
+
+function removePaymentMilestone(clientKey) {
+    if (!currentPaymentDetailData) return;
+    syncPaymentMilestoneDraftFromDom();
+    currentPaymentDetailData.milestones = (currentPaymentDetailData.milestones || []).filter(
+        (milestone) => milestone.clientKey !== clientKey
+    );
+    rerenderPaymentMilestones();
+}
+
+async function savePaymentMilestones() {
+    if (!currentPaymentDetailData) return;
+
+    syncPaymentMilestoneDraftFromDom();
+        const milestones = (currentPaymentDetailData.milestones || []).map(({ clientKey, ...milestone }) => milestone);
+    const milestoneTotal = milestones.reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0);
+    const paymentAmount = Number(currentPaymentDetailData.amount || 0);
+
+    if (milestones.some(milestone => !milestone.title.trim())) {
+        showToast('Each milestone needs a title.', 'error');
+        return;
+    }
+
+    if (milestones.some(milestone => Number(milestone.amount || 0) < 0)) {
+        showToast('Milestone amounts must be 0 or greater.', 'error');
+        return;
+    }
+
+    if (milestoneTotal - paymentAmount > 0.009) {
+        showToast('Milestone total cannot be more than the payment amount.', 'error');
+        return;
+    }
+
+    const saveButton = document.getElementById('savePaymentMilestonesBtn');
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
+
+    try {
+        await window.APIService.updatePayment(currentPaymentDetailData._id, {
+            milestones
+        });
+        showToast('Payment milestones updated successfully!', 'success');
+        await showPaymentDetail(currentPaymentDetailData._id);
+        await refreshPayments();
+        if (window.dashboard && window.dashboard.renderDashboard) {
+            await window.dashboard.renderDashboard();
+        }
+    } catch (error) {
+        showToast('Failed to save milestones: ' + error.message, 'error');
+    } finally {
+        const refreshedButton = document.getElementById('savePaymentMilestonesBtn');
+        if (refreshedButton) {
+            refreshedButton.disabled = false;
+            refreshedButton.innerHTML = '<i class="fas fa-save"></i> Save Milestones';
+        }
+    }
+}
+
+async function showPaymentDetail(paymentId) {
+    try {
+        const payment = await window.APIService.getPayment(paymentId);
+        currentPaymentDetailData = {
+            ...payment,
+            milestones: Array.isArray(payment.milestones) ? payment.milestones.map(milestone => ({ ...milestone })) : []
+        };
+        ensurePaymentMilestoneClientKeys(currentPaymentDetailData);
+
+        let modal = document.getElementById('paymentDetailModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'paymentDetailModal';
+            modal.className = 'payment-detail-modal';
+            document.body.appendChild(modal);
+        }
+
+        const statusIcons = {
+            pending: 'fa-hourglass-half',
+            received: 'fa-circle-check',
+            completed: 'fa-check-double',
+            failed: 'fa-circle-xmark',
+            refunded: 'fa-rotate-left',
+            cancelled: 'fa-ban'
+        };
+
+        const statusText = formatPaymentLabel(payment.status || 'pending');
+        const methodText = formatPaymentLabel(payment.paymentMethod);
+        const amountText = formatPaymentCurrency(payment.amount);
+        const dueDateText = formatPaymentDate(payment.dueDate);
+        const paymentDateText = formatPaymentDate(payment.paymentDate, 'Not Paid Yet');
+        const createdAtText = formatPaymentDateTime(payment.createdAt);
+        const updatedAtText = formatPaymentDateTime(payment.updatedAt);
+        const milestoneSummary = calculatePaymentMilestoneSummary(currentPaymentDetailData);
+        const processedByName = payment.processedBy
+            ? `${payment.processedBy.firstName || ''} ${payment.processedBy.lastName || ''}`.trim()
+            : '';
+        const paymentStateClass = payment.status || 'pending';
+        const statusIconClass = statusIcons[payment.status] || 'fa-circle-info';
+        const orderStage = payment.order?.pipelineStage ? formatPaymentLabel(payment.order.pipelineStage) : 'Not Linked';
+
+        const summaryStats = [
+            {
+                label: 'Method',
+                value: escapePaymentHtml(methodText),
+                icon: 'fa-wallet'
+            },
+            {
+                label: 'Collected',
+                value: escapePaymentHtml(formatPaymentCurrency(milestoneSummary.receivedAmount)),
+                icon: 'fa-money-bill-wave'
+            },
+            {
+                label: 'Remaining',
+                value: escapePaymentHtml(formatPaymentCurrency(milestoneSummary.remainingAmount)),
+                icon: 'fa-hourglass-half'
+            }
+        ];
+
+        const overviewItems = [
+            ['Payment ID', payment.paymentId || '-'],
+            ['Invoice Number', payment.invoiceNumber || '-'],
+            ['Transaction ID', payment.transactionId || '-'],
+            ['Receipt Number', payment.receiptNumber || '-'],
+            ['Created', createdAtText],
+            ['Last Updated', updatedAtText]
+        ];
+
+        const relatedItems = [
+            ['Customer', payment.customer?.name || 'N/A'],
+            ['Email', payment.customer?.email || '-'],
+            ['Order ID', payment.order?.orderId || '-'],
+            ['Service', payment.order?.service || '-'],
+            ['Payment Date', paymentDateText],
+            ['Processed By', processedByName || '-']
+        ];
+
+        modal.innerHTML = `
+            <div class="payment-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="paymentDetailTitle">
+                <div class="payment-detail-content payment-state-${paymentStateClass}">
+                    <div class="payment-detail-header">
+                        <div class="payment-detail-header-copy">
+                            <div class="payment-detail-kicker">Payment Details</div>
+                            <h2 id="paymentDetailTitle">${escapePaymentHtml(payment.paymentId || 'Payment Record')}</h2>
+                            <p>${escapePaymentHtml(payment.customer?.name || 'Customer unavailable')} ${payment.order?.orderId ? `• ${escapePaymentHtml(payment.order.orderId)}` : ''}</p>
+                        </div>
+                        <div class="payment-detail-header-actions">
+                            <span class="payment-status-display ${paymentStateClass}">
+                                <i class="fas ${statusIconClass}"></i>
+                                ${escapePaymentHtml(statusText)}
+                            </span>
+                            <button type="button" class="payment-detail-close" onclick="closePaymentDetail()" aria-label="Close payment details">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="payment-detail-body">
+                        <section class="payment-hero">
+                            <div class="payment-hero-main">
+                                <span class="payment-hero-label">Amount</span>
+                                <div class="payment-amount-highlight">${escapePaymentHtml(amountText)}</div>
+                                <div class="payment-hero-meta">
+                                    <span><i class="fas fa-calendar-check"></i> Paid: ${escapePaymentHtml(paymentDateText)}</span>
+                                    <span><i class="fas fa-calendar"></i> Due: ${escapePaymentHtml(dueDateText)}</span>
+                                </div>
+                            </div>
+                            <div class="payment-hero-stats">
+                                ${summaryStats.map(stat => `
+                                    <div class="payment-stat-card">
+                                        <span class="payment-stat-icon"><i class="fas ${stat.icon}"></i></span>
+                                        <span class="payment-stat-label">${stat.label}</span>
+                                        <strong class="payment-stat-value">${stat.value}</strong>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </section>
+
+                        <div class="payment-info-grid">
+                            <section class="payment-info-card">
+                                <div class="payment-card-header">
+                                    <h3>Overview</h3>
+                                    <span class="payment-card-chip">Financial</span>
+                                </div>
+                                ${overviewItems.map(([label, value]) => `
+                                    <div class="payment-info-item">
+                                        <span class="payment-info-label">${label}</span>
+                                        <span class="payment-info-value">${escapePaymentHtml(value)}</span>
+                                    </div>
+                                `).join('')}
+                            </section>
+
+                            <section class="payment-info-card">
+                                <div class="payment-card-header">
+                                    <h3>Customer & Order</h3>
+                                    <span class="payment-card-chip">Linked Data</span>
+                                </div>
+                                ${relatedItems.map(([label, value]) => `
+                                    <div class="payment-info-item">
+                                        <span class="payment-info-label">${label}</span>
+                                        <span class="payment-info-value">${escapePaymentHtml(value)}</span>
+                                    </div>
+                                `).join('')}
+                            </section>
+                        </div>
+
+                        ${payment.description ? `
+                            <section class="payment-rich-card payment-rich-card-wide">
+                                <div class="payment-card-header">
+                                    <h3>Description</h3>
+                                    <span class="payment-card-chip">Context</span>
+                                </div>
+                                <p class="payment-rich-text">${escapePaymentHtml(payment.description)}</p>
+                            </section>
+                        ` : ''}
+
+                        ${payment.notes ? `
+                            <section class="payment-rich-card payment-rich-card-wide payment-notes-section">
+                                <div class="payment-card-header">
+                                    <h3>Notes</h3>
+                                    <span class="payment-card-chip">Internal</span>
+                                </div>
+                                <p class="payment-rich-text">${escapePaymentHtml(payment.notes)}</p>
+                            </section>
+                        ` : ''}
+
+                        ${payment.order?.employee ? `
+                            <section class="payment-rich-card payment-employee-section">
+                                <div class="payment-card-header">
+                                    <div>
+                                        <h3>Employee Assignment</h3>
+                                        <span class="payment-card-subtext">Employee assigned to this order and payment details</span>
+                                    </div>
+                                    <span class="payment-card-chip">Employee</span>
+                                </div>
+
+                                <div class="payment-employee-info">
+                                    <div class="payment-employee-info-item">
+                                        <span class="payment-employee-info-label">Name</span>
+                                        <span class="payment-employee-info-value">${escapePaymentHtml(payment.order.employee.name || 'N/A')}</span>
+                                    </div>
+                                    <div class="payment-employee-info-item">
+                                        <span class="payment-employee-info-label">Email</span>
+                                        <span class="payment-employee-info-value">${escapePaymentHtml(payment.order.employee.email || 'N/A')}</span>
+                                    </div>
+                                    <div class="payment-employee-info-item">
+                                        <span class="payment-employee-info-label">Phone</span>
+                                        <span class="payment-employee-info-value">${escapePaymentHtml(payment.order.employee.phone || 'N/A')}</span>
+                                    </div>
+                                </div>
+
+                                <div class="payment-card-header" style="margin-top: 18px;">
+                                    <h3>Employee Payment</h3>
+                                    <span class="payment-employee-status-badge ${payment.employeePaymentStatus || 'pending'}">
+                                        <i class="fas ${payment.employeePaymentStatus === 'paid' ? 'fa-check-circle' : payment.employeePaymentStatus === 'cancelled' ? 'fa-ban' : 'fa-clock'}"></i>
+                                        ${formatPaymentLabel(payment.employeePaymentStatus || 'pending')}
+                                    </span>
+                                </div>
+
+                                <div class="payment-employee-payment-form">
+                                    <div class="payment-employee-form-group">
+                                        <label>Amount</label>
+                                        <input type="number" id="employeePaymentAmount" value="${payment.employeePaymentAmount || 0}" min="0" step="0.01">
+                                    </div>
+                                    <div class="payment-employee-form-group">
+                                        <label>Status</label>
+                                        <select id="employeePaymentStatus">
+                                            <option value="pending" ${payment.employeePaymentStatus === 'pending' || !payment.employeePaymentStatus ? 'selected' : ''}>Pending</option>
+                                            <option value="paid" ${payment.employeePaymentStatus === 'paid' ? 'selected' : ''}>Paid</option>
+                                            <option value="cancelled" ${payment.employeePaymentStatus === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div class="payment-employee-form-group">
+                                        <label>Payment Date</label>
+                                        <input type="date" id="employeePaymentDate" value="${payment.employeePaymentDate ? new Date(payment.employeePaymentDate).toISOString().split('T')[0] : ''}">
+                                    </div>
+                                    <div class="payment-employee-form-group">
+                                        <label>Payment Method</label>
+                                        <select id="employeePaymentMethod">
+                                            <option value="">Select Method</option>
+                                            <option value="cash" ${payment.employeePaymentMethod === 'cash' ? 'selected' : ''}>Cash</option>
+                                            <option value="bank-transfer" ${payment.employeePaymentMethod === 'bank-transfer' ? 'selected' : ''}>Bank Transfer</option>
+                                            <option value="check" ${payment.employeePaymentMethod === 'check' ? 'selected' : ''}>Check</option>
+                                            <option value="online" ${payment.employeePaymentMethod === 'online' ? 'selected' : ''}>Online</option>
+                                        </select>
+                                    </div>
+                                    <div class="payment-employee-form-group" style="grid-column: 1 / -1;">
+                                        <label>Notes</label>
+                                        <textarea id="employeePaymentNotes">${escapePaymentHtml(payment.employeePaymentNotes || '')}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="payment-milestone-actions">
+                                    <button class="btn btn-primary" type="button" onclick="saveEmployeePayment()">
+                                        <i class="fas fa-save"></i> Save Employee Payment
+                                    </button>
+                                </div>
+                            </section>
+                        ` : ''}
+
+                        ${payment.order?.vendor ? `
+                            <section class="payment-rich-card payment-vendor-section">
+                                <div class="payment-card-header">
+                                    <div>
+                                        <h3>Vendor Assignment</h3>
+                                        <span class="payment-card-subtext">Vendor assigned to this order and payment details</span>
+                                    </div>
+                                    <span class="payment-card-chip">Vendor</span>
+                                </div>
+
+                                <div class="payment-vendor-info">
+                                    <div class="payment-vendor-info-item">
+                                        <span class="payment-vendor-info-label">Name</span>
+                                        <span class="payment-vendor-info-value">${escapePaymentHtml(payment.order.vendor.name || 'N/A')}</span>
+                                    </div>
+                                    <div class="payment-vendor-info-item">
+                                        <span class="payment-vendor-info-label">Email</span>
+                                        <span class="payment-vendor-info-value">${escapePaymentHtml(payment.order.vendor.email || 'N/A')}</span>
+                                    </div>
+                                    <div class="payment-vendor-info-item">
+                                        <span class="payment-vendor-info-label">Phone</span>
+                                        <span class="payment-vendor-info-value">${escapePaymentHtml(payment.order.vendor.phone || 'N/A')}</span>
+                                    </div>
+                                </div>
+
+                                <div class="payment-card-header" style="margin-top: 18px;">
+                                    <h3>Vendor Payment</h3>
+                                    <span class="payment-vendor-status-badge ${payment.vendorPaymentStatus || 'pending'}">
+                                        <i class="fas ${payment.vendorPaymentStatus === 'paid' ? 'fa-check-circle' : payment.vendorPaymentStatus === 'cancelled' ? 'fa-ban' : 'fa-clock'}"></i>
+                                        ${formatPaymentLabel(payment.vendorPaymentStatus || 'pending')}
+                                    </span>
+                                </div>
+
+                                <div class="payment-vendor-payment-form">
+                                    <div class="payment-vendor-form-group">
+                                        <label>Amount</label>
+                                        <input type="number" id="vendorPaymentAmount" value="${payment.vendorPaymentAmount || 0}" min="0" step="0.01">
+                                    </div>
+                                    <div class="payment-vendor-form-group">
+                                        <label>Status</label>
+                                        <select id="vendorPaymentStatus">
+                                            <option value="pending" ${payment.vendorPaymentStatus === 'pending' || !payment.vendorPaymentStatus ? 'selected' : ''}>Pending</option>
+                                            <option value="paid" ${payment.vendorPaymentStatus === 'paid' ? 'selected' : ''}>Paid</option>
+                                            <option value="cancelled" ${payment.vendorPaymentStatus === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div class="payment-vendor-form-group">
+                                        <label>Payment Date</label>
+                                        <input type="date" id="vendorPaymentDate" value="${payment.vendorPaymentDate ? new Date(payment.vendorPaymentDate).toISOString().split('T')[0] : ''}">
+                                    </div>
+                                    <div class="payment-vendor-form-group">
+                                        <label>Payment Method</label>
+                                        <select id="vendorPaymentMethod">
+                                            <option value="">Select Method</option>
+                                            <option value="cash" ${payment.vendorPaymentMethod === 'cash' ? 'selected' : ''}>Cash</option>
+                                            <option value="bank-transfer" ${payment.vendorPaymentMethod === 'bank-transfer' ? 'selected' : ''}>Bank Transfer</option>
+                                            <option value="check" ${payment.vendorPaymentMethod === 'check' ? 'selected' : ''}>Check</option>
+                                            <option value="online" ${payment.vendorPaymentMethod === 'online' ? 'selected' : ''}>Online</option>
+                                        </select>
+                                    </div>
+                                    <div class="payment-vendor-form-group" style="grid-column: 1 / -1;">
+                                        <label>Notes</label>
+                                        <textarea id="vendorPaymentNotes">${escapePaymentHtml(payment.vendorPaymentNotes || '')}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="payment-milestone-actions">
+                                    <button class="btn btn-primary" type="button" onclick="saveVendorPayment()">
+                                        <i class="fas fa-save"></i> Save Vendor Payment
+                                    </button>
+                                </div>
+                            </section>
+                        ` : ''}
+
+                        <section class="payment-rich-card payment-milestone-section">
+                            <div class="payment-card-header">
+                                <div>
+                                    <h3>Payment Milestones</h3>
+                                    <span class="payment-card-subtext">Create milestones for partial client payments and update each one separately.</span>
+                                </div>
+                                <span class="payment-card-chip" id="paymentMilestoneCount">${milestoneSummary.milestones.length} milestone${milestoneSummary.milestones.length === 1 ? '' : 's'}</span>
+                            </div>
+
+                            <div class="payment-milestone-summary">
+                                <div class="payment-milestone-summary-card">
+                                    <span>Total Payment</span>
+                                    <strong>${escapePaymentHtml(formatPaymentCurrency(payment.amount))}</strong>
+                                </div>
+                                <div class="payment-milestone-summary-card">
+                                    <span>Received</span>
+                                    <strong id="paymentReceivedAmount">${escapePaymentHtml(formatPaymentCurrency(milestoneSummary.receivedAmount))}</strong>
+                                </div>
+                                <div class="payment-milestone-summary-card">
+                                    <span>Remaining</span>
+                                    <strong id="paymentRemainingAmount">${escapePaymentHtml(formatPaymentCurrency(milestoneSummary.remainingAmount))}</strong>
+                                </div>
+                            </div>
+
+                            <div class="payment-milestone-progress">
+                                <div class="payment-milestone-progress-head">
+                                    <span>Collection Progress</span>
+                                    <strong id="paymentMilestoneProgress">${Math.round(milestoneSummary.progress)}% Collected</strong>
+                                </div>
+                                <div class="payment-milestone-progress-track">
+                                    <div class="payment-milestone-progress-bar" id="paymentMilestoneProgressBar" style="width: ${milestoneSummary.progress}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="payment-milestone-actions">
+                                <button class="btn btn-secondary" type="button" onclick="addPaymentMilestone()">
+                                    <i class="fas fa-plus"></i> Add Milestone
+                                </button>
+                                <button class="btn btn-primary" type="button" id="savePaymentMilestonesBtn" onclick="savePaymentMilestones()">
+                                    <i class="fas fa-save"></i> Save Milestones
+                                </button>
+                            </div>
+
+                            <div id="paymentMilestoneList"></div>
+                        </section>
+                    </div>
+
+                    <div class="payment-detail-footer">
+                        <button class="btn btn-secondary" type="button" onclick="closePaymentDetail()">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.onclick = (event) => {
+            if (event.target === modal) {
+                closePaymentDetail();
+            }
+        };
+
+        document.body.classList.add('payment-detail-open');
+        document.removeEventListener('keydown', closePaymentDetailOnEscape);
+        document.addEventListener('keydown', closePaymentDetailOnEscape);
+        modal.classList.add('show');
+        rerenderPaymentMilestones();
+    } catch (error) {
+        console.error('Failed to load payment details:', error);
+        showToast('Failed to load payment details: ' + error.message, 'error');
+    }
+}
+
+function closePaymentDetail() {
+    const modal = document.getElementById('paymentDetailModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    currentPaymentDetailData = null;
+    document.body.classList.remove('payment-detail-open');
+    document.removeEventListener('keydown', closePaymentDetailOnEscape);
+}
+
+window.showPaymentDetail = showPaymentDetail;
+window.closePaymentDetail = closePaymentDetail;
+window.addPaymentMilestone = addPaymentMilestone;
+window.removePaymentMilestone = removePaymentMilestone;
+window.savePaymentMilestones = savePaymentMilestones;
+
+async function saveEmployeePayment() {
+    try {
+        const employeePaymentData = {
+            employeePaymentAmount: parseFloat(document.getElementById('employeePaymentAmount').value) || 0,
+            employeePaymentStatus: document.getElementById('employeePaymentStatus').value,
+            employeePaymentDate: document.getElementById('employeePaymentDate').value || null,
+            employeePaymentMethod: document.getElementById('employeePaymentMethod').value || null,
+            employeePaymentNotes: document.getElementById('employeePaymentNotes').value || ''
+        };
+
+        console.log('Saving employee payment:', employeePaymentData);
+        console.log('Payment ID:', currentPaymentDetailData._id);
+
+        // Show loading state
+        const saveBtn = document.querySelector('.payment-employee-section .btn-primary');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        }
+
+        const result = await window.APIService.updatePayment(currentPaymentDetailData._id, employeePaymentData);
+        console.log('Save successful:', result);
+
+        showToast('Employee payment saved successfully', 'success');
+        
+        // Refresh the modal with updated data
+        await showPaymentDetail(currentPaymentDetailData._id);
+        await refreshPayments();
+    } catch (error) {
+        console.error('Error saving employee payment:', error);
+        showToast('Error: ' + error.message, 'error');
+        
+        // Re-enable button on error
+        const saveBtn = document.querySelector('.payment-employee-section .btn-primary');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Employee Payment';
+        }
+    }
+}
+
+window.saveEmployeePayment = saveEmployeePayment;
+
+async function saveVendorPayment() {
+    try {
+        const vendorPaymentData = {
+            vendorPaymentAmount: parseFloat(document.getElementById('vendorPaymentAmount').value) || 0,
+            vendorPaymentStatus: document.getElementById('vendorPaymentStatus').value,
+            vendorPaymentDate: document.getElementById('vendorPaymentDate').value || null,
+            vendorPaymentMethod: document.getElementById('vendorPaymentMethod').value || null,
+            vendorPaymentNotes: document.getElementById('vendorPaymentNotes').value || ''
+        };
+
+        console.log('Saving vendor payment:', vendorPaymentData);
+        console.log('Payment ID:', currentPaymentDetailData._id);
+
+        // Show loading state
+        const saveBtn = document.querySelector('.payment-vendor-section .btn-primary');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        }
+
+        const result = await window.APIService.updatePayment(currentPaymentDetailData._id, vendorPaymentData);
+        console.log('Save successful:', result);
+
+        showToast('Vendor payment saved successfully', 'success');
+        
+        // Refresh the modal with updated data
+        await showPaymentDetail(currentPaymentDetailData._id);
+        await refreshPayments();
+    } catch (error) {
+        console.error('Error saving vendor payment:', error);
+        showToast('Error: ' + error.message, 'error');
+        
+        // Re-enable button on error
+        const saveBtn = document.querySelector('.payment-vendor-section .btn-primary');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Vendor Payment';
+        }
+    }
+}
+
+window.saveVendorPayment = saveVendorPayment;
 
 // Employee Management Functions
 let currentEmployeeId = null;
@@ -5594,5 +6378,7 @@ function toggleRecurringFields() {
 }
 
 window.toggleRecurringFields = toggleRecurringFields;
+
+
 
 

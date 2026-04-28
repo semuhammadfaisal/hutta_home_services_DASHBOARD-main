@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Details - Hutta Home Services</title>
+    <link rel="stylesheet" href="../assets/css/payment-detail.css">
+</head>
+<body>
+
+<!-- Payment Detail Modal -->
+<div class="payment-detail-modal show">
+    <div class="payment-detail-content">
+        
+        <!-- Header with Status -->
+        <div class="payment-detail-header">
+            <div class="header-left">
+                <div class="payment-icon">💳</div>
+                <div>
+                    <h2>Payment #PAY-2024-001</h2>
+                    <span class="header-subtitle">Acme Corporation • Jan 15, 2024</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <span class="status-badge status-paid">✓ Paid</span>
+                <button class="payment-detail-close">✕</button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="payment-detail-body">
+            
+            <!-- Hero Stats Section -->
+            <div class="hero-stats">
+                <div class="hero-main">
+                    <div class="amount-display">
+                        <span class="amount-label">Total Amount</span>
+                        <h1 class="amount-value">$12,450.00</h1>
+                    </div>
+                    <div class="payment-breakdown">
+                        <div class="breakdown-item">
+                            <span class="breakdown-dot paid"></span>
+                            <span class="breakdown-label">Paid</span>
+                            <span class="breakdown-value">$9,711.00</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="breakdown-dot pending"></span>
+                            <span class="breakdown-label">Remaining</span>
+                            <span class="breakdown-value">$2,739.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-progress">
+                    <div class="circular-progress" data-progress="78">
+                        <svg class="progress-ring" width="140" height="140">
+                            <circle class="progress-ring-bg" cx="70" cy="70" r="60"></circle>
+                            <circle class="progress-ring-fill" cx="70" cy="70" r="60"></circle>
+                        </svg>
+                        <div class="progress-content">
+                            <span class="progress-percent">78%</span>
+                            <span class="progress-text">Complete</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Info Grid -->
+            <div class="quick-info-grid">
+                <div class="info-item">
+                    <span class="info-icon">📄</span>
+                    <div class="info-content">
+                        <span class="info-label">Invoice Number</span>
+                        <input type="text" class="info-value editable" value="INV-000123" />
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">💰</span>
+                    <div class="info-content">
+                        <span class="info-label">Payment Method</span>
+                        <span class="info-value">Credit Card (****4242)</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">📅</span>
+                    <div class="info-content">
+                        <span class="info-label">Due Date</span>
+                        <span class="info-value">Feb 1, 2024</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">👤</span>
+                    <div class="info-content">
+                        <span class="info-label">Customer</span>
+                        <span class="info-value">Acme Corporation</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="activity-section">
+                <h3 class="section-title">Payment Activity</h3>
+                <div class="activity-chart">
+                    <div class="chart-header">
+                        <span class="chart-label">Last 7 Days</span>
+                        <span class="chart-total">$9,711 received</span>
+                    </div>
+                    <div class="chart-bars">
+                        <div class="chart-bar" data-value="$1,200" style="--height: 60%">
+                            <div class="bar-tooltip">Mon<br>$1,200</div>
+                        </div>
+                        <div class="chart-bar" data-value="$800" style="--height: 40%">
+                            <div class="bar-tooltip">Tue<br>$800</div>
+                        </div>
+                        <div class="chart-bar" data-value="$2,100" style="--height: 85%">
+                            <div class="bar-tooltip">Wed<br>$2,100</div>
+                        </div>
+                        <div class="chart-bar" data-value="$1,500" style="--height: 65%">
+                            <div class="bar-tooltip">Thu<br>$1,500</div>
+                        </div>
+                        <div class="chart-bar" data-value="$2,400" style="--height: 95%">
+                            <div class="bar-tooltip">Fri<br>$2,400</div>
+                        </div>
+                        <div class="chart-bar" data-value="$900" style="--height: 45%">
+                            <div class="bar-tooltip">Sat<br>$900</div>
+                        </div>
+                        <div class="chart-bar" data-value="$811" style="--height: 35%">
+                            <div class="bar-tooltip">Sun<br>$811</div>
+                        </div>
+                    </div>
+                    <div class="chart-labels">
+                        <span>Mon</span>
+                        <span>Tue</span>
+                        <span>Wed</span>
+                        <span>Thu</span>
+                        <span>Fri</span>
+                        <span>Sat</span>
+                        <span>Sun</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            <div class="transaction-section">
+                <h3 class="section-title">Transaction History</h3>
+                <div class="transaction-list">
+                    <div class="transaction-item">
+                        <div class="transaction-icon success">↓</div>
+                        <div class="transaction-details">
+                            <span class="transaction-title">Payment Received</span>
+                            <span class="transaction-date">Jan 15, 2024 at 2:30 PM</span>
+                        </div>
+                        <span class="transaction-amount success">+$5,000.00</span>
+                    </div>
+                    <div class="transaction-item">
+                        <div class="transaction-icon success">↓</div>
+                        <div class="transaction-details">
+                            <span class="transaction-title">Initial Payment</span>
+                            <span class="transaction-date">Jan 10, 2024 at 10:15 AM</span>
+                        </div>
+                        <span class="transaction-amount success">+$4,711.00</span>
+                    </div>
+                    <div class="transaction-item">
+                        <div class="transaction-icon pending">⏱</div>
+                        <div class="transaction-details">
+                            <span class="transaction-title">Pending Payment</span>
+                            <span class="transaction-date">Due Feb 1, 2024</span>
+                        </div>
+                        <span class="transaction-amount pending">$2,739.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="notes-section">
+                <div class="notes-header">
+                    <span class="notes-icon">📝</span>
+                    <h4>Payment Notes</h4>
+                </div>
+                <p>Payment received via wire transfer. Customer requested itemized invoice for accounting purposes. Follow-up scheduled for remaining balance on Feb 1st.</p>
+            </div>
+
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="payment-detail-footer">
+            <div class="footer-actions">
+                <button class="btn btn-outline">📥 Download Invoice</button>
+                <button class="btn btn-outline">📧 Send Receipt</button>
+                <button class="btn btn-outline">🖨️ Print</button>
+            </div>
+            <button class="btn btn-primary">✏️ Edit Payment</button>
+        </div>
+
+    </div>
+</div>
+
+<script src="../assets/js/payment-detail.js"></script>
+</body>
+</html>

@@ -39,6 +39,8 @@ hutta_home_ervices/
 - Vendor management
 - Employee management
 - **Employee order assignment with performance tracking**
+- **Employee payment tracking** (track payments to employees for completed work)
+- **Vendor payment tracking** (track payments to vendors for services/materials)
 - **User Management System** (admin can assign roles to new signups)
 - Project tracking
 - Payment processing
@@ -100,9 +102,19 @@ The order management system now supports:
    - Active and completed order counts
    - All stats calculated dynamically from database
 
+3. **Employee payment tracking**
+   - Record payments made to employees for their work
+   - Track payment status (Pending/Paid/Cancelled)
+   - Record payment date, method, and amount
+   - Add notes for each employee payment
+   - View employee payment details in Payment Details modal
+
 **Documentation:**
 - 📘 Full Guide: [EMPLOYEE_ORDER_ASSIGNMENT.md](EMPLOYEE_ORDER_ASSIGNMENT.md)
 - 🚀 Quick Reference: [EMPLOYEE_ASSIGNMENT_QUICK_REF.md](EMPLOYEE_ASSIGNMENT_QUICK_REF.md)
+- 💰 Employee Payments: [EMPLOYEE_PAYMENT_FEATURE.md](EMPLOYEE_PAYMENT_FEATURE.md)
+- 📋 Payment Quick Ref: [EMPLOYEE_PAYMENT_QUICK_REF.md](EMPLOYEE_PAYMENT_QUICK_REF.md)
+- 🎨 Payment Visual Guide: [EMPLOYEE_PAYMENT_VISUAL_GUIDE.md](EMPLOYEE_PAYMENT_VISUAL_GUIDE.md)
 
 ### User Management System (Latest)
 

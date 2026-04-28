@@ -1,0 +1,349 @@
+modal.innerHTML = `
+        <div class="invoice-edit-modal">
+            <div class="invoice-modal-header">
+                <h3><i class="fas fa-file-invoice"></i> Edit Invoice Number</h3>
+                <button class="invoice-modal-close" onclick="this.closest('.invoice-edit-modal-overlay').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="invoice-modal-body">
+                <div class="invoice-input-group">
+                    <label for="invoiceNumberInput">Invoice Number</label>
+                    <div class="invoice-input-wrapper">
+                        <span class="invoice-prefix">INV-</span>
+                        <input type="text" id="invoiceNumberInput" class="invoice-number-input" value="${currentNumber}" placeholder="000000" autofocus>
+                    </div>
+                    <small class="invoice-help-text">Enter only the number. "INV-" will be added automatically.</small>
+                </div>
+            </div>
+            <div class="invoice-modal-footer">
+                <button class="btn-invoice-cancel" onclick="this.closest('.invoice-edit-modal-overlay').remove()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-invoice-save" onclick="saveInvoiceNumber('${paymentId}')">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Focus input and select text
+    setTimeout(() => {
+        const input = document.getElementById('invoiceNumberInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+    
+    // Handle Enter key
+    modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveInvoiceNumber(paymentId);
+        } else if (e.key === 'Escape') {
+            modal.remove();
+        }
+    });
+    
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+async function saveInvoiceNumber(paymentId) {
+    const input = document.getElementById('invoiceNumberInput');
+    const modal = document.querySelector('.invoice-edit-modal-overlay');
+    const saveBtn = document.querySelector('.btn-invoice-save');
+    
+    if (!input) return;
+    
+    // Get the trimmed number
+    const trimmedNumber = input.value.trim();
+    
+    // Disable button and show loading
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
+    
+    try {
+        // Get the payment data
+        const payment = await window.APIService.getPayment(paymentId);
+        
+        console.log('Current payment data:', payment);
+        console.log('New invoice number:', trimmedNumber ? 'INV-' + trimmedNumber : '(empty)');
+        
+        // Update with new invoice number (add INV- prefix)
+        const updateData = {
+            customer: payment.customer._id || payment.customer,
+            amount: payment.amount,
+            paymentMethod: payment.paymentMethod,
+            status: payment.status,
+            order: payment.order?._id || payment.order || null,
+            paymentDate: payment.paymentDate,
+            dueDate: payment.dueDate,
+            invoiceNumber: trimmedNumber ? 'INV-' + trimmedNumber : '',
+            transactionId: payment.transactionId || '',
+            receiptNumber: payment.receiptNumber || '',
+            description: payment.description || '',
+            notes: payment.notes || ''
+        };
+        
+        console.log('Sending update data:', updateData);
+        
+        // Save to backend
+        const result = await window.APIService.updatePayment(paymentId, updateData);
+        
+        console.log('Update result:', result);
+        
+        // Close modal
+        if (modal) modal.remove();
+        
+        // Show success message
+        showToast('Invoice number updated successfully!', 'success');
+        
+        // Refresh the payments table
+        await refreshPayments();
+    } catch (error) {
+        console.error('Invoice number update error:', error);
+        showToast('Failed to update invoice number: ' + error.message, 'error');
+        
+        // Re-enable button
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+        }
+    }
+}
+
+window.editInvoiceNumber = editInvoiceNumber;
+window.saveInvoiceNumber = saveInvoiceNumber;
+
+// Payment Detail View
+function formatPaymentCurrency(value) {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 2
+    }).format(amount);
+}
+
+function formatPaymentDate(value, fallback = '-') {
+    if (!value) return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    }).format(date);
+}
+
+function formatPaymentDateTime(value, fallback = '-') {
+    if (!value) return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    }).format(date);
+}
+
+function formatPaymentLabel(value) {
+    if (!value) return 'Not Set';
+    return value
+        .split('-')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+}
+
+function escapePaymentHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function closePaymentDetailOnEscape(event) {
+    if (event.key === 'Escape') {
+        closePaymentDetail();
+    }
+}
+
+let currentPaymentDetailData = null;
+let paymentMilestoneKeyCounter = 0;
+
+function createPaymentMilestoneClientKey() {
+    paymentMilestoneKeyCounter += 1;
+    return `milestone-${Date.now()}-${paymentMilestoneKeyCounter}`;
+}
+
+function ensurePaymentMilestoneClientKeys(payment) {
+    if (!payment) return;
+    payment.milestones = Array.isArray(payment.milestones) ? payment.milestones : [];
+    payment.milestones = payment.milestones.map((milestone) => ({
+        ...milestone,
+        clientKey: milestone.clientKey || milestone._id || createPaymentMilestoneClientKey()
+    }));
+}
+
+function calculatePaymentMilestoneSummary(payment) {
+    const milestones = Array.isArray(payment?.milestones) ? payment.milestones : [];
+    const totalAmount = Number(payment?.amount || 0);
+    const receivedAmount = milestones
+        .filter(milestone => milestone.status === 'received' || milestone.status === 'completed')
+        .reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0);
+    const remainingAmount = Math.max(totalAmount - receivedAmount, 0);
+    const progress = totalAmount > 0 ? Math.min((receivedAmount / totalAmount) * 100, 100) : 0;
+
+    return {
+        milestones,
+        totalAmount,
+        receivedAmount,
+        remainingAmount,
+        progress
+    };
+}
+
+function renderPaymentMilestoneRows(payment) {
+    const container = document.getElementById('paymentMilestoneList');
+    if (!container) return;
+
+    ensurePaymentMilestoneClientKeys(payment);
+    const milestones = Array.isArray(payment?.milestones) ? payment.milestones : [];
+    if (!milestones.length) {
+        container.innerHTML = `
+            <div class="payment-milestone-empty">
+                <i class="fas fa-flag-checkered"></i>
+                <div>
+                    <strong>No milestones yet</strong>
+                    <p>Split this payment into milestone amounts for partial collections.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = milestones.map((milestone, index) => `
+        <div class="payment-milestone-row status-${escapePaymentHtml(milestone.status || 'pending')}" data-client-key="${escapePaymentHtml(milestone.clientKey)}">
+            <div class="payment-milestone-row-head">
+                <div class="payment-milestone-row-title">
+                    <span class="payment-milestone-step">Milestone ${index + 1}</span>
+                    <span class="payment-milestone-status-chip status-${escapePaymentHtml(milestone.status || 'pending')}">${escapePaymentHtml(formatPaymentLabel(milestone.status || 'pending'))}</span>
+                </div>
+                <button type="button" class="payment-milestone-remove" onclick="removePaymentMilestone('${escapePaymentHtml(milestone.clientKey)}')" title="Remove milestone">
+                    <i class="fas fa-trash"></i>
+                    <span>Delete</span>
+                </button>
+            </div>
+            <div class="payment-milestone-row-top">
+                <div class="payment-milestone-title-wrap">
+                    <label class="payment-milestone-label">Milestone Title</label>
+                    <input type="text" class="payment-milestone-input" data-field="title" value="${escapePaymentHtml(milestone.title || '')}" placeholder="Deposit, Phase 1, Final Payment">
+                </div>
+                <div>
+                    <label class="payment-milestone-label">Amount</label>
+                    <input type="number" class="payment-milestone-input" data-field="amount" min="0" step="0.01" value="${Number(milestone.amount || 0)}" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="payment-milestone-label">Status</label>
+                    <select class="payment-milestone-select" data-field="status">
+                        <option value="pending" ${milestone.status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="received" ${milestone.status === 'received' ? 'selected' : ''}>Received</option>
+                        <option value="completed" ${milestone.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        <option value="failed" ${milestone.status === 'failed' ? 'selected' : ''}>Failed</option>
+                        <option value="cancelled" ${milestone.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                    </select>
+                </div>
+            </div>
+            <div class="payment-milestone-row-bottom">
+                <div>
+                    <label class="payment-milestone-label">Due Date</label>
+                    <input type="date" class="payment-milestone-input" data-field="dueDate" value="${milestone.dueDate ? String(milestone.dueDate).split('T')[0] : ''}">
+                </div>
+                <div>
+                    <label class="payment-milestone-label">Received Date</label>
+                    <input type="date" class="payment-milestone-input" data-field="receivedDate" value="${milestone.receivedDate ? String(milestone.receivedDate).split('T')[0] : ''}">
+                </div>
+                <div class="payment-milestone-notes-wrap">
+                    <label class="payment-milestone-label">Notes</label>
+                    <textarea class="payment-milestone-textarea" data-field="notes" rows="2" placeholder="Optional note for this milestone">${escapePaymentHtml(milestone.notes || '')}</textarea>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function syncPaymentMilestoneDraftFromDom() {
+    if (!currentPaymentDetailData) return;
+
+    const rows = document.querySelectorAll('#paymentMilestoneList .payment-milestone-row');
+    const milestoneMap = new Map((currentPaymentDetailData.milestones || []).map((milestone) => [milestone.clientKey, milestone]));
+    currentPaymentDetailData.milestones = Array.from(rows).map((row, index) => {
+        const clientKey = row.dataset.clientKey;
+        const existingMilestone = milestoneMap.get(clientKey) || {};
+        const getValue = (field) => row.querySelector(`[data-field="${field}"]`)?.value || '';
+        const status = getValue('status') || 'pending';
+        const receivedDate = getValue('receivedDate');
+
+        return {
+            _id: existingMilestone._id,
+            clientKey,
+            title: getValue('title').trim() || `Milestone ${index + 1}`,
+            amount: Number(getValue('amount') || 0),
+            status,
+            dueDate: getValue('dueDate') || null,
+            receivedDate: receivedDate || ((status === 'received' || status === 'completed') ? new Date().toISOString().split('T')[0] : null),
+            notes: getValue('notes').trim()
+        };
+    });
+}
+
+function refreshPaymentMilestoneSummary() {
+    if (!currentPaymentDetailData) return;
+
+    syncPaymentMilestoneDraftFromDom();
+    const summary = calculatePaymentMilestoneSummary(currentPaymentDetailData);
+    const receivedEl = document.getElementById('paymentReceivedAmount');
+    const remainingEl = document.getElementById('paymentRemainingAmount');
+    const progressEl = document.getElementById('paymentMilestoneProgress');
+    const progressBarEl = document.getElementById('paymentMilestoneProgressBar');
+    const countEl = document.getElementById('paymentMilestoneCount');
+
+    if (receivedEl) receivedEl.textContent = formatPaymentCurrency(summary.receivedAmount);
+    if (remainingEl) remainingEl.textContent = formatPaymentCurrency(summary.remainingAmount);
+    if (progressEl) progressEl.textContent = `${Math.round(summary.progress)}% Collected`;
+    if (progressBarEl) progressBarEl.style.width = `${summary.progress}%`;
+    if (countEl) countEl.textContent = `${summary.milestones.length} milestone${summary.milestones.length === 1 ? '' : 's'}`;
+}
+
+function bindPaymentMilestoneInputs() {
+    document.querySelectorAll('#paymentMilestoneList [data-field]').forEach((field) => {
+        field.addEventListener('input', refreshPaymentMilestoneSummary);
+        field.addEventListener('change', refreshPaymentMilestoneSummary);
+    });
+}
+
+function rerenderPaymentMilestones() {
+    if (!currentPaymentDetailData) return;
+    ensurePaymentMilestoneClientKeys(currentPaymentDetailData);
+    renderPaymentMilestoneRows(currentPaymentDetailData);
+    bindPaymentMilestoneInputs();
+    refreshPaymentMilestoneSummary();
+}
+
+function addPaymentMilestone() {
+    if (!curren
