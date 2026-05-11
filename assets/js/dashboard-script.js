@@ -25,11 +25,19 @@ class DashboardManager {
         const mainContent = document.getElementById('mainContent');
 
         if (sidebarToggle && sidebar && mainContent) {
+            const syncSidebarToggleAria = () => {
+                const narrow = window.matchMedia('(max-width: 768px)').matches;
+                const open = narrow ? sidebar.classList.contains('show') : !sidebar.classList.contains('collapsed');
+                sidebarToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            };
             sidebarToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('collapsed');
                 sidebar.classList.toggle('show');
                 mainContent.classList.toggle('expanded');
+                syncSidebarToggleAria();
             });
+            window.matchMedia('(max-width: 768px)').addEventListener('change', syncSidebarToggleAria);
+            syncSidebarToggleAria();
         }
 
         // Menu navigation
@@ -75,6 +83,30 @@ class DashboardManager {
         // Handle mobile responsiveness
         this.handleResize();
         window.addEventListener('resize', () => this.handleResize());
+
+        // Recent activity: open order detail when a row with data-order-id is activated
+        const recentActivityEl = document.getElementById('recentActivity');
+        if (recentActivityEl && !recentActivityEl.dataset.orderNavBound) {
+            recentActivityEl.dataset.orderNavBound = '1';
+            recentActivityEl.addEventListener('click', (e) => {
+                const row = e.target.closest('.activity-item[data-order-id]');
+                if (!row) return;
+                const id = row.getAttribute('data-order-id');
+                if (id && typeof window.viewOrder === 'function') {
+                    window.viewOrder(id, true);
+                }
+            });
+            recentActivityEl.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                const row = e.target.closest('.activity-item[data-order-id]');
+                if (!row || !recentActivityEl.contains(row)) return;
+                e.preventDefault();
+                const id = row.getAttribute('data-order-id');
+                if (id && typeof window.viewOrder === 'function') {
+                    window.viewOrder(id, true);
+                }
+            });
+        }
     }
 
     handleResize() {
@@ -208,8 +240,8 @@ class DashboardManager {
 
 
     showLoadingState() {
-        const kpis = ['totalOrders', 'monthlyRevenue', 'totalVendors', 'totalEmployees'];
-        kpis.forEach(id => {
+        const kpiIds = ['totalOrders', 'totalRevenue', 'paymentsCollected', 'totalVendors', 'totalCustomers'];
+        kpiIds.forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = '<div class="skeleton-loader"></div>';
         });
@@ -394,29 +426,48 @@ class DashboardManager {
         if (!activityList) return;
         
         if (!orders || orders.length === 0) {
-            activityList.innerHTML = '<div class="activity-item"><p>No recent activity</p></div>';
+            activityList.innerHTML = `
+                <div class="activity-empty" role="status">
+                    <i class="fas fa-inbox" aria-hidden="true"></i>
+                    <p>No recent activity</p>
+                    <span>New orders will appear here after they are created.</span>
+                </div>`;
             return;
         }
         
         const recentOrders = orders
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
             .slice(0, 5);
-        
-        activityList.innerHTML = recentOrders.map(order => {
+
+        activityList.innerHTML = recentOrders.map((order) => {
             const timeAgo = this.getTimeAgo(order.createdAt);
-            const customerName = order.customer?.name || order.customer;
-            
-            return `
+            const rawName = order.customer?.name || order.customer || 'Customer';
+            const customerName = escapePaymentHtml(rawName);
+            const timeSafe = escapePaymentHtml(timeAgo);
+            const orderId = order._id || order.id;
+            if (!orderId) {
+                return `
                 <div class="activity-item">
-                    <div class="activity-icon orders">
+                    <div class="activity-icon orders" aria-hidden="true">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div class="activity-content">
                         <p>New order from ${customerName}</p>
-                        <span>${timeAgo}</span>
+                        <span>${timeSafe}</span>
                     </div>
-                </div>
-            `;
+                </div>`;
+            }
+            const idAttr = escapePaymentHtml(String(orderId));
+            return `
+                <div class="activity-item activity-item--order" role="button" tabindex="0" data-order-id="${idAttr}" title="View order details">
+                    <div class="activity-icon orders" aria-hidden="true">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p>New order from ${customerName}</p>
+                        <span>${timeSafe}</span>
+                    </div>
+                </div>`;
         }).join('');
     }
 
@@ -441,9 +492,10 @@ class DashboardManager {
         
         if (!orders || orders.length === 0 || !employees || employees.length === 0) {
             leaderboardContainer.innerHTML = `
-                <div class="leaderboard-empty">
-                    <i class="fas fa-users"></i>
-                    <p>No employee data available</p>
+                <div class="leaderboard-empty" role="status">
+                    <i class="fas fa-users" aria-hidden="true"></i>
+                    <p>No employee data yet</p>
+                    <span class="leaderboard-empty-hint">Add employees and assign them to orders to see rankings here.</span>
                 </div>
             `;
             return;
@@ -475,28 +527,36 @@ class DashboardManager {
         
         if (topEmployees.length === 0) {
             leaderboardContainer.innerHTML = `
-                <div class="leaderboard-empty">
-                    <i class="fas fa-chart-line"></i>
-                    <p>No revenue data yet</p>
+                <div class="leaderboard-empty" role="status">
+                    <i class="fas fa-chart-line" aria-hidden="true"></i>
+                    <p>No attributed revenue yet</p>
+                    <span class="leaderboard-empty-hint">Rankings appear when orders with amounts are linked to employees.</span>
                 </div>
             `;
             return;
         }
-        
+
         // Render leaderboard
         leaderboardContainer.innerHTML = topEmployees.map((employee, index) => {
             const rank = index + 1;
             const rankClass = rank <= 3 ? `rank-${rank}` : '';
-            
+            const nameSafe = escapePaymentHtml(employee.name || 'Employee');
+            const rev = typeof employee.revenue === 'number' ? employee.revenue : 0;
+            const revSafe = escapePaymentHtml(`$${rev.toLocaleString()}`);
+            const ordersLabel = `${employee.orderCount} order${employee.orderCount !== 1 ? 's' : ''}`;
+            const ordersSafe = escapePaymentHtml(ordersLabel);
+
             return `
                 <div class="leaderboard-item ${rankClass}">
-                    <div class="rank">${rank}</div>
+                    <div class="rank" aria-hidden="true">${rank}</div>
                     <div class="employee-info">
-                        <div class="employee-name">${employee.name}</div>
-                        <div class="employee-stats">
-                            <span class="revenue-amount">$${employee.revenue.toLocaleString()}</span>
-                            <span class="order-count">${employee.orderCount} order${employee.orderCount !== 1 ? 's' : ''}</span>
+                        <div class="employee-name">${nameSafe}</div>
+                        <div class="employee-meta">
+                            <span class="order-count">${ordersSafe}</span>
                         </div>
+                    </div>
+                    <div class="leaderboard-revenue">
+                        <span class="revenue-amount">${revSafe}</span>
                     </div>
                 </div>
             `;
@@ -539,7 +599,7 @@ class DashboardManager {
         const endDateInput = document.getElementById('financialEndDate');
         
         let filteredOrders = orders;
-        let periodText = 'All Time';
+        let periodText = 'All time';
         
         if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
             const startDate = new Date(startDateInput.value);
@@ -1135,16 +1195,30 @@ function initializeLogout() {
     
     if (!adminProfile || !profileDropdown) return;
     
+    const syncProfileAria = () => {
+        const open = adminProfile.classList.contains('active');
+        adminProfile.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
     adminProfile.addEventListener('click', function(e) {
         e.stopPropagation();
         adminProfile.classList.toggle('active');
         profileDropdown.classList.toggle('show');
+        syncProfileAria();
+    });
+
+    adminProfile.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            adminProfile.click();
+        }
     });
     
     // Close dropdown when clicking outside
     document.addEventListener('click', function() {
         adminProfile.classList.remove('active');
         profileDropdown.classList.remove('show');
+        syncProfileAria();
     });
 }
 
@@ -1943,11 +2017,11 @@ async function deleteOrder(orderId) {
     }
 }
 
-function viewOrder(orderId) {
-    showOrderDetail(orderId);
+function viewOrder(orderId, fromRecentActivity = false) {
+    showOrderDetail(orderId, false, fromRecentActivity);
 }
 
-async function showOrderDetail(orderId, fromPipeline = false) {
+async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity = false) {
     try {
         const order = await window.APIService.getOrder(orderId);
         
@@ -1978,14 +2052,24 @@ async function showOrderDetail(orderId, fromPipeline = false) {
         }
         
         // Store the source for back navigation
-        window.orderDetailSource = fromPipeline ? 'pipeline' : 'orders';
-        
+        window.orderDetailSource = fromPipeline ? 'pipeline' : fromRecentActivity ? 'dashboard' : 'orders';
+
         // Update back button text and function
         const backButton = document.querySelector('#order-detail .btn-secondary');
         if (backButton) {
             if (fromPipeline) {
                 backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Pipeline';
                 backButton.onclick = () => showSection('pipeline');
+            } else if (fromRecentActivity) {
+                backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Dashboard';
+                backButton.onclick = () => {
+                    showSection('dashboard');
+                    document.querySelectorAll('.menu-item').forEach((mi) => mi.classList.remove('active'));
+                    const dashLink = document.querySelector('.menu-item a[data-section="dashboard"]');
+                    if (dashLink && dashLink.parentElement) {
+                        dashLink.parentElement.classList.add('active');
+                    }
+                };
             } else {
                 backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Orders';
                 backButton.onclick = backToOrders;

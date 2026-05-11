@@ -172,9 +172,7 @@ p, span, label,
 
 /* Background colors */
 body,
-.main-content,
-.top-nav,
-.sidebar {
+.main-content {
     background-color: #FFFFFF !important;
 }
 

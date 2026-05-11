@@ -20,6 +20,8 @@
     <link rel="stylesheet" href="../assets/css/confirm-modal.css">
     <link rel="stylesheet" href="../assets/css/color-overrides.css">
     <link rel="stylesheet" href="../assets/css/dashboard-enhanced.css">
+    <link rel="stylesheet" href="../assets/css/dashboard-overview.css">
+    <link rel="stylesheet" href="../assets/css/navbar-dashboard.css">
     <link rel="stylesheet" href="../assets/css/custom-fields.css">
     <link rel="stylesheet" href="../assets/css/leaderboard.css">
     <link rel="stylesheet" href="../assets/css/vendor-categories.css">
@@ -29,10 +31,10 @@
 </head>
 <body>
     <!-- Top Navigation -->
-    <nav class="top-nav">
+    <nav class="top-nav" aria-label="Primary">
         <div class="nav-left">
-            <button class="sidebar-toggle" id="sidebarToggle">
-                <i class="fas fa-bars"></i>
+            <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-controls="sidebar" aria-expanded="true" aria-label="Toggle menu">
+                <i class="fas fa-bars" aria-hidden="true"></i>
             </button>
             <div class="logo">
                 <img src="../assets/images/logo.png" alt="Hutta Home Services" class="navbar-logo" decoding="async" fetchpriority="high">
@@ -40,23 +42,24 @@
         </div>
         <div class="nav-center">
             <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Search orders, customers, vendors...">
+                <label class="visually-hidden" for="globalDashboardSearch">Search</label>
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input id="globalDashboardSearch" type="search" name="q" autocomplete="off" placeholder="Search orders, customers, vendors…" enterkeyhint="search" aria-label="Search orders, customers, and vendors">
             </div>
         </div>
         <div class="nav-right">
-            <div class="notification-icon">
-                <i class="fas fa-bell"></i>
-                <span class="notification-badge">3</span>
-            </div>
-            <div class="admin-profile" id="adminProfile">
+            <button type="button" class="notification-icon" aria-label="Notifications">
+                <i class="fas fa-bell" aria-hidden="true"></i>
+                <span class="notification-badge" aria-hidden="true">3</span>
+            </button>
+            <div class="admin-profile" id="adminProfile" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
                 <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='white'%3EA%3C/text%3E%3C/svg%3E" alt="Admin" id="adminAvatar">
                 <div class="profile-info">
                     <span class="admin-name" id="adminName">Admin</span>
                     <span class="admin-role">Administrator</span>
                 </div>
-                <i class="fas fa-chevron-down"></i>
-                <div class="profile-dropdown" id="profileDropdown">
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                <div class="profile-dropdown" id="profileDropdown" role="menu">
                     <div class="dropdown-item" onclick="showProfile()">
                         <i class="fas fa-user"></i>
                         <span>Profile</span>
@@ -76,7 +79,7 @@
     </nav>
 
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
         <ul class="sidebar-menu">
             <li class="menu-item active">
                 <a href="#dashboard" data-section="dashboard">
@@ -162,176 +165,137 @@
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
         <!-- Dashboard Section -->
-        <section id="dashboard" class="content-section active">
-            <div class="page-header">
+        <section id="dashboard" class="content-section active dashboard-overview">
+            <div class="page-header overview-hero">
                 <div class="header-content">
                     <div class="header-text">
-                        <h1>Dashboard Overview</h1>
-                        <p>Welcome back! Here's what's happening with your business today.</p>
+                        <p class="overview-eyebrow">Operations</p>
+                        <h1>Dashboard overview</h1>
+                        <p class="overview-lead">Key numbers for your business. Use <strong>Refresh</strong> to pull the latest data from the server.</p>
                     </div>
                     <div class="header-actions">
-                        <div class="date-range">
-                            <i class="fas fa-calendar-alt"></i>
+                        <div class="date-range" title="Today's date in your browser">
+                            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
                             <span id="currentDate">Today</span>
                         </div>
-                        <button class="btn-refresh" onclick="refreshDashboard()">
-                            <i class="fas fa-sync-alt"></i>
+                        <button type="button" class="btn-refresh" onclick="refreshDashboard()" aria-label="Refresh dashboard data">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
                             Refresh
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- KPI Cards -->
-            <div class="kpi-grid">
-                <div class="kpi-card orders-card">
-                    <div class="kpi-icon orders">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-main">
-                            <h3 id="totalOrders">0</h3>
-                            <p>Total Orders</p>
+            <section class="kpi-board" aria-labelledby="kpiBoardHeading">
+                <header class="kpi-board-head">
+                    <h2 id="kpiBoardHeading" class="kpi-board-title">Key metrics</h2>
+                    <p class="kpi-board-lead">Live totals from your workspace</p>
+                </header>
+                <div class="kpi-board-metrics" role="list" aria-label="Key performance indicators">
+                    <article class="kpi-stat kpi-card orders-card" role="listitem">
+                        <div class="kpi-stat-icon orders" aria-hidden="true">
+                            <i class="fas fa-clipboard-list"></i>
                         </div>
-                        <div class="kpi-trend">
-                            <span class="kpi-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                +12%
-                            </span>
-                            <span class="kpi-period">vs last month</span>
+                        <p class="kpi-label">Total orders</p>
+                        <h3 class="kpi-value" id="totalOrders">0</h3>
+                        <p class="kpi-desc">All orders in the system</p>
+                        <div class="kpi-stat-viz" aria-hidden="true">
+                            <div class="mini-chart" data-chart="orders"></div>
                         </div>
-                    </div>
-                    <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="orders"></div>
-                    </div>
+                    </article>
+
+                    <article class="kpi-stat kpi-card revenue-card" role="listitem">
+                        <div class="kpi-stat-icon revenue" aria-hidden="true">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <p class="kpi-label">Total revenue</p>
+                        <h3 class="kpi-value" id="totalRevenue">$0</h3>
+                        <p class="kpi-desc">Sum of order values</p>
+                        <div class="kpi-stat-viz" aria-hidden="true">
+                            <div class="mini-chart" data-chart="revenue"></div>
+                        </div>
+                    </article>
+
+                    <article class="kpi-stat kpi-card payments-card" role="listitem">
+                        <div class="kpi-stat-icon payments" aria-hidden="true">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <p class="kpi-label">Payments collected</p>
+                        <h3 class="kpi-value" id="paymentsCollected">$0</h3>
+                        <p class="kpi-desc">From paid orders</p>
+                        <div class="kpi-stat-viz" aria-hidden="true">
+                            <div class="mini-chart" data-chart="payments"></div>
+                        </div>
+                    </article>
+
+                    <article class="kpi-stat kpi-card vendors-card" role="listitem">
+                        <div class="kpi-stat-icon vendors" aria-hidden="true">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <p class="kpi-label">Vendors</p>
+                        <h3 class="kpi-value" id="totalVendors">0</h3>
+                        <p class="kpi-desc">Active vendor records</p>
+                        <div class="kpi-stat-viz" aria-hidden="true">
+                            <div class="mini-chart" data-chart="vendors"></div>
+                        </div>
+                    </article>
+
+                    <article class="kpi-stat kpi-card customers-card" role="listitem">
+                        <div class="kpi-stat-icon customers" aria-hidden="true">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <p class="kpi-label">Customers</p>
+                        <h3 class="kpi-value" id="totalCustomers">0</h3>
+                        <p class="kpi-desc">Unique customer profiles</p>
+                        <div class="kpi-stat-viz" aria-hidden="true">
+                            <div class="mini-chart" data-chart="customers"></div>
+                        </div>
+                    </article>
                 </div>
-                
-                <div class="kpi-card revenue-card">
-                    <div class="kpi-icon revenue">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-main">
-                            <h3 id="totalRevenue">$0</h3>
-                            <p>Total Revenue</p>
-                        </div>
-                        <div class="kpi-trend">
-                            <span class="kpi-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                +15%
-                            </span>
-                            <span class="kpi-period">all orders</span>
-                        </div>
-                    </div>
-                    <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="revenue"></div>
-                    </div>
-                </div>
-                
-                <div class="kpi-card payments-card">
-                    <div class="kpi-icon payments">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-main">
-                            <h3 id="paymentsCollected">$0</h3>
-                            <p>Payments Collected</p>
-                        </div>
-                        <div class="kpi-trend">
-                            <span class="kpi-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                +8%
-                            </span>
-                            <span class="kpi-period">paid orders</span>
-                        </div>
-                    </div>
-                    <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="payments"></div>
-                    </div>
-                </div>
-                
-                <div class="kpi-card vendors-card">
-                    <div class="kpi-icon vendors">
-                        <i class="fas fa-handshake"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-main">
-                            <h3 id="totalVendors">0</h3>
-                            <p>Vendors</p>
-                        </div>
-                        <div class="kpi-trend">
-                            <span class="kpi-change neutral">
-                                <i class="fas fa-minus"></i>
-                                0%
-                            </span>
-                            <span class="kpi-period">no change</span>
-                        </div>
-                    </div>
-                    <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="vendors"></div>
-                    </div>
-                </div>
-                
-                <div class="kpi-card customers-card">
-                    <div class="kpi-icon customers">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-main">
-                            <h3 id="totalCustomers">0</h3>
-                            <p>Customers</p>
-                        </div>
-                        <div class="kpi-trend">
-                            <span class="kpi-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                +5%
-                            </span>
-                            <span class="kpi-period">vs last month</span>
-                        </div>
-                    </div>
-                    <div class="kpi-chart">
-                        <div class="mini-chart" data-chart="customers"></div>
-                    </div>
-                </div>
+            </section>
+
+            <div class="overview-section-head">
+                <h2 class="overview-section-title">Shortcuts &amp; activity</h2>
+                <span class="overview-section-hint">Common tasks and latest movement</span>
             </div>
 
             <!-- Quick Actions & Recent Activity -->
             <div class="dashboard-grid">
                 <div class="quick-actions-card">
-                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    <h3><i class="fas fa-bolt" aria-hidden="true"></i> Quick actions</h3>
                     <div class="quick-actions">
-                        <button class="quick-action" onclick="showAddOrderModal()">
-                            <i class="fas fa-plus-circle"></i>
-                            <span>New Order</span>
+                        <button type="button" class="quick-action" onclick="showAddOrderModal()">
+                            <i class="fas fa-plus-circle" aria-hidden="true"></i>
+                            <span>New order</span>
                         </button>
-                        <button class="quick-action" onclick="showAddCustomerModal()">
-                            <i class="fas fa-user-plus"></i>
-                            <span>Add Customer</span>
+                        <button type="button" class="quick-action" onclick="showAddCustomerModal()">
+                            <i class="fas fa-user-plus" aria-hidden="true"></i>
+                            <span>Add customer</span>
                         </button>
-                        <button class="quick-action" onclick="showAddVendorModal()">
-                            <i class="fas fa-handshake"></i>
-                            <span>Add Vendor</span>
+                        <button type="button" class="quick-action" onclick="showAddVendorModal()">
+                            <i class="fas fa-handshake" aria-hidden="true"></i>
+                            <span>Add vendor</span>
                         </button>
-                        <button class="quick-action" onclick="showAddEmployeeModal()">
-                            <i class="fas fa-user-tie"></i>
-                            <span>Add Employee</span>
+                        <button type="button" class="quick-action" onclick="showAddEmployeeModal()">
+                            <i class="fas fa-user-tie" aria-hidden="true"></i>
+                            <span>Add employee</span>
                         </button>
-                        <button class="quick-action" onclick="showAddPaymentModal()">
-                            <i class="fas fa-credit-card"></i>
-                            <span>Record Payment</span>
+                        <button type="button" class="quick-action" onclick="showAddPaymentModal()">
+                            <i class="fas fa-credit-card" aria-hidden="true"></i>
+                            <span>Record payment</span>
                         </button>
-                        <button class="quick-action" onclick="loadReportsSection(); window.dashboard.showSection('reports'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=reports]').parentElement.classList.add('active');">
-                            <i class="fas fa-chart-bar"></i>
-                            <span>View Reports</span>
+                        <button type="button" class="quick-action" onclick="loadReportsSection(); window.dashboard.showSection('reports'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=reports]').parentElement.classList.add('active');">
+                            <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                            <span>View reports</span>
                         </button>
                     </div>
                 </div>
                 
                 <div class="recent-activity-card">
-                    <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+                    <h3><i class="fas fa-clock" aria-hidden="true"></i> Recent activity</h3>
                     <div class="activity-list" id="recentActivity">
                         <div class="activity-item">
-                            <div class="activity-icon orders">
+                            <div class="activity-icon orders" aria-hidden="true">
                                 <i class="fas fa-clipboard-list"></i>
                             </div>
                             <div class="activity-content">
@@ -340,7 +304,7 @@
                             </div>
                         </div>
                         <div class="activity-item">
-                            <div class="activity-icon payments">
+                            <div class="activity-icon payments" aria-hidden="true">
                                 <i class="fas fa-dollar-sign"></i>
                             </div>
                             <div class="activity-content">
@@ -349,7 +313,7 @@
                             </div>
                         </div>
                         <div class="activity-item">
-                            <div class="activity-icon orders">
+                            <div class="activity-icon orders" aria-hidden="true">
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="activity-content">
@@ -364,38 +328,45 @@
             <!-- Employee Leaderboard & Vendor Summary -->
             <div class="summary-grid">
                 <div class="summary-card leaderboard-card">
-                    <h3><i class="fas fa-trophy"></i> Employee Leaderboard</h3>
+                    <h3><i class="fas fa-trophy" aria-hidden="true"></i> Employee leaderboard</h3>
+                    <p class="leaderboard-subtitle">Top team members by revenue on orders they are assigned to.</p>
                     <div class="leaderboard-list" id="employeeLeaderboard">
                         <div class="leaderboard-item skeleton">
                             <div class="rank">1</div>
                             <div class="employee-info">
-                                <div class="employee-name">Loading...</div>
-                                <div class="employee-stats">$0</div>
+                                <div class="employee-name">Loading…</div>
+                                <div class="employee-meta">
+                                    <span class="order-count">—</span>
+                                </div>
+                            </div>
+                            <div class="leaderboard-revenue">
+                                <span class="revenue-amount">$0</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="summary-card">
-                    <h3>Vendor Categories</h3>
+                <div class="summary-card vendor-categories-card">
+                    <h3><i class="fas fa-th-large" aria-hidden="true"></i> Vendor categories</h3>
+                    <p class="vendor-categories-subtitle">How many vendors you have registered in each trade.</p>
                     <div class="vendor-categories">
                         <div class="vendor-category electrical">
-                            <i class="fas fa-bolt"></i>
-                            <span>Electrical</span>
+                            <span class="vc-icon" aria-hidden="true"><i class="fas fa-bolt"></i></span>
+                            <span class="vc-label">Electrical</span>
                             <span class="category-count" id="electricalVendors">0</span>
                         </div>
                         <div class="vendor-category plumbing">
-                            <i class="fas fa-wrench"></i>
-                            <span>Plumbing</span>
+                            <span class="vc-icon" aria-hidden="true"><i class="fas fa-wrench"></i></span>
+                            <span class="vc-label">Plumbing</span>
                             <span class="category-count" id="plumbingVendors">0</span>
                         </div>
                         <div class="vendor-category civil">
-                            <i class="fas fa-hard-hat"></i>
-                            <span>Civil</span>
+                            <span class="vc-icon" aria-hidden="true"><i class="fas fa-hard-hat"></i></span>
+                            <span class="vc-label">Civil</span>
                             <span class="category-count" id="civilVendors">0</span>
                         </div>
                         <div class="vendor-category carpentry">
-                            <i class="fas fa-hammer"></i>
-                            <span>Carpentry</span>
+                            <span class="vc-icon" aria-hidden="true"><i class="fas fa-hammer"></i></span>
+                            <span class="vc-label">Carpentry</span>
                             <span class="category-count" id="carpentryVendors">0</span>
                         </div>
                     </div>
@@ -403,51 +374,57 @@
             </div>
 
             <!-- Financial Summary -->
-            <div class="financial-summary">
+            <div class="financial-summary financial-overview-card">
                 <div class="financial-header">
-                    <h3>Financial Overview</h3>
-                    <div class="financial-date-filter">
-                        <input type="date" id="financialStartDate" class="date-input">
-                        <span style="margin: 0 8px; color: #6b7280;">to</span>
-                        <input type="date" id="financialEndDate" class="date-input">
-                        <button class="btn-filter" onclick="applyFinancialFilter()">
-                            <i class="fas fa-filter"></i> Filter
+                    <div class="financial-title-block">
+                        <h3><i class="fas fa-wallet" aria-hidden="true"></i> Financial overview</h3>
+                        <p class="financial-subtitle">Totals from orders in the range below (revenue minus vendor cost).</p>
+                    </div>
+                    <div class="financial-date-filter" role="group" aria-label="Financial date range">
+                        <input type="date" id="financialStartDate" class="date-input" aria-label="Financial range start">
+                        <span class="financial-date-sep">to</span>
+                        <input type="date" id="financialEndDate" class="date-input" aria-label="Financial range end">
+                        <button type="button" class="btn-filter" onclick="applyFinancialFilter()">
+                            <i class="fas fa-filter" aria-hidden="true"></i> Apply
                         </button>
-                        <button class="btn-reset" onclick="resetFinancialFilter()">
-                            <i class="fas fa-redo"></i>
+                        <button type="button" class="btn-reset" onclick="resetFinancialFilter()" title="Clear dates" aria-label="Reset financial date range">
+                            <i class="fas fa-redo" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
                 <div class="financial-grid">
                     <div class="financial-item revenue">
-                        <div class="financial-icon">
+                        <div class="financial-icon" aria-hidden="true">
                             <i class="fas fa-dollar-sign"></i>
                         </div>
                         <div class="financial-content">
-                            <span class="financial-label">Total Revenue</span>
+                            <span class="financial-label">Total revenue</span>
                             <span class="financial-value" id="financialRevenue">$0</span>
                         </div>
                     </div>
                     <div class="financial-item cost">
-                        <div class="financial-icon">
+                        <div class="financial-icon" aria-hidden="true">
                             <i class="fas fa-receipt"></i>
                         </div>
                         <div class="financial-content">
-                            <span class="financial-label">Total Cost</span>
+                            <span class="financial-label">Total cost</span>
                             <span class="financial-value" id="financialCost">$0</span>
                         </div>
                     </div>
                     <div class="financial-item profit">
-                        <div class="financial-icon">
+                        <div class="financial-icon" aria-hidden="true">
                             <i class="fas fa-chart-line"></i>
                         </div>
                         <div class="financial-content">
-                            <span class="financial-label">Total Profit</span>
+                            <span class="financial-label">Total profit</span>
                             <span class="financial-value" id="financialProfit">$0</span>
                         </div>
                     </div>
                 </div>
-                <div class="financial-period-label" id="financialPeriodLabel">All Time</div>
+                <div class="financial-period-footer">
+                    <span class="financial-period-icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
+                    <span class="financial-period-text" id="financialPeriodLabel">All time</span>
+                </div>
             </div>
         </section>
 

@@ -20,7 +20,8 @@ class LoginManager {
             togglePassword.addEventListener('click', () => {
                 const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                 passwordInput.setAttribute('type', type);
-                
+                togglePassword.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+
                 const icon = togglePassword.querySelector('i');
                 if (icon) {
                     icon.classList.toggle('fa-eye');
@@ -101,15 +102,17 @@ class LoginManager {
         const loginBtn = document.getElementById('loginBtn');
         if (!loginBtn) return;
         
-        const btnText = loginBtn.querySelector('.btn-text');
-        const spinner = loginBtn.querySelector('.btn-spinner');
+        const btnText = loginBtn.querySelector('.submit-btn__text');
+        const spinner = loginBtn.querySelector('.submit-btn__spinner');
         
         if (show) {
             loginBtn.disabled = true;
+            loginBtn.classList.add('is-loading');
             if (btnText) btnText.style.display = 'none';
             if (spinner) spinner.style.display = 'inline-block';
         } else {
             loginBtn.disabled = false;
+            loginBtn.classList.remove('is-loading');
             if (btnText) btnText.style.display = 'inline-block';
             if (spinner) spinner.style.display = 'none';
         }
@@ -134,8 +137,9 @@ class LoginManager {
     showSuccess() {
         const loginBtn = document.getElementById('loginBtn');
         if (loginBtn) {
-            loginBtn.innerHTML = '<i class="fas fa-check"></i> Login Successful!';
-            loginBtn.style.background = 'var(--success)';
+            loginBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>&nbsp;Signed in!';
+            loginBtn.style.background = '#047857';
+            loginBtn.style.boxShadow = '0 2px 4px rgba(4,120,87,.12), 0 8px 24px rgba(4,120,87,.28)';
         }
     }
 

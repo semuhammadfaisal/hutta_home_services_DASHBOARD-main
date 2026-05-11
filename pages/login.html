@@ -3,98 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Hutta Home Services</title>
-    <link rel="stylesheet" href="../assets/css/login-styles.css">
+    <title>Sign In — Hutta Home Services</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/login-styles.css">
 </head>
 <body>
-    <div class="login-wrapper">
-        <div class="login-image-section">
-            <div class="floating-elements">
-                <div class="float-element float-1"></div>
-                <div class="float-element float-2"></div>
-                <div class="float-element float-3"></div>
+
+    <div class="page-shell">
+
+        <!-- ── LEFT PANEL ─────────────────────────────── -->
+        <aside class="hero-panel" aria-hidden="true">
+            <div class="hero-bg"></div>
+            <div class="hero-noise"></div>
+
+            <!-- decorative orbs -->
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+
+            <div class="hero-content">
+                <img src="../assets/images/logo.png" alt="Hutta Home Services" class="hero-logo">
+
+                <blockquote class="hero-quote">
+                    "Transforming homes across the nation — one service at a time."
+                </blockquote>
+
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <span class="stat-number">10K+</span>
+                        <span class="stat-label">Happy Customers</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Expert Technicians</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">Support Available</span>
+                    </div>
+                </div>
             </div>
-            <div class="image-overlay">
-                <div class="brand-content">
-                    <div class="brand-logo">
-                        <img src="../assets/images/logo.png" alt="Hutta Home Services" class="login-logo">
-                    </div>
-                    <p>Transform your home with our professional services. Trusted by 10,000+ customers nationwide.</p>
-                    <div class="stats">
-                        <div class="stat">
-                            <h3>10K+</h3>
-                            <span>Happy Customers</span>
-                        </div>
-                        <div class="stat">
-                            <h3>500+</h3>
-                            <span>Expert Technicians</span>
-                        </div>
-                        <div class="stat">
-                            <h3>24/7</h3>
-                            <span>Support Available</span>
-                        </div>
-                    </div>
-                </div>
+
+            <div class="hero-footer">
+                <span class="trust-badge">
+                    <i class="fas fa-shield-halved"></i>
+                    256-bit SSL encrypted
+                </span>
             </div>
-        </div>
-        
-        <div class="login-form-section">
-            <div class="login-container">
-                <div class="login-header">
-                    <div class="welcome-badge">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>Secure Login</span>
+        </aside>
+
+        <!-- ── RIGHT PANEL ────────────────────────────── -->
+        <main class="form-panel">
+            <div class="form-card">
+
+                <header class="card-header">
+                    <div class="card-eyebrow">
+                        <i class="fas fa-lock" aria-hidden="true"></i>
+                        Secure sign-in
                     </div>
-                    <h1>Welcome Back</h1>
-                    <p>Enter your credentials to access your dashboard</p>
-                </div>
-            
-            <form class="login-form" id="loginForm">
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <div class="input-wrapper">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    <h1 class="card-title">Welcome back</h1>
+                    <p class="card-subtitle">Enter your credentials to access the operations dashboard.</p>
+                </header>
+
+                <form id="loginForm" class="auth-form" novalidate>
+
+                    <div class="field-group">
+                        <label class="field-label" for="email">Email address</label>
+                        <div class="field-wrap">
+                            <i class="fas fa-envelope field-icon" aria-hidden="true"></i>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                class="field-input"
+                                placeholder="you@company.com"
+                                autocomplete="email"
+                                aria-describedby="errorMessage"
+                                required
+                            >
+                        </div>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <div class="input-wrapper">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
-                        <button type="button" class="toggle-password" id="togglePassword">
-                            <i class="fas fa-eye"></i>
-                        </button>
+
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label class="field-label" for="password">Password</label>
+                            <a href="forgot-password.html" class="link-muted">Forgot password?</a>
+                        </div>
+                        <div class="field-wrap field-wrap--password">
+                            <i class="fas fa-lock field-icon" aria-hidden="true"></i>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                class="field-input"
+                                placeholder="••••••••"
+                                autocomplete="current-password"
+                                aria-describedby="errorMessage"
+                                required
+                            >
+                            <button type="button" class="pw-toggle" id="togglePassword" aria-label="Show password">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="form-options">
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" id="rememberMe">
-                        <span class="checkmark"></span>
-                        Remember me
+
+                    <label class="remember-row">
+                        <input type="checkbox" id="rememberMe" class="sr-only">
+                        <span class="custom-check" aria-hidden="true"></span>
+                        <span class="remember-text">Keep me signed in for 30 days</span>
                     </label>
-                    <a href="forgot-password.html" class="forgot-password">Forgot Password?</a>
-                </div>
-                
-                <button type="submit" class="login-btn" id="loginBtn">
-                    <span class="btn-text">Sign In</span>
-                    <i class="fas fa-spinner fa-spin btn-spinner" style="display: none;"></i>
-                </button>
-                
-                <div class="error-message" id="errorMessage" style="display: none;">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span id="errorText"></span>
-                </div>
-            </form>
-            
+
+                    <button type="submit" class="submit-btn" id="loginBtn">
+                        <span class="submit-btn__text">Sign in</span>
+                        <i class="fas fa-arrow-right submit-btn__arrow" aria-hidden="true"></i>
+                        <i class="fas fa-circle-notch fa-spin submit-btn__spinner" aria-hidden="true"></i>
+                    </button>
+
+                    <div
+                        class="alert alert--error"
+                        id="errorMessage"
+                        style="display:none"
+                        role="alert"
+                        aria-live="polite"
+                    >
+                        <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                        <span id="errorText"></span>
+                    </div>
+
+                </form>
+
+                <footer class="card-footer">
+                    New to Hutta?&nbsp;<a href="signup.html" class="link-primary">Create an account</a>
+                </footer>
 
             </div>
-        </div>
-    </div>
-    
+        </main>
+
+    </div><!-- /page-shell -->
+
     <script src="../assets/js/api-service.js"></script>
     <script src="../assets/js/login-script.js"></script>
 </body>
