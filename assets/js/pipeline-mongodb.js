@@ -81,16 +81,25 @@ async function loadDataFromDB() {
 // Make function globally accessible
 window.loadDataFromDB = loadDataFromDB;
 
+function unwrapApiListResponse(json) {
+    if (!json) return [];
+    if (Array.isArray(json)) return json;
+    if (Array.isArray(json.data)) return json.data;
+    return [];
+}
+
 // Fetch all orders data
 async function fetchAllOrdersData() {
     try {
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
         if (!session) return [];
         const token = JSON.parse(session).token;
-        const response = await fetch(`${API_BASE_URL}/orders`, {
+        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        return response.ok ? await response.json() : [];
+        if (!response.ok) return [];
+        const json = await response.json();
+        return unwrapApiListResponse(json);
     } catch (error) {
         console.error('Error fetching orders:', error);
         return [];
@@ -421,15 +430,15 @@ async function loadAvailableCustomers() {
         const sessionData = JSON.parse(session);
         const token = sessionData.token;
         
-        const response = await fetch(`${API_BASE_URL}/customers`, {
+        const response = await fetch(`${API_BASE_URL}/customers?limit=5000`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         
         if (!response.ok) throw new Error('Failed to load customers');
-        
-        availableCustomers = await response.json();
+
+        availableCustomers = unwrapApiListResponse(await response.json());
     } catch (error) {
         console.error('Error loading customers:', error);
     }
@@ -494,13 +503,13 @@ async function loadCustomerWorkOrders(customerId) {
         const customer = await customerResponse.json();
         
         // Get all orders and filter by customer email
-        const response = await fetch(`${API_BASE_URL}/orders`, {
+        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!response.ok) throw new Error('Failed to load work orders');
         
-        const allOrders = await response.json();
+        const allOrders = unwrapApiListResponse(await response.json());
         const orders = allOrders.filter(order => 
             order.customerId === customerId || 
             order.customer?.email === customer.email

@@ -33,4 +33,13 @@ const orderSchema = new mongoose.Schema({
   recurringNotes: String
 }, { timestamps: true });
 
+orderSchema.index({ customerId: 1 });
+orderSchema.index({ employee: 1 });
+orderSchema.index({ vendor: 1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ pipelineRecordId: 1 });
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ orderId: 1 });
+orderSchema.index({ 'customer.email': 1 });
+
 module.exports = mongoose.model('Order', orderSchema);

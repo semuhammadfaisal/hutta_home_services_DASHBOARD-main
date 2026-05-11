@@ -104,54 +104,72 @@ class DashboardManager {
 
     async renderDashboard() {
         try {
-            // Show loading state immediately
             this.showLoadingState();
-            
-            // Always load fresh data - no caching for real-time pipeline updates
-            // Clear APIService cache first to ensure fresh data
+
             if (window.APIService && window.APIService.clearCache) {
                 window.APIService.clearCache();
             }
-            
-            const [orders, vendors, employees, customers, payments, kpi] = await Promise.all([
-                window.APIService.getOrdersFresh().catch(err => { console.error('Orders error:', err); return []; }),
+
+            const [statsApi, vendors, employees, kpi] = await Promise.all([
+                window.APIService.getOrderStats().catch(() => ({})),
                 window.APIService.getVendors().catch(() => []),
                 window.APIService.getEmployees().catch(() => []),
-                window.APIService.getCustomers().catch(() => []),
-                window.APIService.getPayments().catch(() => []),
                 window.APIService.getPaymentsCollected().catch(() => ({ paymentsCollected: 0 }))
             ]);
-            
-            console.log('Dashboard data loaded:', { orders: orders.length, vendors: vendors.length, employees: employees.length, customers: customers.length });
-            
-            if (orders.length === 0 && vendors.length === 0 && employees.length === 0 && customers.length === 0) {
-                console.warn('⚠️ All data arrays are empty - possible server connection issue');
-                console.log('API Base URL:', window.APIService.baseURL);
-                console.log('Token available:', !!window.APIService.getToken());
-            }
-            
-            const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
-            const paymentsCollected = kpi.paymentsCollected || 0;
-            
+
             const stats = {
-                totalOrders: orders.length,
-                totalRevenue: totalRevenue,
-                paymentsCollected: paymentsCollected,
+                totalOrders: statsApi.totalOrders ?? 0,
+                totalRevenue: statsApi.totalRevenue ?? 0,
+                paymentsCollected: kpi.paymentsCollected || 0,
                 totalVendors: vendors.length,
-                totalCustomers: customers.length
+                totalCustomers: statsApi.totalCustomers ?? 0
             };
-            
-            // Render all sections with fresh data
+
             this.renderKPIs(stats);
             this.renderVendorCategories(vendors);
-            this.renderEmployeeLeaderboard(orders, employees);
-            this.renderFinancialOverview(orders, payments);
-            this.renderWorkflowFromOrders(orders);
-            this.renderOrdersTable(orders);
-            this.renderRecentActivity(orders);
-            
-            console.log('Dashboard rendered with fresh data');
             this.hideLoadingState();
+
+            const runHeavy = async () => {
+                try {
+                    const [orders, payments, customers] = await Promise.all([
+                        window.APIService.getOrdersFresh().catch(err => { console.error('Orders error:', err); return []; }),
+                        window.APIService.getPayments().catch(() => []),
+                        window.APIService.getCustomers().catch(() => [])
+                    ]);
+
+                    console.log('Dashboard heavy data:', {
+                        orders: orders.length,
+                        vendors: vendors.length,
+                        employees: employees.length,
+                        customers: customers.length
+                    });
+
+                    if (!stats.totalCustomers && customers.length) {
+                        stats.totalCustomers = customers.length;
+                        this.renderKPIs(stats);
+                    }
+
+                    if (orders.length === 0 && vendors.length === 0 && employees.length === 0 && customers.length === 0) {
+                        console.warn('⚠️ All data arrays are empty - possible server connection issue');
+                        console.log('API Base URL:', window.APIService.baseURL);
+                        console.log('Token available:', !!window.APIService.getToken());
+                    }
+
+                    this.renderEmployeeLeaderboard(orders, employees);
+                    this.renderFinancialOverview(orders, payments);
+                    this.renderWorkflowFromOrders(orders);
+                    this.renderOrdersTable(orders);
+                    this.renderRecentActivity(orders);
+                } catch (e) {
+                    console.error('Deferred dashboard load failed:', e);
+                }
+            };
+
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => { runHeavy(); }, { timeout: 2000 });
+            } else {
+                setTimeout(runHeavy, 0);
+            }
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
             this.hideLoadingState();
@@ -297,15 +315,15 @@ class DashboardManager {
             `;
             return;
         }
-        
-        tbody.innerHTML = ordersData.map(order => {
+
+        const rowHtml = (order) => {
             const orderNumber = order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`;
             const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
             const customerName = order.customer?.name || order.customer;
             const customerEmail = order.customer?.email || '';
             const statusDisplay = order.pipelineStage || order.status.replace('-', ' ');
             const statusClass = order.pipelineStage ? 'pipeline' : order.status;
-            
+
             return `
             <tr style="cursor: pointer;" onclick="viewOrder('${order._id || order.id}')">
                 <td>
@@ -350,7 +368,25 @@ class DashboardManager {
                 </td>
             </tr>
         `;
-        }).join('');
+        };
+
+        const CHUNK = 100;
+        if (ordersData.length <= CHUNK) {
+            tbody.innerHTML = ordersData.map(rowHtml).join('');
+            return;
+        }
+
+        tbody.innerHTML = '';
+        let idx = 0;
+        const pump = () => {
+            const slice = ordersData.slice(idx, idx + CHUNK);
+            tbody.insertAdjacentHTML('beforeend', slice.map(rowHtml).join(''));
+            idx += CHUNK;
+            if (idx < ordersData.length) {
+                requestAnimationFrame(pump);
+            }
+        };
+        pump();
     }
 
     renderRecentActivity(orders) {
@@ -5433,24 +5469,34 @@ async function loadOrdersSection() {
 }
 
 function initializeOrderFilters() {
+    if (window.__orderFiltersInitialized) return;
+    window.__orderFiltersInitialized = true;
+
     const searchInput = document.getElementById('orderSearchInput');
     const statusFilter = document.getElementById('orderStatusFilter');
     const priorityFilter = document.getElementById('orderPriorityFilter');
-    
+
     if (searchInput) {
-        searchInput.addEventListener('input', filterOrders);
+        searchInput.addEventListener('input', filterOrdersDebounced);
     }
-    
+
     if (statusFilter) {
-        statusFilter.addEventListener('change', filterOrders);
+        statusFilter.addEventListener('change', filterOrdersImmediate);
     }
-    
+
     if (priorityFilter) {
-        priorityFilter.addEventListener('change', filterOrders);
+        priorityFilter.addEventListener('change', filterOrdersImmediate);
     }
 }
 
-function filterOrders() {
+let orderFilterDebounceTimer = null;
+
+function filterOrdersDebounced() {
+    clearTimeout(orderFilterDebounceTimer);
+    orderFilterDebounceTimer = setTimeout(filterOrdersImmediate, 280);
+}
+
+function filterOrdersImmediate() {
     const searchTerm = document.getElementById('orderSearchInput')?.value.toLowerCase() || '';
     const statusFilter = document.getElementById('orderStatusFilter')?.value || 'all';
     const priorityFilter = document.getElementById('orderPriorityFilter')?.value || 'all';
@@ -5482,6 +5528,8 @@ function filterOrders() {
     
     window.dashboard.renderOrdersTable(filtered);
 }
+
+window.filterOrders = filterOrdersDebounced;
 
 // Profile and settings functions
 function showProfile() {

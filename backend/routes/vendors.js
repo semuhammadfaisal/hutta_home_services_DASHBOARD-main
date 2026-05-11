@@ -7,7 +7,7 @@ const router = express.Router();
 // Get all vendors
 router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    const vendors = await Vendor.find().sort({ name: 1 });
+    const vendors = await Vendor.find().sort({ name: 1 }).lean();
     res.json(vendors);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

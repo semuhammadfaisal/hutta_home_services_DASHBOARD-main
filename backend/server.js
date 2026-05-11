@@ -1,11 +1,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+
+const SLOW_MS = parseInt(process.env.SLOW_REQUEST_MS || '1000', 10);
 
 // Global error handlers
 process.on('uncaughtException', (error) => {
@@ -29,6 +33,29 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(compression({ threshold: 1024 }));
+
+const authRouteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many attempts, please try again later.' }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.API_RATE_LIMIT_MAX || '800', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' }
+});
+
+app.use('/api/auth/login', authRouteLimiter);
+app.use('/api/auth/signup', authRouteLimiter);
+app.use('/api/auth/forgot-password', authRouteLimiter);
+app.use('/api/', apiLimiter);
+
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -45,22 +72,35 @@ app.use('/api/vendors', (req, res, next) => {
   next();
 });
 
-// Request logging
+// Request logging + slow request warning
 app.use((req, res, next) => {
+  const started = Date.now();
   console.log(`${req.method} ${req.path}`);
-  
-  // Add timeout to detect hanging requests
+
   const timeout = setTimeout(() => {
     console.log(`⚠️ Request timeout: ${req.method} ${req.path}`);
   }, 5000);
-  
-  res.on('finish', () => clearTimeout(timeout));
+
+  res.on('finish', () => {
+    clearTimeout(timeout);
+    const ms = Date.now() - started;
+    if (ms >= SLOW_MS) {
+      console.warn(`⏱ Slow request ${ms}ms ${req.method} ${req.originalUrl}`);
+    }
+  });
   next();
 });
 
 // Health check route
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  const payload = {
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    memory: process.memoryUsage()
+  };
+  res.json(payload);
 });
 
 // API Routes with error handling
@@ -109,6 +149,8 @@ app.get('/', (req, res) => {
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(path.join(__dirname, '../index.html'));
+  } else {
+    res.status(404).json({ message: 'Not found' });
   }
 });
 
@@ -125,7 +167,9 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000
+      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10', 10),
+      minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE || '0', 10)
     });
     console.log('✅ MongoDB Connected');
     

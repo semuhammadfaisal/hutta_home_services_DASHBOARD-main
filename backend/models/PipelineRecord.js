@@ -38,6 +38,8 @@ const pipelineRecordSchema = new mongoose.Schema({
 });
 
 pipelineRecordSchema.index({ stageId: 1 });
+pipelineRecordSchema.index({ orderId: 1 });
+pipelineRecordSchema.index({ stageId: 1, orderId: 1 });
 pipelineRecordSchema.index({ createdAt: -1 });
 pipelineRecordSchema.index({ orderIdDisplay: 1 });
 

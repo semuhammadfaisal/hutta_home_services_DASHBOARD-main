@@ -5,11 +5,27 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { sendWelcomeEmail } = require('../utils/emailService');
 
-// Get all users (admin only)
+// Get all users (admin only, paginated)
 router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
-    res.json(users);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
+    const skip = (page - 1) * limit;
+
+    const [total, users] = await Promise.all([
+      User.countDocuments(),
+      User.find()
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    res.json({
+      data: users,
+      pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

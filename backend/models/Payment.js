@@ -63,4 +63,12 @@ const paymentSchema = new mongoose.Schema({
   vendorPaymentNotes: String
 }, { timestamps: true });
 
+paymentSchema.index({ order: 1 });
+paymentSchema.index({ customer: 1 });
+paymentSchema.index({ status: 1 });
+paymentSchema.index({ paymentDate: -1 });
+paymentSchema.index({ createdAt: -1 });
+paymentSchema.index({ employeePaymentStatus: 1 });
+paymentSchema.index({ vendorPaymentStatus: 1 });
+
 module.exports = mongoose.model('Payment', paymentSchema);

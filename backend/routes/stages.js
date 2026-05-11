@@ -1,11 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const Stage = require('../models/Stage');
+const memCache = require('../utils/memoryCache');
+
+const STAGES_CACHE_KEY = 'stages:list:v1';
+const STAGES_TTL_MS = parseInt(process.env.STAGES_CACHE_MS || '30000', 10);
+
+function invalidateStagesCache() {
+    memCache.del(STAGES_CACHE_KEY);
+}
 
 // Get all stages
 router.get('/', async (req, res) => {
     try {
-        const stages = await Stage.find().sort({ position: 1 });
+        const cached = memCache.get(STAGES_CACHE_KEY);
+        if (cached) {
+            return res.json(cached);
+        }
+        const stages = await Stage.find().sort({ position: 1 }).lean();
+        memCache.set(STAGES_CACHE_KEY, stages, STAGES_TTL_MS);
         res.json(stages);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -23,6 +36,7 @@ router.post('/', async (req, res) => {
 
     try {
         const newStage = await stage.save();
+        invalidateStagesCache();
         res.status(201).json(newStage);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -43,6 +57,7 @@ router.put('/:id', async (req, res) => {
         if (req.body.isNoBid !== undefined) stage.isNoBid = req.body.isNoBid;
 
         const updatedStage = await stage.save();
+        invalidateStagesCache();
         res.json(updatedStage);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -58,6 +73,7 @@ router.delete('/:id', async (req, res) => {
         }
 
         await stage.deleteOne();
+        invalidateStagesCache();
         res.json({ message: 'Stage deleted' });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -75,7 +91,8 @@ router.patch('/reorder', async (req, res) => {
             });
         }
 
-        const updatedStages = await Stage.find().sort({ position: 1 });
+        invalidateStagesCache();
+        const updatedStages = await Stage.find().sort({ position: 1 }).lean();
         res.json(updatedStages);
     } catch (error) {
         res.status(400).json({ message: error.message });

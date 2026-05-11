@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Employee = require('../models/Employee');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
@@ -7,7 +8,7 @@ const router = express.Router();
 // Get all employees
 router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    const employees = await Employee.find().sort({ name: 1 });
+    const employees = await Employee.find().sort({ name: 1 }).lean();
     res.json(employees);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -18,22 +19,47 @@ router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, 
 router.get('/:id/stats', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const Order = require('../models/Order');
-    const employeeId = req.params.id;
-    
-    const orders = await Order.find({ employee: employeeId });
-    
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + (order.amount || 0), 0);
-    const totalProfit = orders.reduce((sum, order) => sum + ((order.amount || 0) - (order.vendorCost || 0)), 0);
-    const activeOrders = orders.filter(o => ['new', 'in-progress'].includes(o.status)).length;
-    const completedOrders = orders.filter(o => o.status === 'completed').length;
-    
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid employee id' });
+    }
+    const employeeObjectId = new mongoose.Types.ObjectId(req.params.id);
+
+    const agg = await Order.aggregate([
+      { $match: { employee: employeeObjectId } },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: { $ifNull: ['$amount', 0] } },
+          totalProfit: {
+            $sum: {
+              $subtract: [{ $ifNull: ['$amount', 0] }, { $ifNull: ['$vendorCost', 0] }]
+            }
+          },
+          activeOrders: {
+            $sum: { $cond: [{ $in: ['$status', ['new', 'in-progress']] }, 1, 0] }
+          },
+          completedOrders: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const r = agg[0] || {
+      totalOrders: 0,
+      totalRevenue: 0,
+      totalProfit: 0,
+      activeOrders: 0,
+      completedOrders: 0
+    };
+
     res.json({
-      totalOrders,
-      totalRevenue,
-      totalProfit,
-      activeOrders,
-      completedOrders
+      totalOrders: r.totalOrders,
+      totalRevenue: r.totalRevenue,
+      totalProfit: r.totalProfit,
+      activeOrders: r.activeOrders,
+      completedOrders: r.completedOrders
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

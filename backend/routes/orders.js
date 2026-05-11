@@ -5,144 +5,170 @@ const Customer = require('../models/Customer');
 const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const memCache = require('../utils/memoryCache');
 const router = express.Router();
+
+const STATS_CACHE_KEY = 'orders:stats:v2';
+const STATS_TTL_MS = parseInt(process.env.ORDERS_STATS_CACHE_MS || '60000', 10);
+
+function invalidateOrderStatsCache() {
+  memCache.del(STATS_CACHE_KEY);
+}
 
 // Get dashboard stats - MUST be before /:id route
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    // Get NO BID stages to exclude from calculations
+    const cached = memCache.get(STATS_CACHE_KEY);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const Stage = require('../models/Stage');
     const PipelineRecord = require('../models/PipelineRecord');
-    
+
     const noBidStages = await Stage.find({ isNoBid: true }).select('_id').lean();
-    const noBidStageIds = noBidStages.map(s => s._id.toString());
-    
-    // Get orders in NO BID stages
-    const noBidRecords = await PipelineRecord.find({ 
-      stageId: { $in: noBidStageIds } 
+    const noBidStageObjectIds = noBidStages.map(s => s._id);
+
+    const noBidRecords = await PipelineRecord.find({
+      stageId: { $in: noBidStageObjectIds }
     }).select('orderId').lean();
     const noBidOrderIds = noBidRecords.map(r => r.orderId).filter(Boolean);
-    
-    // Exclude NO BID orders from all counts
-    const totalOrders = await Order.countDocuments({
-      _id: { $nin: noBidOrderIds }
-    });
-    const activeProjects = await Order.countDocuments({ 
-      status: 'in-progress',
-      _id: { $nin: noBidOrderIds }
-    });
-    const completedProjects = await Order.countDocuments({ 
-      status: 'completed',
-      _id: { $nin: noBidOrderIds }
-    });
-    const newOrders = await Order.countDocuments({ 
-      status: 'new',
-      _id: { $nin: noBidOrderIds }
-    });
-    
-    // Calculate monthly revenue (current month) - exclude NO BID orders
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    
-    const monthlyRevenueResult = await Order.aggregate([
-      { 
-        $match: { 
-          createdAt: { $gte: startOfMonth },
-          status: { $in: ['completed', 'in-progress'] },
-          _id: { $nin: noBidOrderIds }
-        } 
-      },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-    
-    const monthlyRevenue = monthlyRevenueResult[0]?.total || 0;
-    
-    // Count distinct vendors from orders (exclude NO BID)
-    const vendorsCount = await Order.distinct('vendor', {
-      _id: { $nin: noBidOrderIds }
-    }).then(vendors => 
-      vendors.filter(v => v != null).length
-    );
-    
-    // Get actual vendor and employee counts from their collections
-    const Vendor = require('../models/Vendor');
-    const Employee = require('../models/Employee');
-    const totalVendors = await Vendor.countDocuments();
-    const totalEmployees = await Employee.countDocuments();
 
-    res.json({
+    const [totalOrders, activeProjects, completedProjects, newOrders, monthlyRevenueResult, totalRevenueResult, vendorsCount, totalVendors, totalEmployees, totalCustomers] = await Promise.all([
+      Order.countDocuments({ _id: { $nin: noBidOrderIds } }),
+      Order.countDocuments({ status: 'in-progress', _id: { $nin: noBidOrderIds } }),
+      Order.countDocuments({ status: 'completed', _id: { $nin: noBidOrderIds } }),
+      Order.countDocuments({ status: 'new', _id: { $nin: noBidOrderIds } }),
+      (() => {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        return Order.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: startOfMonth },
+              status: { $in: ['completed', 'in-progress'] },
+              _id: { $nin: noBidOrderIds }
+            }
+          },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+      })(),
+      Order.aggregate([
+        { $match: { _id: { $nin: noBidOrderIds } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      Order.distinct('vendor', { _id: { $nin: noBidOrderIds } }).then(vendors =>
+        vendors.filter(v => v != null).length
+      ),
+      Vendor.countDocuments(),
+      require('../models/Employee').countDocuments(),
+      Customer.countDocuments()
+    ]);
+
+    const monthlyRevenue = monthlyRevenueResult[0]?.total || 0;
+    const totalRevenue = totalRevenueResult[0]?.total || 0;
+
+    const payload = {
       totalOrders,
       activeProjects,
       completedProjects,
       newOrders,
       monthlyRevenue,
+      totalRevenue,
+      totalCustomers,
       vendorsCount,
       totalVendors,
       totalEmployees
-    });
+    };
+
+    memCache.set(STATS_CACHE_KEY, payload, STATS_TTL_MS);
+    res.json(payload);
   } catch (error) {
     console.error('Stats error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get all orders
+// Get all orders (paginated body; avoids N+1 pipeline queries)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const orders = await Order.find()
-      .populate('vendor', 'name category')
-      .populate('employee', 'name')
-      .sort({ createdAt: -1 })
-      .lean();
-    
-    // Filter out orders in NO BID stage
     const Stage = require('../models/Stage');
     const PipelineRecord = require('../models/PipelineRecord');
-    
+
     const noBidStages = await Stage.find({ isNoBid: true }).select('_id').lean();
-    const noBidStageIds = noBidStages.map(s => s._id.toString());
-    
+    const noBidStageObjectIds = noBidStages.map(s => s._id);
+
+    const [noBidRecordsForOrders, orders] = await Promise.all([
+      PipelineRecord.find({ stageId: { $in: noBidStageObjectIds } })
+        .select('orderId')
+        .lean(),
+      Order.find()
+        .populate('vendor', 'name category')
+        .populate('employee', 'name')
+        .sort({ createdAt: -1 })
+        .lean()
+    ]);
+
+    const excludedByPipelineOrderId = new Set(
+      noBidRecordsForOrders.map(r => r.orderId && r.orderId.toString()).filter(Boolean)
+    );
+
+    const pipelineRecordIds = [...new Set(
+      orders.map(o => o.pipelineRecordId).filter(Boolean).map(id => id.toString())
+    )].map(id => new mongoose.Types.ObjectId(id));
+
+    const pipelineRecords = pipelineRecordIds.length
+      ? await PipelineRecord.find({ _id: { $in: pipelineRecordIds } })
+        .select('stageId orderId')
+        .lean()
+      : [];
+
+    const recordById = new Map(pipelineRecords.map(r => [r._id.toString(), r]));
+    const stageIds = [...new Set(
+      pipelineRecords.map(r => r.stageId && r.stageId.toString()).filter(Boolean)
+    )].map(id => new mongoose.Types.ObjectId(id));
+
+    const stagesForRecords = stageIds.length
+      ? await Stage.find({ _id: { $in: stageIds } }).select('name isNoBid').lean()
+      : [];
+    const stageById = new Map(stagesForRecords.map(s => [s._id.toString(), s]));
+
     const visibleOrders = [];
-    
-    // For orders without pipelineStage, try to populate from pipeline records
-    for (let order of orders) {
-      if (!order.pipelineStage && order.pipelineRecordId) {
-        try {
-          const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId).lean();
-          if (pipelineRecord && pipelineRecord.stageId) {
-            const stage = await Stage.findById(pipelineRecord.stageId).select('name isNoBid').lean();
-            if (stage) {
-              order.pipelineStage = stage.name;
-              // Update order with pipelineStage for future efficiency
-              await Order.findByIdAndUpdate(order._id, { pipelineStage: stage.name });
-              
-              // Skip if in NO BID stage
-              if (stage.isNoBid) continue;
-            }
-          }
-        } catch (err) {
-          console.log('Pipeline stage lookup failed for order:', order._id);
+
+    for (const order of orders) {
+      const oid = order._id.toString();
+      if (excludedByPipelineOrderId.has(oid)) continue;
+
+      const rec = order.pipelineRecordId
+        ? recordById.get(order.pipelineRecordId.toString())
+        : null;
+      if (rec && rec.stageId) {
+        const st = stageById.get(rec.stageId.toString());
+        if (st && st.isNoBid) continue;
+        if (!order.pipelineStage && st) {
+          order.pipelineStage = st.name;
         }
       }
-      
-      // Check if order is in NO BID stage by checking pipeline record
-      if (order.pipelineRecordId) {
-        try {
-          const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId).lean();
-          if (pipelineRecord && pipelineRecord.stageId) {
-            const isNoBid = noBidStageIds.includes(pipelineRecord.stageId.toString());
-            if (isNoBid) continue; // Skip NO BID orders
-          }
-        } catch (err) {
-          console.log('NO BID check failed for order:', order._id);
-        }
-      }
-      
+
       visibleOrders.push(order);
     }
-    
-    res.json(visibleOrders);
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(10000, Math.max(1, parseInt(req.query.limit, 10) || 5000));
+    const total = visibleOrders.length;
+    const skip = (page - 1) * limit;
+    const data = visibleOrders.slice(skip, skip + limit);
+
+    res.json({
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit))
+      }
+    });
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -277,6 +303,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     }
     
     await order.save();
+    invalidateOrderStatsCache();
     console.log('ORDER SAVED:', order._id, 'with ID:', orderId, 'WO:', workOrderNumber);
     console.log('Customer ID for payment:', customerId);
     
@@ -509,6 +536,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     }
     
     console.log('=== ORDER UPDATE COMPLETE ===');
+    invalidateOrderStatsCache();
     res.json(order);
   } catch (error) {
     console.error('Update order error:', error);
@@ -548,6 +576,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async 
       // Don't fail the order deletion if payment deletion fails
     }
     
+    invalidateOrderStatsCache();
     res.json({ message: 'Order deleted successfully' });
   } catch (error) {
     console.error('Delete order error:', error);

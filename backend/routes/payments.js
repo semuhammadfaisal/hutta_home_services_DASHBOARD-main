@@ -79,18 +79,42 @@ function buildPaymentPayload(body, existingPayment = null) {
   return payload;
 }
 
-// Get all payments
+// Get all payments (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const payments = await Payment.find()
-      .populate('customer', 'name email')
-      .populate('order', 'orderId service employee vendor')
-      .populate({ path: 'order', populate: { path: 'employee', select: 'name email phone' } })
-      .populate({ path: 'order', populate: { path: 'vendor', select: 'name email phone' } })
-      .populate('project', 'projectId name')
-      .populate('processedBy', 'firstName lastName')
-      .sort({ createdAt: -1 });
-    res.json(payments);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 2000));
+    const skip = (page - 1) * limit;
+
+    const [total, payments] = await Promise.all([
+      Payment.countDocuments(),
+      Payment.find()
+        .populate('customer', 'name email')
+        .populate({
+          path: 'order',
+          select: 'orderId service employee vendor',
+          populate: [
+            { path: 'employee', select: 'name email phone' },
+            { path: 'vendor', select: 'name email phone' }
+          ]
+        })
+        .populate('project', 'projectId name')
+        .populate('processedBy', 'firstName lastName')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    res.json({
+      data: payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit))
+      }
+    });
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message || 'Server error' });
   }

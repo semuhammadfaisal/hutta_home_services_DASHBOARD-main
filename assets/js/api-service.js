@@ -1,5 +1,13 @@
 // API Service for Hutta Home Services
 class APIService {
+    /** Normalize list endpoints that return { data, pagination } or a raw array. */
+    unwrapListPayload(payload) {
+        if (!payload) return [];
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload.data)) return payload.data;
+        return [];
+    }
+
     constructor() {
         // Use relative API path when on production, localhost for development
         this.baseURL = window.location.hostname === 'localhost' 
@@ -150,6 +158,8 @@ class APIService {
                         token: 'demo-token-' + Date.now(),
                         user: { email: 'admin@hutta.com', name: 'Admin User' }
                     });
+                } else if (endpoint.startsWith('/orders')) {
+                    resolve({ data: [], pagination: { page: 1, limit: 5000, total: 0, pages: 1 } });
                 } else {
                     console.log('Returning generic mock response');
                     resolve({ success: true, data: [] });
@@ -221,14 +231,16 @@ class APIService {
 
     // Orders
     async getOrders() {
-        return this.request('/orders');
+        const raw = await this.request('/orders?limit=5000');
+        return this.unwrapListPayload(raw);
     }
 
     async getOrdersFresh() {
-        // Bypass cache - always fetch fresh data
-        const cacheKey = 'GET:/orders';
+        const cacheKey = 'GET:/orders?limit=5000';
         this.requestCache.delete(cacheKey);
-        return this.request('/orders');
+        this.requestCache.delete('GET:/orders');
+        const raw = await this.request('/orders?limit=5000');
+        return this.unwrapListPayload(raw);
     }
 
     async getPaymentsCollected() {
@@ -258,7 +270,8 @@ class APIService {
 
     // Customers
     async getCustomers() {
-        return this.request('/customers');
+        const raw = await this.request('/customers?limit=5000');
+        return this.unwrapListPayload(raw);
     }
 
     async getCustomer(id) {
@@ -355,7 +368,8 @@ class APIService {
 
     // Payments
     async getPayments() {
-        return this.request('/payments');
+        const raw = await this.request('/payments?limit=5000');
+        return this.unwrapListPayload(raw);
     }
 
     async getPayment(id) {
@@ -479,7 +493,8 @@ class APIService {
 
     // Users (Admin only)
     async getUsers() {
-        return this.request('/users');
+        const raw = await this.request('/users?limit=2000');
+        return this.unwrapListPayload(raw);
     }
 
     async createUser(userData) {

@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Customer = require('../models/Customer');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
@@ -6,11 +7,31 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
-// Get all customers
+// Get all customers (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const customers = await Customer.find().sort({ createdAt: -1 });
-    res.json(customers);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 2000));
+    const skip = (page - 1) * limit;
+
+    const [total, customers] = await Promise.all([
+      Customer.countDocuments(),
+      Customer.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    res.json({
+      data: customers,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit))
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -40,32 +61,42 @@ router.get('/:id/profile', authenticateToken, async (req, res) => {
     .lean();
     
     console.log('Orders found:', orders.length);
-    
-    // Populate pipeline stage info
+
     const PipelineRecord = require('../models/PipelineRecord');
     const Stage = require('../models/Stage');
-    
-    for (let order of orders) {
-      try {
-        // Find pipeline record by orderId
-        const pipelineRecord = await PipelineRecord.findOne({ orderId: order._id }).lean();
-        if (pipelineRecord && pipelineRecord.stageId) {
-          const stage = await Stage.findById(pipelineRecord.stageId).select('name').lean();
-          order.pipelineStage = stage ? stage.name : null;
-        }
-      } catch (err) {
-        console.log('Pipeline record not found for order:', order._id);
+    const Vendor = require('../models/Vendor');
+
+    const orderObjectIds = orders.map(o => o._id);
+    const pipelineRows = orderObjectIds.length
+      ? await PipelineRecord.find({ orderId: { $in: orderObjectIds } }).select('orderId stageId').lean()
+      : [];
+    const pipelineByOrderId = new Map(
+      pipelineRows.filter(p => p.orderId).map(p => [p.orderId.toString(), p])
+    );
+
+    const stageIdStrings = [...new Set(pipelineRows.map(p => p.stageId && p.stageId.toString()).filter(Boolean))];
+    const stageObjectIds = stageIdStrings.map(id => new mongoose.Types.ObjectId(id));
+    const stages = stageObjectIds.length
+      ? await Stage.find({ _id: { $in: stageObjectIds } }).select('name').lean()
+      : [];
+    const stageById = new Map(stages.map(s => [s._id.toString(), s]));
+
+    const vendorIdStrings = [...new Set(orders.map(o => o.vendor && o.vendor.toString()).filter(Boolean))];
+    const vendorObjectIds = vendorIdStrings.map(id => new mongoose.Types.ObjectId(id));
+    const vendors = vendorObjectIds.length
+      ? await Vendor.find({ _id: { $in: vendorObjectIds } }).select('name category').lean()
+      : [];
+    const vendorById = new Map(vendors.map(v => [v._id.toString(), v]));
+
+    for (const order of orders) {
+      const pr = pipelineByOrderId.get(order._id.toString());
+      if (pr && pr.stageId) {
+        const st = stageById.get(pr.stageId.toString());
+        order.pipelineStage = st ? st.name : null;
       }
-      
-      // Populate vendor info
       if (order.vendor) {
-        try {
-          const Vendor = require('../models/Vendor');
-          const vendor = await Vendor.findById(order.vendor).select('name category').lean();
-          order.vendor = vendor;
-        } catch (err) {
-          console.log('Vendor not found for order:', order._id);
-        }
+        const vdoc = vendorById.get(order.vendor.toString());
+        if (vdoc) order.vendor = vdoc;
       }
     }
     
