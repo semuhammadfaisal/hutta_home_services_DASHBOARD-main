@@ -1,5 +1,7 @@
 // API Configuration
 const API_BASE_URL = '/api';
+/** How many new-order cards show before clicking “Show more” */
+const NEW_ORDERS_DEFAULT_VISIBLE = 2;
 
 // Data storage
 let stages = [];
@@ -122,100 +124,124 @@ async function fetchAllEmployeesData() {
     }
 }
 
+/** Bind once — loadStages() runs often; duplicate listeners broke stage actions */
+function bindPipelineStagesContainerOnce(container) {
+    if (!container || container.dataset.pipelineUiBound === '1') return;
+    container.dataset.pipelineUiBound = '1';
+    container.addEventListener('click', pipelineStagesContainerClick);
+    container.addEventListener('dragstart', pipelineStagesContainerDragStart);
+}
+
+function pipelineStagesContainerDragStart(e) {
+    if (e.target.classList.contains('record-card') || e.target.classList.contains('new-order-card')) {
+        drag(e);
+    }
+}
+
+function pipelineStagesContainerClick(e) {
+    const editStageBtn = e.target.closest('.edit-stage-btn');
+    if (editStageBtn) {
+        e.stopPropagation();
+        editStage(editStageBtn.dataset.stageId);
+        return;
+    }
+
+    const deleteStageBtn = e.target.closest('.delete-stage-btn');
+    if (deleteStageBtn) {
+        e.stopPropagation();
+        deleteStage(deleteStageBtn.dataset.stageId);
+        return;
+    }
+
+    const editBtn = e.target.closest('.record-edit-btn');
+    if (editBtn) {
+        e.stopPropagation();
+        editRecord(editBtn.dataset.recordId);
+        return;
+    }
+
+    const viewBtn = e.target.closest('.record-view-btn');
+    if (viewBtn) {
+        e.stopPropagation();
+        const recordId = viewBtn.dataset.recordId;
+        const record = records.find(r => r._id === recordId);
+
+        if (record && record.orderId) {
+            if (typeof window.showOrderDetail === 'function') {
+                window.showOrderDetail(record.orderId, true);
+            } else {
+                console.error('showOrderDetail function not found');
+                viewRecord(recordId);
+            }
+        } else {
+            viewRecord(recordId);
+        }
+        return;
+    }
+
+    const deleteBtn = e.target.closest('.record-delete-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        deleteRecord(deleteBtn.dataset.recordId);
+        return;
+    }
+
+    const descToggle = e.target.closest('.record-description-toggle');
+    if (descToggle) {
+        e.stopPropagation();
+        e.preventDefault();
+        const block = descToggle.closest('.record-description-block');
+        const descEl = block?.querySelector('.record-description');
+        if (!descEl) return;
+        const expanded = descEl.classList.toggle('record-description--expanded');
+        if (expanded) {
+            descEl.classList.remove('record-description--clamped');
+            descToggle.textContent = 'Read less';
+            descToggle.setAttribute('aria-expanded', 'true');
+        } else {
+            descEl.classList.add('record-description--clamped');
+            descEl.classList.remove('record-description--expanded');
+            descToggle.textContent = 'Read more';
+            descToggle.setAttribute('aria-expanded', 'false');
+        }
+        return;
+    }
+
+    const expandBtn = e.target.closest('.expand-stage-btn');
+    if (expandBtn) {
+        e.stopPropagation();
+        expandStage(expandBtn.dataset.stageId);
+        return;
+    }
+}
+
 // Load and render stages
 function loadStages() {
     const container = document.getElementById('stagesContainer');
     if (!container) return;
-    
-    // Clear container
+
     container.innerHTML = '';
-    
-    // Add new orders suggestion column first
+
     const suggestionsColumn = createNewOrdersSuggestionColumn();
     container.appendChild(suggestionsColumn);
-    
-    // Render stages synchronously (much faster)
+
     for (const stage of stages) {
-        const stageColumn = createStageColumn(stage);
-        container.appendChild(stageColumn);
+        container.appendChild(createStageColumn(stage));
     }
-    
-    // Add event delegation for all buttons
-    container.addEventListener('click', (e) => {
-        console.log('Click detected:', e.target);
-        
-        // Edit stage button
-        const editStageBtn = e.target.closest('.edit-stage-btn');
-        if (editStageBtn) {
-            e.stopPropagation();
-            const stageId = editStageBtn.dataset.stageId;
-            editStage(stageId);
-            return;
-        }
-        
-        // Delete stage button
-        const deleteStageBtn = e.target.closest('.delete-stage-btn');
-        if (deleteStageBtn) {
-            e.stopPropagation();
-            const stageId = deleteStageBtn.dataset.stageId;
-            deleteStage(stageId);
-            return;
-        }
-        
-        // Edit record button
-        const editBtn = e.target.closest('.record-edit-btn');
-        if (editBtn) {
-            e.stopPropagation();
-            editRecord(editBtn.dataset.recordId);
-            return;
-        }
-        
-        // View record button
-        const viewBtn = e.target.closest('.record-view-btn');
-        if (viewBtn) {
-            e.stopPropagation();
-            const recordId = viewBtn.dataset.recordId;
-            const record = records.find(r => r._id === recordId);
-            
-            // If record has linked order, open order detail page
-            if (record && record.orderId) {
-                if (typeof window.showOrderDetail === 'function') {
-                    window.showOrderDetail(record.orderId, true); // true = from pipeline
-                } else {
-                    console.error('showOrderDetail function not found');
-                    viewRecord(recordId);
-                }
-            } else {
-                // No linked order, show pipeline view modal
-                viewRecord(recordId);
+
+    bindPipelineStagesContainerOnce(container);
+
+    requestAnimationFrame(() => {
+        container.querySelectorAll('.record-description-block').forEach((block) => {
+            const desc = block.querySelector('.record-description');
+            const btn = block.querySelector('.record-description-toggle');
+            if (!desc || !btn || btn.hidden) return;
+            if (desc.scrollHeight <= desc.clientHeight + 2) {
+                btn.hidden = true;
             }
-            return;
-        }
-        
-        // Delete record button
-        const deleteBtn = e.target.closest('.record-delete-btn');
-        if (deleteBtn) {
-            e.stopPropagation();
-            deleteRecord(deleteBtn.dataset.recordId);
-            return;
-        }
-        
-        // Expand stage button
-        const expandBtn = e.target.closest('.expand-stage-btn');
-        if (expandBtn) {
-            e.stopPropagation();
-            expandStage(expandBtn.dataset.stageId);
-            return;
-        }
+        });
     });
-    
-    // Add drag event delegation
-    container.addEventListener('dragstart', (e) => {
-        if (e.target.classList.contains('record-card') || e.target.classList.contains('new-order-card')) {
-            drag(e);
-        }
-    });
-    
+
     updateStatistics();
 }
 
@@ -245,9 +271,9 @@ function createStageColumn(stage) {
                 ${stage.isNoBid ? '<i class="fas fa-ban" style="margin-right: 6px;"></i>' : ''}${stage.name}
             </h3>
             <div class="stage-actions">
-                <button class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
-                <button class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
-                <button class="icon-btn delete delete-stage-btn" data-stage-id="${stage._id}" title="Delete Stage"><i class="fas fa-trash"></i></button>
+                <button type="button" draggable="false" class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
+                <button type="button" draggable="false" class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
+                <button type="button" draggable="false" class="icon-btn delete delete-stage-btn" data-stage-id="${stage._id}" title="Delete Stage"><i class="fas fa-trash"></i></button>
             </div>
         </div>
         <div class="stage-count">
@@ -321,9 +347,9 @@ function renderRecords(stageId) {
             ${record.email ? `<div class="record-info"><i class="fas fa-envelope"></i> ${record.email}</div>` : ''}
             ${record.phone ? `<div class="record-info"><i class="fas fa-phone"></i> ${record.phone}</div>` : ''}
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}
-            ${record.description ? `<div class="record-description">${record.description}</div>` : ''}
+            ${record.description ? renderRecordDescriptionHtml(record.description) : ''}
             <div class="record-footer">
-                ${employeeName ? `<span style="font-weight: 600; color: #3b82f6; font-size: 11px; margin-right: 8px;"><i class="fas fa-user-tie"></i> ${employeeName}</span>` : ''}
+                ${employeeName ? `<span class="record-assignee"><i class="fas fa-user-tie" aria-hidden="true"></i> ${employeeName}</span>` : ''}
                 <span class="priority-badge priority-${record.priority}">${record.priority}</span>
                 <span class="record-time">${formatTime(record.createdAt)}</span>
             </div>
@@ -1024,15 +1050,20 @@ async function drop(event) {
 
 // Stage Reordering with smooth animations
 function stageColumnDragStart(event) {
-    if (event.target.classList.contains('stage-column')) {
-        draggedStage = event.target;
-        event.target.classList.add('reordering');
-        event.dataTransfer.effectAllowed = 'move';
+    const column = event.currentTarget;
+    if (!column?.classList.contains('stage-column')) return;
+    if (event.target.closest('button, .record-card, .new-order-card, input, textarea, select, a')) {
+        event.preventDefault();
+        return;
     }
+    draggedStage = column;
+    column.classList.add('reordering');
+    event.dataTransfer.effectAllowed = 'move';
 }
 
 function stageColumnDragOver(event) {
-    if (event.target.classList.contains('stage-column') && draggedStage) {
+    const overColumn = event.target.closest('.stage-column');
+    if (overColumn && draggedStage) {
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     }
@@ -1046,8 +1077,9 @@ function stageColumnDrop(event) {
 }
 
 function stageColumnDragEnd(event) {
-    if (event.target.classList.contains('stage-column')) {
-        event.target.classList.remove('reordering');
+    const column = event.currentTarget;
+    if (column?.classList.contains('stage-column')) {
+        column.classList.remove('reordering');
         draggedStage = null;
     }
 }
@@ -1080,9 +1112,12 @@ function updateStatistics() {
     if (totalStagesEl) totalStagesEl.textContent = stages.length;
     if (totalRecordsEl) totalRecordsEl.textContent = records.length;
     
-    // Update new orders count
+    const count = newOrders.length;
     const newOrdersCountEl = document.getElementById('newOrdersCount');
-    if (newOrdersCountEl) newOrdersCountEl.textContent = newOrders.length;
+    if (newOrdersCountEl) newOrdersCountEl.textContent = count;
+    document.querySelectorAll('.pipeline-new-orders-badge').forEach((el) => {
+        el.textContent = count;
+    });
 }
 
 async function clearPipelineData() {
@@ -1126,6 +1161,27 @@ function formatTime(isoString) {
     if (hours > 0) return hours + 'h ago';
     if (minutes > 0) return minutes + 'm ago';
     return 'Just now';
+}
+
+function escapeHtml(unsafe) {
+    if (unsafe == null || unsafe === '') return '';
+    return String(unsafe)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderRecordDescriptionHtml(description) {
+    const raw = String(description ?? '').trim();
+    if (!raw) return '';
+    const safe = escapeHtml(raw);
+    return `
+        <div class="record-description-block">
+            <div class="record-description record-description--clamped">${safe}</div>
+            <button type="button" class="record-description-toggle" aria-expanded="false">Read more</button>
+        </div>`;
 }
 
 window.addEventListener('click', (event) => {
@@ -1382,30 +1438,23 @@ window.editRecordFromExpanded = editRecordFromExpanded;
 function createNewOrdersSuggestionColumn() {
     const column = document.createElement('div');
     column.className = 'stage-column new-orders-column';
-    column.style.background = 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)';
-    column.style.border = '2px dashed #0ea5e9';
-    column.style.minWidth = '340px';
-    column.style.maxWidth = '340px';
     
     const header = document.createElement('div');
-    header.className = 'stage-header';
-    header.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
-    header.style.color = 'white';
+    header.className = 'stage-header new-orders-column-header';
     header.innerHTML = `
         <div class="stage-title">
-            <h3 style="color: white; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-plus-circle"></i>
-                New Orders
+            <h3 class="new-orders-column-title">
+                <i class="fas fa-plus-circle" aria-hidden="true"></i>
+                New orders
             </h3>
         </div>
         <div class="stage-count">
-            <span class="count-badge" id="newOrdersCount" style="background: rgba(255,255,255,0.2); color: white;">${newOrders.length}</span>
+            <span class="count-badge pipeline-new-orders-badge">${newOrders.length}</span>
         </div>
     `;
     
     const body = document.createElement('div');
-    body.className = 'stage-body';
-    body.style.background = '#f8fafc';
+    body.className = 'stage-body new-orders-column-body';
     body.innerHTML = renderNewOrders();
     
     column.appendChild(header);
@@ -1417,46 +1466,28 @@ function createNewOrdersSuggestionColumn() {
 function renderNewOrders() {
     if (newOrders.length === 0) {
         return `
-            <div style="text-align: center; color: #64748b; padding: 40px 20px; font-size: 13px;">
-                <i class="fas fa-check-circle" style="font-size: 32px; color: #10b981; margin-bottom: 12px; display: block;"></i>
-                <div style="font-weight: 600; margin-bottom: 4px;">All caught up!</div>
-                <div>No new orders to add to pipeline</div>
+            <div class="pipeline-new-orders-empty" role="status">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <div class="pipeline-new-orders-empty-title">All caught up</div>
+                <div class="pipeline-new-orders-empty-hint">No new orders to add to the pipeline.</div>
             </div>
         `;
     }
     
-    // Show only first order by default
-    const firstOrder = newOrders[0];
-    const remainingCount = newOrders.length - 1;
-    
-    let html = renderOrderCard(firstOrder);
-    
-    // Add expand button if more orders exist
+    const visible = newOrders.slice(0, NEW_ORDERS_DEFAULT_VISIBLE);
+    const remainingCount = newOrders.length - visible.length;
+
+    let html = visible.map((order) => renderOrderCard(order)).join('');
+
     if (remainingCount > 0) {
         html += `
-            <button class="expand-new-orders-btn" onclick="expandNewOrders()" style="
-                width: 100%;
-                padding: 12px;
-                background: linear-gradient(135deg, #0ea5e9, #0284c7);
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: 12px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s;
-                margin-top: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 6px;
-            ">
-                <i class="fas fa-chevron-down"></i>
+            <button type="button" class="expand-new-orders-btn pipeline-expand-new-orders" onclick="expandNewOrders()">
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
                 Show ${remainingCount} more order${remainingCount > 1 ? 's' : ''}
             </button>
         `;
     }
-    
+
     return html;
 }
 
@@ -1549,85 +1580,37 @@ function renderOrderCard(order) {
     const priority = order.priority || 'medium';
     
     return `
-        <div class="new-order-card" draggable="true" data-order-id="${order._id}" style="
-            background: white;
-            border: 2px solid #e0f2fe;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
-            cursor: move;
-            transition: all 0.2s;
-            position: relative;
-        ">
-            <div class="drag-indicator" style="
-                position: absolute;
-                top: 8px;
-                right: 8px;
-                color: #0ea5e9;
-                font-size: 12px;
-            ">
+        <div class="new-order-card" draggable="true" data-order-id="${order._id}">
+            <div class="new-order-card-grip" aria-hidden="true">
                 <i class="fas fa-grip-vertical"></i>
             </div>
-            
-            <div class="order-header" style="margin-bottom: 8px;">
-                <div class="order-title" style="font-weight: 600; font-size: 13px; color: #1e293b; margin-bottom: 2px;">
-                    ${customerName}
-                </div>
-                <div class="order-id" style="font-size: 10px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; display: inline-block;">
-                    ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}
-                </div>
+            <div class="new-order-card-head">
+                <div class="new-order-card-title">${customerName}</div>
+                <div class="new-order-card-id">${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}</div>
             </div>
-            
-            <div class="order-info" style="font-size: 12px; color: #475569; margin-bottom: 8px;">
-                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                    <i class="fas fa-wrench" style="color: #64748b; font-size: 11px;"></i>
+            <div class="new-order-card-meta">
+                <div class="new-order-card-row">
+                    <i class="fas fa-wrench" aria-hidden="true"></i>
                     <span>${order.service || 'Service not specified'}</span>
                 </div>
                 ${order.customer?.email ? `
-                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                        <i class="fas fa-envelope" style="color: #64748b; font-size: 11px;"></i>
+                    <div class="new-order-card-row">
+                        <i class="fas fa-envelope" aria-hidden="true"></i>
                         <span>${order.customer.email}</span>
                     </div>
                 ` : ''}
                 ${amount ? `
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-dollar-sign" style="color: #64748b; font-size: 11px;"></i>
-                        <span style="font-weight: 600; color: #059669;">${amount}</span>
+                    <div class="new-order-card-row new-order-card-amount-row">
+                        <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+                        <span class="new-order-card-amount">${amount}</span>
                     </div>
                 ` : ''}
             </div>
-            
-            <div class="order-footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid #e2e8f0;">
-                <span class="priority-badge priority-${priority}" style="
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                    font-size: 9px;
-                    letter-spacing: 0.5px;
-                    ${priority === 'high' ? 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;' : 
-                      priority === 'medium' ? 'background: #fffbeb; color: #d97706; border: 1px solid #fde68a;' : 
-                      'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;'}
-                ">${priority}</span>
-                <span class="order-time" style="font-size: 10px; color: #94a3b8;">${timeAgo}</span>
+            <div class="new-order-card-foot">
+                <span class="priority-badge priority-${priority}">${priority}</span>
+                <span class="new-order-card-time">${timeAgo}</span>
             </div>
-            
-            <div class="drag-hint" style="
-                position: absolute;
-                bottom: -20px;
-                left: 50%;
-                transform: translateX(-50%);
-                font-size: 10px;
-                color: #0ea5e9;
-                background: white;
-                padding: 2px 8px;
-                border-radius: 4px;
-                border: 1px solid #0ea5e9;
-                opacity: 0;
-                transition: opacity 0.2s;
-                pointer-events: none;
-                white-space: nowrap;
-            ">Drag to stage →</div>
+            <div class="new-order-card-hint">Drag to a stage</div>
         </div>
     `;
 }
@@ -1642,24 +1625,8 @@ function expandNewOrders() {
     
     // Add collapse button
     const collapseBtn = `
-        <button class="collapse-new-orders-btn" onclick="collapseNewOrders()" style="
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #64748b, #475569);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        ">
-            <i class="fas fa-chevron-up"></i>
+        <button type="button" class="pipeline-collapse-new-orders" onclick="collapseNewOrders()">
+            <i class="fas fa-chevron-up" aria-hidden="true"></i>
             Show less
         </button>
     `;
@@ -1675,35 +1642,7 @@ function collapseNewOrders() {
     container.innerHTML = renderNewOrders();
 }
 
-// Add hover effects for new order cards
-document.addEventListener('DOMContentLoaded', () => {
-    // Add CSS for hover effects
-    const style = document.createElement('style');
-    style.textContent = `
-        .new-order-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
-            border-color: #0ea5e9 !important;
-        }
-        
-        .new-order-card:hover .drag-hint {
-            opacity: 1;
-        }
-        
-        .new-order-card.dragging {
-            opacity: 0.5;
-            transform: rotate(5deg);
-        }
-        
-        .stage-body.drag-over {
-            background: #f0f9ff !important;
-            border: 2px dashed #0ea5e9;
-        }
-    `;
-    document.head.appendChild(style);
-});
-
-window.createPipelineRecordFromOrder = createPipelineRecordFromOrder;
+// Add hover effects for new order cards (styles live in pipeline.css)
 window.loadNewOrdersSuggestions = loadNewOrdersSuggestions;
 window.expandNewOrders = expandNewOrders;
 window.collapseNewOrders = collapseNewOrders;
@@ -1804,4 +1743,5 @@ window.closeStageModal = closeStageModal;
 window.saveStage = saveStage;
 window.editStage = editStage;
 window.deleteStage = deleteStage;
+window.clearPipelineData = clearPipelineData;
 

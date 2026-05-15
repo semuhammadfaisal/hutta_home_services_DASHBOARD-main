@@ -1,4 +1,7 @@
-let currentDate = new Date();
+// Import timezone configuration
+const TIMEZONE = 'America/Denver'; // MDT timezone
+
+let currentDate = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
 let cachedOrders = [];
 let cachedProjects = [];
 
@@ -10,7 +13,7 @@ function getEventsForDate(year, month, day) {
         if (isRecurring) return;
 
         if (order.startDate) {
-            const oDate = new Date(order.startDate);
+            const oDate = new Date(new Date(order.startDate).toLocaleString('en-US', { timeZone: TIMEZONE }));
             if (oDate.getFullYear() === year && oDate.getMonth() === month && oDate.getDate() === day) {
                 events.push({
                     type: 'order',
@@ -22,9 +25,8 @@ function getEventsForDate(year, month, day) {
         }
 
         if (order.endDate) {
-            const eDate = new Date(order.endDate);
+            const eDate = new Date(new Date(order.endDate).toLocaleString('en-US', { timeZone: TIMEZONE }));
             if (eDate.getFullYear() === year && eDate.getMonth() === month && eDate.getDate() === day) {
-                // Avoid duplicate if start === end
                 const startDate = order.startDate ? new Date(order.startDate) : null;
                 const sameAsStart = startDate && startDate.getFullYear() === year && startDate.getMonth() === month && startDate.getDate() === day;
                 if (!sameAsStart) {
@@ -41,7 +43,7 @@ function getEventsForDate(year, month, day) {
     
     cachedProjects.forEach(project => {
         if (project.startDate) {
-            const pDate = new Date(project.startDate);
+            const pDate = new Date(new Date(project.startDate).toLocaleString('en-US', { timeZone: TIMEZONE }));
             if (pDate.getFullYear() === year && pDate.getMonth() === month && pDate.getDate() === day) {
                 events.push({
                     type: 'project',
@@ -92,7 +94,6 @@ async function renderCalendar() {
     
     calendarDays.innerHTML = '';
     
-    // Previous month days
     for (let i = firstDay - 1; i >= 0; i--) {
         const day = daysInPrevMonth - i;
         const dayDiv = document.createElement('div');
@@ -101,8 +102,7 @@ async function renderCalendar() {
         calendarDays.appendChild(dayDiv);
     }
     
-    // Current month days
-    const today = new Date();
+    const today = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
     for (let day = 1; day <= daysInMonth; day++) {
         const dayDiv = document.createElement('div');
         dayDiv.className = 'calendar-day';
@@ -111,10 +111,8 @@ async function renderCalendar() {
             dayDiv.classList.add('today');
         }
         
-        // Make day clickable to add order
         dayDiv.style.cursor = 'pointer';
         dayDiv.onclick = (e) => {
-            // Only trigger if clicking on the day itself, not on events
             if (e.target === dayDiv || e.target.classList.contains('calendar-day-number')) {
                 const selectedDate = new Date(year, month, day);
                 openOrderModalWithDate(selectedDate);
@@ -167,7 +165,6 @@ async function renderCalendar() {
         calendarDays.appendChild(dayDiv);
     }
     
-    // Next month days
     const totalCells = calendarDays.children.length;
     const remainingCells = 42 - totalCells;
     for (let day = 1; day <= remainingCells; day++) {
@@ -236,7 +233,7 @@ async function showEventDetail(event) {
                 </div>
                 <div class="detail-item">
                     <label>Start Date</label>
-                    <div class="value">${new Date(data.startDate).toLocaleDateString()}</div>
+                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>
@@ -265,7 +262,7 @@ async function showEventDetail(event) {
                 </div>
                 <div class="detail-item">
                     <label>Start Date</label>
-                    <div class="value">${new Date(data.startDate).toLocaleDateString()}</div>
+                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>
@@ -284,9 +281,7 @@ function closeDetailPanel() {
     document.getElementById('calendarDetailPanel').style.display = 'none';
 }
 
-// Function to open order modal with pre-filled date
 function openOrderModalWithDate(date) {
-    // Format date as YYYY-MM-DD for input field
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -294,11 +289,9 @@ function openOrderModalWithDate(date) {
     
     console.log('Opening order modal with date:', formattedDate);
     
-    // Call the global showAddOrderModal function if it exists
     if (typeof window.showAddOrderModal === 'function') {
         window.showAddOrderModal();
         
-        // Wait a bit for modal to open, then set the date
         setTimeout(() => {
             const startDateInput = document.getElementById('startDate');
             const endDateInput = document.getElementById('endDate');
@@ -308,7 +301,6 @@ function openOrderModalWithDate(date) {
                 console.log('Start date set to:', formattedDate);
             }
             
-            // Set end date to same day by default
             if (endDateInput) {
                 endDateInput.value = formattedDate;
                 console.log('End date set to:', formattedDate);
@@ -320,19 +312,17 @@ function openOrderModalWithDate(date) {
     }
 }
 
-// Make function globally accessible
 window.openOrderModalWithDate = openOrderModalWithDate;
 
 
-// Recurring Calendar specific functions
 let recurringCachedOrders = [];
-let recurringCurrentMonth = new Date().getMonth();
-let recurringCurrentYear = new Date().getFullYear();
+const todayMDT = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+let recurringCurrentMonth = todayMDT.getMonth();
+let recurringCurrentYear = todayMDT.getFullYear();
 
 async function loadRecurringCalendarData() {
     try {
         const allOrders = await window.APIService.getOrders();
-        // Filter only recurring orders (default to 'one-time' for old orders without orderType)
         recurringCachedOrders = allOrders.filter(order => order.orderType === 'recurring');
     } catch (error) {
         console.error('Failed to load recurring calendar data:', error);
@@ -352,11 +342,9 @@ function getRecurringEventsForDate(year, month, day) {
             const endDate = order.recurringEndDate ? new Date(order.recurringEndDate) : null;
             if (endDate) endDate.setHours(23, 59, 59, 999);
             
-            // Check if target date is within the recurring range
             if (targetDate < startDate) return;
             if (endDate && targetDate > endDate) return;
             
-            // Check if this date matches the recurrence pattern
             if (isRecurringMatch(startDate, targetDate, order.recurringFrequency, order.recurringCustomDays)) {
                 events.push({
                     type: 'recurring-order',
@@ -386,39 +374,31 @@ function isRecurringMatch(startDate, targetDate, frequency, customDays) {
     
     switch (frequency) {
         case 'custom':
-            // Custom frequency: every X days
             if (!customDays || customDays < 1) return false;
             return daysDiff % customDays === 0;
             
         case 'weekly':
-            // Same day of week, every 7 days
             return daysDiff % 7 === 0 && start.getDay() === target.getDay();
             
         case 'bi-weekly':
-            // Same day of week, every 14 days
             return daysDiff % 14 === 0 && start.getDay() === target.getDay();
             
         case 'monthly':
-            // Same day of month
             const monthsDiff = (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth());
             if (monthsDiff < 0) return false;
             
-            // Check if same day of month
             const startDay = start.getDate();
             const targetDay = target.getDate();
             
-            // Handle edge case: if start date is 29-31 and target month doesn't have that day
             const lastDayOfTargetMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
             
             if (startDay > lastDayOfTargetMonth) {
-                // If start day doesn't exist in target month, match on last day of month
                 return targetDay === lastDayOfTargetMonth;
             }
             
             return targetDay === startDay;
             
         case 'yearly':
-            // Same month and day every year
             const yearsDiff = target.getFullYear() - start.getFullYear();
             if (yearsDiff < 0) return false;
             
@@ -452,7 +432,6 @@ async function renderRecurringCalendar() {
     
     calendarDays.innerHTML = '';
     
-    // Previous month days
     for (let i = firstDay - 1; i >= 0; i--) {
         const day = daysInPrevMonth - i;
         const dayDiv = document.createElement('div');
@@ -461,8 +440,7 @@ async function renderRecurringCalendar() {
         calendarDays.appendChild(dayDiv);
     }
     
-    // Current month days
-    const today = new Date();
+    const today = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
     for (let day = 1; day <= daysInMonth; day++) {
         const dayDiv = document.createElement('div');
         dayDiv.className = 'calendar-day';
@@ -507,7 +485,6 @@ async function renderRecurringCalendar() {
         calendarDays.appendChild(dayDiv);
     }
     
-    // Next month days
     const totalCells = calendarDays.children.length;
     const remainingCells = 42 - totalCells;
     for (let day = 1; day <= remainingCells; day++) {
@@ -536,7 +513,6 @@ async function showRecurringEventDetail(event) {
             'custom': 'Custom'
         };
         
-        // Determine frequency display
         let frequencyDisplay;
         if (data.recurringFrequency === 'custom') {
             if (data.recurringCustomDays && data.recurringCustomDays > 0) {
@@ -574,12 +550,12 @@ async function showRecurringEventDetail(event) {
             </div>
             <div class="detail-item">
                 <label>Start Date</label>
-                <div class="value">${new Date(data.startDate).toLocaleDateString()}</div>
+                <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
             </div>
             ${data.recurringEndDate ? `
             <div class="detail-item">
                 <label>End Date</label>
-                <div class="value">${new Date(data.recurringEndDate).toLocaleDateString()}</div>
+                <div class="value">${new Date(data.recurringEndDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
             </div>
             ` : ''}
             ${data.recurringNotes ? `
@@ -605,6 +581,5 @@ async function showRecurringEventDetail(event) {
     }
 }
 
-// Update the global functions
 window.renderRecurringCalendar = renderRecurringCalendar;
 window.showRecurringEventDetail = showRecurringEventDetail;

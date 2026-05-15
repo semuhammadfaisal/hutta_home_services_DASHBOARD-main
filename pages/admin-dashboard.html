@@ -10,8 +10,6 @@
     <link rel="stylesheet" href="../assets/css/reports.css">
     <link rel="stylesheet" href="../assets/css/settings.css">
     <link rel="stylesheet" href="../assets/css/pipeline.css">
-    <link rel="stylesheet" href="../assets/css/pipeline-enhanced.css">
-    <link rel="stylesheet" href="../assets/css/pipeline-horizontal.css">
     <link rel="stylesheet" href="../assets/css/accounting-styles.css">
     <link rel="stylesheet" href="../assets/css/calendar.css">
     <link rel="stylesheet" href="../assets/css/detail-pages.css">
@@ -1083,9 +1081,12 @@
         <section id="pipeline" class="content-section">
             <div class="pipeline-page">
                 <div class="pipeline-header-bar">
-                    <h1>Pipeline Management</h1>
+                    <div class="pipeline-title-block">
+                        <h1>Pipeline Management</h1>
+                        <p class="pipeline-subtitle">Drag cards between stages to update progress. Use the first column to pull in recent orders.</p>
+                    </div>
                     <div class="pipeline-actions">
-                        <div class="pipeline-stats">
+                        <div class="pipeline-stats" role="group" aria-label="Pipeline summary">
                             <div class="stat-item">
                                 <span class="stat-value" id="totalStages">0</span>
                                 <span class="stat-label">Stages</span>
@@ -1099,8 +1100,13 @@
                                 <span class="stat-label">New Orders</span>
                             </div>
                         </div>
-                        <button class="btn-secondary" onclick="clearPipelineData()" title="Clear all data">Clear Data</button>
-                        <button class="btn-add-stage" onclick="openStageModal()">+ Add Stage</button>
+                        <div class="pipeline-toolbar-buttons">
+                            <button type="button" class="pipeline-btn-clear" onclick="clearPipelineData()" title="Remove all pipeline records and stages">
+                                <i class="fas fa-eraser" aria-hidden="true"></i>
+                                <span>Clear data</span>
+                            </button>
+                            <button type="button" class="btn-add-stage" onclick="openStageModal()"><i class="fas fa-plus" aria-hidden="true"></i> Add stage</button>
+                        </div>
                     </div>
                 </div>
                 <div class="pipeline-search-bar">
