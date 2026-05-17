@@ -1,20 +1,48 @@
-// Import timezone configuration
-const TIMEZONE = 'America/Denver'; // MDT timezone
+// Calendar — Mountain Time (America/Denver)
+function getCalendarTimezone() {
+    return (window.TimezoneConfig && window.TimezoneConfig.TIMEZONE) || 'America/Denver';
+}
 
-let currentDate = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+function getYmdInMDT(date) {
+    if (window.TimezoneConfig && window.TimezoneConfig.getYmdInMDT) {
+        return window.TimezoneConfig.getYmdInMDT(date);
+    }
+    const d = new Date(date);
+    return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+}
+
+function getTodayYmdMDT() {
+    if (window.TimezoneConfig && window.TimezoneConfig.nowYmdMDT) {
+        return window.TimezoneConfig.nowYmdMDT();
+    }
+    return getYmdInMDT(new Date());
+}
+
+function initCalendarView() {
+    const today = getTodayYmdMDT();
+    return { year: today.year, month: today.month };
+}
+
+let calendarView = initCalendarView();
 let cachedOrders = [];
 let cachedProjects = [];
 
+function sameYmd(a, year, month, day) {
+    return a && a.year === year && a.month === month && a.day === day;
+}
+
 function getEventsForDate(year, month, day) {
     const events = [];
+    const orders = Array.isArray(cachedOrders) ? cachedOrders : [];
+    const projects = Array.isArray(cachedProjects) ? cachedProjects : [];
     
-    cachedOrders.forEach(order => {
+    orders.forEach(order => {
         const isRecurring = order.orderType === 'recurring';
         if (isRecurring) return;
 
         if (order.startDate) {
-            const oDate = new Date(new Date(order.startDate).toLocaleString('en-US', { timeZone: TIMEZONE }));
-            if (oDate.getFullYear() === year && oDate.getMonth() === month && oDate.getDate() === day) {
+            const startYmd = getYmdInMDT(order.startDate);
+            if (sameYmd(startYmd, year, month, day)) {
                 events.push({
                     type: 'order',
                     title: order.orderId || order.service || 'Order',
@@ -25,11 +53,10 @@ function getEventsForDate(year, month, day) {
         }
 
         if (order.endDate) {
-            const eDate = new Date(new Date(order.endDate).toLocaleString('en-US', { timeZone: TIMEZONE }));
-            if (eDate.getFullYear() === year && eDate.getMonth() === month && eDate.getDate() === day) {
-                const startDate = order.startDate ? new Date(order.startDate) : null;
-                const sameAsStart = startDate && startDate.getFullYear() === year && startDate.getMonth() === month && startDate.getDate() === day;
-                if (!sameAsStart) {
+            const endYmd = getYmdInMDT(order.endDate);
+            if (sameYmd(endYmd, year, month, day)) {
+                const startYmd = order.startDate ? getYmdInMDT(order.startDate) : null;
+                if (!sameYmd(startYmd, year, month, day)) {
                     events.push({
                         type: 'order',
                         title: order.orderId || order.service || 'Order',
@@ -41,10 +68,10 @@ function getEventsForDate(year, month, day) {
         }
     });
     
-    cachedProjects.forEach(project => {
+    projects.forEach(project => {
         if (project.startDate) {
-            const pDate = new Date(new Date(project.startDate).toLocaleString('en-US', { timeZone: TIMEZONE }));
-            if (pDate.getFullYear() === year && pDate.getMonth() === month && pDate.getDate() === day) {
+            const startYmd = getYmdInMDT(project.startDate);
+            if (sameYmd(startYmd, year, month, day)) {
                 events.push({
                     type: 'project',
                     title: project.name || 'Project',
@@ -58,15 +85,30 @@ function getEventsForDate(year, month, day) {
 }
 
 async function loadCalendarData() {
-    try {
-        [cachedOrders, cachedProjects] = await Promise.all([
-            window.APIService.getOrders(),
-            window.APIService.getProjects()
-        ]);
-    } catch (error) {
-        console.error('Failed to load calendar data:', error);
-        cachedOrders = [];
-        cachedProjects = [];
+    cachedOrders = [];
+    cachedProjects = [];
+
+    if (!window.APIService) {
+        console.warn('Calendar: APIService not ready');
+        return;
+    }
+
+    const [ordersResult, projectsResult] = await Promise.allSettled([
+        window.APIService.getOrders(),
+        window.APIService.getProjects()
+    ]);
+
+    if (ordersResult.status === 'fulfilled') {
+        cachedOrders = Array.isArray(ordersResult.value) ? ordersResult.value : [];
+    } else {
+        console.error('Failed to load calendar orders:', ordersResult.reason);
+    }
+
+    if (projectsResult.status === 'fulfilled') {
+        const raw = projectsResult.value;
+        cachedProjects = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+    } else {
+        console.error('Failed to load calendar projects:', projectsResult.reason);
     }
 }
 
@@ -75,8 +117,8 @@ window.refreshCalendar = renderCalendar;
 async function renderCalendar() {
     await loadCalendarData();
     
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+    const year = calendarView.year;
+    const month = calendarView.month;
     
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December'];
@@ -102,12 +144,12 @@ async function renderCalendar() {
         calendarDays.appendChild(dayDiv);
     }
     
-    const today = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+    const today = getTodayYmdMDT();
     for (let day = 1; day <= daysInMonth; day++) {
         const dayDiv = document.createElement('div');
         dayDiv.className = 'calendar-day';
         
-        if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+        if (sameYmd(today, year, month, day)) {
             dayDiv.classList.add('today');
         }
         
@@ -177,12 +219,20 @@ async function renderCalendar() {
 }
 
 function previousMonth() {
-    currentDate.setMonth(currentDate.getMonth() - 1);
+    calendarView.month -= 1;
+    if (calendarView.month < 0) {
+        calendarView.month = 11;
+        calendarView.year -= 1;
+    }
     renderCalendar();
 }
 
 function nextMonth() {
-    currentDate.setMonth(currentDate.getMonth() + 1);
+    calendarView.month += 1;
+    if (calendarView.month > 11) {
+        calendarView.month = 0;
+        calendarView.year += 1;
+    }
     renderCalendar();
 }
 
@@ -190,17 +240,29 @@ function addEvent() {
     alert('Add Event functionality coming soon!');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('calendarDays')) {
+function loadCalendarSection() {
+    if (typeof renderCalendar === 'function') {
         renderCalendar();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    calendarView = initCalendarView();
+    if (document.getElementById('calendarDays')) {
+        setTimeout(loadCalendarSection, 300);
     }
 });
 
 document.addEventListener('click', function(e) {
     if (e.target.closest('a[data-section="calendar"]')) {
-        setTimeout(renderCalendar, 100);
+        setTimeout(loadCalendarSection, 100);
     }
 });
+
+window.renderCalendar = renderCalendar;
+window.loadCalendarSection = loadCalendarSection;
+window.previousMonth = previousMonth;
+window.nextMonth = nextMonth;
 
 async function showEventDetail(event) {
     const panel = document.getElementById('calendarDetailPanel');
@@ -233,7 +295,7 @@ async function showEventDetail(event) {
                 </div>
                 <div class="detail-item">
                     <label>Start Date</label>
-                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
+                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>
@@ -262,7 +324,7 @@ async function showEventDetail(event) {
                 </div>
                 <div class="detail-item">
                     <label>Start Date</label>
-                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
+                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>
@@ -278,8 +340,11 @@ async function showEventDetail(event) {
 }
 
 function closeDetailPanel() {
-    document.getElementById('calendarDetailPanel').style.display = 'none';
+    const panel = document.getElementById('calendarDetailPanel');
+    if (panel) panel.style.display = 'none';
 }
+
+window.closeDetailPanel = closeDetailPanel;
 
 function openOrderModalWithDate(date) {
     const year = date.getFullYear();
@@ -316,9 +381,9 @@ window.openOrderModalWithDate = openOrderModalWithDate;
 
 
 let recurringCachedOrders = [];
-const todayMDT = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
-let recurringCurrentMonth = todayMDT.getMonth();
-let recurringCurrentYear = todayMDT.getFullYear();
+const recurringToday = getTodayYmdMDT();
+let recurringCurrentMonth = recurringToday.month;
+let recurringCurrentYear = recurringToday.year;
 
 async function loadRecurringCalendarData() {
     try {
@@ -440,12 +505,12 @@ async function renderRecurringCalendar() {
         calendarDays.appendChild(dayDiv);
     }
     
-    const today = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+    const today = getTodayYmdMDT();
     for (let day = 1; day <= daysInMonth; day++) {
         const dayDiv = document.createElement('div');
         dayDiv.className = 'calendar-day';
         
-        if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+        if (sameYmd(today, year, month, day)) {
             dayDiv.classList.add('today');
         }
         
@@ -550,12 +615,12 @@ async function showRecurringEventDetail(event) {
             </div>
             <div class="detail-item">
                 <label>Start Date</label>
-                <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
+                <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
             </div>
             ${data.recurringEndDate ? `
             <div class="detail-item">
                 <label>End Date</label>
-                <div class="value">${new Date(data.recurringEndDate).toLocaleDateString('en-US', { timeZone: TIMEZONE })}</div>
+                <div class="value">${new Date(data.recurringEndDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
             </div>
             ` : ''}
             ${data.recurringNotes ? `

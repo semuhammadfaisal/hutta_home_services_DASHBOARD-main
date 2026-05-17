@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="../assets/css/vendor-categories.css">
     <link rel="stylesheet" href="../assets/css/invoice-modal.css">
     <link rel="stylesheet" href="../assets/css/payment-detail.css">
+    <link rel="stylesheet" href="../assets/css/security-utils.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -42,7 +43,7 @@
             <div class="search-box">
                 <label class="visually-hidden" for="globalDashboardSearch">Search</label>
                 <i class="fas fa-search" aria-hidden="true"></i>
-                <input id="globalDashboardSearch" type="search" name="q" autocomplete="off" placeholder="Search orders, customers, vendors…" enterkeyhint="search" aria-label="Search orders, customers, and vendors">
+                <input id="globalDashboardSearch" type="search" name="q" autocomplete="off" placeholder="Search orders, customers, vendorsâ€¦" enterkeyhint="search" aria-label="Search orders, customers, and vendors">
             </div>
         </div>
         <div class="nav-right">
@@ -332,9 +333,9 @@
                         <div class="leaderboard-item skeleton">
                             <div class="rank">1</div>
                             <div class="employee-info">
-                                <div class="employee-name">Loading…</div>
+                                <div class="employee-name">Loadingâ€¦</div>
                                 <div class="employee-meta">
-                                    <span class="order-count">—</span>
+                                    <span class="order-count">â€”</span>
                                 </div>
                             </div>
                             <div class="leaderboard-revenue">
@@ -610,7 +611,7 @@
                 <div class="customers-search-filter">
                     <div class="customers-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="customerSearchInput" placeholder="Search customers by name, email, or phone...">
+                        <input type="text" id="customersToolbarSearchInput" placeholder="Search customers by name, email, or phone...">
                     </div>
                     <div class="customers-filters">
                         <select class="filter-select" id="customerTypeFilter">
@@ -1265,12 +1266,12 @@
 
                 <!-- Accounting Tabs -->
                 <div class="accounting-tabs">
-                    <button class="accounting-tab active" onclick="switchAccountingTab('jobs')">Job-Level Profit</button>
-                    <button class="accounting-tab" onclick="switchAccountingTab('ar')">AR Management</button>
-                    <button class="accounting-tab" onclick="switchAccountingTab('forecast')">Forecasting & Growth</button>
-                    <button class="accounting-tab" onclick="switchAccountingTab('wealth')">Profit Allocation & Wealth</button>
-                    <button class="accounting-tab" onclick="switchAccountingTab('executive')">Executive Dashboard</button>
-                    <button class="accounting-tab" onclick="switchAccountingTab('cashflow')">Cash Flow Snapshot</button>
+                    <button type="button" class="accounting-tab active" data-accounting-tab="jobs" onclick="switchAccountingTab('jobs', this)">Job-Level Profit</button>
+                    <button type="button" class="accounting-tab" data-accounting-tab="ar" onclick="switchAccountingTab('ar', this)">AR Management</button>
+                    <button type="button" class="accounting-tab" data-accounting-tab="forecast" onclick="switchAccountingTab('forecast', this)">Forecasting & Growth</button>
+                    <button type="button" class="accounting-tab" data-accounting-tab="wealth" onclick="switchAccountingTab('wealth', this)">Profit Allocation & Wealth</button>
+                    <button type="button" class="accounting-tab" data-accounting-tab="executive" onclick="switchAccountingTab('executive', this)">Executive Dashboard</button>
+                    <button type="button" class="accounting-tab" data-accounting-tab="cashflow" onclick="switchAccountingTab('cashflow', this)">Cash Flow Snapshot</button>
                 </div>
 
                 <!-- Job-Level Profit Tab -->
@@ -1587,12 +1588,12 @@
                                 <div class="exec-kpi-card">
                                     <div class="kpi-label">Avg Days to Get Paid</div>
                                     <div class="kpi-value" id="avgDaysToGetPaid">0 days</div>
-                                    <div class="kpi-desc">Job Created → Payment Received</div>
+                                    <div class="kpi-desc">Job Created â†’ Payment Received</div>
                                 </div>
                                 <div class="exec-kpi-card">
                                     <div class="kpi-label">Avg Contractor Payout Delay</div>
                                     <div class="kpi-value" id="avgPayoutDelay">0 days</div>
-                                    <div class="kpi-desc">Payment Received → Contractor Paid</div>
+                                    <div class="kpi-desc">Payment Received â†’ Contractor Paid</div>
                                 </div>
                                 <div class="exec-kpi-card">
                                     <div class="kpi-label">Revenue Per Client</div>
@@ -1638,7 +1639,7 @@
                                     <label>EBITDA (Net Profit)</label>
                                     <div class="formula-value" id="ebitdaValue">$0</div>
                                 </div>
-                                <div class="formula-operator">×</div>
+                                <div class="formula-operator">Ã—</div>
                                 <div class="formula-item">
                                     <label>Valuation Multiple</label>
                                     <input type="number" id="valuationMultiple" step="0.1" value="3" onchange="updateValuationMultiple()" style="width: 80px; padding: 5px; font-size: 1.2rem; text-align: center;">
@@ -1900,7 +1901,7 @@
                                 <option value="UTC">UTC</option>
                                 <option value="America/New_York">Eastern Time</option>
                                 <option value="America/Chicago">Central Time</option>
-                                <option value="America/Denver">Mountain Time</option>
+                                <option value="America/Denver" selected>Mountain Time (MDT)</option>
                                 <option value="America/Los_Angeles">Pacific Time</option>
                             </select>
                         </div>
@@ -2880,9 +2881,9 @@
                         <div class="form-group">
                             <label for="recordPriority"><i class="fas fa-flag"></i> Priority</label>
                             <select id="recordPriority">
-                                <option value="low">🟢 Low</option>
-                                <option value="medium" selected>🟡 Medium</option>
-                                <option value="high">🔴 High</option>
+                                <option value="low">ðŸŸ¢ Low</option>
+                                <option value="medium" selected>ðŸŸ¡ Medium</option>
+                                <option value="high">ðŸ”´ High</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -3189,45 +3190,12 @@
         </div>
     </div>
 
-    <script src="../assets/js/api-service.js"></script>
-    <script src="../assets/js/rbac.js"></script>
-    <script src="../assets/js/toast.js"></script>
-    <script src="../assets/js/custom-fields.js"></script>
-    <script src="../assets/js/csv-import.js"></script>
-    <script src="../assets/js/login-script.js"></script>
-    <script src="../assets/js/file-upload.js"></script>
-    <script src="../assets/js/form-required-fields.js"></script>
-    <script src="../assets/js/pipeline-mongodb.js"></script>
-    <script src="../assets/js/accounting-system.js"></script>
-    <script src="../assets/js/calendar.js"></script>
-    <script src="../assets/js/top-customers.js"></script>
-    <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js"></script>
-    <script src="../assets/js/rbac-wrappers.js"></script>
-    <script>
-      if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
-      }
-    </script>
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
     <!-- Order Detail Modal -->
     <div class="modal-overlay" id="orderDetailModal">
         <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
             <div class="modal-header">
                 <h2 id="modalOrderDetailTitle">Order Details</h2>
-                <button class="modal-close" onclick="closeOrderDetailModal()">
+                <button type="button" class="modal-close" onclick="closeOrderDetailModal()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -3278,7 +3246,6 @@
                             </div>
                         </div>
                     </div>
-                    
                     <div class="detail-info-card">
                         <h3>Customer Information</h3>
                         <div class="info-grid">
@@ -3300,7 +3267,6 @@
                             </div>
                         </div>
                     </div>
-                    
                     <div class="detail-info-card">
                         <h3>Description & Notes</h3>
                         <div class="info-item full-width">
@@ -3319,3 +3285,29 @@
             </div>
         </div>
     </div>
+
+    <script src="../config/timezone-config.js"></script>
+    <script src="../assets/js/api-service.js"></script>
+    <script src="../assets/js/rbac.js"></script>
+    <script src="../assets/js/toast.js"></script>
+    <script src="../assets/js/custom-fields.js"></script>
+    <script src="../assets/js/csv-import.js"></script>
+    <script src="../assets/js/login-script.js"></script>
+    <script src="../assets/js/file-upload.js"></script>
+    <script src="../assets/js/form-required-fields.js"></script>
+    <script src="../assets/js/security-utils.js"></script>
+    <script src="../assets/js/pipeline-mongodb.js"></script>
+    <script src="../assets/js/accounting-system.js"></script>
+    <script src="../assets/js/calendar.js"></script>
+    <script src="../assets/js/top-customers.js"></script>
+    <script src="../assets/js/recurring-custom-frequency.js"></script>
+    <script src="../assets/js/dashboard-script.js"></script>
+    <script src="../assets/js/button-fix.js"></script>
+    <script src="../assets/js/rbac-wrappers.js"></script>
+    <script>
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+      }
+    </script>
+</body>
+</html>

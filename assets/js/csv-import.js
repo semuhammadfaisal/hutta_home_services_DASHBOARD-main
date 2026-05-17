@@ -218,7 +218,7 @@ async function importEmployeesFromCSV() {
                         role: mapEmployeeRole(employee.role),
                         department: employee.department || 'General',
                         salary: parseFloat(employee.salary) || 0,
-                        hireDate: employee.hiredate || employee['hire date'] || new Date().toISOString().split('T')[0],
+                        hireDate: employee.hiredate || employee['hire date'] || (window.TimezoneConfig ? window.TimezoneConfig.todayInputMDT() : new Date().toISOString().split('T')[0]),
                         status: mapEmployeeStatus(employee.status || 'available'),
                         skills: employee.skills ? employee.skills.split(';').map(s => s.trim()) : []
                     };

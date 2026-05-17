@@ -1,0 +1,121 @@
+/* Security Utilities Styles */
+
+.password-strength-indicator {
+    font-size: 12px;
+    margin-top: 5px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.password-strength-indicator.weak {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border-left: 3px solid #dc2626;
+}
+
+.password-strength-indicator.strong {
+    background-color: #d1fae5;
+    color: #059669;
+    border-left: 3px solid #059669;
+}
+
+/* Validation error styles */
+.validation-error {
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.validation-error::before {
+    content: "⚠";
+    font-size: 14px;
+}
+
+.validation-success {
+    color: #059669;
+    font-size: 12px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.validation-success::before {
+    content: "✓";
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Input field validation states */
+input.invalid,
+textarea.invalid,
+select.invalid {
+    border-color: #dc2626 !important;
+    background-color: #fef2f2;
+}
+
+input.valid,
+textarea.valid,
+select.valid {
+    border-color: #059669 !important;
+}
+
+/* Security badge */
+.security-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.security-badge.secure {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+.security-badge.warning {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.security-badge.danger {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+/* Duplicate warning */
+.duplicate-warning {
+    background-color: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #92400e;
+}
+
+.duplicate-warning-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.duplicate-warning-list {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+}
+
+.duplicate-warning-list li {
+    margin: 4px 0;
+}

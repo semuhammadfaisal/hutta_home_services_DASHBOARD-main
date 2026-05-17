@@ -1,99 +1,186 @@
 // Timezone Configuration for Hutta Home Services
-// MDT (Mountain Daylight Time) = UTC-6
+// Uses America/Denver (Mountain Time: MDT/MST with automatic DST)
 
-const TIMEZONE = 'America/Denver'; // MDT/MST timezone
-const TIMEZONE_OFFSET = -6; // MDT offset in hours
+const MDT_ZONE = 'America/Denver';
 
-// Convert UTC date to MDT
+function getMDTParts(utcMs) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: MDT_ZONE,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: false
+    }).formatToParts(new Date(utcMs));
+    const get = (type) => parseInt(parts.find((p) => p.type === type).value, 10);
+    return {
+        year: get('year'),
+        month: get('month'),
+        day: get('day'),
+        hour: get('hour'),
+        minute: get('minute'),
+        second: get('second')
+    };
+}
+
 function toMDT(date) {
     if (!date) return null;
     const d = new Date(date);
-    return new Date(d.toLocaleString('en-US', { timeZone: TIMEZONE }));
+    if (Number.isNaN(d.getTime())) return null;
+    const parts = getMDTParts(d.getTime());
+    return new Date(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
 }
 
-// Format date in MDT timezone
+function getYmdInMDT(date) {
+    if (!date) return null;
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return null;
+    const parts = getMDTParts(d.getTime());
+    return { year: parts.year, month: parts.month - 1, day: parts.day };
+}
+
 function formatDateMDT(date, options = {}) {
     if (!date) return '';
     const d = new Date(date);
-    return d.toLocaleString('en-US', { 
-        timeZone: TIMEZONE,
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-US', {
+        timeZone: MDT_ZONE,
         ...options
     });
 }
 
-// Format date only (no time) in MDT
-function formatDateOnlyMDT(date) {
+function formatDateOnlyMDT(date, options = {}) {
     if (!date) return '';
     const d = new Date(date);
-    return d.toLocaleDateString('en-US', { 
-        timeZone: TIMEZONE,
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', {
+        timeZone: MDT_ZONE,
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit'
+        day: '2-digit',
+        ...options
     });
 }
 
-// Format time only in MDT
+function formatDateShortMDT(date, options = {}) {
+    if (!date) return '';
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', {
+        timeZone: MDT_ZONE,
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        ...options
+    });
+}
+
 function formatTimeMDT(date) {
     if (!date) return '';
     const d = new Date(date);
-    return d.toLocaleTimeString('en-US', { 
-        timeZone: TIMEZONE,
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-US', {
+        timeZone: MDT_ZONE,
         hour: '2-digit',
         minute: '2-digit'
     });
 }
 
-// Get current date/time in MDT
 function nowMDT() {
-    return new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+    return new Date();
 }
 
-// Convert date input (YYYY-MM-DD) to MDT midnight
+function nowYmdMDT() {
+    return getYmdInMDT(new Date());
+}
+
+function addDaysToDateString(dateString, days) {
+    const start = dateInputToMDT(dateString);
+    return formatForInput(new Date(start.getTime() + days * 86400000));
+}
+
+// Interpret YYYY-MM-DD as midnight in America/Denver
 function dateInputToMDT(dateString) {
     if (!dateString) return null;
-    // Parse as local date in MDT timezone
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day, 6, 0, 0)); // Add 6 hours for MDT offset
-    return date;
+    const normalized = String(dateString).split('T')[0];
+    const [year, month, day] = normalized.split('-').map(Number);
+    if (!year || !month || !day) return null;
+
+    const base = Date.UTC(year, month - 1, day, 12, 0, 0);
+    for (let offsetHours = -14; offsetHours <= 14; offsetHours++) {
+        const candidate = base + offsetHours * 3600000;
+        const p = getMDTParts(candidate);
+        if (p.year === year && p.month === month && p.day === day && p.hour === 0 && p.minute === 0) {
+            return new Date(candidate);
+        }
+    }
+    return new Date(base);
 }
 
-// Format date for input field (YYYY-MM-DD) in MDT
+function endOfDayMDT(dateInput) {
+    const dateString = typeof dateInput === 'string'
+        ? dateInput.split('T')[0]
+        : formatForInput(dateInput);
+    const nextDay = addDaysToDateString(dateString, 1);
+    return new Date(dateInputToMDT(nextDay).getTime() - 1);
+}
+
 function formatForInput(date) {
     if (!date) return '';
     const d = toMDT(date);
+    if (!d || Number.isNaN(d.getTime())) return '';
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 
-// Export for browser
-if (typeof window !== 'undefined') {
-    window.TimezoneConfig = {
-        TIMEZONE,
-        TIMEZONE_OFFSET,
-        toMDT,
-        formatDateMDT,
-        formatDateOnlyMDT,
-        formatTimeMDT,
-        nowMDT,
-        dateInputToMDT,
-        formatForInput
-    };
+function todayInputMDT() {
+    const ymd = getYmdInMDT(new Date());
+    if (!ymd) return '';
+    return `${ymd.year}-${String(ymd.month + 1).padStart(2, '0')}-${String(ymd.day).padStart(2, '0')}`;
 }
 
-// Export for Node.js
+function startOfMonthMDT(referenceDate) {
+    const ref = referenceDate ? toMDT(referenceDate) : nowMDT();
+    const dateString = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}-01`;
+    return dateInputToMDT(dateString);
+}
+
+function isDateInRangeMDT(date, startDate, endDate) {
+    if (!date || !startDate || !endDate) return false;
+    const value = new Date(date).getTime();
+    const start = dateInputToMDT(startDate).getTime();
+    const end = endOfDayMDT(endDate).getTime();
+    return value >= start && value <= end;
+}
+
+const timezoneApi = {
+    TIMEZONE: MDT_ZONE,
+    getMDTParts,
+    getYmdInMDT,
+    toMDT,
+    formatDateMDT,
+    formatDateOnlyMDT,
+    formatDateShortMDT,
+    formatTimeMDT,
+    nowMDT,
+    nowYmdMDT,
+    dateInputToMDT,
+    endOfDayMDT,
+    formatForInput,
+    todayInputMDT,
+    startOfMonthMDT,
+    isDateInRangeMDT,
+    addDaysToDateString
+};
+
+if (typeof window !== 'undefined') {
+    window.TimezoneConfig = timezoneApi;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        TIMEZONE,
-        TIMEZONE_OFFSET,
-        toMDT,
-        formatDateMDT,
-        formatDateOnlyMDT,
-        formatTimeMDT,
-        nowMDT,
-        dateInputToMDT,
-        formatForInput
-    };
+    module.exports = timezoneApi;
 }

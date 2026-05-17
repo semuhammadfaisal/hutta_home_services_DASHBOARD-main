@@ -385,7 +385,7 @@ function viewMovementHistory(recordId) {
     
     let historyText = `Movement History for "${record.projectName}":\n\n`;
     history.forEach(log => {
-        historyText += `${new Date(log.movedAt).toLocaleString()}\n`;
+        historyText += `${window.TimezoneConfig ? window.TimezoneConfig.formatDateMDT(log.movedAt) : new Date(log.movedAt).toLocaleString('en-US', { timeZone: 'America/Denver' })}\n`;
         historyText += `  From: ${log.fromStageName} → To: ${log.toStageName}\n`;
         historyText += `  By: ${log.movedBy}\n\n`;
     });

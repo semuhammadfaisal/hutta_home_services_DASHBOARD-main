@@ -1,4 +1,14 @@
-// Accounting System - Data Models and Business Logic
+// Accounting System - Data Models and Business Logic (dates in Mountain Time)
+
+function accountingNow() {
+    return window.TimezoneConfig ? window.TimezoneConfig.nowMDT() : new Date();
+}
+
+function addDaysFromNow(days) {
+    const d = accountingNow();
+    d.setDate(d.getDate() + days);
+    return d;
+}
 
 class AccountingSystem {
     constructor() {
@@ -199,8 +209,7 @@ class AccountingSystem {
             .filter(ar => {
                 if (!ar.dueDate) return true;
                 const dueDate = new Date(ar.dueDate);
-                const days30 = new Date();
-                days30.setDate(days30.getDate() + 30);
+                const days30 = addDaysFromNow(30);
                 return dueDate <= days30;
             })
             .reduce((sum, ar) => sum + parseFloat(ar.amount || 0), 0);
@@ -209,8 +218,7 @@ class AccountingSystem {
             .filter(cp => {
                 if (!cp.dueDate) return true;
                 const dueDate = new Date(cp.dueDate);
-                const days30 = new Date();
-                days30.setDate(days30.getDate() + 30);
+                const days30 = addDaysFromNow(30);
                 return dueDate <= days30;
             })
             .reduce((sum, cp) => sum + parseFloat(cp.amount || 0), 0);
@@ -223,8 +231,7 @@ class AccountingSystem {
             .filter(ar => {
                 if (!ar.dueDate) return true;
                 const dueDate = new Date(ar.dueDate);
-                const days60 = new Date();
-                days60.setDate(days60.getDate() + 60);
+                const days60 = addDaysFromNow(60);
                 return dueDate <= days60;
             })
             .reduce((sum, ar) => sum + parseFloat(ar.amount || 0), 0);
@@ -233,8 +240,7 @@ class AccountingSystem {
             .filter(cp => {
                 if (!cp.dueDate) return true;
                 const dueDate = new Date(cp.dueDate);
-                const days60 = new Date();
-                days60.setDate(days60.getDate() + 60);
+                const days60 = addDaysFromNow(60);
                 return dueDate <= days60;
             })
             .reduce((sum, cp) => sum + parseFloat(cp.amount || 0), 0);
@@ -660,7 +666,7 @@ function loadARTable() {
         <tr class="${reminderStatus.status}">
             <td>${job ? job.jobName : 'N/A'}</td>
             <td>$${ar.amount.toFixed(2)}</td>
-            <td>${ar.dueDate ? new Date(ar.dueDate).toLocaleDateString() : 'N/A'}</td>
+            <td>${ar.dueDate ? (window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(ar.dueDate) : new Date(ar.dueDate).toLocaleDateString('en-US', { timeZone: 'America/Denver' })) : 'N/A'}</td>
             <td><span class="reminder-badge ${reminderStatus.status}">${reminderStatus.message}</span></td>
             <td>${reminderStatus.days > 0 ? `${reminderStatus.days} days` : '-'}</td>
             <td>
@@ -752,7 +758,7 @@ function payContractor(jobId) {
     } else {
         if (confirm(`Pay contractor for ${job.jobName}?\nAmount: $${job.contractorBid.toFixed(2)}`)) {
             accountingSystem.updateJob(jobId, { 
-                contractorPaidDate: new Date().toISOString().split('T')[0] 
+                contractorPaidDate: window.TimezoneConfig ? window.TimezoneConfig.todayInputMDT() : new Date().toISOString().split('T')[0] 
             });
             updateAccountingDashboard();
             alert('Contractor paid successfully!');
@@ -785,7 +791,7 @@ function confirmOverridePayout() {
     
     try {
         accountingSystem.updateJob(jobId, { 
-            contractorPaidDate: new Date().toISOString().split('T')[0],
+            contractorPaidDate: window.TimezoneConfig ? window.TimezoneConfig.todayInputMDT() : new Date().toISOString().split('T')[0],
             overridePayoutApproval: true,
             overrideApprovalCode: approvalCode,
             overrideAdminNotes: adminNotes,
@@ -948,20 +954,25 @@ function setMonthlyOverhead() {
     }
 }
 
-function switchAccountingTab(tabName) {
-    // Remove active class from all tabs
+function switchAccountingTab(tabName, tabButton) {
     document.querySelectorAll('.accounting-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    
-    // Remove active class from all tab contents
+
     document.querySelectorAll('.accounting-tab-content').forEach(content => {
         content.classList.remove('active');
     });
-    
-    // Add active class to selected tab and content
-    event.target.classList.add('active');
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+
+    const activeTab = tabButton
+        || document.querySelector(`.accounting-tab[data-accounting-tab="${tabName}"]`)
+        || Array.from(document.querySelectorAll('.accounting-tab')).find((tab) => {
+            const onclick = tab.getAttribute('onclick') || '';
+            return onclick.includes(`'${tabName}'`) || onclick.includes(`"${tabName}"`);
+        });
+    if (activeTab) activeTab.classList.add('active');
+
+    const tabContent = document.getElementById(`${tabName}-tab`);
+    if (tabContent) tabContent.classList.add('active');
     
     // Load specific tab data
     if (tabName === 'forecast') {
@@ -1242,3 +1253,25 @@ function updateTotalDebt() {
     accountingSystem.setTotalDebt(debt);
     loadExecutiveTab();
 }
+
+// Explicit globals for inline onclick handlers
+window.updateAccountingDashboard = updateAccountingDashboard;
+window.showAddJobModal = showAddJobModal;
+window.closeJobModal = closeJobModal;
+window.saveJob = saveJob;
+window.payContractor = payContractor;
+window.showOverridePayoutModal = showOverridePayoutModal;
+window.closeOverridePayoutModal = closeOverridePayoutModal;
+window.confirmOverridePayout = confirmOverridePayout;
+window.sendReminder = sendReminder;
+window.generateWeeklyCashReport = generateWeeklyCashReport;
+window.editJob = editJob;
+window.viewJobDetail = viewJobDetail;
+window.closeJobDetailModal = closeJobDetailModal;
+window.deleteJobConfirm = deleteJobConfirm;
+window.setMonthlyOverhead = setMonthlyOverhead;
+window.switchAccountingTab = switchAccountingTab;
+window.saveForecastInputs = saveForecastInputs;
+window.saveWealthTracking = saveWealthTracking;
+window.updateValuationMultiple = updateValuationMultiple;
+window.updateTotalDebt = updateTotalDebt;

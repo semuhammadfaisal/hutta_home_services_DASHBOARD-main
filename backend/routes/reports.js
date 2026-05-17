@@ -5,20 +5,24 @@ const Project = require('../models/Project');
 const Customer = require('../models/Customer');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { dateInputToMDT, endOfDayMDT } = require('../utils/timezone');
 const router = express.Router();
+
+function buildCreatedAtFilter(startDate, endDate) {
+  if (!startDate || !endDate) return {};
+  return {
+    createdAt: {
+      $gte: dateInputToMDT(startDate),
+      $lte: endOfDayMDT(endDate)
+    }
+  };
+}
 
 // Get financial report
 router.get('/financial', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const dateFilter = {};
-    
-    if (startDate && endDate) {
-      dateFilter.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
-    }
+    const dateFilter = buildCreatedAtFilter(startDate, endDate);
 
     const [totalRevenue, totalPayments, pendingPayments, completedOrders] = await Promise.all([
       Order.aggregate([
@@ -51,14 +55,7 @@ router.get('/financial', authenticateToken, checkRole(['admin']), async (req, re
 router.get('/orders', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const dateFilter = {};
-    
-    if (startDate && endDate) {
-      dateFilter.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
-    }
+    const dateFilter = buildCreatedAtFilter(startDate, endDate);
 
     const [statusBreakdown, monthlyOrders] = await Promise.all([
       Order.aggregate([

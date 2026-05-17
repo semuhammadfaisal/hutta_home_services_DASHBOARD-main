@@ -51,7 +51,7 @@ const employeeSection = employeeInfo ? `
             </div>
             <div class="payment-employee-form-group">
                 <label>Payment Date</label>
-                <input type="date" id="employeePaymentDate" value="${payment.employeePaymentDate ? new Date(payment.employeePaymentDate).toISOString().split('T')[0] : ''}">
+                <input type="date" id="employeePaymentDate" value="${payment.employeePaymentDate ? (window.TimezoneConfig ? window.TimezoneConfig.formatForInput(payment.employeePaymentDate) : new Date(payment.employeePaymentDate).toISOString().split('T')[0]) : ''}">
             </div>
             <div class="payment-employee-form-group">
                 <label>Payment Method</label>

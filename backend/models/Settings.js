@@ -4,7 +4,7 @@ const settingsSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   theme: { type: String, enum: ['light', 'dark'], default: 'light' },
   language: { type: String, default: 'en' },
-  timezone: { type: String, default: 'UTC' },
+  timezone: { type: String, default: 'America/Denver' },
   notifications: {
     email: { type: Boolean, default: true },
     push: { type: Boolean, default: true },

@@ -6,6 +6,7 @@ const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const memCache = require('../utils/memoryCache');
+const { startOfMonthMDT } = require('../utils/timezone');
 const router = express.Router();
 
 const STATS_CACHE_KEY = 'orders:stats:v2';
@@ -40,9 +41,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
       Order.countDocuments({ status: 'completed', _id: { $nin: noBidOrderIds } }),
       Order.countDocuments({ status: 'new', _id: { $nin: noBidOrderIds } }),
       (() => {
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        const startOfMonth = startOfMonthMDT();
         return Order.aggregate([
           {
             $match: {

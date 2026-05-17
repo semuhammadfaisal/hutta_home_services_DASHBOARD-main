@@ -1,5 +1,20 @@
 // API Configuration
 const API_BASE_URL = '/api';
+
+function getPipelineAuthHeaders(includeJson = true) {
+    const headers = {};
+    if (includeJson) headers['Content-Type'] = 'application/json';
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        if (session) {
+            const token = JSON.parse(session).token;
+            if (token) headers.Authorization = `Bearer ${token}`;
+        }
+    } catch (e) {
+        console.warn('Pipeline auth header skipped:', e);
+    }
+    return headers;
+}
 /** How many new-order cards show before clicking “Show more” */
 const NEW_ORDERS_DEFAULT_VISIBLE = 2;
 
@@ -50,8 +65,9 @@ async function loadDataFromDB() {
         
         // Calculate new orders from cached data
         const ordersInPipeline = records.map(r => r.orderId).filter(Boolean);
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgo = window.TimezoneConfig
+            ? new Date(window.TimezoneConfig.nowMDT().getTime() - 30 * 86400000)
+            : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
         newOrders = (ordersData || []).filter(order => {
             const isNotInPipeline = !ordersInPipeline.includes(order._id);
             const isRecent = new Date(order.createdAt) > thirtyDaysAgo;
@@ -130,12 +146,18 @@ function bindPipelineStagesContainerOnce(container) {
     container.dataset.pipelineUiBound = '1';
     container.addEventListener('click', pipelineStagesContainerClick);
     container.addEventListener('dragstart', pipelineStagesContainerDragStart);
+    container.addEventListener('dragend', pipelineStagesContainerDragEnd);
 }
 
 function pipelineStagesContainerDragStart(e) {
-    if (e.target.classList.contains('record-card') || e.target.classList.contains('new-order-card')) {
-        drag(e);
+    const card = e.target.closest('.record-card, .new-order-card');
+    if (card) {
+        drag(e, card);
     }
+}
+
+function pipelineStagesContainerDragEnd() {
+    document.querySelectorAll('.dragging').forEach((el) => el.classList.remove('dragging'));
 }
 
 function pipelineStagesContainerClick(e) {
@@ -710,7 +732,7 @@ async function saveRecord(event) {
             const editingRecord = records.find(r => r._id === id);
             response = await fetch(`${API_BASE_URL}/pipeline-records/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getPipelineAuthHeaders(),
                 body: JSON.stringify({ customerName, email, phone, priority, budget, startDate, address, description, notes, orderId: editingRecord?.orderId })
             });
             
@@ -795,7 +817,7 @@ async function saveRecord(event) {
             
             response = await fetch(`${API_BASE_URL}/pipeline-records`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getPipelineAuthHeaders(),
                 body: JSON.stringify({ 
                     stageId, 
                     orderId: orderIdValue, 
@@ -876,17 +898,19 @@ async function deleteRecord(recordId) {
 }
 
 // Drag and Drop with smooth animations (optimized)
-function drag(event) {
-    if (event.target.classList.contains('new-order-card')) {
-        event.dataTransfer.setData('orderId', event.target.dataset.orderId);
+function drag(event, cardEl) {
+    const card = cardEl || event.target.closest('.new-order-card, .record-card');
+    if (!card) return;
+
+    if (card.classList.contains('new-order-card')) {
+        event.dataTransfer.setData('orderId', card.dataset.orderId);
         event.dataTransfer.setData('isNewOrder', 'true');
     } else {
-        event.dataTransfer.setData('recordId', event.target.dataset.recordId);
+        event.dataTransfer.setData('recordId', card.dataset.recordId);
         event.dataTransfer.setData('isNewOrder', 'false');
     }
-    
-    // Add dragging class
-    event.target.classList.add('dragging');
+
+    card.classList.add('dragging');
     event.dataTransfer.effectAllowed = 'move';
 }
 
@@ -951,7 +975,7 @@ async function drop(event) {
             console.log('Updating pipeline record stage...');
             const stageUpdateResponse = await fetch(`${API_BASE_URL}/pipeline-records/${recordId}/stage`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getPipelineAuthHeaders(),
                 body: JSON.stringify({ stageId: newStageId })
             });
             
@@ -1086,16 +1110,20 @@ function stageColumnDragEnd(event) {
 
 async function reorderStages() {
     const container = document.getElementById('stagesContainer');
-    const stageElements = [...container.querySelectorAll('.stage-column')];
+    const stageElements = [...container.querySelectorAll('.stage-column:not(.new-orders-column)')].filter(
+        (el) => el.dataset.stageId
+    );
     const reorderedStages = stageElements.map((el, index) => ({
         _id: el.dataset.stageId,
         position: index + 1
     }));
+
+    if (reorderedStages.length === 0) return;
     
     try {
         await fetch(`${API_BASE_URL}/stages/reorder`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getPipelineAuthHeaders(),
             body: JSON.stringify(reorderedStages)
         });
         await fetchStages();
@@ -1287,7 +1315,6 @@ window.verifyPipelineConnection = async function(recordId) {
 window.filterPipelineRecords = filterPipelineRecords;
 window.clearPipelineSearch = clearPipelineSearch;
 window.verifyPipelineConnection = verifyPipelineConnection;
-window.fetchNewOrders = fetchNewOrders;
 window.renderNewOrders = renderNewOrders;
 
 // Expand Stage Function
@@ -1362,13 +1389,13 @@ async function expandStage(stageId) {
                                     ${record.startDate ? `
                                         <div style="display: flex; align-items: center; gap: 8px;">
                                             <i class="fas fa-calendar" style="width: 16px; color: #6b7280;"></i>
-                                            <span>Start: ${new Date(record.startDate).toLocaleDateString()}</span>
+                                            <span>Start: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.startDate) : new Date(record.startDate).toLocaleDateString('en-US', { timeZone: 'America/Denver' })}</span>
                                         </div>
                                     ` : ''}
                                     
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i class="fas fa-clock" style="width: 16px; color: #6b7280;"></i>
-                                        <span>Created: ${new Date(record.createdAt).toLocaleDateString()}</span>
+                                        <span>Created: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.createdAt) : new Date(record.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Denver' })}</span>
                                     </div>
                                 </div>
                                 
@@ -1522,7 +1549,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
         
         const response = await fetch(`${API_BASE_URL}/pipeline-records`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getPipelineAuthHeaders(),
             body: JSON.stringify({
                 stageId,
                 orderId: order._id,
@@ -1689,7 +1716,7 @@ async function saveStage(event) {
         
         const response = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: getPipelineAuthHeaders(),
             body: JSON.stringify(body)
         });
         
@@ -1744,4 +1771,6 @@ window.saveStage = saveStage;
 window.editStage = editStage;
 window.deleteStage = deleteStage;
 window.clearPipelineData = clearPipelineData;
+window.openRecordModal = openRecordModal;
+window.closeRecordModal = closeRecordModal;
 

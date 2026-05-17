@@ -1,3 +1,31 @@
+// Mountain Time (America/Denver) helpers — requires config/timezone-config.js
+function tz() {
+    return window.TimezoneConfig;
+}
+function todayDateInput() {
+    const c = tz();
+    return c ? c.todayInputMDT() : new Date().toISOString().split('T')[0];
+}
+function nowInMDT() {
+    const c = tz();
+    return c ? c.nowMDT() : new Date();
+}
+function formatDisplayDate(value, fallback = '-') {
+    if (!value) return fallback;
+    const c = tz();
+    if (c) {
+        const formatted = c.formatDateShortMDT(value);
+        return formatted || fallback;
+    }
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? fallback : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function formatDisplayDateInput(value) {
+    if (!value) return '';
+    const c = tz();
+    return c ? c.formatForInput(value) : new Date(value).toISOString().split('T')[0];
+}
+
 // Dashboard Data and Functionality
 class DashboardManager {
     constructor() {
@@ -70,6 +98,10 @@ class DashboardManager {
                     loadAccountingSection();
                 } else if (targetSection === 'users') {
                     loadUsersSection();
+                } else if (targetSection === 'calendar') {
+                    if (typeof window.loadCalendarSection === 'function') {
+                        window.loadCalendarSection();
+                    }
                 } else if (targetSection === 'recurring-calendar') {
                     loadRecurringCalendarSection();
                 }
@@ -350,7 +382,7 @@ class DashboardManager {
 
         const rowHtml = (order) => {
             const orderNumber = order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`;
-            const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+            const orderDate = order.createdAt ? (tz() ? tz().formatDateMDT(order.createdAt, { month: 'short', day: 'numeric' }) : new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '';
             const customerName = order.customer?.name || order.customer;
             const customerEmail = order.customer?.email || '';
             const statusDisplay = order.pipelineStage || order.status.replace('-', ' ');
@@ -472,7 +504,7 @@ class DashboardManager {
     }
 
     getTimeAgo(date) {
-        const now = new Date();
+        const now = nowInMDT();
         const past = new Date(date);
         const diffMs = now - past;
         const diffMins = Math.floor(diffMs / 60000);
@@ -602,16 +634,21 @@ class DashboardManager {
         let periodText = 'All time';
         
         if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
-            const startDate = new Date(startDateInput.value);
-            const endDate = new Date(endDateInput.value);
-            endDate.setHours(23, 59, 59, 999);
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
             
             filteredOrders = orders.filter(order => {
+                if (tz()) {
+                    return tz().isDateInRangeMDT(order.createdAt, startDate, endDate);
+                }
                 const orderDate = new Date(order.createdAt);
-                return orderDate >= startDate && orderDate <= endDate;
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                return orderDate >= start && orderDate <= end;
             });
             
-            periodText = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+            periodText = `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
         }
         
         const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
@@ -633,12 +670,7 @@ class DashboardManager {
     }
 
     formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        return formatDisplayDate(dateString, '');
     }
 
     // Action handlers
@@ -819,13 +851,13 @@ function getNotificationIcon(type) {
 
 function formatTime(timestamp) {
     const date = new Date(timestamp);
-    const now = new Date();
+    const now = nowInMDT();
     const diff = now - date;
     
     if (diff < 60000) return 'Just now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return date.toLocaleDateString();
+    return formatDisplayDate(timestamp);
 }
 
 async function markNotificationAsRead(notificationId) {
@@ -1105,12 +1137,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set current date in the header
     const currentDateElement = document.getElementById('currentDate');
     if (currentDateElement) {
-        const today = new Date();
+        const today = nowInMDT();
         const options = { 
             weekday: 'long', 
             year: 'numeric', 
             month: 'long', 
-            day: 'numeric' 
+            day: 'numeric',
+            timeZone: tz()?.TIMEZONE || 'America/Denver'
         };
         currentDateElement.textContent = today.toLocaleDateString('en-US', options);
     }
@@ -1300,7 +1333,8 @@ function populateCustomerSelectOptions() {
             
             // Close dropdown
             dropdown.classList.remove('show');
-            document.querySelector('.searchable-select').classList.remove('open');
+            const ss = document.querySelector('#orderModal .searchable-select');
+            if (ss) ss.classList.remove('open');
             
             // Handle customer selection
             handleCustomerSelect();
@@ -1328,7 +1362,8 @@ function populateCustomerSelectOptions() {
         
         // Close dropdown
         dropdown.classList.remove('show');
-        document.querySelector('.searchable-select').classList.remove('open');
+        const ss = document.querySelector('#orderModal .searchable-select');
+        if (ss) ss.classList.remove('open');
         
         // Handle customer selection
         handleCustomerSelect();
@@ -1400,7 +1435,8 @@ function filterCustomerOptions(searchTerm) {
             
             // Close dropdown
             dropdown.classList.remove('show');
-            document.querySelector('.searchable-select').classList.remove('open');
+            const ss = document.querySelector('#orderModal .searchable-select');
+            if (ss) ss.classList.remove('open');
             
             // Handle customer selection
             handleCustomerSelect();
@@ -1428,7 +1464,8 @@ function filterCustomerOptions(searchTerm) {
         
         // Close dropdown
         dropdown.classList.remove('show');
-        document.querySelector('.searchable-select').classList.remove('open');
+        const ss = document.querySelector('#orderModal .searchable-select');
+        if (ss) ss.classList.remove('open');
         
         // Handle customer selection
         handleCustomerSelect();
@@ -1450,7 +1487,8 @@ function toggleCustomerDropdown(event) {
     }
     
     const dropdown = document.getElementById('customerSelectDropdown');
-    const container = document.querySelector('.searchable-select');
+    const container = document.querySelector('#orderModal .searchable-select');
+    if (!container || !dropdown) return;
     
     if (dropdown.classList.contains('show')) {
         // Hide dropdown
@@ -1489,7 +1527,7 @@ function toggleCustomerDropdown(event) {
 
 
 function handleOutsideClick(event) {
-    const container = document.querySelector('.searchable-select');
+    const container = document.querySelector('#orderModal .searchable-select');
     
     // Check if click is outside the searchable-select container
     if (container && !container.contains(event.target)) {
@@ -1613,6 +1651,7 @@ function populateCustomerAddresses(customer) {
 window.handleCustomerSelect = handleCustomerSelect;
 
 function showAddOrderModal() {
+    try {
     currentOrderId = null;
     document.getElementById('orderModalTitle').textContent = 'Add New Order';
     document.getElementById('orderForm').reset();
@@ -1623,7 +1662,8 @@ function showAddOrderModal() {
     document.getElementById('newCustomerFields').style.display = 'block';
     document.getElementById('customerAddressSelection').style.display = 'none';
     document.getElementById('customerSelectDropdown').classList.remove('show');
-    document.querySelector('.searchable-select').classList.remove('open');
+    const searchableSelect = document.querySelector('#orderModal .searchable-select');
+    if (searchableSelect) searchableSelect.classList.remove('open');
     
     // Reset search filter
     const searchFilter = document.getElementById('customerSearchFilter');
@@ -1653,7 +1693,7 @@ function showAddOrderModal() {
     document.getElementById('customerAddress').style.cssText = '';
     
     // Set default dates
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayDateInput();
     document.getElementById('startDate').value = today;
     
     // Reset order type and recurring fields
@@ -1670,7 +1710,15 @@ function showAddOrderModal() {
     loadVendors();
     loadEmployees();
     loadOrderCustomers();
-    document.getElementById('orderModal').classList.add('show');
+    const orderModal = document.getElementById('orderModal');
+    orderModal.style.display = '';
+    orderModal.classList.add('show');
+    } catch (error) {
+        console.error('showAddOrderModal failed:', error);
+        if (typeof showToast === 'function') {
+            showToast('Could not open order form. Please refresh the page.', 'error');
+        }
+    }
 }
 
 async function editOrder(orderId) {
@@ -2037,8 +2085,8 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             document.getElementById('modalDetailOrderProfit').textContent = order.amount && order.vendorCost ? `$${(order.amount - order.vendorCost).toLocaleString()}` : '-';
             document.getElementById('modalDetailOrderService').textContent = order.service || '-';
             document.getElementById('modalDetailOrderVendor').textContent = order.vendor?.name || '-';
-            document.getElementById('modalDetailOrderStartDate').textContent = order.startDate ? new Date(order.startDate).toLocaleDateString() : '-';
-            document.getElementById('modalDetailOrderEndDate').textContent = order.endDate ? new Date(order.endDate).toLocaleDateString() : '-';
+            document.getElementById('modalDetailOrderStartDate').textContent = order.startDate ? formatDisplayDate(order.startDate) : '-';
+            document.getElementById('modalDetailOrderEndDate').textContent = order.endDate ? formatDisplayDate(order.endDate) : '-';
             document.getElementById('modalDetailOrderCustomerName').textContent = order.customer?.name || '-';
             document.getElementById('modalDetailOrderCustomerEmail').textContent = order.customer?.email || '-';
             document.getElementById('modalDetailOrderCustomerPhone').textContent = order.customer?.phone || '-';
@@ -2102,8 +2150,8 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         if (detailOrderProfit) detailOrderProfit.textContent = '$' + (order.profit?.toLocaleString() || '0');
         if (detailOrderService) detailOrderService.textContent = order.service || '-';
         if (detailOrderVendor) detailOrderVendor.textContent = order.vendor?.name || 'N/A';
-        if (detailOrderStartDate) detailOrderStartDate.textContent = order.startDate ? new Date(order.startDate).toLocaleDateString() : '-';
-        if (detailOrderEndDate) detailOrderEndDate.textContent = order.endDate ? new Date(order.endDate).toLocaleDateString() : '-';
+        if (detailOrderStartDate) detailOrderStartDate.textContent = order.startDate ? formatDisplayDate(order.startDate) : '-';
+        if (detailOrderEndDate) detailOrderEndDate.textContent = order.endDate ? formatDisplayDate(order.endDate) : '-';
         
         if (detailOrderCustomerName) detailOrderCustomerName.textContent = order.customer?.name || order.customer || '-';
         if (detailOrderCustomerEmail) detailOrderCustomerEmail.textContent = order.customer?.email || '-';
@@ -2216,7 +2264,7 @@ async function loadSettings() {
         currentSettings = {
             theme: 'light',
             language: 'en',
-            timezone: 'UTC',
+            timezone: 'America/Denver',
             notifications: {
                 email: true,
                 push: true,
@@ -2244,7 +2292,7 @@ function populateSettingsForm(settings) {
     // User Preferences
     document.getElementById('settingsTheme').value = settings.theme || 'light';
     document.getElementById('settingsLanguage').value = settings.language || 'en';
-    document.getElementById('settingsTimezone').value = settings.timezone || 'UTC';
+    document.getElementById('settingsTimezone').value = settings.timezone || 'America/Denver';
     
     // Notifications
     document.getElementById('notificationsEmail').checked = settings.notifications?.email ?? true;
@@ -2429,13 +2477,13 @@ function renderCustomersReport(data) {
 
 // Load reports when reports section is shown
 function loadReportsSection() {
-    // Set default date range (last 30 days)
-    const endDate = new Date();
-    const startDate = new Date();
+    // Set default date range (last 30 days) in Mountain Time
+    const endDate = nowInMDT();
+    const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 30);
     
-    document.getElementById('reportStartDate').value = startDate.toISOString().split('T')[0];
-    document.getElementById('reportEndDate').value = endDate.toISOString().split('T')[0];
+    document.getElementById('reportStartDate').value = formatDisplayDateInput(startDate);
+    document.getElementById('reportEndDate').value = todayDateInput();
     
     generateReports();
 }
@@ -2475,11 +2523,13 @@ function showAddPaymentModal() {
     document.getElementById('paymentForm').reset();
     
     // Set default payment date to today
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayDateInput();
     document.getElementById('paymentDate').value = today;
     
     loadPaymentData();
-    document.getElementById('paymentModal').classList.add('show');
+    const paymentModal = document.getElementById('paymentModal');
+    paymentModal.style.display = '';
+    paymentModal.classList.add('show');
 }
 
 async function editPayment(paymentId) {
@@ -2642,7 +2692,7 @@ function renderPaymentsTable(payments) {
                     <option value="cancelled" ${payment.status === 'cancelled' ? 'selected' : ''}>🚫 Cancelled</option>
                 </select>
             </td>
-            <td>${payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : 'Not Paid'}</td>
+            <td>${payment.paymentDate ? formatDisplayDate(payment.paymentDate) : 'Not Paid'}</td>
             <td>
                 ${payment.order ? `<span style="color: #6b7280;">${payment.order.orderId || payment.order}</span>` : 'N/A'}
             </td>
@@ -2871,9 +2921,12 @@ function formatPaymentCurrency(value) {
 
 function formatPaymentDate(value, fallback = '-') {
     if (!value) return fallback;
+    const c = tz();
+    if (c) return c.formatDateShortMDT(value) || fallback;
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return fallback;
     return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Denver',
         month: 'short',
         day: 'numeric',
         year: 'numeric'
@@ -2882,9 +2935,20 @@ function formatPaymentDate(value, fallback = '-') {
 
 function formatPaymentDateTime(value, fallback = '-') {
     if (!value) return fallback;
+    const c = tz();
+    if (c) {
+        return c.formatDateMDT(value, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        }) || fallback;
+    }
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return fallback;
     return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Denver',
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -3040,7 +3104,7 @@ function syncPaymentMilestoneDraftFromDom() {
             amount: Number(getValue('amount') || 0),
             status,
             dueDate: getValue('dueDate') || null,
-            receivedDate: receivedDate || ((status === 'received' || status === 'completed') ? new Date().toISOString().split('T')[0] : null),
+            receivedDate: receivedDate || ((status === 'received' || status === 'completed') ? todayDateInput() : null),
             notes: getValue('notes').trim()
         };
     });
@@ -3368,7 +3432,7 @@ async function showPaymentDetail(paymentId) {
                                     </div>
                                     <div class="payment-employee-form-group">
                                         <label>Payment Date</label>
-                                        <input type="date" id="employeePaymentDate" value="${payment.employeePaymentDate ? new Date(payment.employeePaymentDate).toISOString().split('T')[0] : ''}">
+                                        <input type="date" id="employeePaymentDate" value="${payment.employeePaymentDate ? formatDisplayDateInput(payment.employeePaymentDate) : ''}">
                                     </div>
                                     <div class="payment-employee-form-group">
                                         <label>Payment Method</label>
@@ -3442,7 +3506,7 @@ async function showPaymentDetail(paymentId) {
                                     </div>
                                     <div class="payment-vendor-form-group">
                                         <label>Payment Date</label>
-                                        <input type="date" id="vendorPaymentDate" value="${payment.vendorPaymentDate ? new Date(payment.vendorPaymentDate).toISOString().split('T')[0] : ''}">
+                                        <input type="date" id="vendorPaymentDate" value="${payment.vendorPaymentDate ? formatDisplayDateInput(payment.vendorPaymentDate) : ''}">
                                     </div>
                                     <div class="payment-vendor-form-group">
                                         <label>Payment Method</label>
@@ -3652,10 +3716,12 @@ function showAddEmployeeModal() {
     document.getElementById('employeeForm').reset();
     
     // Set default hire date to today
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayDateInput();
     document.getElementById('employeeHireDate').value = today;
     
-    document.getElementById('employeeModal').classList.add('show');
+    const employeeModal = document.getElementById('employeeModal');
+    employeeModal.style.display = '';
+    employeeModal.classList.add('show');
 }
 
 async function editEmployee(employeeId) {
@@ -3793,7 +3859,7 @@ async function showEmployeeDetail(employeeId) {
         document.getElementById('detailEmployeeRole').textContent = employee.role.replace('-', ' ') || '-';
         document.getElementById('detailEmployeeDepartment').textContent = employee.department || '-';
         document.getElementById('detailEmployeeStatus').innerHTML = `<span class="employee-status-badge ${employee.status}">${employee.status.replace('-', ' ')}</span>`;
-        document.getElementById('detailEmployeeHireDate').textContent = employee.hireDate ? new Date(employee.hireDate).toLocaleDateString() : '-';
+        document.getElementById('detailEmployeeHireDate').textContent = employee.hireDate ? formatDisplayDate(employee.hireDate) : '-';
         document.getElementById('detailEmployeeAddress').textContent = employee.address || '-';
         document.getElementById('detailEmployeeSkills').textContent = employee.skills && employee.skills.length > 0 ? employee.skills.join(', ') : '-';
         
@@ -3829,7 +3895,7 @@ async function showEmployeeDetail(employeeId) {
                         </div>
                         <div class="document-details">
                             <div class="document-name">${doc.name}</div>
-                            <div class="document-meta">${formatFileSize(doc.size)} • ${new Date(doc.uploadedAt).toLocaleDateString()}</div>
+                            <div class="document-meta">${formatFileSize(doc.size)} • ${formatDisplayDate(doc.uploadedAt)}</div>
                         </div>
                     </div>
                     <div class="document-actions">
@@ -3921,7 +3987,7 @@ function renderEmployeesTable(employees) {
             <td><span class="employee-role-badge">${employee.role.replace('-', ' ')}</span></td>
             <td>${employee.department || 'N/A'}</td>
             <td><span class="employee-status-badge ${employee.status}">${employee.status.replace('-', ' ')}</span></td>
-            <td>${employee.hireDate ? new Date(employee.hireDate).toLocaleDateString() : 'N/A'}</td>
+            <td>${employee.hireDate ? formatDisplayDate(employee.hireDate) : 'N/A'}</td>
             <td onclick="event.stopPropagation()">
                 <div class="employee-actions">
                     <button class="action-btn edit" onclick="editEmployee('${employee._id}')" title="Edit">
@@ -4187,7 +4253,9 @@ function showAddVendorModal() {
     // Show/hide "Add New Category" option based on user role
     updateVendorCategoryOptions();
     
-    document.getElementById('vendorModal').classList.add('show');
+    const vendorModal = document.getElementById('vendorModal');
+    vendorModal.style.display = '';
+    vendorModal.classList.add('show');
 }
 
 async function editVendor(vendorId) {
@@ -4833,7 +4901,9 @@ function showAddCustomerModal() {
     // Clear custom fields
     clearCustomerCustomFields();
     
-    document.getElementById('customerModal').classList.add('show');
+    const customerModal = document.getElementById('customerModal');
+    customerModal.style.display = '';
+    customerModal.classList.add('show');
 }
 
 async function editCustomer(customerId) {
@@ -5238,7 +5308,7 @@ async function showCustomerProfile(customerId) {
                     <td>${order.service}</td>
                     <td><span class="order-status-badge ${statusClass}">${statusDisplay}</span></td>
                     <td>$${order.amount.toLocaleString()}</td>
-                    <td>${new Date(order.createdAt).toLocaleDateString()}</td>
+                    <td>${formatDisplayDate(order.createdAt)}</td>
                 </tr>
             `;
             }).join('');
@@ -5255,7 +5325,7 @@ async function showCustomerProfile(customerId) {
                         </div>
                         <div class="document-details">
                             <div class="document-name">${doc.name}</div>
-                            <div class="document-meta">${formatFileSize(doc.size)} • ${new Date(doc.uploadedAt).toLocaleDateString()}</div>
+                            <div class="document-meta">${formatFileSize(doc.size)} • ${formatDisplayDate(doc.uploadedAt)}</div>
                         </div>
                     </div>
                     <div class="document-actions">
@@ -5430,7 +5500,7 @@ async function loadCustomersSection() {
 }
 
 function initializeCustomerFilters() {
-    const searchInput = document.getElementById('customerSearchInput');
+    const searchInput = document.getElementById('customersToolbarSearchInput');
     const typeFilter = document.getElementById('customerTypeFilter');
     const statusFilter = document.getElementById('customerStatusFilter');
     
@@ -5448,7 +5518,7 @@ function initializeCustomerFilters() {
 }
 
 function filterCustomers() {
-    const searchTerm = document.getElementById('customerSearchInput')?.value.toLowerCase() || '';
+    const searchTerm = document.getElementById('customersToolbarSearchInput')?.value.toLowerCase() || '';
     const typeFilter = document.getElementById('customerTypeFilter')?.value || 'all';
     const statusFilter = document.getElementById('customerStatusFilter')?.value || 'all';
     
@@ -5920,7 +5990,7 @@ async function showVendorDetail(vendorId) {
                         </div>
                         <div class="document-details">
                             <div class="document-name">${doc.name}</div>
-                            <div class="document-meta">${formatFileSize(doc.size)} • ${new Date(doc.uploadedAt).toLocaleDateString()}</div>
+                            <div class="document-meta">${formatFileSize(doc.size)} • ${formatDisplayDate(doc.uploadedAt)}</div>
                         </div>
                     </div>
                     <div class="document-actions">
@@ -5962,7 +6032,7 @@ async function showVendorDetail(vendorId) {
                             <span><i class="fas fa-user"></i> ${order.customer?.name || order.customer}</span>
                             <span><i class="fas fa-wrench"></i> ${order.service}</span>
                             <span><i class="fas fa-dollar-sign"></i> $${order.amount?.toLocaleString() || '0'}</span>
-                            <span><i class="fas fa-calendar"></i> ${order.startDate ? new Date(order.startDate).toLocaleDateString() : 'N/A'}</span>
+                            <span><i class="fas fa-calendar"></i> ${order.startDate ? formatDisplayDate(order.startDate) : 'N/A'}</span>
                         </div>
                     </div>
                     <button class="btn-icon" onclick="viewOrder('${order._id}')" title="View Order">
@@ -6096,7 +6166,7 @@ function renderUsersTable(users) {
         const initials = ((user.firstName || '')[0] + (user.lastName || '')[0]).toUpperCase() || 'U';
         const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
         const userId = `#${user._id.substring(0, 8).toUpperCase()}`;
-        const signupDate = new Date(user.createdAt).toLocaleDateString();
+        const signupDate = formatDisplayDate(user.createdAt);
         const isPending = user.role === 'pending';
         const requestedRoleName = user.requestedRole ? user.requestedRole.replace('_', ' ') : 'Not specified';
         
@@ -6420,28 +6490,36 @@ window.resetFinancialFilter = resetFinancialFilter;
 
 // Toggle recurring fields in order form
 function toggleRecurringFields() {
-    const orderType = document.getElementById('orderType').value;
+    const orderType = document.getElementById('orderType')?.value;
     const recurringFields = document.getElementById('recurringFields');
     const recurringFrequency = document.getElementById('recurringFrequency');
-    
+    const endDateGroup = document.getElementById('endDateGroup');
+    const endDateInput = document.getElementById('endDate');
+
+    if (!recurringFields) return;
+
     if (orderType === 'recurring') {
         recurringFields.style.display = 'block';
-        recurringFrequency.required = true;
+        if (recurringFrequency) recurringFrequency.required = true;
+        if (endDateGroup) endDateGroup.style.display = 'none';
+        if (endDateInput) endDateInput.required = false;
     } else {
         recurringFields.style.display = 'none';
-        recurringFrequency.required = false;
-        // Clear recurring fields when switching to one-time
-        document.getElementById('recurringFrequency').value = 'weekly';
+        if (recurringFrequency) {
+            recurringFrequency.required = false;
+            recurringFrequency.value = 'weekly';
+        }
         document.getElementById('recurringEndDate').value = '';
         document.getElementById('recurringNotes').value = '';
         document.getElementById('recurringCustomDays').value = '';
         if (document.getElementById('customDaysGroup')) {
             document.getElementById('customDaysGroup').style.display = 'none';
         }
+        if (endDateGroup) endDateGroup.style.display = 'block';
+        if (endDateInput) endDateInput.required = true;
     }
 }
 
-// Make function globally available
 window.toggleRecurringFields = toggleRecurringFields;
 
 // Recurring Calendar navigation functions
@@ -6481,35 +6559,11 @@ function loadRecurringCalendarSection() {
 }
 
 window.loadRecurringCalendarSection = loadRecurringCalendarSection;
-
-
-// Toggle Recurring Fields Function
-function toggleRecurringFields() {
-    const orderType = document.getElementById('orderType').value;
-    const recurringFields = document.getElementById('recurringFields');
-    const endDateGroup = document.getElementById('endDateGroup');
-    const endDateInput = document.getElementById('endDate');
-
-    if (orderType === 'recurring') {
-        recurringFields.style.display = 'block';
-        if (endDateGroup) {
-            endDateGroup.style.display = 'none';
-        }
-        if (endDateInput) {
-            endDateInput.required = false;
-        }
-    } else {
-        recurringFields.style.display = 'none';
-        if (endDateGroup) {
-            endDateGroup.style.display = 'block';
-        }
-        if (endDateInput) {
-            endDateInput.required = true;
-        }
-    }
-}
-
-window.toggleRecurringFields = toggleRecurringFields;
+window.showProfile = showProfile;
+window.closeProfileModal = closeProfileModal;
+window.saveProfile = saveProfile;
+window.uploadAvatar = uploadAvatar;
+window.showSettings = showSettings;
 
 
 

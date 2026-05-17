@@ -10,6 +10,9 @@ async function loadTopCustomers(startDate = null, endDate = null) {
         let filteredOrders = orders;
         if (startDate && endDate) {
             filteredOrders = orders.filter(order => {
+                if (window.TimezoneConfig) {
+                    return window.TimezoneConfig.isDateInRangeMDT(order.startDate, startDate, endDate);
+                }
                 const orderDate = new Date(order.startDate);
                 return orderDate >= new Date(startDate) && orderDate <= new Date(endDate);
             });
@@ -112,6 +115,10 @@ function resetTopCustomersFilter() {
     document.getElementById('topCustomersEndDate').value = '';
     loadTopCustomers();
 }
+
+window.filterTopCustomers = filterTopCustomers;
+window.resetTopCustomersFilter = resetTopCustomersFilter;
+window.loadTopCustomers = loadTopCustomers;
 
 // Load top customers when customers section is shown
 if (document.readyState === 'loading') {
