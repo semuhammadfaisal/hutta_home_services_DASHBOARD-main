@@ -26,7 +26,7 @@ const orderSchema = new mongoose.Schema({
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
   startDate: { type: Date, required: true },
-  endDate: { type: Date, required: true },
+  endDate: { type: Date },
   status: { type: String, default: 'new' },
   priority: { type: String, default: 'medium' },
   description: String,

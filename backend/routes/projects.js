@@ -1,6 +1,7 @@
 const express = require('express');
 const Project = require('../models/Project');
 const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const router = express.Router();
 
 // Get all projects
@@ -76,7 +77,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete project
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const project = await Project.findByIdAndDelete(req.params.id);
     if (!project) {

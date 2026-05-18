@@ -176,7 +176,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
 });
 
 // Delete customer
-router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const customer = await Customer.findByIdAndDelete(req.params.id);
     if (!customer) {

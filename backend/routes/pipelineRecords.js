@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const PipelineRecord = require('../models/PipelineRecord');
+const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 
 // KPI: payments collected = sum of budgets for records in Paid/Close stages + received/completed payments not already counted
 // Exclude NO BID stages from calculations
@@ -295,7 +297,7 @@ router.patch('/:id/stage', async (req, res) => {
 });
 
 // Delete record
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
     try {
         const record = await PipelineRecord.findById(req.params.id);
         if (!record) {

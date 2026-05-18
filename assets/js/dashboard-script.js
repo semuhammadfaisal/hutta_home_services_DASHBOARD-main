@@ -1954,7 +1954,7 @@ async function saveOrder() {
         vendor: document.getElementById('vendor').value || null,
         employee: document.getElementById('employee').value || null,
         startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('orderType').value === 'recurring' ? null : document.getElementById('endDate').value,
+        endDate: document.getElementById('orderType').value === 'recurring' ? null : (document.getElementById('endDate').value || null),
         status: document.getElementById('status').value || 'new',
         priority: document.getElementById('priority').value || 'medium',
         description: document.getElementById('description').value || '',
@@ -2321,8 +2321,8 @@ async function refreshOrders() {
         const tableContainer = document.querySelector('.orders-table-container');
         if (tableContainer) setTableLoading(tableContainer, true);
         
-        const orders = await window.APIService.getOrders();
-        window.dashboard.renderOrdersTable(orders);
+        allOrders = await window.APIService.getOrders();
+        filterOrdersImmediate();
         
             // Refresh dashboard stats after order changes (debounced)
             clearTimeout(window.statsRefreshTimer);
@@ -5762,11 +5762,16 @@ window.calculateProfit = calculateProfit;
 function updateOrderStats(orders) {
     const totalCount = document.getElementById('totalOrdersCount');
     const activeCount = document.getElementById('activeOrdersCount');
+    const revenueTotal = document.getElementById('filteredOrdersRevenue');
     
     if (totalCount) totalCount.textContent = orders.length;
     if (activeCount) {
         const activeOrders = orders.filter(o => ['new', 'in-progress'].includes(o.status)).length;
         activeCount.textContent = activeOrders;
+    }
+    if (revenueTotal) {
+        const revenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+        revenueTotal.textContent = `$${revenue.toLocaleString()}`;
     }
 }
 
@@ -5785,8 +5790,8 @@ async function loadOrdersSection() {
         
         allOrders = await window.APIService.getOrders();
         console.log('Orders loaded:', allOrders.length);
-        window.dashboard.renderOrdersTable(allOrders);
         initializeOrderFilters();
+        filterOrdersImmediate();
     } catch (error) {
         console.error('Failed to load orders:', error);
         window.dashboard.renderOrdersTable([]);
@@ -5804,6 +5809,10 @@ function initializeOrderFilters() {
     const searchInput = document.getElementById('orderSearchInput');
     const statusFilter = document.getElementById('orderStatusFilter');
     const priorityFilter = document.getElementById('orderPriorityFilter');
+    const typeFilter = document.getElementById('orderTypeFilter');
+    const dateFilter = document.getElementById('orderDateFilter');
+    const startDateFilter = document.getElementById('orderStartDateFilter');
+    const endDateFilter = document.getElementById('orderEndDateFilter');
 
     if (searchInput) {
         searchInput.addEventListener('input', filterOrdersDebounced);
@@ -5816,6 +5825,27 @@ function initializeOrderFilters() {
     if (priorityFilter) {
         priorityFilter.addEventListener('change', filterOrdersImmediate);
     }
+
+    if (typeFilter) {
+        typeFilter.addEventListener('change', filterOrdersImmediate);
+    }
+
+    if (dateFilter) {
+        dateFilter.addEventListener('change', () => {
+            syncOrderCustomDateRangeVisibility();
+            filterOrdersImmediate();
+        });
+    }
+
+    if (startDateFilter) {
+        startDateFilter.addEventListener('change', filterOrdersImmediate);
+    }
+
+    if (endDateFilter) {
+        endDateFilter.addEventListener('change', filterOrdersImmediate);
+    }
+
+    syncOrderCustomDateRangeVisibility();
 }
 
 let orderFilterDebounceTimer = null;
@@ -5825,35 +5855,113 @@ function filterOrdersDebounced() {
     orderFilterDebounceTimer = setTimeout(filterOrdersImmediate, 280);
 }
 
+function syncOrderCustomDateRangeVisibility() {
+    const dateFilter = document.getElementById('orderDateFilter')?.value || 'all';
+    const customRange = document.getElementById('orderCustomDateRange');
+    if (customRange) customRange.hidden = dateFilter !== 'custom';
+}
+
+function getOrderDateFilterRange() {
+    const selected = document.getElementById('orderDateFilter')?.value || 'all';
+    if (selected === 'all') return null;
+
+    const config = tz();
+    const today = config ? config.todayInputMDT() : new Date().toISOString().split('T')[0];
+    const toStart = (dateString) => {
+        if (!dateString) return null;
+        if (config) return config.dateInputToMDT(dateString).getTime();
+        const d = new Date(`${dateString}T00:00:00`);
+        return Number.isNaN(d.getTime()) ? null : d.getTime();
+    };
+    const toEnd = (dateString) => {
+        if (!dateString) return null;
+        if (config) return config.endOfDayMDT(dateString).getTime();
+        const d = new Date(`${dateString}T23:59:59.999`);
+        return Number.isNaN(d.getTime()) ? null : d.getTime();
+    };
+    const addDays = (dateString, days) => {
+        if (config) return config.addDaysToDateString(dateString, days);
+        const d = new Date(`${dateString}T00:00:00`);
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    };
+    const monthString = (year, monthIndex) => `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+
+    if (selected === 'today') {
+        return { start: toStart(today), end: toEnd(today) };
+    }
+
+    if (selected === 'this-week') {
+        const current = config ? config.dateInputToMDT(today) : new Date(`${today}T00:00:00`);
+        const day = current.getDay();
+        const weekStart = addDays(today, -day);
+        const weekEnd = addDays(weekStart, 6);
+        return { start: toStart(weekStart), end: toEnd(weekEnd) };
+    }
+
+    if (selected === 'this-month' || selected === 'last-month') {
+        const current = config ? config.toMDT(config.dateInputToMDT(today)) : new Date(`${today}T00:00:00`);
+        let year = current.getFullYear();
+        let month = current.getMonth();
+        if (selected === 'last-month') {
+            month -= 1;
+            if (month < 0) {
+                month = 11;
+                year -= 1;
+            }
+        }
+        const start = monthString(year, month);
+        const nextMonth = month === 11 ? monthString(year + 1, 0) : monthString(year, month + 1);
+        const end = addDays(nextMonth, -1);
+        return { start: toStart(start), end: toEnd(end) };
+    }
+
+    if (selected === 'custom') {
+        const startDate = document.getElementById('orderStartDateFilter')?.value;
+        const endDate = document.getElementById('orderEndDateFilter')?.value;
+        if (!startDate && !endDate) return null;
+        return {
+            start: startDate ? toStart(startDate) : null,
+            end: endDate ? toEnd(endDate) : null
+        };
+    }
+
+    return null;
+}
+
 function filterOrdersImmediate() {
     const searchTerm = document.getElementById('orderSearchInput')?.value.toLowerCase() || '';
     const statusFilter = document.getElementById('orderStatusFilter')?.value || 'all';
     const priorityFilter = document.getElementById('orderPriorityFilter')?.value || 'all';
+    const typeFilter = document.getElementById('orderTypeFilter')?.value || 'all';
+    const dateRange = getOrderDateFilterRange();
     
-    let filtered = allOrders;
-    
-    // Apply search filter
-    if (searchTerm) {
-        filtered = filtered.filter(order => {
+    const filtered = allOrders.filter(order => {
+        if (searchTerm) {
             const orderId = (order.orderId || order._id).toLowerCase();
             const customerName = (order.customer?.name || order.customer || '').toLowerCase();
             const service = (order.service || '').toLowerCase();
             
-            return orderId.includes(searchTerm) ||
-                   customerName.includes(searchTerm) ||
-                   service.includes(searchTerm);
-        });
-    }
-    
-    // Apply status filter
-    if (statusFilter !== 'all') {
-        filtered = filtered.filter(order => order.status === statusFilter);
-    }
-    
-    // Apply priority filter
-    if (priorityFilter !== 'all') {
-        filtered = filtered.filter(order => (order.priority || 'medium') === priorityFilter);
-    }
+            if (!orderId.includes(searchTerm) &&
+                !customerName.includes(searchTerm) &&
+                !service.includes(searchTerm)) {
+                return false;
+            }
+        }
+
+        if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+        if (priorityFilter !== 'all' && (order.priority || 'medium') !== priorityFilter) return false;
+        if (typeFilter !== 'all' && (order.orderType || 'one-time') !== typeFilter) return false;
+
+        if (dateRange) {
+            const orderDate = new Date(order.createdAt || order.startDate).getTime();
+            if (Number.isNaN(orderDate)) return false;
+            if (dateRange.start !== null && orderDate < dateRange.start) return false;
+            if (dateRange.end !== null && orderDate > dateRange.end) return false;
+        }
+
+        return true;
+    });
     
     window.dashboard.renderOrdersTable(filtered);
 }
@@ -6691,7 +6799,7 @@ function toggleRecurringFields() {
             document.getElementById('customDaysGroup').style.display = 'none';
         }
         if (endDateGroup) endDateGroup.style.display = 'block';
-        if (endDateInput) endDateInput.required = true;
+        if (endDateInput) endDateInput.required = false;
     }
 }
 

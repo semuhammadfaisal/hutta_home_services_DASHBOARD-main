@@ -1,4 +1,6 @@
 // Top Customers Report Functionality
+let topCustomersData = [];
+let showAllTopCustomers = false;
 
 async function loadTopCustomers(startDate = null, endDate = null) {
     try {
@@ -37,7 +39,9 @@ async function loadTopCustomers(startDate = null, endDate = null) {
             .sort((a, b) => b.totalRevenue - a.totalRevenue)
             .slice(0, 10);
         
-        renderTopCustomers(topCustomers);
+        topCustomersData = topCustomers;
+        showAllTopCustomers = false;
+        renderTopCustomers();
     } catch (error) {
         console.error('Error loading top customers:', error);
         if (window.showToast) {
@@ -46,12 +50,12 @@ async function loadTopCustomers(startDate = null, endDate = null) {
     }
 }
 
-function renderTopCustomers(customers) {
+function renderTopCustomers(customers = topCustomersData) {
     const grid = document.getElementById('topCustomersGrid');
     
     if (!customers || customers.length === 0) {
         grid.innerHTML = `
-            <div class="top-customers-empty" style="grid-column: 1 / -1;">
+            <div class="top-customers-empty">
                 <i class="fas fa-users"></i>
                 <h3>No Customer Data</h3>
                 <p>No customers with orders found for the selected period</p>
@@ -60,24 +64,51 @@ function renderTopCustomers(customers) {
         return;
     }
     
-    grid.innerHTML = customers.map((customer, index) => {
+    const totalRevenue = customers.reduce((sum, customer) => sum + customer.totalRevenue, 0);
+    const totalOrders = customers.reduce((sum, customer) => sum + customer.totalOrders, 0);
+    const topCustomer = customers[0];
+    const visibleCustomers = showAllTopCustomers ? customers : customers.slice(0, 3);
+    const hasMoreCustomers = customers.length > 3;
+
+    grid.innerHTML = `
+        <div class="top-customers-summary">
+            <div class="top-customers-summary-item">
+                <span class="summary-label">Ranked Customers</span>
+                <strong>${showAllTopCustomers ? customers.length : Math.min(customers.length, 3)}</strong>
+            </div>
+            <div class="top-customers-summary-item">
+                <span class="summary-label">Top Revenue</span>
+                <strong>$${(topCustomer?.totalRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+            </div>
+            <div class="top-customers-summary-item">
+                <span class="summary-label">Ranked Revenue</span>
+                <strong>$${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+            </div>
+            <div class="top-customers-summary-item">
+                <span class="summary-label">Ranked Orders</span>
+                <strong>${totalOrders}</strong>
+            </div>
+        </div>
+        <div class="top-customers-list">
+            ${visibleCustomers.map((customer, index) => {
         const rank = index + 1;
         const rankClass = rank <= 3 ? `rank-${rank}` : '';
-        
         return `
             <div class="top-customer-card">
                 <div class="top-customer-rank ${rankClass}">${rank}</div>
-                <div class="top-customer-info">
-                    <div class="top-customer-name">${customer.name || 'N/A'}</div>
-                    <div class="top-customer-email">
-                        <i class="fas fa-envelope"></i>
-                        ${customer.email || 'No email'}
+                <div class="top-customer-main">
+                    <div class="top-customer-info">
+                        <div class="top-customer-name">${customer.name || 'N/A'}</div>
+                        <div class="top-customer-email">
+                            <i class="fas fa-envelope"></i>
+                            ${customer.email || 'No email'}
+                        </div>
                     </div>
                 </div>
                 <div class="top-customer-stats">
                     <div class="top-customer-stat">
                         <span class="top-customer-stat-label">Total Revenue</span>
-                        <span class="top-customer-stat-value revenue">$${customer.totalRevenue.toFixed(2)}</span>
+                        <span class="top-customer-stat-value revenue">$${customer.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <div class="top-customer-stat">
                         <span class="top-customer-stat-label">Total Orders</span>
@@ -86,7 +117,21 @@ function renderTopCustomers(customers) {
                 </div>
             </div>
         `;
-    }).join('');
+    }).join('')}
+        </div>
+        ${hasMoreCustomers ? `
+            <div class="top-customers-actions">
+                <button type="button" class="top-customers-toggle" onclick="toggleTopCustomersList()">
+                    ${showAllTopCustomers ? 'Show Top 3' : `View All ${customers.length}`}
+                </button>
+            </div>
+        ` : ''}
+    `;
+}
+
+function toggleTopCustomersList() {
+    showAllTopCustomers = !showAllTopCustomers;
+    renderTopCustomers();
 }
 
 function filterTopCustomers() {
@@ -119,8 +164,9 @@ function resetTopCustomersFilter() {
 window.filterTopCustomers = filterTopCustomers;
 window.resetTopCustomersFilter = resetTopCustomersFilter;
 window.loadTopCustomers = loadTopCustomers;
+window.toggleTopCustomersList = toggleTopCustomersList;
 
-// Load top customers when customers section is shown
+// Load top customers when dashboard overview is shown
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initTopCustomers);
 } else {
@@ -134,18 +180,18 @@ function initTopCustomers() {
         // Load initially
         loadTopCustomers();
         
-        // Reload when customers section becomes active
+        // Reload when dashboard overview becomes active
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
-                if (mutation.target.id === 'customers' && mutation.target.classList.contains('active')) {
+                if (mutation.target.id === 'dashboard' && mutation.target.classList.contains('active')) {
                     loadTopCustomers();
                 }
             });
         });
         
-        const customersSection = document.getElementById('customers');
-        if (customersSection) {
-            observer.observe(customersSection, { attributes: true, attributeFilter: ['class'] });
+        const dashboardSection = document.getElementById('dashboard');
+        if (dashboardSection) {
+            observer.observe(dashboardSection, { attributes: true, attributeFilter: ['class'] });
         }
     }, 1000);
 }

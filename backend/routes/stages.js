@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Stage = require('../models/Stage');
 const memCache = require('../utils/memoryCache');
+const authenticateToken = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 
 const STAGES_CACHE_KEY = 'stages:list:v1';
 const STAGES_TTL_MS = parseInt(process.env.STAGES_CACHE_MS || '30000', 10);
@@ -65,7 +67,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete stage
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
     try {
         const stage = await Stage.findById(req.params.id);
         if (!stage) {

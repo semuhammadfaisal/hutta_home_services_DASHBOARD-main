@@ -15,6 +15,19 @@ function getPipelineAuthHeaders(includeJson = true) {
     }
     return headers;
 }
+
+async function throwIfPipelineRequestFailed(response, fallbackMessage) {
+    if (response.ok) return;
+
+    let message = fallbackMessage;
+    try {
+        const errorData = await response.json();
+        message = errorData.message || message;
+    } catch (e) {
+        message = response.statusText || message;
+    }
+    throw new Error(message);
+}
 /** How many new-order cards show before clicking “Show more” */
 const NEW_ORDERS_DEFAULT_VISIBLE = 2;
 
@@ -1014,8 +1027,17 @@ async function deleteRecord(recordId) {
     if (!confirm(`Delete "${record.customerName}"?`)) return;
     
     try {
-        await fetch(`${API_BASE_URL}/pipeline-records/${recordId}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE_URL}/pipeline-records/${recordId}`, {
+            method: 'DELETE',
+            headers: getPipelineAuthHeaders(false)
+        });
+        await throwIfPipelineRequestFailed(response, 'Failed to delete pipeline record');
+
+        if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
+        if (window.showToast) {
+            window.showToast(`Removed "${record.customerName}" from pipeline`, 'success');
+        }
     } catch (error) {
         alert('Error deleting record: ' + error.message);
     }
@@ -1155,12 +1177,21 @@ async function clearPipelineData() {
     
     try {
         for (const record of records) {
-            await fetch(`${API_BASE_URL}/pipeline-records/${record._id}`, { method: 'DELETE' });
+            const response = await fetch(`${API_BASE_URL}/pipeline-records/${record._id}`, {
+                method: 'DELETE',
+                headers: getPipelineAuthHeaders(false)
+            });
+            await throwIfPipelineRequestFailed(response, 'Failed to delete pipeline record');
         }
         for (const stage of stages) {
-            await fetch(`${API_BASE_URL}/stages/${stage._id}`, { method: 'DELETE' });
+            const response = await fetch(`${API_BASE_URL}/stages/${stage._id}`, {
+                method: 'DELETE',
+                headers: getPipelineAuthHeaders(false)
+            });
+            await throwIfPipelineRequestFailed(response, 'Failed to delete stage');
         }
         
+        if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
         alert('✅ Pipeline data cleared successfully!');
     } catch (error) {
@@ -1824,8 +1855,18 @@ async function deleteStage(stageId) {
     if (!confirm(`Delete stage "${stage.name}"?`)) return;
     
     try {
-        await fetch(`${API_BASE_URL}/stages/${stageId}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE_URL}/stages/${stageId}`, {
+            method: 'DELETE',
+            headers: getPipelineAuthHeaders(false)
+        });
+
+        await throwIfPipelineRequestFailed(response, 'Failed to delete stage');
+
+        if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
+        if (window.showToast) {
+            window.showToast(`Stage "${stage.name}" deleted`, 'success');
+        }
     } catch (error) {
         alert('Error deleting stage: ' + error.message);
     }

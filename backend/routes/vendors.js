@@ -76,7 +76,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
 });
 
 // Delete vendor
-router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndDelete(req.params.id);
     if (!vendor) {

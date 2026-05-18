@@ -264,6 +264,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     const vendorCost = Number(req.body.vendorCost) || 0;
     const processingFee = Number(req.body.processingFee) || 0;
     const profit = amount - vendorCost - processingFee;
+    const endDate = req.body.endDate ? new Date(req.body.endDate) : null;
     
     // Prepare order data
     const orderData = {
@@ -282,7 +283,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       processingFee,
       profit,
       startDate: new Date(req.body.startDate),
-      endDate: new Date(req.body.endDate),
+      endDate,
       status: req.body.status || 'new',
       priority: req.body.priority || 'medium',
       description: req.body.description || '',
@@ -361,7 +362,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
         paymentMethod: null, // Will be set later when payment is received
         status: 'pending',
         description: `Payment for ${orderId} - ${req.body.service}`,
-        dueDate: new Date(req.body.endDate),
+        dueDate: endDate,
         processedBy: req.user.userId
       });
       
@@ -560,7 +561,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
 });
 
 // Delete order
-router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const order = await Order.findByIdAndDelete(req.params.id);
     if (!order) {

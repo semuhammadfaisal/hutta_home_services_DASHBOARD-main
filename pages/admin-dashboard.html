@@ -372,6 +372,31 @@
                 </div>
             </div>
 
+            <!-- Top Customers Report -->
+            <div class="top-customers-report dashboard-overview-panel">
+                <div class="top-customers-header">
+                    <div class="top-customers-title-block">
+                        <h3><i class="fas fa-trophy" aria-hidden="true"></i> Top Customers</h3>
+                        <p>Highest revenue customers for the selected period.</p>
+                    </div>
+                    <div class="top-customers-date-filter" role="group" aria-label="Top customers date range">
+                        <input type="date" id="topCustomersStartDate" class="date-input" aria-label="Top customers start date">
+                        <span class="top-customers-date-sep">to</span>
+                        <input type="date" id="topCustomersEndDate" class="date-input" aria-label="Top customers end date">
+                        <button type="button" class="btn-filter" onclick="filterTopCustomers()">
+                            <i class="fas fa-filter" aria-hidden="true"></i> Filter
+                        </button>
+                        <button type="button" class="btn-reset" onclick="resetTopCustomersFilter()" title="Clear dates" aria-label="Reset top customers date range">
+                            <i class="fas fa-redo" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="top-customers-grid" id="topCustomersGrid">
+                    <!-- Top customers will be populated here -->
+                </div>
+            </div>
+
             <!-- Financial Summary -->
             <div class="financial-summary financial-overview-card">
                 <div class="financial-header">
@@ -458,6 +483,26 @@
                             <option value="medium">Medium</option>
                             <option value="high">High</option>
                         </select>
+                        <select class="filter-select" id="orderTypeFilter">
+                            <option value="all">All Orders</option>
+                            <option value="recurring">Recurring Orders</option>
+                            <option value="one-time">One-Time Orders</option>
+                        </select>
+                    </div>
+                    <div class="orders-date-filter">
+                        <select class="filter-select" id="orderDateFilter" aria-label="Filter orders by date">
+                            <option value="all">All Dates</option>
+                            <option value="today">Today</option>
+                            <option value="this-week">This Week</option>
+                            <option value="this-month">This Month</option>
+                            <option value="last-month">Last Month</option>
+                            <option value="custom">Custom Date Range</option>
+                        </select>
+                        <div class="orders-custom-date-range" id="orderCustomDateRange" hidden>
+                            <input type="date" id="orderStartDateFilter" class="date-input" aria-label="Order filter start date">
+                            <span class="orders-date-separator">to</span>
+                            <input type="date" id="orderEndDateFilter" class="date-input" aria-label="Order filter end date">
+                        </div>
                     </div>
                 </div>
                 <div class="orders-stats">
@@ -468,6 +513,10 @@
                     <div class="stat-item">
                         <div class="stat-value" id="activeOrdersCount">0</div>
                         <div class="stat-label">Active</div>
+                    </div>
+                    <div class="stat-item orders-revenue-stat">
+                        <div class="stat-value" id="filteredOrdersRevenue">$0</div>
+                        <div class="stat-label">Total Revenue</div>
                     </div>
                 </div>
             </div>
@@ -665,28 +714,6 @@
                         <!-- Customers will be populated by JavaScript -->
                     </tbody>
                 </table>
-            </div>
-            
-            <!-- Top Customers Report -->
-            <div class="top-customers-report" style="margin-top: 40px;">
-                <div class="report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 24px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 16px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); border: 1px solid rgba(0, 86, 184, 0.1);">
-                    <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #0f172a;"><i class="fas fa-trophy" style="color: #0056B8; margin-right: 12px;"></i>Top Customers</h2>
-                    <div class="date-filter" style="display: flex; align-items: center; gap: 12px;">
-                        <input type="date" id="topCustomersStartDate" class="date-input" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 500;">
-                        <span style="color: #6b7280;">to</span>
-                        <input type="date" id="topCustomersEndDate" class="date-input" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 500;">
-                        <button class="btn-primary" onclick="filterTopCustomers()" style="padding: 12px 20px; white-space: nowrap;">
-                            <i class="fas fa-filter"></i> Filter
-                        </button>
-                        <button class="btn-secondary" onclick="resetTopCustomersFilter()" style="padding: 12px 16px;">
-                            <i class="fas fa-redo"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="top-customers-grid" id="topCustomersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-                    <!-- Top customers will be populated here -->
-                </div>
             </div>
         </section>
 
@@ -2210,14 +2237,13 @@
                             <label for="profit">Profit</label>
                             <input type="number" id="profit" step="0.01" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
                         </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="orderType">Order Type *</label>
-                        <select id="orderType" required onchange="toggleRecurringFields()">
-                            <option value="one-time">One Time Order</option>
-                            <option value="recurring">Recurring Order</option>
-                        </select>
+                        <div class="form-group">
+                            <label for="orderType">Order Type *</label>
+                            <select id="orderType" required onchange="toggleRecurringFields()">
+                                <option value="one-time">One Time Order</option>
+                                <option value="recurring">Recurring Order</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="form-row">
@@ -2226,8 +2252,8 @@
                             <input type="date" id="startDate" required>
                         </div>
                         <div class="form-group" id="endDateGroup">
-                            <label for="endDate">End Date *</label>
-                            <input type="date" id="endDate" required>
+                            <label for="endDate">End Date</label>
+                            <input type="date" id="endDate">
                         </div>
                     </div>
                     
