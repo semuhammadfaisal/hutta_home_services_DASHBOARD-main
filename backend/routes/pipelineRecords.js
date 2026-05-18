@@ -9,15 +9,19 @@ router.get('/kpi/payments-collected', async (req, res) => {
         const Stage = require('../models/Stage');
         const Payment = require('../models/Payment');
 
-        // Find all stages whose name matches paid/close variants (case-insensitive)
+        // Find all stages whose name matches paid/close variants (case-insensitive) AND exclude NO BID stages
         const allStages = await Stage.find().lean();
         const paidStageIds = allStages
             .filter(s => /^(paid|close|closed|complete|completed|won|done)$/i.test(s.name.trim()) && !s.isNoBid)
             .map(s => s._id);
+        
+        // Get NO BID stage IDs
+        const noBidStageIds = allStages.filter(s => s.isNoBid).map(s => s._id);
 
-        console.log('Paid stage IDs:', paidStageIds, 'from stages:', allStages.map(s => s.name));
+        console.log('Paid stage IDs:', paidStageIds);
+        console.log('NO BID stage IDs:', noBidStageIds);
 
-        // Sum budgets of pipeline records in those stages
+        // Sum budgets of pipeline records in paid stages (excluding NO BID)
         const pipelineResult = await PipelineRecord.aggregate([
             { $match: { stageId: { $in: paidStageIds } } },
             { $group: { _id: null, total: { $sum: '$budget' }, orderIds: { $push: '$orderId' } } }
@@ -25,15 +29,19 @@ router.get('/kpi/payments-collected', async (req, res) => {
 
         const pipelineTotal = pipelineResult[0]?.total || 0;
         const linkedOrderIds = (pipelineResult[0]?.orderIds || []).filter(Boolean);
+        
+        // Get orders in NO BID stages to exclude from payment calculations
+        const noBidRecords = await PipelineRecord.find({ stageId: { $in: noBidStageIds } }).select('orderId').lean();
+        const noBidOrderIds = noBidRecords.map(r => r.orderId).filter(Boolean);
 
-        // Also count received/completed payments NOT linked to a pipeline-counted order
+        // Also count received/completed payments NOT linked to a pipeline-counted order AND NOT in NO BID stages
         const extraPayments = await Payment.find({
             status: { $in: ['received', 'completed'] },
-            order: { $nin: linkedOrderIds }
+            order: { $nin: [...linkedOrderIds, ...noBidOrderIds] }
         }).lean();
         const extraTotal = extraPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
-        console.log('KPI result:', { pipelineTotal, extraTotal, total: pipelineTotal + extraTotal });
+        console.log('KPI result:', { pipelineTotal, extraTotal, excludedNoBid: noBidOrderIds.length, total: pipelineTotal + extraTotal });
         res.json({ paymentsCollected: pipelineTotal + extraTotal });
     } catch (error) {
         console.error('KPI error:', error);

@@ -153,6 +153,9 @@
     background: var(--pipe-muted);
     flex: 1;
     min-height: 120px;
+    pointer-events: auto;
+    position: relative;
+    z-index: 0;
 }
 
 #pipeline .record-card {
@@ -163,6 +166,18 @@
     margin-bottom: 10px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
+}
+
+#pipeline .record-card:active {
+    cursor: grabbing;
 }
 
 #pipeline .record-card:last-child {
@@ -196,6 +211,9 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
+    pointer-events: auto;
+    position: relative;
+    z-index: 10;
 }
 
 #pipeline .record-actions .icon-btn {
@@ -413,8 +431,17 @@
     padding: 14px 42px 14px 14px;
     margin-bottom: 10px;
     cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
     transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    pointer-events: auto;
+}
+
+#pipeline .new-order-card:active {
+    cursor: grabbing;
 }
 
 #pipeline .new-order-card:last-child {
@@ -912,6 +939,9 @@
     overflow-y: auto;
     max-height: 600px;
     background: #f9fafb;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
 }
 
 .stage-projects {
@@ -1692,6 +1722,15 @@
     transform: rotate(3deg) scale(0.95);
     box-shadow: 0 8px 25px rgba(0, 86, 184, 0.22);
     z-index: 1000;
+    pointer-events: none;
+}
+
+#pipeline .record-card.dragging {
+    opacity: 0.6;
+    transform: rotate(3deg) scale(0.95);
+    box-shadow: 0 8px 25px rgba(0, 86, 184, 0.22);
+    z-index: 1000;
+    pointer-events: none;
 }
 
 @keyframes successPulse {

@@ -23,6 +23,9 @@ let stages = [];
 let records = [];
 let filteredRecords = [];
 let draggedStage = null;
+let draggedRecordId = null; // Store dragged record ID
+let draggedOrderId = null; // Store dragged order ID
+let draggedIsNewOrder = false; // Store if it's a new order
 let searchQuery = '';
 let newOrders = []; // Store new orders for suggestions
 let employeeCache = new Map(); // Cache employee data
@@ -32,12 +35,24 @@ let autoScrollInterval = null; // For auto-scroll during drag
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Pipeline MongoDB script loaded');
-    // Only load data if we're on the pipeline section or if it's active
+    
     const pipelineSection = document.getElementById('pipeline');
     if (pipelineSection && pipelineSection.classList.contains('active')) {
         console.log('Pipeline section is active, loading data...');
         loadDataFromDB();
     }
+    
+    // CRITICAL: Prevent default dragover on document to allow drop
+    document.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        console.log('Global dragover detected on:', e.target.className);
+    }, false);
+    
+    // Also prevent default drop on document
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        console.log('Global drop detected (prevented)');
+    }, false);
 });
 
 // Load all data from MongoDB
@@ -145,19 +160,49 @@ function bindPipelineStagesContainerOnce(container) {
     if (!container || container.dataset.pipelineUiBound === '1') return;
     container.dataset.pipelineUiBound = '1';
     container.addEventListener('click', pipelineStagesContainerClick);
-    container.addEventListener('dragstart', pipelineStagesContainerDragStart);
-    container.addEventListener('dragend', pipelineStagesContainerDragEnd);
+    // Removed event delegation for drag - using direct handlers instead
 }
 
 function pipelineStagesContainerDragStart(e) {
     const card = e.target.closest('.record-card, .new-order-card');
-    if (card) {
-        drag(e, card);
+    if (!card) return;
+    
+    if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
+        e.preventDefault();
+        return;
     }
+    
+    if (!card.draggable) card.draggable = true;
+    card.classList.add('dragging');
+    
+    if (card.classList.contains('new-order-card')) {
+        draggedOrderId = card.dataset.orderId;
+        draggedRecordId = null;
+        draggedIsNewOrder = true;
+    } else {
+        draggedRecordId = card.dataset.recordId;
+        draggedOrderId = null;
+        draggedIsNewOrder = false;
+    }
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', 'dragging');
 }
 
-function pipelineStagesContainerDragEnd() {
+function pipelineStagesContainerDragEnd(e) {
+    // Clean up all drag states
     document.querySelectorAll('.dragging').forEach((el) => el.classList.remove('dragging'));
+    document.querySelectorAll('.drag-over').forEach((el) => el.classList.remove('drag-over'));
+    
+    // Clear drag data
+    draggedRecordId = null;
+    draggedOrderId = null;
+    draggedIsNewOrder = false;
+    
+    // Reset any stuck drag operations
+    if (e && e.dataTransfer) {
+        e.dataTransfer.clearData();
+    }
 }
 
 function pipelineStagesContainerClick(e) {
@@ -253,7 +298,73 @@ function loadStages() {
 
     bindPipelineStagesContainerOnce(container);
 
+    // Ensure all cards are draggable with proper event handlers
     requestAnimationFrame(() => {
+        const allCards = container.querySelectorAll('.record-card, .new-order-card');
+        console.log('Setting up drag for', allCards.length, 'cards');
+        allCards.forEach(card => {
+            card.setAttribute('draggable', 'true');
+            card.draggable = true;
+            
+            // Add mousedown to verify events work
+            card.onmousedown = function(e) {
+                if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
+                    return; // Let buttons work normally
+                }
+                console.log('Mouse down on card - drag should start');
+                console.log('Card draggable attribute:', this.getAttribute('draggable'));
+                console.log('Card draggable property:', this.draggable);
+            };
+            
+            // Add direct ondragstart handler
+            card.ondragstart = function(e) {
+                console.log('=== DRAGSTART EVENT ===');
+                console.log('Target:', e.target);
+                console.log('CurrentTarget:', e.currentTarget);
+                console.log('Card ID:', this.dataset.recordId || this.dataset.orderId);
+                
+                if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
+                    console.log('Drag prevented - clicked on button/action');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                
+                // Don't create drag image - it might be causing issues
+                this.classList.add('dragging');
+                this.style.opacity = '0.5';
+                
+                if (this.classList.contains('new-order-card')) {
+                    draggedOrderId = this.dataset.orderId;
+                    draggedRecordId = null;
+                    draggedIsNewOrder = true;
+                    console.log('Set draggedOrderId:', draggedOrderId);
+                } else {
+                    draggedRecordId = this.dataset.recordId;
+                    draggedOrderId = null;
+                    draggedIsNewOrder = false;
+                    console.log('Set draggedRecordId:', draggedRecordId);
+                }
+                
+                try {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', this.dataset.recordId || this.dataset.orderId);
+                    console.log('DataTransfer set successfully');
+                } catch (err) {
+                    console.error('Error setting dataTransfer:', err);
+                }
+            };
+            
+            // Add direct ondragend handler
+            card.ondragend = function(e) {
+                console.log('Drag ended');
+                this.classList.remove('dragging');
+                this.style.opacity = '';
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            };
+        });
+        
+        // Check for read more buttons
         container.querySelectorAll('.record-description-block').forEach((block) => {
             const desc = block.querySelector('.record-description');
             const btn = block.querySelector('.record-description-toggle');
@@ -278,7 +389,6 @@ function createStageColumn(stage) {
         column.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
         column.style.border = '2px dashed #dc2626';
     }
-    column.draggable = true;
     column.dataset.stageId = stage._id;
     
     const stageHeader = document.createElement('div');
@@ -286,16 +396,15 @@ function createStageColumn(stage) {
     if (stage.isNoBid) {
         stageHeader.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
     }
-    stageHeader.draggable = false;
     stageHeader.innerHTML = `
         <div class="stage-title">
             <h3 style="${stage.isNoBid ? 'color: white;' : ''}">
                 ${stage.isNoBid ? '<i class="fas fa-ban" style="margin-right: 6px;"></i>' : ''}${stage.name}
             </h3>
             <div class="stage-actions">
-                <button type="button" draggable="false" class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
-                <button type="button" draggable="false" class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
-                <button type="button" draggable="false" class="icon-btn delete delete-stage-btn" data-stage-id="${stage._id}" title="Delete Stage"><i class="fas fa-trash"></i></button>
+                <button type="button" class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
+                <button type="button" class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
+                <button type="button" class="icon-btn delete delete-stage-btn" data-stage-id="${stage._id}" title="Delete Stage"><i class="fas fa-trash"></i></button>
             </div>
         </div>
         <div class="stage-count">
@@ -310,17 +419,32 @@ function createStageColumn(stage) {
     }
     stageBody.dataset.stageId = stage._id;
     stageBody.innerHTML = renderRecords(stage._id);
-    stageBody.addEventListener('drop', drop);
-    stageBody.addEventListener('dragover', allowDrop);
-    stageBody.addEventListener('dragleave', dragLeave);
+    
+    stageBody.ondragover = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        this.classList.add('drag-over');
+        console.log('Drag over stage:', this.dataset.stageId);
+    };
+    
+    stageBody.ondragleave = function(e) {
+        const rect = this.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom) {
+            this.classList.remove('drag-over');
+        }
+    };
+    
+    stageBody.ondrop = function(e) {
+        console.log('Drop event triggered on stage:', this.dataset.stageId);
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+        drop.call(this, e);
+    };
     
     column.appendChild(stageHeader);
     column.appendChild(stageBody);
-    
-    column.addEventListener('dragstart', stageColumnDragStart);
-    column.addEventListener('dragover', stageColumnDragOver);
-    column.addEventListener('drop', stageColumnDrop);
-    column.addEventListener('dragend', stageColumnDragEnd);
     
     return column;
 }
@@ -356,7 +480,7 @@ function renderRecords(stageId) {
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         const displayTitle = record.orderIdDisplay || record.customerName;
         return `
-        <div class="record-card" draggable="true" data-record-id="${record._id}">
+        <div class="record-card" data-record-id="${record._id}">
             <div class="record-header">
                 <div class="record-title">${displayTitle}</div>
                 <div class="record-actions">
@@ -897,83 +1021,33 @@ async function deleteRecord(recordId) {
     }
 }
 
-// Drag and Drop with smooth animations (optimized)
-function drag(event, cardEl) {
-    const card = cardEl || event.target.closest('.new-order-card, .record-card');
-    if (!card) return;
 
-    if (card.classList.contains('new-order-card')) {
-        event.dataTransfer.setData('orderId', card.dataset.orderId);
-        event.dataTransfer.setData('isNewOrder', 'true');
-    } else {
-        event.dataTransfer.setData('recordId', card.dataset.recordId);
-        event.dataTransfer.setData('isNewOrder', 'false');
-    }
-
-    card.classList.add('dragging');
-    event.dataTransfer.effectAllowed = 'move';
-}
-
-function allowDrop(event) {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    
-    // Add drag-over class
-    const target = event.currentTarget;
-    if (!target.classList.contains('drag-over')) {
-        target.classList.add('drag-over');
-    }
-}
-
-function dragLeave(event) {
-    // Only remove if actually leaving the element
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX;
-    const y = event.clientY;
-    
-    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
-        event.currentTarget.classList.remove('drag-over');
-    }
-}
 
 async function drop(event) {
     event.preventDefault();
-    const dropTarget = event.currentTarget;
+    event.stopPropagation();
+    
+    const dropTarget = this;
+    const newStageId = dropTarget.dataset.stageId;
+    
     dropTarget.classList.remove('drag-over');
+    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
     
-    console.log('DROP FIRED - isNewOrder:', event.dataTransfer.getData('isNewOrder'), 'stageId:', dropTarget.dataset.stageId);
-    
-    const isNewOrder = event.dataTransfer.getData('isNewOrder') === 'true';
-    const newStageId = event.currentTarget.dataset.stageId;
-    
-    if (isNewOrder) {
-        // Handle new order drop
-        const orderId = event.dataTransfer.getData('orderId');
-        const order = newOrders.find(o => o._id === orderId);
+    if (draggedIsNewOrder && draggedOrderId) {
+        const order = newOrders.find(o => o._id === draggedOrderId);
+        if (order) await createPipelineRecordFromOrder(order, newStageId);
+    } else if (draggedRecordId) {
+        const record = records.find(r => r._id === draggedRecordId);
+        if (!record || record.stageId === newStageId) return;
         
-        if (order) {
-            console.log('Dropping new order into stage:', order.orderId, 'to stage:', newStageId);
-            await createPipelineRecordFromOrder(order, newStageId);
-        }
-    } else {
-        // Handle existing record drop
-        const recordId = event.dataTransfer.getData('recordId');
-        const record = records.find(r => r._id === recordId);
-        
-        if (record && record.stageId !== newStageId) {
         const oldStageId = record.stageId;
         const oldStageName = stages.find(s => s._id === oldStageId)?.name || 'Unknown';
         const newStageName = stages.find(s => s._id === newStageId)?.name || 'Unknown';
         
-        console.log('=== PIPELINE DROP DEBUG ===');
-        console.log('Record ID:', recordId);
-        console.log('Old Stage:', oldStageName, '(' + oldStageId + ')');
-        console.log('New Stage:', newStageName, '(' + newStageId + ')');
-        
         try {
-            // Update the pipeline record stage (this is the important one)
-            console.log('Updating pipeline record stage...');
-            const stageUpdateResponse = await fetch(`${API_BASE_URL}/pipeline-records/${recordId}/stage`, {
+            // Update the pipeline record stage
+            const stageUpdateResponse = await fetch(`${API_BASE_URL}/pipeline-records/${record._id}/stage`, {
                 method: 'PATCH',
                 headers: getPipelineAuthHeaders(),
                 body: JSON.stringify({ stageId: newStageId })
@@ -981,11 +1055,8 @@ async function drop(event) {
             
             if (!stageUpdateResponse.ok) {
                 const errorText = await stageUpdateResponse.text();
-                console.error('Stage update failed:', stageUpdateResponse.status, errorText);
                 throw new Error('Failed to update pipeline record stage: ' + errorText);
             }
-            
-            console.log('Pipeline record stage updated successfully');
             
             // Auto-update linked payment record when moving to Paid/Close
             if (/^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim()) && record.orderId) {
@@ -993,7 +1064,6 @@ async function drop(event) {
                     const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
                     if (session) {
                         const token = JSON.parse(session).token;
-                        // Find payment linked to this order
                         const paymentsRes = await fetch(`${API_BASE_URL}/payments`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
@@ -1009,7 +1079,6 @@ async function drop(event) {
                                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                                     body: JSON.stringify({ ...linked, customer: linked.customer?._id || linked.customer, order: linked.order?._id || linked.order, status: 'received', paymentDate: linked.paymentDate || new Date().toISOString() })
                                 });
-                                console.log('Payment record auto-updated to received');
                                 if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
                                 if (typeof refreshPayments === 'function') refreshPayments();
                             }
@@ -1020,14 +1089,12 @@ async function drop(event) {
                 }
             }
             
-            // Try to log the movement (optional - don't fail if this doesn't work)
             try {
-                console.log('Logging pipeline movement...');
-                const movementResponse = await fetch(`${API_BASE_URL}/pipeline-movements`, {
+                await fetch(`${API_BASE_URL}/pipeline-movements`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        recordId,
+                        recordId: record._id,
                         customerName: record.customerName,
                         fromStageId: oldStageId,
                         fromStageName: oldStageName,
@@ -1036,19 +1103,10 @@ async function drop(event) {
                         movedBy: 'Admin'
                     })
                 });
-                
-                if (movementResponse.ok) {
-                    console.log('Pipeline movement logged successfully');
-                } else {
-                    const errorText = await movementResponse.text();
-                    console.warn('Pipeline movement logging failed:', movementResponse.status, errorText);
-                }
             } catch (movementError) {
                 console.warn('Failed to log pipeline movement:', movementError);
-                // Don't fail the whole operation if movement logging fails
             }
             
-            console.log('Reloading pipeline data...');
             await loadDataFromDB();
             
             // Refresh dashboard KPIs if moved to/from a paid/close stage
@@ -1063,72 +1121,6 @@ async function drop(event) {
             console.error('Error moving record:', error);
             alert('Error moving record: ' + error.message);
         }
-    }
-    
-    }
-    
-    
-    // Remove dragging class from all elements
-    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
-}
-
-// Stage Reordering with smooth animations
-function stageColumnDragStart(event) {
-    const column = event.currentTarget;
-    if (!column?.classList.contains('stage-column')) return;
-    if (event.target.closest('button, .record-card, .new-order-card, input, textarea, select, a')) {
-        event.preventDefault();
-        return;
-    }
-    draggedStage = column;
-    column.classList.add('reordering');
-    event.dataTransfer.effectAllowed = 'move';
-}
-
-function stageColumnDragOver(event) {
-    const overColumn = event.target.closest('.stage-column');
-    if (overColumn && draggedStage) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-    }
-}
-
-function stageColumnDrop(event) {
-    if (draggedStage) {
-        event.preventDefault();
-        reorderStages();
-    }
-}
-
-function stageColumnDragEnd(event) {
-    const column = event.currentTarget;
-    if (column?.classList.contains('stage-column')) {
-        column.classList.remove('reordering');
-        draggedStage = null;
-    }
-}
-
-async function reorderStages() {
-    const container = document.getElementById('stagesContainer');
-    const stageElements = [...container.querySelectorAll('.stage-column:not(.new-orders-column)')].filter(
-        (el) => el.dataset.stageId
-    );
-    const reorderedStages = stageElements.map((el, index) => ({
-        _id: el.dataset.stageId,
-        position: index + 1
-    }));
-
-    if (reorderedStages.length === 0) return;
-    
-    try {
-        await fetch(`${API_BASE_URL}/stages/reorder`, {
-            method: 'PATCH',
-            headers: getPipelineAuthHeaders(),
-            body: JSON.stringify(reorderedStages)
-        });
-        await fetchStages();
-    } catch (error) {
-        console.error('Error reordering stages:', error);
     }
 }
 
@@ -1522,6 +1514,30 @@ function loadNewOrdersSuggestions() {
     const container = document.querySelector('.new-orders-column .stage-body');
     if (container) {
         container.innerHTML = renderNewOrders();
+        requestAnimationFrame(() => {
+            container.querySelectorAll('.new-order-card').forEach(card => {
+                card.setAttribute('draggable', 'true');
+                card.draggable = true;
+                
+                card.ondragstart = function(e) {
+                    if (e.target.closest('button')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    this.classList.add('dragging');
+                    draggedOrderId = this.dataset.orderId;
+                    draggedRecordId = null;
+                    draggedIsNewOrder = true;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', 'dragging');
+                };
+                
+                card.ondragend = function(e) {
+                    this.classList.remove('dragging');
+                    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                };
+            });
+        });
     }
     updateStatistics();
 }
@@ -1607,7 +1623,7 @@ function renderOrderCard(order) {
     const priority = order.priority || 'medium';
     
     return `
-        <div class="new-order-card" draggable="true" data-order-id="${order._id}">
+        <div class="new-order-card" data-order-id="${order._id}">
             <div class="new-order-card-grip" aria-hidden="true">
                 <i class="fas fa-grip-vertical"></i>
             </div>
@@ -1659,6 +1675,31 @@ function expandNewOrders() {
     `;
     
     container.innerHTML = allOrdersHtml + collapseBtn;
+    
+    requestAnimationFrame(() => {
+        container.querySelectorAll('.new-order-card').forEach(card => {
+            card.setAttribute('draggable', 'true');
+            card.draggable = true;
+            
+            card.ondragstart = function(e) {
+                if (e.target.closest('button')) {
+                    e.preventDefault();
+                    return false;
+                }
+                this.classList.add('dragging');
+                draggedOrderId = this.dataset.orderId;
+                draggedRecordId = null;
+                draggedIsNewOrder = true;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', 'dragging');
+            };
+            
+            card.ondragend = function(e) {
+                this.classList.remove('dragging');
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            };
+        });
+    });
 }
 
 // Collapse new orders to show only first
@@ -1667,6 +1708,31 @@ function collapseNewOrders() {
     if (!container) return;
     
     container.innerHTML = renderNewOrders();
+    
+    requestAnimationFrame(() => {
+        container.querySelectorAll('.new-order-card').forEach(card => {
+            card.setAttribute('draggable', 'true');
+            card.draggable = true;
+            
+            card.ondragstart = function(e) {
+                if (e.target.closest('button')) {
+                    e.preventDefault();
+                    return false;
+                }
+                this.classList.add('dragging');
+                draggedOrderId = this.dataset.orderId;
+                draggedRecordId = null;
+                draggedIsNewOrder = true;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', 'dragging');
+            };
+            
+            card.ondragend = function(e) {
+                this.classList.remove('dragging');
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            };
+        });
+    });
 }
 
 // Add hover effects for new order cards (styles live in pipeline.css)

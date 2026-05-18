@@ -16,13 +16,22 @@ function invalidateOrderStatsCache() {
   memCache.del(STATS_CACHE_KEY);
 }
 
+// Clear stats cache endpoint
+router.post('/clear-cache', authenticateToken, (req, res) => {
+  invalidateOrderStatsCache();
+  res.json({ message: 'Stats cache cleared' });
+});
+
 // Get dashboard stats - MUST be before /:id route
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const cached = memCache.get(STATS_CACHE_KEY);
     if (cached) {
+      console.log('📦 Returning cached stats');
       return res.json(cached);
     }
+    
+    console.log('🔄 Calculating fresh stats...');
 
     const Stage = require('../models/Stage');
     const PipelineRecord = require('../models/PipelineRecord');
@@ -34,6 +43,12 @@ router.get('/stats', authenticateToken, async (req, res) => {
       stageId: { $in: noBidStageObjectIds }
     }).select('orderId').lean();
     const noBidOrderIds = noBidRecords.map(r => r.orderId).filter(Boolean);
+    
+    console.log(`🚫 Excluding ${noBidOrderIds.length} NO BID orders from stats`);
+    if (noBidOrderIds.length > 0) {
+      const noBidOrders = await Order.find({ _id: { $in: noBidOrderIds } }).select('orderId amount').lean();
+      console.log('NO BID orders:', noBidOrders.map(o => `${o.orderId} ($${o.amount})`).join(', '));
+    }
 
     const [totalOrders, activeProjects, completedProjects, newOrders, monthlyRevenueResult, totalRevenueResult, vendorsCount, totalVendors, totalEmployees, totalCustomers] = await Promise.all([
       Order.countDocuments({ _id: { $nin: noBidOrderIds } }),

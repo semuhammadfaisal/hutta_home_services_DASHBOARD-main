@@ -86,9 +86,22 @@ router.get('/', authenticateToken, async (req, res) => {
     const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 2000));
     const skip = (page - 1) * limit;
 
+    // Get NO BID stages and their orders
+    const Stage = require('../models/Stage');
+    const PipelineRecord = require('../models/PipelineRecord');
+    const Order = require('../models/Order');
+
+    const noBidStages = await Stage.find({ isNoBid: true }).select('_id').lean();
+    const noBidStageIds = noBidStages.map(s => s._id);
+
+    const noBidRecords = await PipelineRecord.find({
+      stageId: { $in: noBidStageIds }
+    }).select('orderId').lean();
+    const noBidOrderIds = noBidRecords.map(r => r.orderId).filter(Boolean);
+
     const [total, payments] = await Promise.all([
-      Payment.countDocuments(),
-      Payment.find()
+      Payment.countDocuments({ order: { $nin: noBidOrderIds } }),
+      Payment.find({ order: { $nin: noBidOrderIds } })
         .populate('customer', 'name email')
         .populate({
           path: 'order',
