@@ -34,7 +34,7 @@ hutta_home_ervices/
 
 - User authentication
 - Admin dashboard with KPI metrics
-- Order management
+- **Order management with file attachments** (invoices, contracts, photos)
 - **Customer management** (supports multiple locations with shared email)
 - Vendor management
 - Employee management
@@ -42,13 +42,40 @@ hutta_home_ervices/
 - **Employee payment tracking** (track payments to employees for completed work)
 - **Vendor payment tracking** (track payments to vendors for services/materials)
 - **User Management System** (admin can assign roles to new signups)
+- **File attachments** (orders, customers, vendors, employees)
 - Project tracking
 - Payment processing
 - Reporting system
 
 ## Recent Updates
 
-### NO BID Stage Feature (Latest)
+### Order Attachments Feature (Latest)
+
+Orders now support file attachments for better documentation:
+
+1. **Upload Multiple Files**
+   - Attach invoices, contracts, photos, receipts
+   - Support for PDF, DOC, DOCX, TXT, JPG, JPEG, PNG
+   - Up to 10 files per order, 10MB max per file
+
+2. **Manage Attachments**
+   - Add files when creating new orders
+   - Add/remove files when editing orders
+   - Files stored securely in backend/uploads/
+
+3. **Same as Other Entities**
+   - Customers, vendors, and employees also support attachments
+   - Consistent file upload experience across the platform
+
+**Documentation:**
+- 🚀 **Quick Start:** [ORDER_ATTACHMENTS_QUICK_START.md](ORDER_ATTACHMENTS_QUICK_START.md) ← **Start here!**
+- 📘 Full Guide: [ORDER_ATTACHMENTS_FEATURE.md](ORDER_ATTACHMENTS_FEATURE.md)
+
+**No Setup Required:**
+- Just restart server and refresh browser
+- No database migration needed
+
+### NO BID Stage Feature
 
 The pipeline now supports NO BID stages for tracking lost or declined opportunities:
 

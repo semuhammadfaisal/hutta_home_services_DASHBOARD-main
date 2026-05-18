@@ -1798,6 +1798,25 @@ async function editOrder(orderId) {
             document.getElementById('employee').value = order.employee._id || order.employee;
         }
         
+        // Clear and populate documents
+        if (window.uploadedFiles) {
+            window.uploadedFiles.order = [];
+        }
+        const preview = document.getElementById('orderDocsPreview');
+        if (preview && order.documents && order.documents.length > 0) {
+            preview.innerHTML = order.documents.map((doc, index) => `
+                <div class="doc-item">
+                    <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
+                    <a href="${doc.url}" target="_blank">${doc.name}</a>
+                    <i class="fas fa-times remove-doc" onclick="removeExistingOrderDoc(${index})"></i>
+                </div>
+            `).join('');
+            window.existingOrderDocs = order.documents;
+        } else {
+            if (preview) preview.innerHTML = '';
+            window.existingOrderDocs = [];
+        }
+        
         document.getElementById('orderModal').classList.add('show');
     } catch (error) {
         alert('Failed to load order: ' + error.message);
@@ -1972,6 +1991,21 @@ async function saveOrder() {
     }
     
     try {
+        // Upload documents if any
+        if (window.uploadedFiles && window.uploadedFiles.order && window.uploadedFiles.order.length > 0) {
+            console.log('Uploading order documents:', window.uploadedFiles.order.length, 'files');
+            updateLoadingMessage('Uploading documents...');
+            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.order);
+            console.log('Upload response:', uploadedDocs);
+            if (uploadedDocs && uploadedDocs.length > 0) {
+                const existingDocs = window.existingOrderDocs || [];
+                orderData.documents = [...existingDocs, ...uploadedDocs];
+                console.log('Documents added to orderData:', orderData.documents);
+            }
+        } else if (window.existingOrderDocs) {
+            orderData.documents = window.existingOrderDocs;
+        }
+        
         if (currentOrderId) {
             updateLoadingMessage('Updating order...');
             await window.APIService.updateOrder(currentOrderId, orderData);
@@ -2094,6 +2128,34 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             document.getElementById('modalDetailOrderDescription').textContent = order.description || 'No description provided';
             document.getElementById('modalDetailOrderNotes').textContent = order.notes || 'No notes';
             
+            // Display documents in modal
+            const modalDocsList = document.getElementById('modalOrderDocumentsList');
+            if (order.documents && order.documents.length > 0) {
+                modalDocsList.innerHTML = order.documents.map(doc => `
+                    <div class="document-item">
+                        <div class="document-info">
+                            <div class="document-icon">
+                                <i class="fas fa-file-${getDocIcon(doc.name)}"></i>
+                            </div>
+                            <div class="document-details">
+                                <div class="document-name">${doc.name}</div>
+                                <div class="document-meta">${formatFileSize(doc.size)} • ${formatDisplayDate(doc.uploadedAt)}</div>
+                            </div>
+                        </div>
+                        <div class="document-actions">
+                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                modalDocsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
+            }
+            
             // Show modal
             document.getElementById('orderDetailModal').classList.add('show');
             return;
@@ -2161,6 +2223,36 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         if (detailOrderDescription) detailOrderDescription.textContent = order.description || 'No description provided';
         if (detailOrderNotes) detailOrderNotes.textContent = order.notes || 'No notes';
         
+        // Display documents
+        const docsList = document.getElementById('orderDocumentsList');
+        if (docsList) {
+            if (order.documents && order.documents.length > 0) {
+                docsList.innerHTML = order.documents.map(doc => `
+                    <div class="document-item">
+                        <div class="document-info">
+                            <div class="document-icon">
+                                <i class="fas fa-file-${getDocIcon(doc.name)}"></i>
+                            </div>
+                            <div class="document-details">
+                                <div class="document-name">${doc.name}</div>
+                                <div class="document-meta">${formatFileSize(doc.size)} • ${formatDisplayDate(doc.uploadedAt)}</div>
+                            </div>
+                        </div>
+                        <div class="document-actions">
+                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
+            }
+        }
+        
         showSection('order-detail');
     } catch (error) {
         console.error('Failed to load order details:', error);
@@ -2206,6 +2298,14 @@ function closeOrderModal() {
     document.getElementById('customerEmail').style.cssText = '';
     document.getElementById('customerPhone').style.cssText = '';
     document.getElementById('customerAddress').style.cssText = '';
+    
+    // Clear uploaded files
+    if (window.uploadedFiles) {
+        window.uploadedFiles.order = [];
+        const preview = document.getElementById('orderDocsPreview');
+        if (preview) preview.innerHTML = '';
+    }
+    window.existingOrderDocs = [];
 }
 
 async function refreshOrders() {
@@ -5568,6 +5668,26 @@ window.deleteOrder = deleteOrder;
 window.showAddOrderModal = showAddOrderModal;
 window.closeOrderModal = closeOrderModal;
 window.saveOrder = saveOrder;
+
+window.removeExistingOrderDoc = function(index) {
+    if (confirm('Are you sure you want to remove this document?')) {
+        if (window.existingOrderDocs) {
+            window.existingOrderDocs.splice(index, 1);
+            const preview = document.getElementById('orderDocsPreview');
+            if (window.existingOrderDocs.length > 0) {
+                preview.innerHTML = window.existingOrderDocs.map((doc, idx) => `
+                    <div class="doc-item">
+                        <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
+                        <a href="${doc.url}" target="_blank">${doc.name}</a>
+                        <i class="fas fa-times remove-doc" onclick="removeExistingOrderDoc(${idx})"></i>
+                    </div>
+                `).join('');
+            } else {
+                preview.innerHTML = '';
+            }
+        }
+    }
+};
 
 // Calculate Profit Function
 function calculateProfit() {

@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+const documentSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  url: { type: String, required: true },
+  type: { type: String, required: true },
+  size: { type: Number, required: true },
+  uploadedAt: { type: Date, default: Date.now }
+}, { _id: false });
+
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
   workOrderNumber: { type: String },
@@ -30,7 +38,8 @@ const orderSchema = new mongoose.Schema({
   recurringFrequency: { type: String, enum: ['weekly', 'bi-weekly', 'monthly', 'yearly', 'custom'] },
   recurringCustomDays: { type: Number },
   recurringEndDate: { type: Date },
-  recurringNotes: String
+  recurringNotes: String,
+  documents: { type: [documentSchema], default: [] }
 }, { timestamps: true });
 
 orderSchema.index({ customerId: 1 });

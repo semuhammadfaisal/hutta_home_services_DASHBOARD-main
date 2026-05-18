@@ -2,7 +2,8 @@
 const uploadedFiles = {
     customer: [],
     vendor: [],
-    employee: []
+    employee: [],
+    order: []
 };
 
 // Handle file selection and preview
@@ -92,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     handleFileSelect('customerDocs', 'customerDocsPreview', 'customer');
     handleFileSelect('vendorDocs', 'vendorDocsPreview', 'vendor');
     handleFileSelect('employeeDocs', 'employeeDocsPreview', 'employee');
+    handleFileSelect('orderDocs', 'orderDocsPreview', 'order');
 });
 
 window.removeFile = removeFile;
