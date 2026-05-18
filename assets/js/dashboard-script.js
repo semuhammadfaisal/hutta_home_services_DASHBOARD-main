@@ -3905,10 +3905,13 @@ async function saveEmployee() {
                 // Combine existing documents with newly uploaded ones
                 const existingDocs = window.currentEmployeeDocuments || [];
                 employeeData.documents = [...existingDocs, ...uploadedDocs];
+            } else {
+                // Upload failed, keep existing documents
+                employeeData.documents = window.currentEmployeeDocuments || [];
             }
-        } else if (window.currentEmployeeDocuments) {
-            // No new uploads, just keep existing documents
-            employeeData.documents = window.currentEmployeeDocuments;
+        } else {
+            // No new uploads, preserve existing documents
+            employeeData.documents = window.currentEmployeeDocuments || [];
         }
         
         if (currentEmployeeId) {
@@ -4601,10 +4604,13 @@ async function saveVendor() {
                 const existingDocs = window.currentVendorDocuments || [];
                 vendorData.documents = [...existingDocs, ...uploadedDocs];
                 console.log('Documents added to vendorData:', vendorData.documents);
+            } else {
+                // Upload failed, keep existing documents
+                vendorData.documents = window.currentVendorDocuments || [];
             }
-        } else if (window.currentVendorDocuments) {
-            // No new uploads, just keep existing documents
-            vendorData.documents = window.currentVendorDocuments;
+        } else {
+            // No new uploads, preserve existing documents
+            vendorData.documents = window.currentVendorDocuments || [];
         }
         
         console.log('Final vendor data:', vendorData);
@@ -5136,6 +5142,25 @@ async function editCustomer(customerId) {
         // Load custom fields
         loadCustomerCustomFields(customer.customFields || []);
         
+        // Clear and populate documents
+        if (window.uploadedFiles) {
+            window.uploadedFiles.customer = [];
+        }
+        const preview = document.getElementById('customerDocsPreview');
+        if (preview && customer.documents && customer.documents.length > 0) {
+            preview.innerHTML = customer.documents.map((doc, index) => `
+                <div class="doc-item">
+                    <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
+                    <a href="${doc.url}" target="_blank">${doc.name}</a>
+                    <i class="fas fa-times remove-doc" onclick="removeExistingCustomerDoc(${index})"></i>
+                </div>
+            `).join('');
+            window.existingCustomerDocs = customer.documents;
+        } else {
+            if (preview) preview.innerHTML = '';
+            window.existingCustomerDocs = [];
+        }
+        
         document.getElementById('customerModal').classList.add('show');
     } catch (error) {
         alert('Failed to load customer: ' + error.message);
@@ -5275,12 +5300,16 @@ async function saveCustomer() {
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.customer);
             console.log('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
-                customerData.documents = uploadedDocs;
+                const existingDocs = window.existingCustomerDocs || [];
+                customerData.documents = [...existingDocs, ...uploadedDocs];
                 console.log('Documents added to customerData:', customerData.documents);
+            } else {
+                // Upload failed, keep existing documents
+                customerData.documents = window.existingCustomerDocs || [];
             }
         } else {
-            // Initialize documents as empty array if no files uploaded
-            customerData.documents = [];
+            // No new uploads, preserve existing documents
+            customerData.documents = window.existingCustomerDocs || [];
         }
         
         if (currentCustomerId) {
@@ -5474,6 +5503,8 @@ function closeCustomerModal() {
     const filePreview = document.getElementById('customerDocsPreview');
     if (fileInput) fileInput.value = '';
     if (filePreview) filePreview.innerHTML = '';
+    if (window.uploadedFiles) window.uploadedFiles.customer = [];
+    window.existingCustomerDocs = [];
     if (window.uploadedFiles) window.uploadedFiles.customer = [];
     
     // Clear custom fields
@@ -5684,6 +5715,26 @@ window.removeExistingOrderDoc = function(index) {
                         <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
                         <a href="${doc.url}" target="_blank">${doc.name}</a>
                         <i class="fas fa-times remove-doc" onclick="removeExistingOrderDoc(${idx})"></i>
+                    </div>
+                `).join('');
+            } else {
+                preview.innerHTML = '';
+            }
+        }
+    }
+};
+
+window.removeExistingCustomerDoc = function(index) {
+    if (confirm('Are you sure you want to remove this document?')) {
+        if (window.existingCustomerDocs) {
+            window.existingCustomerDocs.splice(index, 1);
+            const preview = document.getElementById('customerDocsPreview');
+            if (window.existingCustomerDocs.length > 0) {
+                preview.innerHTML = window.existingCustomerDocs.map((doc, idx) => `
+                    <div class="doc-item">
+                        <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
+                        <a href="${doc.url}" target="_blank">${doc.name}</a>
+                        <i class="fas fa-times remove-doc" onclick="removeExistingCustomerDoc(${idx})"></i>
                     </div>
                 `).join('');
             } else {
