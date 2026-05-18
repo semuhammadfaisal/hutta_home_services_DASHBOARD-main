@@ -2001,9 +2001,13 @@ async function saveOrder() {
                 const existingDocs = window.existingOrderDocs || [];
                 orderData.documents = [...existingDocs, ...uploadedDocs];
                 console.log('Documents added to orderData:', orderData.documents);
+            } else {
+                // Upload failed, keep existing documents
+                orderData.documents = window.existingOrderDocs || [];
             }
-        } else if (window.existingOrderDocs) {
-            orderData.documents = window.existingOrderDocs;
+        } else {
+            // No new uploads, preserve existing documents
+            orderData.documents = window.existingOrderDocs || [];
         }
         
         if (currentOrderId) {
