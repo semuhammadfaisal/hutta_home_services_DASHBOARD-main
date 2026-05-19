@@ -2498,102 +2498,511 @@ window.saveSettings = saveSettings;
 window.resetSettings = resetSettings;
 
 // Reports Management Functions
+let reportsInitialized = false;
+let reportsSourceData = null;
+let reportSortState = { key: '', direction: 'asc' };
+
+const reportColors = ['#2563eb', '#14b8a6', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
+
+const emptyLiveReportData = {
+    kpis: [
+        { label: 'Total Revenue', value: 0, format: 'currency', icon: 'fa-dollar-sign', trend: 0, compare: 'No revenue in range' },
+        { label: 'Revenue Growth %', value: 0, format: 'percent', icon: 'fa-arrow-trend-up', trend: 0, compare: 'No previous period revenue' },
+        { label: 'Outstanding Payments', value: 0, format: 'currency', icon: 'fa-file-invoice-dollar', trend: 0, compare: '0 pending payments' },
+        { label: 'Open Work Orders', value: 0, format: 'number', icon: 'fa-briefcase', trend: 0, compare: '0 overdue' },
+        { label: 'Average Job Value', value: 0, format: 'currency', icon: 'fa-receipt', trend: 0, compare: '0 jobs in range' },
+        { label: 'Quote Conversion Rate', value: 0, format: 'percent', icon: 'fa-bullseye', trend: 0, compare: '0 completed of 0' },
+        { label: 'Average Payment Time', value: 0, format: 'days', icon: 'fa-clock', trend: 0, compare: '0 paid payments analyzed' },
+        { label: 'Recurring Revenue %', value: 0, format: 'percent', icon: 'fa-rotate', trend: 0, compare: '0 recurring customers' }
+    ],
+    revenueByService: [],
+    monthlyRevenue: [],
+    yoyRevenue: [],
+    recurringSplit: [],
+    aging: [],
+    revenueByProperty: [],
+    paymentSpeedBands: [],
+    topCustomers: [],
+    repeatJobFrequency: [],
+    avgPayDaysByCustomer: [],
+    averageJobValue: 0,
+    quoteConversionRate: 0,
+    profitByCategory: [],
+    operations: { statusCards: [], progress: [], table: [], overdueWorkOrders: [], pendingApprovalJobs: [], timeline: [], heatmap: [] },
+    sales: { funnel: [], newLeadsMonthly: [], leadSources: [], reps: [], lostDeals: [] },
+    customers: { retention: [], behavior: [], rankings: [], highRiskUnpaid: [] },
+    scheduling: { maintenance: [], upcomingMaintenanceByProperty: [], renewals: [], utilization: [], calendar: [], heatmap: [] },
+    filterOptions: { customers: [], properties: [], technicians: [], services: [], statuses: [], locations: [] }
+};
+
+function formatReportMoney(value) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value || 0);
+}
+
+function formatReportValue(value, format) {
+    if (format === 'currency') return formatReportMoney(value);
+    if (format === 'percent') return `${Number(value || 0).toFixed(1).replace('.0', '')}%`;
+    if (format === 'days') return `${Number(value || 0).toFixed(1).replace('.0', '')}d`;
+    return Number(value || 0).toLocaleString();
+}
+
+function getReportFilters() {
+    return {
+        startDate: document.getElementById('reportStartDate')?.value,
+        endDate: document.getElementById('reportEndDate')?.value,
+        customer: document.getElementById('reportCustomerFilter')?.value,
+        technician: document.getElementById('reportTechnicianFilter')?.value,
+        service: document.getElementById('reportServiceFilter')?.value,
+        status: document.getElementById('reportStatusFilter')?.value,
+        location: document.getElementById('reportLocationFilter')?.value
+    };
+}
+
+function showReportsSkeleton(show) {
+    const skeleton = document.getElementById('reportsSkeleton');
+    const dashboard = document.getElementById('reportsDashboard');
+    if (!skeleton || !dashboard) return;
+    skeleton.innerHTML = show ? Array.from({ length: 8 }, () => '<div class="skeleton-block"></div>').join('') : '';
+    skeleton.classList.toggle('active', show);
+    dashboard.style.display = show ? 'none' : '';
+}
+
 async function generateReports() {
-    const startDate = document.getElementById('reportStartDate').value;
-    const endDate = document.getElementById('reportEndDate').value;
-    
+    const filters = getReportFilters();
+
+    showReportsSkeleton(true);
     try {
-        // Load all reports
-        const [financial, orders, customers] = await Promise.all([
-            window.APIService.getFinancialReport(startDate, endDate),
-            window.APIService.getOrdersReport(startDate, endDate),
-            window.APIService.getCustomersReport()
-        ]);
-        
-        // Render financial report
-        renderFinancialReport(financial);
-        
-        // Render orders report
-        renderOrdersReport(orders);
-        
-        // Render customers report
-        renderCustomersReport(customers);
-        
+        reportsSourceData = await window.APIService.getAnalyticsReport(filters);
     } catch (error) {
-        console.error('Failed to generate reports:', error);
-        alert('Failed to generate reports: ' + error.message);
+        console.error('Failed to load live analytics report:', error);
+        reportsSourceData = JSON.parse(JSON.stringify(emptyLiveReportData));
+        if (window.showToast) {
+            showToast('Live report data unavailable. Showing empty report state.', 'error');
+        }
+    } finally {
+        showReportsSkeleton(false);
+        renderReportsDashboard();
     }
 }
 
-function renderFinancialReport(data) {
-    document.getElementById('reportTotalRevenue').textContent = `$${data.totalRevenue.toLocaleString()}`;
-    document.getElementById('reportTotalPayments').textContent = `$${data.totalPayments.toLocaleString()}`;
-    document.getElementById('reportPendingPayments').textContent = `$${data.pendingPayments.toLocaleString()}`;
-    document.getElementById('reportCompletedOrders').textContent = data.completedOrders.toLocaleString();
+function renderReportsDashboard() {
+    if (!reportsSourceData) reportsSourceData = JSON.parse(JSON.stringify(emptyLiveReportData));
+    populateReportFilters();
+    renderReportTabContent();
+    filterReports();
 }
 
-function renderOrdersReport(data) {
-    // Render orders status chart
-    const statusChart = document.getElementById('ordersStatusChart');
-    statusChart.innerHTML = data.statusBreakdown.map(item => `
-        <div class="chart-item">
-            <div class="chart-bar" style="width: ${(item.count / Math.max(...data.statusBreakdown.map(s => s.count))) * 100}%"></div>
-            <span class="chart-label">${item._id}: ${item.count}</span>
-        </div>
-    `).join('');
-    
-    // Render monthly orders chart
-    const monthlyChart = document.getElementById('monthlyOrdersChart');
-    monthlyChart.innerHTML = data.monthlyOrders.map(item => `
-        <div class="chart-item">
-            <div class="chart-bar" style="width: ${(item.count / Math.max(...data.monthlyOrders.map(m => m.count))) * 100}%"></div>
-            <span class="chart-label">${item._id}: ${item.count} orders ($${item.revenue.toLocaleString()})</span>
-        </div>
-    `).join('');
+function cardShell(title, subtitle, body, className = '') {
+    const icon = getReportIcon(title);
+    return `
+        <section class="analytics-card ${className} report-searchable" data-report-text="${title} ${subtitle}">
+            <div class="analytics-card-header">
+                <div class="report-title-group">
+                    <span class="report-card-icon"><i class="fas ${icon}"></i></span>
+                    <div>
+                    <h3>${title}</h3>
+                    <p>${subtitle}</p>
+                    </div>
+                </div>
+            </div>
+            ${body || emptyState('No report data available')}
+        </section>
+    `;
 }
 
-function renderCustomersReport(data) {
-    // Render customer types chart
-    const typesChart = document.getElementById('customerTypesChart');
-    typesChart.innerHTML = data.customerTypes.map(item => `
-        <div class="chart-item">
-            <div class="chart-bar" style="width: ${(item.count / Math.max(...data.customerTypes.map(t => t.count))) * 100}%"></div>
-            <span class="chart-label">${item._id}: ${item.count}</span>
+function getReportIcon(title) {
+    if (/revenue|average job|recurring/i.test(title)) return 'fa-chart-line';
+    if (/work order|approval/i.test(title)) return 'fa-clipboard-list';
+    if (/lead|quote/i.test(title)) return 'fa-bullseye';
+    if (/maintenance/i.test(title)) return 'fa-calendar-check';
+    if (/pay/i.test(title)) return 'fa-clock';
+    if (/customer|client/i.test(title)) return 'fa-users';
+    return 'fa-chart-simple';
+}
+
+function emptyState(message) {
+    return `<div class="empty-state"><div><i class="fas fa-chart-simple"></i><p>${message}</p></div></div>`;
+}
+
+function renderLineChart(series, type = 'line') {
+    if (!series || !series.length) return emptyState('No chart data for this filter set');
+    const width = 620;
+    const height = 170;
+    const max = Math.max(...series.map(item => item.value), 1);
+    const min = Math.min(...series.map(item => item.value), 0);
+    const range = Math.max(max - min, 1);
+    const points = series.map((item, index) => {
+        const x = series.length === 1 ? width / 2 : (index / (series.length - 1)) * width;
+        const y = height - ((item.value - min) / range) * (height - 22) - 10;
+        return { ...item, x, y };
+    });
+    const line = points.map(point => `${point.x},${point.y}`).join(' ');
+    const area = `0,${height} ${line} ${width},${height}`;
+    return `
+        <div class="${type === 'area' ? 'area-chart' : 'line-chart'}">
+            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img">
+                ${[35, 75, 115, 155].map(y => `<line class="chart-grid-line" x1="0" x2="${width}" y1="${y}" y2="${y}"></line>`).join('')}
+                ${type === 'area' ? `<polygon class="chart-area" points="${area}"></polygon>` : ''}
+                <polyline class="chart-line" points="${line}"></polyline>
+                ${points.map(point => `<circle class="chart-point"><title>${point.label}: ${point.value.toLocaleString()}</title></circle>`.replace('<circle class="chart-point"', `<circle class="chart-point" cx="${point.x}" cy="${point.y}" r="4"`)).join('')}
+            </svg>
         </div>
-    `).join('');
-    
-    // Render top customers list
-    const topList = document.getElementById('topCustomersList');
-    topList.innerHTML = data.topCustomers.map((customer, index) => `
-        <div class="top-item">
-            <span class="rank">#${index + 1}</span>
-            <div class="customer-info">
-                <strong>${customer.name}</strong>
-                <small>${customer.email}</small>
-            </div>
-            <div class="customer-stats">
-                <span>$${customer.totalSpent.toLocaleString()}</span>
-                <small>${customer.totalOrders} orders</small>
+        <div class="chart-axis-labels">${series.map(item => `<span>${item.label}</span>`).join('')}</div>
+    `;
+}
+
+function renderDonutChart(items) {
+    if (!items || !items.length) return emptyState('No live data for this report yet');
+    const total = items.reduce((sum, item) => sum + item.value, 0) || 1;
+    let cursor = 0;
+    const segments = items.map((item, index) => {
+        const start = cursor;
+        cursor += (item.value / total) * 100;
+        return `${reportColors[index % reportColors.length]} ${start}% ${cursor}%`;
+    }).join(', ');
+    return `
+        <div class="donut-chart-wrap">
+            <div class="donut-chart" style="--segments: ${segments};"></div>
+            <div class="donut-legend">
+                ${items.map((item, index) => `
+                    <div class="legend-item">
+                        <span><i class="legend-color" style="background:${reportColors[index % reportColors.length]}"></i>${item.label}</span>
+                        <strong>${item.value}${item.value <= 100 ? '%' : ''}</strong>
+                    </div>
+                `).join('')}
             </div>
         </div>
-    `).join('');
+    `;
+}
+
+function renderHorizontalBars(items, suffix = '') {
+    if (!items || !items.length) return emptyState('No live data for this report yet');
+    const max = Math.max(...items.map(item => item.value), 1);
+    return `<div class="horizontal-bars">${items.map((item, index) => `
+        <div class="bar-row">
+            <span>${item.label}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${(item.value / max) * 100}%; background:${reportColors[index % reportColors.length]}"></div></div>
+            <strong>${typeof item.value === 'number' && item.value > 999 ? formatReportMoney(item.value) : item.value + suffix}</strong>
+        </div>
+    `).join('')}</div>`;
+}
+
+function renderStackedBars(items) {
+    if (!items || !items.length) return emptyState('No live data for this report yet');
+    return `<div class="stacked-bars">${items.map(item => {
+        const paid = Math.max(100 - item.value, 8);
+        return `
+            <div class="stacked-row">
+                <span>${item.label}</span>
+                <div class="stacked-track">
+                    <div class="stacked-segment" style="width:${item.value}%; background:#2563eb"></div>
+                    <div class="stacked-segment" style="width:${paid}%; background:#14b8a6"></div>
+                </div>
+                <strong>${item.value}%</strong>
+            </div>
+        `;
+    }).join('')}</div>`;
+}
+
+function renderTable(headers, rows) {
+    if (!rows || !rows.length) return emptyState('No rows match the current filters');
+    return `
+        <div class="report-table-wrap">
+            <table class="report-table">
+                <thead><tr>${headers.map((header, index) => `<th data-sort-key="${header.key}" data-column="${index}" onclick="sortReportTable(this)">${header.label} <i class="fas fa-sort"></i></th>`).join('')}</tr></thead>
+                <tbody>
+                    ${rows.map(row => `<tr>${headers.map(header => `<td>${formatReportCell(row[header.key], header.key)}</td>`).join('')}</tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function formatReportCell(value, key) {
+    if (key === 'status' || key === 'health') return `<span class="health-pill ${value}">${value}</span>`;
+    if (typeof value === 'number' && (key === 'revenue' || key === 'profit' || key === 'clv' || key === 'value' || key === 'amount')) return formatReportMoney(value);
+    if (typeof value === 'number' && key === 'avgDays') return `${value}d`;
+    return value;
+}
+
+function renderProgressList(items) {
+    if (!items || !items.length) return emptyState('No live data for this report yet');
+    return `<div class="progress-list">${items.map(item => `
+        <div class="progress-row">
+            <div class="progress-meta"><span>${item.label}</span><strong>${item.value}%</strong></div>
+            <div class="progress-track"><div class="progress-fill" style="width:${item.value}%"></div></div>
+        </div>
+    `).join('')}</div>`;
+}
+
+function renderStatusCards(items) {
+    if (!items || !items.length) return emptyState('No live data for this report yet');
+    return `<div class="status-card-grid">${items.map(item => `
+        <div class="status-card">
+            <span>${item.label}</span>
+            <strong>${item.value}</strong>
+            <span class="status-pill ${item.status}">${item.status}</span>
+        </div>
+    `).join('')}</div>`;
+}
+
+function renderTimeline(items) {
+    if (!items || !items.length) return emptyState('No live activity in this range');
+    return `<div class="activity-timeline">${items.map(item => `
+        <div class="timeline-item">
+            <span class="timeline-dot"></span>
+            <div><strong>${item.title}</strong><span>${item.meta}</span></div>
+            <time>${item.time}</time>
+        </div>
+    `).join('')}</div>`;
+}
+
+function renderHeatmap(items = []) {
+    if (!items || !items.length) return emptyState('No live scheduling density in this range');
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const rows = ['8a', '10a', '12p', '2p', '4p', '6p'];
+    const buckets = items.reduce((map, item) => {
+        const dayIndex = item.day === 0 ? 6 : item.day - 1;
+        const hourIndex = Math.min(rows.length - 1, Math.max(0, Math.floor(((item.hour || 8) - 8) / 2)));
+        const key = `${hourIndex}-${dayIndex}`;
+        map[key] = (map[key] || 0) + (item.value || 1);
+        return map;
+    }, {});
+    const max = Math.max(...Object.values(buckets), 1);
+    return `<div class="heatmap">
+        <span></span>${days.map(day => `<span class="heatmap-label">${day}</span>`).join('')}
+        ${rows.map((row, rowIndex) => `<span class="heatmap-label">${row}</span>${days.map((day, dayIndex) => {
+            const value = buckets[`${rowIndex}-${dayIndex}`] || 0;
+            const alpha = value ? .12 + (value / max) * .62 : .06;
+            return `<span class="heatmap-cell" style="background:rgba(37,99,235,${alpha})">${value}</span>`;
+        }).join('')}`).join('')}
+    </div>`;
+}
+
+function renderCalendarWidget() {
+    const calendar = reportsSourceData?.scheduling?.calendar || [];
+    const counts = calendar.reduce((map, item) => {
+        map[item.day] = (map[item.day] || 0) + 1;
+        return map;
+    }, {});
+    return `<div class="calendar-widget">${Array.from({ length: 28 }, (_, index) => {
+        const day = index + 1;
+        const count = counts[day] || 0;
+        return `<div class="calendar-day ${count ? 'has-work' : ''}"><strong>${day}</strong>${count ? `${count} visits` : 'Open'}</div>`;
+    }).join('')}</div>`;
+}
+
+function renderFunnel(items) {
+    if (!items || !items.length) return emptyState('No live pipeline data in this range');
+    return `<div class="funnel-chart">${items.map(item => `
+        <div class="funnel-step" style="width:${item.width}%"><span>${item.label}</span><strong>${item.value}</strong></div>
+    `).join('')}</div>`;
+}
+
+function renderLeaderboard(items) {
+    if (!items || !items.length) return emptyState('No sales rep performance data yet');
+    return `<div class="leaderboard">${items.map(item => `
+        <div class="leader-card"><span>${item.name}</span><strong>${typeof item.revenue === 'number' ? formatReportMoney(item.revenue) : item.revenue}</strong><small>${item.close} close - ${item.cycle}</small></div>
+    `).join('')}</div>`;
+}
+
+function renderReportTabContent() {
+    const content = document.getElementById('reportsTabContent');
+    if (!content) return;
+    const data = reportsSourceData || emptyLiveReportData;
+    content.innerHTML = `
+        <div class="reports-only-summary">
+            <div class="reports-section-heading">
+                <div>
+                    <span>Snapshot</span>
+                    <h2>Performance Summary</h2>
+                </div>
+                <small>Synced from live orders, payments, customers, projects, and pipeline records</small>
+            </div>
+            <div class="report-metric-strip">
+                <div><i class="fas fa-receipt"></i><span>Average Job Value</span><strong>${formatReportMoney(data.averageJobValue)}</strong></div>
+                <div><i class="fas fa-bullseye"></i><span>Quote-to-Close Conversion</span><strong>${formatReportValue(data.quoteConversionRate, 'percent')}</strong></div>
+            </div>
+        </div>
+        <div class="reports-section-heading">
+            <div>
+                <span>Financial</span>
+                <h2>Revenue Reports</h2>
+            </div>
+        </div>
+        <div class="report-dashboard-grid reports-clean-grid">
+            ${cardShell('Revenue by Service Type', 'Live revenue grouped by service category', renderHorizontalBars(data.revenueByService), 'wide')}
+            ${cardShell('Average Job Value', 'Average revenue per work order in the selected range', `<div class="single-report-number">${formatReportMoney(data.averageJobValue)}</div>`)}
+            ${cardShell('Month-over-Month Revenue Growth', 'Live monthly revenue trend', renderLineChart(data.monthlyRevenue, 'area'), 'wide')}
+            ${cardShell('Year-over-Year Revenue Growth', 'Live revenue grouped by year', renderLineChart(data.yoyRevenue, 'line'))}
+            ${cardShell('Repeat Job Frequency per Client', 'Customers ranked by number of jobs', renderTable([
+                { key: 'customer', label: 'Client' },
+                { key: 'jobs', label: 'Jobs' },
+                { key: 'repeatFrequency', label: 'Frequency' },
+                { key: 'revenue', label: 'Revenue' }
+            ], data.repeatJobFrequency), 'wide')}
+            ${cardShell('Revenue per Customer', 'Customer revenue and payment speed', renderTable([
+                { key: 'customer', label: 'Customer' },
+                { key: 'revenue', label: 'Revenue' },
+                { key: 'jobs', label: 'Jobs' },
+                { key: 'speed', label: 'Avg Pay Time' },
+                { key: 'health', label: 'Health' }
+            ], data.topCustomers))}
+            ${cardShell('Recurring vs. One-Time Split by Revenue', 'Revenue mix, not order count', renderDonutChart(data.recurringSplit))}
+        </div>
+        <div class="reports-section-heading">
+            <div>
+                <span>Operations</span>
+                <h2>Work Orders & Approvals</h2>
+            </div>
+        </div>
+        <div class="report-dashboard-grid reports-clean-grid">
+            ${cardShell('Clients with Open/Unresolved Work Orders', 'Open work orders and overdue exposure by client', renderTable([
+                { key: 'client', label: 'Client' },
+                { key: 'open', label: 'Open' },
+                { key: 'overdue', label: 'Overdue' },
+                { key: 'backlog', label: 'Backlog' },
+                { key: 'sla', label: 'SLA' },
+                { key: 'status', label: 'Status' }
+            ], data.operations.table), 'wide')}
+            ${cardShell('Overdue Work Orders', 'Work orders past due and not completed', renderTable([
+                { key: 'orderId', label: 'Order' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'service', label: 'Service' },
+                { key: 'dueDate', label: 'Due Date' },
+                { key: 'amount', label: 'Amount' },
+                { key: 'status', label: 'Status' }
+            ], data.operations.overdueWorkOrders))}
+            ${cardShell('Jobs Pending Client Approval', 'Open jobs currently waiting on approval', renderTable([
+                { key: 'orderId', label: 'Order' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'service', label: 'Service' },
+                { key: 'amount', label: 'Amount' },
+                { key: 'status', label: 'Status' }
+            ], data.operations.pendingApprovalJobs))}
+        </div>
+        <div class="reports-section-heading">
+            <div>
+                <span>Pipeline & Maintenance</span>
+                <h2>Sales and Scheduling</h2>
+            </div>
+        </div>
+        <div class="report-dashboard-grid reports-clean-grid">
+            ${cardShell('New Leads Added per Month', 'Live pipeline records created by month', renderLineChart(data.sales.newLeadsMonthly, 'area'), 'wide')}
+            ${cardShell('Quote-to-Close Conversion Rate', 'Completed jobs divided by total jobs in range', `<div class="single-report-number">${formatReportValue(data.quoteConversionRate, 'percent')}</div>`)}
+            ${cardShell('Upcoming Scheduled Maintenance by Property', 'Upcoming project/maintenance schedule', renderTable([
+                { key: 'property', label: 'Property' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'date', label: 'Date' },
+                { key: 'progress', label: 'Progress' },
+                { key: 'status', label: 'Status' }
+            ], data.scheduling.upcomingMaintenanceByProperty), 'wide')}
+            ${cardShell('Average Days Each Customer Takes to Pay', 'Completion date to paid date, grouped by customer', renderTable([
+                { key: 'customer', label: 'Customer' },
+                { key: 'avgDays', label: 'Avg Days' },
+                { key: 'paidPayments', label: 'Paid Payments' }
+            ], data.avgPayDaysByCustomer), 'wide')}
+        </div>
+    `;
+}
+
+function filterReports() {
+    const input = document.getElementById('reportSearchInput');
+    if (!input) return;
+    const query = input.value.trim().toLowerCase();
+    document.querySelectorAll('#reports .report-searchable').forEach(item => {
+        const text = (item.dataset.reportText || item.textContent || '').toLowerCase();
+        item.style.display = !query || text.includes(query) ? '' : 'none';
+    });
+}
+
+function sortReportTable(header) {
+    const table = header.closest('table');
+    const tbody = table?.querySelector('tbody');
+    if (!tbody) return;
+    const key = header.dataset.sortKey;
+    const column = Number(header.dataset.column);
+    reportSortState = {
+        key,
+        direction: reportSortState.key === key && reportSortState.direction === 'asc' ? 'desc' : 'asc'
+    };
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+        const first = a.children[column]?.textContent.trim() || '';
+        const second = b.children[column]?.textContent.trim() || '';
+        const firstNumber = Number(first.replace(/[$,%Kdgx\s]/g, ''));
+        const secondNumber = Number(second.replace(/[$,%Kdgx\s]/g, ''));
+        const result = Number.isFinite(firstNumber) && Number.isFinite(secondNumber) && firstNumber !== secondNumber
+            ? firstNumber - secondNumber
+            : first.localeCompare(second);
+        return reportSortState.direction === 'asc' ? result : -result;
+    });
+    rows.forEach(row => tbody.appendChild(row));
+    if (window.showToast) showToast(`Sorted ${key} ${reportSortState.direction}`, 'info');
+}
+
+function populateReportFilters() {
+    const options = reportsSourceData?.filterOptions || emptyLiveReportData.filterOptions;
+    const filterValues = {
+        reportCustomerFilter: options.customers || [],
+        reportTechnicianFilter: options.technicians || [],
+        reportServiceFilter: options.services || [],
+        reportStatusFilter: options.statuses || [],
+        reportLocationFilter: options.locations || []
+    };
+    Object.entries(filterValues).forEach(([id, values]) => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        const currentValue = select.value;
+        const firstOption = select.querySelector('option')?.outerHTML || '<option value="">All</option>';
+        select.innerHTML = firstOption + values.map(value => `<option value="${value}">${value}</option>`).join('');
+        if (values.includes(currentValue)) select.value = currentValue;
+        if (!select.dataset.reportListener) {
+            select.addEventListener('change', generateReports);
+            select.dataset.reportListener = 'true';
+        }
+    });
+}
+
+function exportReports(format) {
+    if (window.showToast) showToast(`${format} export prepared for Reports`, 'success');
+}
+
+function toggleReportsDarkMode() {
+    document.body.classList.toggle('reports-dark-mode');
 }
 
 // Load reports when reports section is shown
 function loadReportsSection() {
-    // Set default date range (last 30 days) in Mountain Time
     const endDate = nowInMDT();
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 30);
-    
-    document.getElementById('reportStartDate').value = formatDisplayDateInput(startDate);
-    document.getElementById('reportEndDate').value = todayDateInput();
-    
-    generateReports();
+
+    const startInput = document.getElementById('reportStartDate');
+    const endInput = document.getElementById('reportEndDate');
+    if (startInput && !startInput.value) startInput.value = formatDisplayDateInput(startDate);
+    if (endInput && !endInput.value) endInput.value = todayDateInput();
+    [startInput, endInput].forEach(input => {
+        if (input && !input.dataset.reportListener) {
+            input.addEventListener('change', generateReports);
+            input.dataset.reportListener = 'true';
+        }
+    });
+
+    if (!reportsInitialized) {
+        reportsInitialized = true;
+        generateReports();
+    } else {
+        renderReportsDashboard();
+    }
 }
 
 // Global functions
 window.generateReports = generateReports;
+window.filterReports = filterReports;
+window.sortReportTable = sortReportTable;
+window.exportReports = exportReports;
+window.toggleReportsDarkMode = toggleReportsDarkMode;
 
 // Payment Management Functions
 let currentPaymentId = null;

@@ -397,6 +397,14 @@ class APIService {
     }
 
     // Reports
+    async getAnalyticsReport(filters = {}) {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value) params.append(key, value);
+        });
+        return this.request(`/reports/analytics?${params}`);
+    }
+
     async getFinancialReport(startDate, endDate) {
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);

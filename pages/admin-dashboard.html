@@ -1775,89 +1775,60 @@
             </div>
         </section>
 
-        <section id="reports" class="content-section">
-            <div class="page-header">
-                <h1>Reports & Analytics</h1>
-                <div class="report-filters">
-                    <input type="date" id="reportStartDate" placeholder="Start Date">
-                    <input type="date" id="reportEndDate" placeholder="End Date">
-                    <button class="btn-primary" onclick="generateReports()">Generate Reports</button>
+        <section id="reports" class="content-section reports-workspace">
+            <div class="reports-header">
+                <div>
+                    <span class="reports-eyebrow">Live reporting center</span>
+                    <h1>Reports & Analytics</h1>
+                    <p>Real-time revenue, work order, pipeline, maintenance, and payment performance from your CRM data.</p>
                 </div>
             </div>
-            
-            <!-- Financial Report -->
-            <div class="report-section">
-                <h2>Financial Overview</h2>
-                <div class="report-cards">
-                    <div class="report-card">
-                        <div class="report-icon financial">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
-                        <div class="report-content">
-                            <h3 id="reportTotalRevenue">$0</h3>
-                            <p>Total Revenue</p>
-                        </div>
-                    </div>
-                    <div class="report-card">
-                        <div class="report-icon payments">
-                            <i class="fas fa-credit-card"></i>
-                        </div>
-                        <div class="report-content">
-                            <h3 id="reportTotalPayments">$0</h3>
-                            <p>Total Payments</p>
-                        </div>
-                    </div>
-                    <div class="report-card">
-                        <div class="report-icon pending">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="report-content">
-                            <h3 id="reportPendingPayments">$0</h3>
-                            <p>Pending Payments</p>
-                        </div>
-                    </div>
-                    <div class="report-card">
-                        <div class="report-icon orders">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="report-content">
-                            <h3 id="reportCompletedOrders">0</h3>
-                            <p>Completed Orders</p>
-                        </div>
-                    </div>
+
+            <div class="reports-filter-bar">
+                <div class="report-search">
+                    <i class="fas fa-search"></i>
+                    <input id="reportSearchInput" type="search" placeholder="Search reports, KPIs, customers..." oninput="filterReports()" aria-label="Search reports">
+                </div>
+                <div class="report-filter-grid">
+                    <label>
+                        <span>Start</span>
+                        <input type="date" id="reportStartDate">
+                    </label>
+                    <label>
+                        <span>End</span>
+                        <input type="date" id="reportEndDate">
+                    </label>
+                    <label>
+                        <span>Customer</span>
+                        <select id="reportCustomerFilter"><option value="">All customers</option></select>
+                    </label>
+                    <label>
+                        <span>Technician</span>
+                        <select id="reportTechnicianFilter"><option value="">All technicians</option></select>
+                    </label>
+                    <label>
+                        <span>Service</span>
+                        <select id="reportServiceFilter"><option value="">All services</option></select>
+                    </label>
+                    <label>
+                        <span>Status</span>
+                        <select id="reportStatusFilter"><option value="">All statuses</option></select>
+                    </label>
+                    <label>
+                        <span>Location</span>
+                        <select id="reportLocationFilter"><option value="">All locations</option></select>
+                    </label>
+                </div>
+                <div class="report-filter-actions">
+                    <button class="btn-primary" onclick="generateReports()" type="button"><i class="fas fa-sync-alt"></i> Sync</button>
                 </div>
             </div>
-            
-            <!-- Orders Report -->
-            <div class="report-section">
-                <h2>Orders Analysis</h2>
-                <div class="chart-container">
-                    <div class="chart-box">
-                        <h3>Orders by Status</h3>
-                        <div id="ordersStatusChart" class="chart"></div>
-                    </div>
-                    <div class="chart-box">
-                        <h3>Monthly Orders Trend</h3>
-                        <div id="monthlyOrdersChart" class="chart"></div>
-                    </div>
-                </div>
+
+            <div id="reportsSkeleton" class="reports-skeleton" aria-hidden="true"></div>
+
+            <div id="reportsDashboard" class="reports-dashboard">
+                <div id="reportsTabContent" class="reports-tab-content"></div>
             </div>
-            
-            <!-- Customers Report -->
-            <div class="report-section">
-                <h2>Customer Insights</h2>
-                <div class="chart-container">
-                    <div class="chart-box">
-                        <h3>Customer Types</h3>
-                        <div id="customerTypesChart" class="chart"></div>
-                    </div>
-                    <div class="chart-box">
-                        <h3>Top Customers</h3>
-                        <div id="topCustomersList" class="top-list"></div>
-                    </div>
-                </div>
-            </div>
-            
         </section>
 
         <!-- Users Section (Admin Only) -->
