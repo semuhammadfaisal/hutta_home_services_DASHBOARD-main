@@ -6,7 +6,7 @@ const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const memCache = require('../utils/memoryCache');
-const { startOfMonthMDT } = require('../utils/timezone');
+const { startOfMonthMDT, dateInputToMDT } = require('../utils/timezone');
 const router = express.Router();
 
 const STATS_CACHE_KEY = 'orders:stats:v2';
@@ -14,6 +14,11 @@ const STATS_TTL_MS = parseInt(process.env.ORDERS_STATS_CACHE_MS || '60000', 10);
 
 function invalidateOrderStatsCache() {
   memCache.del(STATS_CACHE_KEY);
+}
+
+function parseMdtDateInput(value) {
+  if (!value) return null;
+  return dateInputToMDT(value);
 }
 
 // Clear stats cache endpoint
@@ -264,7 +269,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     const vendorCost = Number(req.body.vendorCost) || 0;
     const processingFee = Number(req.body.processingFee) || 0;
     const profit = amount - vendorCost - processingFee;
-    const endDate = req.body.endDate ? new Date(req.body.endDate) : null;
+    const endDate = parseMdtDateInput(req.body.endDate);
     
     // Prepare order data
     const orderData = {
@@ -282,7 +287,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       vendorCost,
       processingFee,
       profit,
-      startDate: new Date(req.body.startDate),
+      startDate: parseMdtDateInput(req.body.startDate),
       endDate,
       status: req.body.status || 'new',
       priority: req.body.priority || 'medium',
@@ -298,7 +303,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
         return res.status(400).json({ message: 'Recurring frequency is required for recurring orders' });
       }
       orderData.recurringFrequency = req.body.recurringFrequency;
-      orderData.recurringEndDate = req.body.recurringEndDate ? new Date(req.body.recurringEndDate) : null;
+      orderData.recurringEndDate = parseMdtDateInput(req.body.recurringEndDate);
       orderData.recurringNotes = req.body.recurringNotes || '';
       
       // Add custom days if frequency is custom
@@ -411,13 +416,13 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     
     // Convert dates if provided
     if (req.body.startDate) {
-      updateData.startDate = new Date(req.body.startDate);
+      updateData.startDate = parseMdtDateInput(req.body.startDate);
       if (existingOrder.startDate?.getTime() !== updateData.startDate.getTime()) {
         changes.startDate = updateData.startDate;
       }
     }
     if (req.body.endDate) {
-      updateData.endDate = new Date(req.body.endDate);
+      updateData.endDate = parseMdtDateInput(req.body.endDate);
     }
     
     // Convert numbers if provided
@@ -479,7 +484,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
         }
         // Set recurring fields
         if (req.body.recurringFrequency) updateData.recurringFrequency = req.body.recurringFrequency;
-        if (req.body.recurringEndDate) updateData.recurringEndDate = new Date(req.body.recurringEndDate);
+        if (req.body.recurringEndDate) updateData.recurringEndDate = parseMdtDateInput(req.body.recurringEndDate);
         if (req.body.recurringNotes !== undefined) updateData.recurringNotes = req.body.recurringNotes;
         
         // Handle custom days

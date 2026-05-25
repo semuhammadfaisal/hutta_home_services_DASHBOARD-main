@@ -2,7 +2,18 @@ const express = require('express');
 const Project = require('../models/Project');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { dateInputToMDT } = require('../utils/timezone');
 const router = express.Router();
+
+function normalizeProjectDateInputs(body = {}) {
+  const payload = { ...body };
+  ['startDate', 'endDate', 'actualStartDate', 'actualEndDate'].forEach(field => {
+    if (Object.prototype.hasOwnProperty.call(payload, field)) {
+      payload[field] = payload[field] ? dateInputToMDT(payload[field]) : null;
+    }
+  });
+  return payload;
+}
 
 // Get all projects
 router.get('/', authenticateToken, async (req, res) => {
@@ -40,7 +51,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const projectCount = await Project.countDocuments();
     const projectId = `PRJ-${String(projectCount + 1).padStart(3, '0')}`;
     
-    const project = new Project({ ...req.body, projectId });
+    const project = new Project({ ...normalizeProjectDateInputs(req.body), projectId });
     await project.save();
     
     const populatedProject = await Project.findById(project._id)
@@ -59,7 +70,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const project = await Project.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
+      normalizeProjectDateInputs(req.body), 
       { new: true }
     )
     .populate('customer', 'name email')

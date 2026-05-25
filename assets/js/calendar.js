@@ -8,7 +8,19 @@ function getYmdInMDT(date) {
         return window.TimezoneConfig.getYmdInMDT(date);
     }
     const d = new Date(date);
-    return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+    if (Number.isNaN(d.getTime())) return null;
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: getCalendarTimezone(),
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+    }).formatToParts(d);
+    const getPart = (type) => parseInt(parts.find(part => part.type === type)?.value, 10);
+    return {
+        year: getPart('year'),
+        month: getPart('month') - 1,
+        day: getPart('day')
+    };
 }
 
 function getTodayYmdMDT() {
@@ -31,6 +43,53 @@ function sameYmd(a, year, month, day) {
     return a && a.year === year && a.month === month && a.day === day;
 }
 
+function parseDateOnlyYmd(value) {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.000)?Z)?$/);
+    if (!match) return null;
+    return {
+        year: Number(match[1]),
+        month: Number(match[2]) - 1,
+        day: Number(match[3])
+    };
+}
+
+function getCalendarFieldYmd(value) {
+    return parseDateOnlyYmd(value) || getYmdInMDT(value);
+}
+
+function calendarDateString(year, month, day) {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function ymdToOrdinal(ymd) {
+    if (!ymd) return null;
+    const ordinal = Math.floor(Date.UTC(ymd.year, ymd.month, ymd.day) / 86400000);
+    return Number.isNaN(ordinal) ? null : ordinal;
+}
+
+function dayOfWeekForYmd(year, month, day) {
+    return new Date(Date.UTC(year, month, day)).getUTCDay();
+}
+
+function daysInCalendarMonth(year, month) {
+    return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+
+function dateFromYmdMDT(year, month, day) {
+    const dateString = calendarDateString(year, month, day);
+    return window.TimezoneConfig?.dateInputToMDT
+        ? window.TimezoneConfig.dateInputToMDT(dateString)
+        : new Date(`${dateString}T00:00:00`);
+}
+
+function formatCalendarDate(value) {
+    const ymd = getCalendarFieldYmd(value);
+    if (!ymd) return 'N/A';
+    return new Date(Date.UTC(ymd.year, ymd.month, ymd.day)).toLocaleDateString('en-US', {
+        timeZone: 'UTC'
+    });
+}
+
 function getEventsForDate(year, month, day) {
     const events = [];
     const orders = Array.isArray(cachedOrders) ? cachedOrders : [];
@@ -41,7 +100,7 @@ function getEventsForDate(year, month, day) {
         if (isRecurring) return;
 
         if (order.startDate) {
-            const startYmd = getYmdInMDT(order.startDate);
+            const startYmd = getCalendarFieldYmd(order.startDate);
             if (sameYmd(startYmd, year, month, day)) {
                 events.push({
                     type: 'order',
@@ -53,9 +112,9 @@ function getEventsForDate(year, month, day) {
         }
 
         if (order.endDate) {
-            const endYmd = getYmdInMDT(order.endDate);
+            const endYmd = getCalendarFieldYmd(order.endDate);
             if (sameYmd(endYmd, year, month, day)) {
-                const startYmd = order.startDate ? getYmdInMDT(order.startDate) : null;
+                const startYmd = order.startDate ? getCalendarFieldYmd(order.startDate) : null;
                 if (!sameYmd(startYmd, year, month, day)) {
                     events.push({
                         type: 'order',
@@ -70,7 +129,7 @@ function getEventsForDate(year, month, day) {
     
     projects.forEach(project => {
         if (project.startDate) {
-            const startYmd = getYmdInMDT(project.startDate);
+            const startYmd = getCalendarFieldYmd(project.startDate);
             if (sameYmd(startYmd, year, month, day)) {
                 events.push({
                     type: 'project',
@@ -127,9 +186,9 @@ async function renderCalendar() {
         monthEl.textContent = `${monthNames[month]} ${year}`;
     }
     
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const firstDay = dayOfWeekForYmd(year, month, 1);
+    const daysInMonth = daysInCalendarMonth(year, month);
+    const daysInPrevMonth = daysInCalendarMonth(year, month - 1);
     
     const calendarDays = document.getElementById('calendarDays');
     if (!calendarDays) return;
@@ -156,7 +215,7 @@ async function renderCalendar() {
         dayDiv.style.cursor = 'pointer';
         dayDiv.onclick = (e) => {
             if (e.target === dayDiv || e.target.classList.contains('calendar-day-number')) {
-                const selectedDate = new Date(year, month, day);
+                const selectedDate = dateFromYmdMDT(year, month, day);
                 openOrderModalWithDate(selectedDate);
             }
         };
@@ -295,7 +354,7 @@ async function showEventDetail(event) {
                 </div>
                 <div class="detail-item">
                     <label>Start Date</label>
-                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
+                    <div class="value">${formatCalendarDate(data.startDate)}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>
@@ -324,7 +383,7 @@ async function showEventDetail(event) {
                 </div>
                 <div class="detail-item">
                     <label>Start Date</label>
-                    <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
+                    <div class="value">${formatCalendarDate(data.startDate)}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>
@@ -347,10 +406,9 @@ function closeDetailPanel() {
 window.closeDetailPanel = closeDetailPanel;
 
 function openOrderModalWithDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
+    const selectedYmd = getYmdInMDT(date);
+    if (!selectedYmd) return;
+    const formattedDate = calendarDateString(selectedYmd.year, selectedYmd.month, selectedYmd.day);
     
     console.log('Opening order modal with date:', formattedDate);
     
@@ -397,27 +455,29 @@ async function loadRecurringCalendarData() {
 
 function getRecurringEventsForDate(year, month, day) {
     const events = [];
-    const targetDate = new Date(year, month, day);
-    targetDate.setHours(0, 0, 0, 0);
+    const targetYmd = { year, month, day };
+    const targetOrdinal = ymdToOrdinal(targetYmd);
     
     recurringCachedOrders.forEach(order => {
         if (order.startDate && order.recurringFrequency) {
-            const startDate = new Date(order.startDate);
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = order.recurringEndDate ? new Date(order.recurringEndDate) : null;
-            if (endDate) endDate.setHours(23, 59, 59, 999);
+            const startYmd = getCalendarFieldYmd(order.startDate);
+            const startOrdinal = ymdToOrdinal(startYmd);
+            const endYmd = order.recurringEndDate ? getCalendarFieldYmd(order.recurringEndDate) : null;
+            const endOrdinal = ymdToOrdinal(endYmd);
+
+            if (startOrdinal === null || targetOrdinal === null) return;
             
-            if (targetDate < startDate) return;
-            if (endDate && targetDate > endDate) return;
+            if (targetOrdinal < startOrdinal) return;
+            if (endOrdinal !== null && targetOrdinal > endOrdinal) return;
             
-            if (isRecurringMatch(startDate, targetDate, order.recurringFrequency, order.recurringCustomDays)) {
+            if (isRecurringMatch(startYmd, targetYmd, order.recurringFrequency, order.recurringCustomDays)) {
                 events.push({
                     type: 'recurring-order',
                     title: order.orderId || order.service || 'Recurring Order',
                     id: order._id,
                     frequency: order.recurringFrequency,
                     order: order,
-                    occurrenceDate: targetDate
+                    occurrenceDate: dateFromYmdMDT(year, month, day)
                 });
             }
         }
@@ -427,15 +487,16 @@ function getRecurringEventsForDate(year, month, day) {
 }
 
 function isRecurringMatch(startDate, targetDate, frequency, customDays) {
-    const start = new Date(startDate);
-    const target = new Date(targetDate);
-    start.setHours(0, 0, 0, 0);
-    target.setHours(0, 0, 0, 0);
+    const start = startDate;
+    const target = targetDate;
+    const startOrdinal = ymdToOrdinal(start);
+    const targetOrdinal = ymdToOrdinal(target);
     
-    if (start.getTime() === target.getTime()) return true;
-    if (target < start) return false;
+    if (startOrdinal === null || targetOrdinal === null) return false;
+    if (startOrdinal === targetOrdinal) return true;
+    if (targetOrdinal < startOrdinal) return false;
     
-    const daysDiff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+    const daysDiff = targetOrdinal - startOrdinal;
     
     switch (frequency) {
         case 'custom':
@@ -443,19 +504,19 @@ function isRecurringMatch(startDate, targetDate, frequency, customDays) {
             return daysDiff % customDays === 0;
             
         case 'weekly':
-            return daysDiff % 7 === 0 && start.getDay() === target.getDay();
+            return daysDiff % 7 === 0 && dayOfWeekForYmd(start.year, start.month, start.day) === dayOfWeekForYmd(target.year, target.month, target.day);
             
         case 'bi-weekly':
-            return daysDiff % 14 === 0 && start.getDay() === target.getDay();
+            return daysDiff % 14 === 0 && dayOfWeekForYmd(start.year, start.month, start.day) === dayOfWeekForYmd(target.year, target.month, target.day);
             
         case 'monthly':
-            const monthsDiff = (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth());
+            const monthsDiff = (target.year - start.year) * 12 + (target.month - start.month);
             if (monthsDiff < 0) return false;
             
-            const startDay = start.getDate();
-            const targetDay = target.getDate();
+            const startDay = start.day;
+            const targetDay = target.day;
             
-            const lastDayOfTargetMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+            const lastDayOfTargetMonth = daysInCalendarMonth(target.year, target.month);
             
             if (startDay > lastDayOfTargetMonth) {
                 return targetDay === lastDayOfTargetMonth;
@@ -464,10 +525,10 @@ function isRecurringMatch(startDate, targetDate, frequency, customDays) {
             return targetDay === startDay;
             
         case 'yearly':
-            const yearsDiff = target.getFullYear() - start.getFullYear();
+            const yearsDiff = target.year - start.year;
             if (yearsDiff < 0) return false;
             
-            return start.getMonth() === target.getMonth() && start.getDate() === target.getDate();
+            return start.month === target.month && start.day === target.day;
             
         default:
             return false;
@@ -488,9 +549,9 @@ async function renderRecurringCalendar() {
         monthEl.textContent = `${monthNames[month]} ${year}`;
     }
     
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const firstDay = dayOfWeekForYmd(year, month, 1);
+    const daysInMonth = daysInCalendarMonth(year, month);
+    const daysInPrevMonth = daysInCalendarMonth(year, month - 1);
     
     const calendarDays = document.getElementById('recurringCalendarDays');
     if (!calendarDays) return;
@@ -615,12 +676,12 @@ async function showRecurringEventDetail(event) {
             </div>
             <div class="detail-item">
                 <label>Start Date</label>
-                <div class="value">${new Date(data.startDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
+                <div class="value">${formatCalendarDate(data.startDate)}</div>
             </div>
             ${data.recurringEndDate ? `
             <div class="detail-item">
                 <label>End Date</label>
-                <div class="value">${new Date(data.recurringEndDate).toLocaleDateString('en-US', { timeZone: getCalendarTimezone() })}</div>
+                <div class="value">${formatCalendarDate(data.recurringEndDate)}</div>
             </div>
             ` : ''}
             ${data.recurringNotes ? `
