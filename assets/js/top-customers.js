@@ -10,19 +10,36 @@ async function loadTopCustomers(startDate = null, endDate = null) {
         
         // Filter orders by date if provided
         let filteredOrders = orders;
-        if (startDate && endDate) {
+        if (startDate || endDate) {
             filteredOrders = orders.filter(order => {
                 if (window.TimezoneConfig) {
-                    return window.TimezoneConfig.isDateInRangeMDT(order.startDate, startDate, endDate);
+                    const dateValue = order.startDate || order.createdAt;
+                    if (startDate && endDate) {
+                        return window.TimezoneConfig.isDateInRangeMDT(dateValue, startDate, endDate);
+                    }
+                    const orderTime = new Date(dateValue).getTime();
+                    const startTime = startDate ? window.TimezoneConfig.dateInputToMDT(startDate).getTime() : null;
+                    const endTime = endDate ? window.TimezoneConfig.endOfDayMDT(endDate).getTime() : null;
+                    return (!startTime || orderTime >= startTime) && (!endTime || orderTime <= endTime);
                 }
-                const orderDate = new Date(order.startDate);
-                return orderDate >= new Date(startDate) && orderDate <= new Date(endDate);
+                const orderDate = new Date(order.startDate || order.createdAt);
+                return (!startDate || orderDate >= new Date(startDate)) &&
+                    (!endDate || orderDate <= new Date(`${endDate}T23:59:59.999`));
             });
         }
         
         // Calculate customer statistics
         const customerStats = customers.map(customer => {
-            const customerOrders = filteredOrders.filter(order => order.customerId === customer._id);
+            const customerOrders = filteredOrders.filter(order => {
+                const orderCustomer = order.customer || {};
+                const orderCustomerId = order.customerId || orderCustomer._id || order.customer;
+                const orderCustomerEmail = orderCustomer.email;
+                const orderCustomerName = orderCustomer.name || (typeof order.customer === 'string' ? order.customer : '');
+
+                return String(orderCustomerId || '') === String(customer._id || '') ||
+                    (!!orderCustomerEmail && !!customer.email && String(orderCustomerEmail).toLowerCase() === String(customer.email).toLowerCase()) ||
+                    (!!orderCustomerName && !!customer.name && String(orderCustomerName).toLowerCase() === String(customer.name).toLowerCase());
+            });
             const totalRevenue = customerOrders.reduce((sum, order) => sum + (parseFloat(order.amount) || 0), 0);
             const totalOrders = customerOrders.length;
             
@@ -138,14 +155,14 @@ function filterTopCustomers() {
     const startDate = document.getElementById('topCustomersStartDate').value;
     const endDate = document.getElementById('topCustomersEndDate').value;
     
-    if (!startDate || !endDate) {
+    if (!startDate && !endDate) {
         if (window.showToast) {
-            showToast('Please select both start and end dates', 'warning');
+            showToast('Please select a start or end date', 'warning');
         }
         return;
     }
     
-    if (new Date(startDate) > new Date(endDate)) {
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
         if (window.showToast) {
             showToast('Start date must be before end date', 'error');
         }

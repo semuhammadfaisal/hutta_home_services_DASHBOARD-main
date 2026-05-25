@@ -1247,7 +1247,7 @@ window.selectCustomer = selectCustomer;
 
 // Pipeline Search Functions
 function filterPipelineRecords(query) {
-    searchQuery = query.toLowerCase().trim();
+    searchQuery = String(query || '').toLowerCase().trim();
     
     const searchInput = document.getElementById('pipelineSearchInput');
     const clearBtn = document.querySelector('.btn-clear-search');
@@ -1258,6 +1258,8 @@ function filterPipelineRecords(query) {
             const email = (record.email || '').toLowerCase();
             const phone = (record.phone || '').toLowerCase();
             const orderIdDisplay = (record.orderIdDisplay || '').toLowerCase();
+            const service = (record.service || '').toLowerCase();
+            const status = (record.status || record.stageName || '').toLowerCase();
             const address = (record.address || '').toLowerCase();
             const description = (record.description || '').toLowerCase();
             
@@ -1265,6 +1267,8 @@ function filterPipelineRecords(query) {
                    email.includes(searchQuery) || 
                    phone.includes(searchQuery) ||
                    orderIdDisplay.includes(searchQuery) ||
+                   service.includes(searchQuery) ||
+                   status.includes(searchQuery) ||
                    address.includes(searchQuery) ||
                    description.includes(searchQuery);
         });

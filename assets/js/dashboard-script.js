@@ -715,6 +715,70 @@ function initializeSearch() {
     });
 }
 
+function normalizeFilterValue(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, '-');
+}
+
+function normalizeSearchText(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function buildSearchText(values) {
+    return values
+        .filter(value => value !== undefined && value !== null)
+        .map(value => {
+            if (Array.isArray(value)) return value.join(' ');
+            if (typeof value === 'object') return Object.values(value).join(' ');
+            return value;
+        })
+        .join(' ')
+        .toLowerCase();
+}
+
+function formatFilterLabel(value) {
+    return String(value || '')
+        .trim()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function updateSelectOptions(selectId, items, getValues, defaultLabel, baseOptions = []) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const selectedValue = select.value || 'all';
+    const optionMap = new Map(baseOptions.map(([value, label]) => [normalizeFilterValue(value), label]));
+
+    items.forEach(item => {
+        getValues(item).forEach(value => {
+            const normalized = normalizeFilterValue(value);
+            if (!normalized || normalized === 'all' || optionMap.has(normalized)) return;
+            optionMap.set(normalized, formatFilterLabel(value));
+        });
+    });
+
+    select.replaceChildren();
+
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = defaultLabel;
+    select.appendChild(allOption);
+
+    optionMap.forEach((label, value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+    });
+
+    const normalizedSelected = normalizeFilterValue(selectedValue);
+    select.value = optionMap.has(normalizedSelected) ? normalizedSelected : 'all';
+}
+
 // Notification handling
 let notificationIntervalId = null;
 
@@ -3157,8 +3221,10 @@ function closePaymentModal() {
 
 async function refreshPayments() {
     try {
-        const payments = await window.APIService.getPayments();
-        renderPaymentsTable(payments);
+        allPayments = await window.APIService.getPayments();
+        initializePaymentFilters();
+        updatePaymentFilterOptions(allPayments);
+        filterPayments();
     } catch (error) {
         console.error('Failed to refresh payments:', error);
     }
@@ -3220,6 +3286,85 @@ function renderPaymentsTable(payments) {
             </td>
         </tr>
     `).join('');
+}
+
+let allPayments = [];
+
+function initializePaymentFilters() {
+    if (window.__paymentFiltersInitialized) return;
+    window.__paymentFiltersInitialized = true;
+
+    const searchInput = document.getElementById('paymentSearchInput');
+    const statusFilter = document.getElementById('paymentStatusFilter');
+    const methodFilter = document.getElementById('paymentMethodFilter');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterPayments);
+    }
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterPayments);
+    }
+
+    if (methodFilter) {
+        methodFilter.addEventListener('change', filterPayments);
+    }
+}
+
+function updatePaymentFilterOptions(payments = []) {
+    updateSelectOptions('paymentStatusFilter', payments, payment => [payment.status], 'All Status', [
+        ['pending', 'Pending'],
+        ['received', 'Received'],
+        ['completed', 'Completed'],
+        ['failed', 'Failed'],
+        ['refunded', 'Refunded'],
+        ['cancelled', 'Cancelled']
+    ]);
+
+    updateSelectOptions('paymentMethodFilter', payments, payment => [payment.paymentMethod], 'All Methods', [
+        ['cash', 'Cash'],
+        ['credit-card', 'Credit Card'],
+        ['debit-card', 'Debit Card'],
+        ['bank-transfer', 'Bank Transfer'],
+        ['check', 'Check'],
+        ['online', 'Online']
+    ]);
+}
+
+function filterPayments() {
+    const searchTerm = normalizeSearchText(document.getElementById('paymentSearchInput')?.value);
+    const statusFilter = normalizeFilterValue(document.getElementById('paymentStatusFilter')?.value || 'all');
+    const methodFilter = normalizeFilterValue(document.getElementById('paymentMethodFilter')?.value || 'all');
+
+    let filtered = allPayments;
+
+    if (searchTerm) {
+        filtered = filtered.filter(payment => buildSearchText([
+            payment._id,
+            payment.id,
+            payment.invoiceNumber,
+            payment.transactionId,
+            payment.referenceNumber,
+            payment.customer?.name,
+            payment.customer?.email,
+            payment.order?.orderId || payment.order,
+            payment.order?.service,
+            payment.amount,
+            payment.status,
+            payment.paymentMethod,
+            payment.notes
+        ]).includes(searchTerm));
+    }
+
+    if (statusFilter !== 'all') {
+        filtered = filtered.filter(payment => normalizeFilterValue(payment.status) === statusFilter);
+    }
+
+    if (methodFilter !== 'all') {
+        filtered = filtered.filter(payment => normalizeFilterValue(payment.paymentMethod) === methodFilter);
+    }
+
+    renderPaymentsTable(filtered);
 }
 
 function updatePaymentStats(payments) {
@@ -4539,8 +4684,9 @@ async function loadEmployeesSection() {
         if (tableContainer) setTableLoading(tableContainer, true);
         
         allEmployees = await window.APIService.getEmployees();
-        renderEmployeesTable(allEmployees);
         initializeEmployeeFilters();
+        updateEmployeeFilterOptions(allEmployees);
+        filterEmployees();
     } catch (error) {
         console.error('Failed to load employees:', error);
         renderEmployeesTable([]);
@@ -4551,6 +4697,9 @@ async function loadEmployeesSection() {
 }
 
 function initializeEmployeeFilters() {
+    if (window.__employeeFiltersInitialized) return;
+    window.__employeeFiltersInitialized = true;
+
     const searchInput = document.getElementById('employeeSearchInput');
     const roleFilter = document.getElementById('employeeRoleFilter');
     const statusFilter = document.getElementById('employeeStatusFilter');
@@ -4568,27 +4717,50 @@ function initializeEmployeeFilters() {
     }
 }
 
+function updateEmployeeFilterOptions(employees = []) {
+    updateSelectOptions('employeeRoleFilter', employees, employee => [employee.role], 'All Roles', [
+        ['electrician', 'Electrician'],
+        ['plumber', 'Plumber'],
+        ['carpenter', 'Carpenter'],
+        ['hvac-technician', 'HVAC Technician'],
+        ['project-manager', 'Project Manager'],
+        ['supervisor', 'Supervisor'],
+        ['general-worker', 'General Worker']
+    ]);
+
+    updateSelectOptions('employeeStatusFilter', employees, employee => [employee.status], 'All Status', [
+        ['available', 'Available'],
+        ['busy', 'Busy'],
+        ['offline', 'Offline'],
+        ['on-leave', 'On Leave']
+    ]);
+}
+
 function filterEmployees() {
-    const searchTerm = document.getElementById('employeeSearchInput')?.value.toLowerCase() || '';
-    const roleFilter = document.getElementById('employeeRoleFilter')?.value || 'all';
-    const statusFilter = document.getElementById('employeeStatusFilter')?.value || 'all';
+    const searchTerm = normalizeSearchText(document.getElementById('employeeSearchInput')?.value);
+    const roleFilter = normalizeFilterValue(document.getElementById('employeeRoleFilter')?.value || 'all');
+    const statusFilter = normalizeFilterValue(document.getElementById('employeeStatusFilter')?.value || 'all');
     
     let filtered = allEmployees;
     
     if (searchTerm) {
-        filtered = filtered.filter(employee => 
-            employee.name.toLowerCase().includes(searchTerm) ||
-            employee.email.toLowerCase().includes(searchTerm) ||
-            employee.role.toLowerCase().includes(searchTerm)
-        );
+        filtered = filtered.filter(employee => buildSearchText([
+            employee.name,
+            employee.email,
+            employee.phone,
+            employee.role,
+            employee.department,
+            employee.status,
+            employee.skills
+        ]).includes(searchTerm));
     }
     
     if (roleFilter !== 'all') {
-        filtered = filtered.filter(employee => employee.role === roleFilter);
+        filtered = filtered.filter(employee => normalizeFilterValue(employee.role) === roleFilter);
     }
     
     if (statusFilter !== 'all') {
-        filtered = filtered.filter(employee => employee.status === statusFilter);
+        filtered = filtered.filter(employee => normalizeFilterValue(employee.status) === statusFilter);
     }
     
     renderEmployeesTable(filtered);
@@ -5198,8 +5370,9 @@ async function loadVendorsSection() {
         if (tableContainer) setTableLoading(tableContainer, true);
         
         allVendors = await window.APIService.getVendors();
-        renderVendorsTable(allVendors);
         initializeVendorFilters();
+        updateVendorFilterOptions(allVendors);
+        filterVendors();
     } catch (error) {
         console.error('Failed to load vendors:', error);
         renderVendorsTable([]);
@@ -5210,6 +5383,9 @@ async function loadVendorsSection() {
 }
 
 function initializeVendorFilters() {
+    if (window.__vendorFiltersInitialized) return;
+    window.__vendorFiltersInitialized = true;
+
     const searchInput = document.getElementById('vendorSearchInput');
     const categoryFilter = document.getElementById('vendorCategoryFilter');
     const statusFilter = document.getElementById('vendorStatusFilter');
@@ -5227,31 +5403,54 @@ function initializeVendorFilters() {
     }
 }
 
+function getVendorActiveState(vendor) {
+    if (vendor.isActive !== undefined) return Boolean(vendor.isActive);
+    return normalizeFilterValue(vendor.status || 'active') !== 'inactive';
+}
+
+function updateVendorFilterOptions(vendors = []) {
+    updateSelectOptions('vendorCategoryFilter', vendors, vendor => [vendor.category], 'All Categories', [
+        ['electrical', 'Electrical'],
+        ['plumbing', 'Plumbing'],
+        ['civil', 'Civil'],
+        ['carpentry', 'Carpentry'],
+        ['hvac', 'HVAC'],
+        ['painting', 'Painting'],
+        ['cleaning', 'Cleaning']
+    ]);
+}
+
 function filterVendors() {
-    const searchTerm = document.getElementById('vendorSearchInput')?.value.toLowerCase() || '';
-    const categoryFilter = document.getElementById('vendorCategoryFilter')?.value || 'all';
+    const searchTerm = normalizeSearchText(document.getElementById('vendorSearchInput')?.value);
+    const categoryFilter = normalizeFilterValue(document.getElementById('vendorCategoryFilter')?.value || 'all');
     const statusFilter = document.getElementById('vendorStatusFilter')?.value || 'all';
     
     let filtered = allVendors;
     
     // Apply search filter
     if (searchTerm) {
-        filtered = filtered.filter(vendor => 
-            vendor.name.toLowerCase().includes(searchTerm) ||
-            vendor.email.toLowerCase().includes(searchTerm) ||
-            vendor.category.toLowerCase().includes(searchTerm)
-        );
+        filtered = filtered.filter(vendor => buildSearchText([
+            vendor.name,
+            vendor.email,
+            vendor.emails,
+            vendor.phone,
+            vendor.phones,
+            vendor.category,
+            vendor.status,
+            vendor.address,
+            vendor.notes
+        ]).includes(searchTerm));
     }
     
     // Apply category filter
     if (categoryFilter !== 'all') {
-        filtered = filtered.filter(vendor => vendor.category === categoryFilter);
+        filtered = filtered.filter(vendor => normalizeFilterValue(vendor.category) === categoryFilter);
     }
     
     // Apply status filter
     if (statusFilter !== 'all') {
         const isActive = statusFilter === 'true';
-        filtered = filtered.filter(vendor => vendor.isActive === isActive);
+        filtered = filtered.filter(vendor => getVendorActiveState(vendor) === isActive);
     }
     
     renderVendorsTable(filtered);
@@ -6027,14 +6226,20 @@ async function loadCustomersSection() {
         // Count orders for each customer
         allCustomers.forEach(customer => {
             customer.totalOrders = orders.filter(order => {
-                const customerId = order.customer?._id || order.customer;
-                const customerEmail = order.customer?.email;
-                return customerId === customer._id || customerEmail === customer.email;
+                const orderCustomer = order.customer || {};
+                const customerId = order.customerId || orderCustomer._id || order.customer;
+                const customerEmail = orderCustomer.email;
+                const customerName = orderCustomer.name || (typeof order.customer === 'string' ? order.customer : '');
+
+                return String(customerId || '') === String(customer._id || '') ||
+                    (!!customerEmail && !!customer.email && String(customerEmail).toLowerCase() === String(customer.email).toLowerCase()) ||
+                    (!!customerName && !!customer.name && String(customerName).toLowerCase() === String(customer.name).toLowerCase());
             }).length;
         });
         
-        renderCustomersTable(allCustomers);
         initializeCustomerFilters();
+        updateCustomerFilterOptions(allCustomers);
+        filterCustomers();
     } catch (error) {
         console.error('Failed to load customers:', error);
         renderCustomersTable([]);
@@ -6045,6 +6250,9 @@ async function loadCustomersSection() {
 }
 
 function initializeCustomerFilters() {
+    if (window.__customerFiltersInitialized) return;
+    window.__customerFiltersInitialized = true;
+
     const searchInput = document.getElementById('customersToolbarSearchInput');
     const typeFilter = document.getElementById('customerTypeFilter');
     const statusFilter = document.getElementById('customerStatusFilter');
@@ -6062,30 +6270,49 @@ function initializeCustomerFilters() {
     }
 }
 
+function updateCustomerFilterOptions(customers = []) {
+    updateSelectOptions('customerTypeFilter', customers, customer => [customer.customerType], 'All Types', [
+        ['recurring', 'Recurring'],
+        ['one-time', 'One-time']
+    ]);
+
+    updateSelectOptions('customerStatusFilter', customers, customer => [customer.status], 'All Status', [
+        ['active', 'Active'],
+        ['inactive', 'Inactive']
+    ]);
+}
+
 function filterCustomers() {
-    const searchTerm = document.getElementById('customersToolbarSearchInput')?.value.toLowerCase() || '';
-    const typeFilter = document.getElementById('customerTypeFilter')?.value || 'all';
-    const statusFilter = document.getElementById('customerStatusFilter')?.value || 'all';
+    const searchTerm = normalizeSearchText(document.getElementById('customersToolbarSearchInput')?.value);
+    const typeFilter = normalizeFilterValue(document.getElementById('customerTypeFilter')?.value || 'all');
+    const statusFilter = normalizeFilterValue(document.getElementById('customerStatusFilter')?.value || 'all');
     
     let filtered = allCustomers;
     
     // Apply search filter
     if (searchTerm) {
-        filtered = filtered.filter(customer => 
-            customer.name.toLowerCase().includes(searchTerm) ||
-            customer.email.toLowerCase().includes(searchTerm) ||
-            (customer.phone && customer.phone.includes(searchTerm))
-        );
+        filtered = filtered.filter(customer => buildSearchText([
+            customer.name,
+            customer.email,
+            customer.emails,
+            customer.phone,
+            customer.phones,
+            customer.address,
+            customer.addresses,
+            customer.customerType,
+            customer.status,
+            customer.notes
+        ]).includes(searchTerm));
     }
     
     // Apply type filter
     if (typeFilter !== 'all') {
-        filtered = filtered.filter(customer => customer.customerType === typeFilter);
+        filtered = filtered.filter(customer => normalizeFilterValue(customer.customerType) === typeFilter);
     }
     
     // Apply status filter
     if (statusFilter !== 'all') {
-        filtered = filtered.filter(customer => customer.status === statusFilter);
+        filtered = filtered.filter(customer => normalizeFilterValue(customer.status) === statusFilter);
     }
     
     renderCustomersTable(filtered);
@@ -6392,6 +6619,34 @@ function formatOrderFilterLabel(value) {
         .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function getOrderStatusFilterValues(order) {
+    const rawValues = [order.status, order.pipelineStage];
+    const normalizedValues = rawValues
+        .map(normalizeOrderFilterValue)
+        .filter(Boolean);
+    const valueSet = new Set(normalizedValues);
+
+    normalizedValues.forEach(value => {
+        if (value === 'complete' || value === 'done' || value === 'finished' || value === 'closed' || value === 'paid' || value.includes('completed')) {
+            valueSet.add('completed');
+        }
+
+        if (value.includes('progress') || value.includes('working') || value.includes('work-order') || value === 'scheduled') {
+            valueSet.add('in-progress');
+        }
+
+        if (value.includes('cancel') || value === 'lost') {
+            valueSet.add('cancelled');
+        }
+
+        if (value.includes('delay') || value.includes('overdue')) {
+            valueSet.add('delayed');
+        }
+    });
+
+    return [...valueSet];
+}
+
 function updateOrderStatusFilterOptions(orders = []) {
     const statusFilter = document.getElementById('orderStatusFilter');
     if (!statusFilter) return;
@@ -6443,12 +6698,7 @@ function filterOrdersImmediate() {
         if (searchTerm && !getOrderSearchText(order).includes(searchTerm)) return false;
 
         if (statusFilter !== 'all') {
-            const statusValues = [
-                order.status,
-                order.pipelineStage
-            ].map(normalizeOrderFilterValue);
-
-            if (!statusValues.includes(statusFilter)) return false;
+            if (!getOrderStatusFilterValues(order).includes(statusFilter)) return false;
         }
 
         if (priorityFilter !== 'all' && normalizeOrderFilterValue(order.priority || 'medium') !== priorityFilter) return false;
