@@ -2322,6 +2322,7 @@ async function refreshOrders() {
         if (tableContainer) setTableLoading(tableContainer, true);
         
         allOrders = await window.APIService.getOrders();
+        updateOrderStatusFilterOptions(allOrders);
         filterOrdersImmediate();
         
             // Refresh dashboard stats after order changes (debounced)
@@ -6200,6 +6201,7 @@ async function loadOrdersSection() {
         allOrders = await window.APIService.getOrders();
         console.log('Orders loaded:', allOrders.length);
         initializeOrderFilters();
+        updateOrderStatusFilterOptions(allOrders);
         filterOrdersImmediate();
     } catch (error) {
         console.error('Failed to load orders:', error);
@@ -6338,33 +6340,123 @@ function getOrderDateFilterRange() {
     return null;
 }
 
+function normalizeOrderFilterValue(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, '-');
+}
+
+function getOrderFilterDate(order) {
+    const dateValue = order.startDate || order.createdAt || order.endDate;
+    const timestamp = dateValue ? new Date(dateValue).getTime() : NaN;
+    return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function getOrderSearchText(order) {
+    const customer = order.customer || {};
+    const vendor = order.vendor || {};
+    const employee = order.employee || {};
+    const visibleStatus = order.pipelineStage || order.status || '';
+
+    return [
+        order.orderId,
+        order.workOrderNumber,
+        order._id,
+        order.id,
+        customer.name || customer,
+        customer.email,
+        customer.phone,
+        customer.address,
+        order.service,
+        vendor.name || vendor,
+        employee.name || employee,
+        order.priority,
+        order.orderType,
+        order.status,
+        order.pipelineStage,
+        visibleStatus,
+        order.description,
+        order.notes
+    ]
+        .filter(value => value !== undefined && value !== null)
+        .join(' ')
+        .toLowerCase();
+}
+
+function formatOrderFilterLabel(value) {
+    return String(value || '')
+        .trim()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function updateOrderStatusFilterOptions(orders = []) {
+    const statusFilter = document.getElementById('orderStatusFilter');
+    if (!statusFilter) return;
+
+    const selectedValue = statusFilter.value || 'all';
+    const knownStatuses = [
+        ['new', 'New'],
+        ['in-progress', 'In Progress'],
+        ['completed', 'Completed'],
+        ['cancelled', 'Cancelled'],
+        ['delayed', 'Delayed']
+    ];
+    const statusMap = new Map(knownStatuses);
+
+    orders.forEach(order => {
+        [order.status, order.pipelineStage].forEach(value => {
+            const normalized = normalizeOrderFilterValue(value);
+            if (!normalized || normalized === 'all' || statusMap.has(normalized)) return;
+            statusMap.set(normalized, formatOrderFilterLabel(value));
+        });
+    });
+
+    statusFilter.replaceChildren();
+
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'All Status';
+    statusFilter.appendChild(allOption);
+
+    statusMap.forEach((label, value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        statusFilter.appendChild(option);
+    });
+
+    const normalizedSelected = normalizeOrderFilterValue(selectedValue);
+    statusFilter.value = statusMap.has(normalizedSelected) ? normalizedSelected : 'all';
+}
+
 function filterOrdersImmediate() {
-    const searchTerm = document.getElementById('orderSearchInput')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('orderStatusFilter')?.value || 'all';
-    const priorityFilter = document.getElementById('orderPriorityFilter')?.value || 'all';
-    const typeFilter = document.getElementById('orderTypeFilter')?.value || 'all';
+    const searchTerm = (document.getElementById('orderSearchInput')?.value || '').trim().toLowerCase();
+    const statusFilter = normalizeOrderFilterValue(document.getElementById('orderStatusFilter')?.value || 'all');
+    const priorityFilter = normalizeOrderFilterValue(document.getElementById('orderPriorityFilter')?.value || 'all');
+    const typeFilter = normalizeOrderFilterValue(document.getElementById('orderTypeFilter')?.value || 'all');
     const dateRange = getOrderDateFilterRange();
     
     const filtered = allOrders.filter(order => {
-        if (searchTerm) {
-            const orderId = (order.orderId || order._id).toLowerCase();
-            const customerName = (order.customer?.name || order.customer || '').toLowerCase();
-            const service = (order.service || '').toLowerCase();
-            
-            if (!orderId.includes(searchTerm) &&
-                !customerName.includes(searchTerm) &&
-                !service.includes(searchTerm)) {
-                return false;
-            }
+        if (searchTerm && !getOrderSearchText(order).includes(searchTerm)) return false;
+
+        if (statusFilter !== 'all') {
+            const statusValues = [
+                order.status,
+                order.pipelineStage
+            ].map(normalizeOrderFilterValue);
+
+            if (!statusValues.includes(statusFilter)) return false;
         }
 
-        if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-        if (priorityFilter !== 'all' && (order.priority || 'medium') !== priorityFilter) return false;
-        if (typeFilter !== 'all' && (order.orderType || 'one-time') !== typeFilter) return false;
+        if (priorityFilter !== 'all' && normalizeOrderFilterValue(order.priority || 'medium') !== priorityFilter) return false;
+        if (typeFilter !== 'all' && normalizeOrderFilterValue(order.orderType || 'one-time') !== typeFilter) return false;
 
         if (dateRange) {
-            const orderDate = new Date(order.createdAt || order.startDate).getTime();
-            if (Number.isNaN(orderDate)) return false;
+            const orderDate = getOrderFilterDate(order);
+            if (orderDate === null) return false;
             if (dateRange.start !== null && orderDate < dateRange.start) return false;
             if (dateRange.end !== null && orderDate > dateRange.end) return false;
         }
