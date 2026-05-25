@@ -5299,6 +5299,12 @@ body {
     border: 1px solid #fcd34d;
 }
 
+.payment-status-badge.bidding {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
 .payment-status-badge.failed {
     background: linear-gradient(135deg, #fee2e2, #fecaca);
     color: #991b1b;
@@ -6017,6 +6023,12 @@ body {
     background: linear-gradient(135deg, #fef3c7, #fde68a);
     color: #92400e;
     border-color: #fcd34d;
+}
+
+.payment-status-select.status-bidding {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1e40af;
+    border-color: #93c5fd;
 }
 
 .payment-status-select.status-received {

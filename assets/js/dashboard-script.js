@@ -3264,6 +3264,7 @@ function renderPaymentsTable(payments) {
             <td><span class="method-badge ${payment.paymentMethod || 'pending'}">${payment.paymentMethod ? payment.paymentMethod.replace('-', ' ') : 'Not Set'}</span></td>
             <td onclick="event.stopPropagation();">
                 <select class="payment-status-select status-${payment.status}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value)" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 13px; font-weight: 500; cursor: pointer;">
+                    <option value="bidding" ${payment.status === 'bidding' ? 'selected' : ''}>Bidding</option>
                     <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
                     <option value="received" ${payment.status === 'received' ? 'selected' : ''}>✅ Received</option>
                     <option value="completed" ${payment.status === 'completed' ? 'selected' : ''}>✔️ Completed</option>
@@ -3313,6 +3314,7 @@ function initializePaymentFilters() {
 
 function updatePaymentFilterOptions(payments = []) {
     updateSelectOptions('paymentStatusFilter', payments, payment => [payment.status], 'All Status', [
+        ['bidding', 'Bidding'],
         ['pending', 'Pending'],
         ['received', 'Received'],
         ['completed', 'Completed'],
@@ -3895,6 +3897,7 @@ async function showPaymentDetail(paymentId) {
         }
 
         const statusIcons = {
+            bidding: 'fa-gavel',
             pending: 'fa-hourglass-half',
             received: 'fa-circle-check',
             completed: 'fa-check-double',

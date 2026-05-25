@@ -69,7 +69,8 @@ body.payment-detail-open {
     background: linear-gradient(180deg, var(--payment-brand-blue-dark) 0%, #003872 100%);
 }
 
-.payment-detail-content.payment-state-pending {
+.payment-detail-content.payment-state-pending,
+.payment-detail-content.payment-state-bidding {
     border-top: 4px solid var(--payment-brand-blue);
 }
 
@@ -145,7 +146,8 @@ body.payment-detail-open {
     box-shadow: inset 0 0 0 1px transparent;
 }
 
-.payment-status-display.pending {
+.payment-status-display.pending,
+.payment-status-display.bidding {
     background: var(--payment-brand-blue-soft);
     color: var(--payment-brand-blue);
     box-shadow: inset 0 0 0 1px rgba(0, 86, 184, 0.24);

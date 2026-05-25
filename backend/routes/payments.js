@@ -53,7 +53,9 @@ function buildPaymentPayload(body, existingPayment = null) {
     payload.milestones = milestones;
 
     if (milestones.length) {
-      if (completedMilestones.length === milestones.length) {
+      if (body.status === 'bidding') {
+        payload.status = 'bidding';
+      } else if (completedMilestones.length === milestones.length) {
         payload.status = 'completed';
       } else if (receivedMilestones.length > 0) {
         payload.status = 'received';
