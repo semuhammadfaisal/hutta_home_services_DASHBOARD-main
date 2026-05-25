@@ -25,6 +25,23 @@ function formatDisplayDateInput(value) {
     const c = tz();
     return c ? c.formatForInput(value) : new Date(value).toISOString().split('T')[0];
 }
+function formatDashboardDateTime(date = new Date()) {
+    return date.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: tz()?.TIMEZONE || 'America/Denver'
+    });
+}
+function updateDashboardDateTime() {
+    const currentDateElement = document.getElementById('currentDate');
+    if (!currentDateElement) return;
+    currentDateElement.textContent = formatDashboardDateTime(nowInMDT());
+}
 
 // Dashboard Data and Functionality
 class DashboardManager {
@@ -1198,19 +1215,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // Set current date in the header
-    const currentDateElement = document.getElementById('currentDate');
-    if (currentDateElement) {
-        const today = nowInMDT();
-        const options = { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            timeZone: tz()?.TIMEZONE || 'America/Denver'
-        };
-        currentDateElement.textContent = today.toLocaleDateString('en-US', options);
-    }
+    // Set current date and time in the header
+    updateDashboardDateTime();
+    setInterval(updateDashboardDateTime, 60 * 1000);
     
     // Check authentication
     const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
