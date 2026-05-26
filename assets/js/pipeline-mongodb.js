@@ -47,31 +47,31 @@ let autoScrollInterval = null; // For auto-scroll during drag
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Pipeline MongoDB script loaded');
+    window.AppLogger?.debug('Pipeline MongoDB script loaded');
     
     const pipelineSection = document.getElementById('pipeline');
     if (pipelineSection && pipelineSection.classList.contains('active')) {
-        console.log('Pipeline section is active, loading data...');
+        window.AppLogger?.debug('Pipeline section is active, loading data...');
         loadDataFromDB();
     }
     
     // CRITICAL: Prevent default dragover on document to allow drop
     document.addEventListener('dragover', (e) => {
         e.preventDefault();
-        console.log('Global dragover detected on:', e.target.className);
+        window.AppLogger?.debug('Global dragover detected on:', e.target.className);
     }, false);
     
     // Also prevent default drop on document
     document.addEventListener('drop', (e) => {
         e.preventDefault();
-        console.log('Global drop detected (prevented)');
+        window.AppLogger?.debug('Global drop detected (prevented)');
     }, false);
 });
 
 // Load all data from MongoDB
 async function loadDataFromDB() {
     try {
-        console.log('Loading pipeline data from database...');
+        window.AppLogger?.debug('Loading pipeline data from database...');
         
         // Fetch all data in parallel - NO loading overlay for speed
         const [stagesData, recordsData, ordersData, employeesData] = await Promise.all([
@@ -102,7 +102,7 @@ async function loadDataFromDB() {
             return isNotInPipeline && isRecent;
         }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        console.log('Pipeline loaded:', stages.length, 'stages,', records.length, 'records');
+        window.AppLogger?.debug('Pipeline loaded:', stages.length, 'stages,', records.length, 'records');
         
         loadStages();
         loadNewOrdersSuggestions();
@@ -314,7 +314,7 @@ function loadStages() {
     // Ensure all cards are draggable with proper event handlers
     requestAnimationFrame(() => {
         const allCards = container.querySelectorAll('.record-card, .new-order-card');
-        console.log('Setting up drag for', allCards.length, 'cards');
+        window.AppLogger?.debug('Setting up drag for', allCards.length, 'cards');
         allCards.forEach(card => {
             card.setAttribute('draggable', 'true');
             card.draggable = true;
@@ -324,20 +324,20 @@ function loadStages() {
                 if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
                     return; // Let buttons work normally
                 }
-                console.log('Mouse down on card - drag should start');
-                console.log('Card draggable attribute:', this.getAttribute('draggable'));
-                console.log('Card draggable property:', this.draggable);
+                window.AppLogger?.debug('Mouse down on card - drag should start');
+                window.AppLogger?.debug('Card draggable attribute:', this.getAttribute('draggable'));
+                window.AppLogger?.debug('Card draggable property:', this.draggable);
             };
             
             // Add direct ondragstart handler
             card.ondragstart = function(e) {
-                console.log('=== DRAGSTART EVENT ===');
-                console.log('Target:', e.target);
-                console.log('CurrentTarget:', e.currentTarget);
-                console.log('Card ID:', this.dataset.recordId || this.dataset.orderId);
+                window.AppLogger?.debug('=== DRAGSTART EVENT ===');
+                window.AppLogger?.debug('Target:', e.target);
+                window.AppLogger?.debug('CurrentTarget:', e.currentTarget);
+                window.AppLogger?.debug('Card ID:', this.dataset.recordId || this.dataset.orderId);
                 
                 if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
-                    console.log('Drag prevented - clicked on button/action');
+                    window.AppLogger?.debug('Drag prevented - clicked on button/action');
                     e.preventDefault();
                     e.stopPropagation();
                     return false;
@@ -351,18 +351,18 @@ function loadStages() {
                     draggedOrderId = this.dataset.orderId;
                     draggedRecordId = null;
                     draggedIsNewOrder = true;
-                    console.log('Set draggedOrderId:', draggedOrderId);
+                    window.AppLogger?.debug('Set draggedOrderId:', draggedOrderId);
                 } else {
                     draggedRecordId = this.dataset.recordId;
                     draggedOrderId = null;
                     draggedIsNewOrder = false;
-                    console.log('Set draggedRecordId:', draggedRecordId);
+                    window.AppLogger?.debug('Set draggedRecordId:', draggedRecordId);
                 }
                 
                 try {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', this.dataset.recordId || this.dataset.orderId);
-                    console.log('DataTransfer set successfully');
+                    window.AppLogger?.debug('DataTransfer set successfully');
                 } catch (err) {
                     console.error('Error setting dataTransfer:', err);
                 }
@@ -370,7 +370,7 @@ function loadStages() {
             
             // Add direct ondragend handler
             card.ondragend = function(e) {
-                console.log('Drag ended');
+                window.AppLogger?.debug('Drag ended');
                 this.classList.remove('dragging');
                 this.style.opacity = '';
                 document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
@@ -438,7 +438,7 @@ function createStageColumn(stage) {
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
         this.classList.add('drag-over');
-        console.log('Drag over stage:', this.dataset.stageId);
+        window.AppLogger?.debug('Drag over stage:', this.dataset.stageId);
     };
     
     stageBody.ondragleave = function(e) {
@@ -449,7 +449,7 @@ function createStageColumn(stage) {
     };
     
     stageBody.ondrop = function(e) {
-        console.log('Drop event triggered on stage:', this.dataset.stageId);
+        window.AppLogger?.debug('Drop event triggered on stage:', this.dataset.stageId);
         e.preventDefault();
         e.stopPropagation();
         this.classList.remove('drag-over');
@@ -519,7 +519,7 @@ function renderRecords(stageId) {
 // Load and render stages
 
 async function loadEmployeeForOrder(orderId) {
-    console.log('loadEmployeeForOrder called with orderId:', orderId);
+    window.AppLogger?.debug('loadEmployeeForOrder called with orderId:', orderId);
     try {
         const employeeEl = document.getElementById('viewEmployee');
         if (!employeeEl) {
@@ -530,16 +530,16 @@ async function loadEmployeeForOrder(orderId) {
         // Try to get from cache first (instant)
         if (orderCache.has(orderId)) {
             const order = orderCache.get(orderId);
-            console.log('Order found in cache:', order);
+            window.AppLogger?.debug('Order found in cache:', order);
             
             if (order.employee) {
                 if (typeof order.employee === 'object' && order.employee.name) {
-                    console.log('Setting employee name (object):', order.employee.name);
+                    window.AppLogger?.debug('Setting employee name (object):', order.employee.name);
                     employeeEl.textContent = order.employee.name;
                     return;
                 } else if (typeof order.employee === 'string' && employeeCache.has(order.employee)) {
                     const employee = employeeCache.get(order.employee);
-                    console.log('Setting employee name from cache:', employee.name);
+                    window.AppLogger?.debug('Setting employee name from cache:', employee.name);
                     employeeEl.textContent = employee.name;
                     return;
                 }
@@ -549,7 +549,7 @@ async function loadEmployeeForOrder(orderId) {
         // Fallback: fetch from API if not in cache
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
         if (!session) {
-            console.log('No session found');
+            window.AppLogger?.debug('No session found');
             employeeEl.textContent = 'Not assigned';
             return;
         }
@@ -557,7 +557,7 @@ async function loadEmployeeForOrder(orderId) {
         const sessionData = JSON.parse(session);
         const token = sessionData.token;
         
-        console.log('Fetching order details for:', orderId);
+        window.AppLogger?.debug('Fetching order details for:', orderId);
         const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -569,31 +569,31 @@ async function loadEmployeeForOrder(orderId) {
         }
         
         const order = await response.json();
-        console.log('Order loaded:', order);
+        window.AppLogger?.debug('Order loaded:', order);
         
         if (order.employee) {
             if (typeof order.employee === 'object' && order.employee.name) {
-                console.log('Setting employee name (object):', order.employee.name);
+                window.AppLogger?.debug('Setting employee name (object):', order.employee.name);
                 employeeEl.textContent = order.employee.name;
             } else if (typeof order.employee === 'string') {
-                console.log('Employee is ID, fetching employee details:', order.employee);
+                window.AppLogger?.debug('Employee is ID, fetching employee details:', order.employee);
                 const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (empResponse.ok) {
                     const employee = await empResponse.json();
-                    console.log('Employee fetched:', employee);
+                    window.AppLogger?.debug('Employee fetched:', employee);
                     employeeEl.textContent = employee.name;
                 } else {
                     console.error('Failed to fetch employee:', empResponse.status);
                     employeeEl.textContent = 'Not assigned';
                 }
             } else {
-                console.log('Employee field has unexpected type');
+                window.AppLogger?.debug('Employee field has unexpected type');
                 employeeEl.textContent = 'Not assigned';
             }
         } else {
-            console.log('No employee assigned');
+            window.AppLogger?.debug('No employee assigned');
             employeeEl.textContent = 'Not assigned';
         }
     } catch (error) {
@@ -835,7 +835,7 @@ async function saveRecord(event) {
         event.stopPropagation();
     }
     
-    console.log('saveRecord called');
+    window.AppLogger?.debug('saveRecord called');
     
     const form = document.getElementById('recordForm');
     if (!form) {
@@ -861,7 +861,7 @@ async function saveRecord(event) {
     const notes = document.getElementById('recordNotes')?.value || '';
     const orderIdValue = document.getElementById('recordWorkOrder')?.value || null;
     
-    console.log('Form data:', { customerName, stageId, orderId: orderIdValue });
+    window.AppLogger?.debug('Form data:', { customerName, stageId, orderId: orderIdValue });
     
     try {
         let response;
@@ -917,7 +917,7 @@ async function saveRecord(event) {
                                 body: JSON.stringify(orderUpdateData)
                             });
                             
-                            console.log('Linked order updated successfully');
+                            window.AppLogger?.debug('Linked order updated successfully');
                             
                             // Clear order cache
                             if (orderCache.has(editingRecord.orderId)) {
@@ -977,7 +977,7 @@ async function saveRecord(event) {
             throw new Error(errorData.message || 'Failed to save record');
         }
         
-        console.log('Record saved successfully');
+        window.AppLogger?.debug('Record saved successfully');
         closeRecordModal();
         
         // Clear API cache and refresh all related views
@@ -988,25 +988,25 @@ async function saveRecord(event) {
         
         // Refresh orders tab if it's loaded
         if (typeof refreshOrders === 'function') {
-            console.log('Refreshing orders tab...');
+            window.AppLogger?.debug('Refreshing orders tab...');
             await refreshOrders();
         }
         
         // Refresh payments tab if it's loaded
         if (typeof refreshPayments === 'function') {
-            console.log('Refreshing payments tab...');
+            window.AppLogger?.debug('Refreshing payments tab...');
             await refreshPayments();
         }
         
         // Refresh calendar if it's loaded
         if (window.refreshCalendar) {
-            console.log('Refreshing calendar...');
+            window.AppLogger?.debug('Refreshing calendar...');
             await window.refreshCalendar();
         }
         
         // Refresh dashboard KPIs
         if (window.dashboard && window.dashboard.renderDashboard) {
-            console.log('Refreshing dashboard...');
+            window.AppLogger?.debug('Refreshing dashboard...');
             await window.dashboard.renderDashboard();
         }
         
@@ -1304,20 +1304,20 @@ function updateSearchStats() {
 
 // Global function to verify pipeline record to order connection
 window.verifyPipelineConnection = async function(recordId) {
-    console.log('=== VERIFYING PIPELINE CONNECTION ===');
-    console.log('Record ID:', recordId);
+    window.AppLogger?.debug('=== VERIFYING PIPELINE CONNECTION ===');
+    window.AppLogger?.debug('Record ID:', recordId);
     
     try {
         // Get pipeline record
         const recordResponse = await fetch(`/api/pipeline-records/${recordId}`);
         const record = await recordResponse.json();
-        console.log('Pipeline record:', record);
+        window.AppLogger?.debug('Pipeline record:', record);
         
         if (record.orderId) {
             // Get linked order
             const orderResponse = await fetch(`/api/orders/${record.orderId}`);
             const order = await orderResponse.json();
-            console.log('Linked order:', {
+            window.AppLogger?.debug('Linked order:', {
                 id: order._id,
                 pipelineStage: order.pipelineStage,
                 pipelineRecordId: order.pipelineRecordId,
@@ -1327,11 +1327,11 @@ window.verifyPipelineConnection = async function(recordId) {
             // Get stage name
             const stageResponse = await fetch(`/api/stages/${record.stageId}`);
             const stage = await stageResponse.json();
-            console.log('Stage:', stage);
+            window.AppLogger?.debug('Stage:', stage);
             
             return { record, order, stage };
         } else {
-            console.log('No orderId in pipeline record');
+            window.AppLogger?.debug('No orderId in pipeline record');
             return { record, order: null, stage: null };
         }
     } catch (error) {
@@ -1416,13 +1416,13 @@ async function expandStage(stageId) {
                                     ${record.startDate ? `
                                         <div style="display: flex; align-items: center; gap: 8px;">
                                             <i class="fas fa-calendar" style="width: 16px; color: #6b7280;"></i>
-                                            <span>Start: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.startDate) : new Date(record.startDate).toLocaleDateString('en-US', { timeZone: 'America/Denver' })}</span>
+                                            <span>Start: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.startDate) : new Date(record.startDate).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}</span>
                                         </div>
                                     ` : ''}
                                     
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i class="fas fa-clock" style="width: 16px; color: #6b7280;"></i>
-                                        <span>Created: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.createdAt) : new Date(record.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Denver' })}</span>
+                                        <span>Created: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.createdAt) : new Date(record.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}</span>
                                     </div>
                                 </div>
                                 
@@ -1591,7 +1591,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
         const priority = order.priority || 'medium';
         const orderIdDisplay = order.orderId || '';
         
-        console.log('Creating pipeline record from order:', {
+        window.AppLogger?.debug('Creating pipeline record from order:', {
             orderId: order._id,
             orderIdDisplay,
             customerName,
@@ -1622,7 +1622,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
             throw new Error(errorData.message || 'Failed to create pipeline record');
         }
         
-        console.log('Pipeline record created successfully');
+        window.AppLogger?.debug('Pipeline record created successfully');
         
         // Remove the order from new orders list
         newOrders = newOrders.filter(o => o._id !== order._id);

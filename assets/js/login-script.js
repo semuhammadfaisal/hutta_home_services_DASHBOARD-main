@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     new LoginManager();
-    console.log('Login system initialized');
+    window.AppLogger?.debug('Login system initialized');
 });
 
 // Export for use in other files

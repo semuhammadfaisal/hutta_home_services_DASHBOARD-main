@@ -351,7 +351,8 @@
     margin-bottom: 0;
 }
 
-.detail-item label {
+.detail-item label,
+.detail-item .display-label {
     display: block;
     font-size: 0.7rem;
     color: #64748b;

@@ -385,7 +385,7 @@ function viewMovementHistory(recordId) {
     
     let historyText = `Movement History for "${record.projectName}":\n\n`;
     history.forEach(log => {
-        historyText += `${window.TimezoneConfig ? window.TimezoneConfig.formatDateMDT(log.movedAt) : new Date(log.movedAt).toLocaleString('en-US', { timeZone: 'America/Denver' })}\n`;
+        historyText += `${window.TimezoneConfig ? window.TimezoneConfig.formatDateMDT(log.movedAt) : new Date(log.movedAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })}\n`;
         historyText += `  From: ${log.fromStageName} → To: ${log.toStageName}\n`;
         historyText += `  By: ${log.movedBy}\n\n`;
     });
@@ -499,7 +499,7 @@ function reorderStages() {
     stages.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
     localStorage.setItem('pipeline_stages', JSON.stringify(stages));
     
-    console.log('PATCH /api/stages/reorder', { order: newOrder });
+    window.AppLogger?.debug('PATCH /api/stages/reorder', { order: newOrder });
 }
 
 // Movement Logging
@@ -519,8 +519,8 @@ function logMovement(recordId, projectName, fromStageId, fromStageName, toStageI
     movementLogs.push(movement);
     localStorage.setItem('pipeline_movements', JSON.stringify(movementLogs));
     
-    console.log('Movement Logged:', movement);
-    console.log('POST /api/projects/' + recordId + '/movements', movement);
+    window.AppLogger?.debug('Movement Logged:', movement);
+    window.AppLogger?.debug('POST /api/projects/' + recordId + '/movements', movement);
 }
 
 // Get movement history for a record
@@ -530,37 +530,37 @@ function getMovementHistory(recordId) {
 
 // Database Simulation Functions (Replace with actual API calls)
 function saveStageInDB(stage) {
-    console.log('POST /api/stages', stage);
+    window.AppLogger?.debug('POST /api/stages', stage);
     // fetch('/api/stages', { method: 'POST', body: JSON.stringify(stage) });
 }
 
 function updateStageInDB(stage) {
-    console.log('PUT /api/stages/' + stage.id, stage);
+    window.AppLogger?.debug('PUT /api/stages/' + stage.id, stage);
     // fetch('/api/stages/' + stage.id, { method: 'PUT', body: JSON.stringify(stage) });
 }
 
 function deleteStageFromDB(stageId) {
-    console.log('DELETE /api/stages/' + stageId);
+    window.AppLogger?.debug('DELETE /api/stages/' + stageId);
     // fetch('/api/stages/' + stageId, { method: 'DELETE' });
 }
 
 function saveRecordInDB(record) {
-    console.log('POST /api/records', record);
+    window.AppLogger?.debug('POST /api/records', record);
     // fetch('/api/records', { method: 'POST', body: JSON.stringify(record) });
 }
 
 function updateRecordInDB(record) {
-    console.log('PUT /api/records/' + record.id, record);
+    window.AppLogger?.debug('PUT /api/records/' + record.id, record);
     // fetch('/api/records/' + record.id, { method: 'PUT', body: JSON.stringify(record) });
 }
 
 function deleteRecordFromDB(recordId) {
-    console.log('DELETE /api/records/' + recordId);
+    window.AppLogger?.debug('DELETE /api/records/' + recordId);
     // fetch('/api/records/' + recordId, { method: 'DELETE' });
 }
 
 function updateRecordStageInDB(recordId, oldStageId, newStageId) {
-    console.log('PATCH /api/records/' + recordId + '/stage', { oldStageId, newStageId });
+    window.AppLogger?.debug('PATCH /api/records/' + recordId + '/stage', { oldStageId, newStageId });
     // fetch('/api/records/' + recordId + '/stage', { method: 'PATCH', body: JSON.stringify({ stageId: newStageId }) });
 }
 

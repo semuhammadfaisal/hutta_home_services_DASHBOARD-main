@@ -1,6 +1,6 @@
-// Calendar — Mountain Time (America/Denver)
+// Calendar — Arizona Time (America/Phoenix, MST / GMT-7)
 function getCalendarTimezone() {
-    return (window.TimezoneConfig && window.TimezoneConfig.TIMEZONE) || 'America/Denver';
+    return (window.TimezoneConfig && window.TimezoneConfig.TIMEZONE) || 'America/Phoenix';
 }
 
 function getYmdInMDT(date) {
@@ -410,7 +410,7 @@ function openOrderModalWithDate(date) {
     if (!selectedYmd) return;
     const formattedDate = calendarDateString(selectedYmd.year, selectedYmd.month, selectedYmd.day);
     
-    console.log('Opening order modal with date:', formattedDate);
+    window.AppLogger?.debug('Opening order modal with date:', formattedDate);
     
     if (typeof window.showAddOrderModal === 'function') {
         window.showAddOrderModal();
@@ -421,12 +421,12 @@ function openOrderModalWithDate(date) {
             
             if (startDateInput) {
                 startDateInput.value = formattedDate;
-                console.log('Start date set to:', formattedDate);
+                window.AppLogger?.debug('Start date set to:', formattedDate);
             }
             
             if (endDateInput) {
                 endDateInput.value = formattedDate;
-                console.log('End date set to:', formattedDate);
+                window.AppLogger?.debug('End date set to:', formattedDate);
             }
         }, 100);
     } else {

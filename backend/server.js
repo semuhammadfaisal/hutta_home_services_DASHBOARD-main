@@ -6,8 +6,8 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-// Set default timezone to MDT
-process.env.TZ = 'America/Denver';
+// Set default timezone to Arizona Time (MST / GMT-7, no DST)
+process.env.TZ = 'America/Phoenix';
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -98,11 +98,11 @@ app.use((req, res, next) => {
 app.get('/api/health', async (req, res) => {
   const payload = {
     status: 'OK',
-    timestamp: new Date().toLocaleString('en-US', { timeZone: 'America/Denver' }),
+    timestamp: new Date().toLocaleString('en-US', { timeZone: 'America/Phoenix' }),
     uptime: process.uptime(),
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     memory: process.memoryUsage(),
-    timezone: 'America/Denver (MDT)'
+    timezone: 'America/Phoenix (MST, GMT-7)'
   };
   res.json(payload);
 });

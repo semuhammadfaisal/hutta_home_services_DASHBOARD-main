@@ -283,7 +283,7 @@ const PipelineManager = {
         logs.push(log);
         localStorage.setItem('projectMovementLogs', JSON.stringify(logs));
         
-        console.log('Project moved:', log);
+        window.AppLogger?.debug('Project moved:', log);
     },
 
     showAddStageModal() {

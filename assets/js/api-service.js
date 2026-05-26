@@ -17,8 +17,8 @@ class APIService {
         this.demoMode = false; // Disable demo mode - using real backend
         this.requestCache = new Map();
         this.pendingRequests = new Map();
-        console.log('APIService initialized - Demo Mode:', this.demoMode);
-        console.log('API Base URL:', this.baseURL);
+        window.AppLogger?.debug('APIService initialized - Demo Mode:', this.demoMode);
+        window.AppLogger?.debug('API Base URL:', this.baseURL);
     }
 
     getToken() {
@@ -38,7 +38,7 @@ class APIService {
     async request(endpoint, options = {}) {
         // Demo mode - return mock data
         if (this.demoMode) {
-            console.log('Using demo mode for:', endpoint);
+            window.AppLogger?.debug('Using demo mode for:', endpoint);
             return this.getMockResponse(endpoint, options);
         }
         
@@ -56,7 +56,7 @@ class APIService {
             }
         }
         
-        console.log('Making request to:', `${this.baseURL}${endpoint}`);
+        window.AppLogger?.debug('Making request to:', `${this.baseURL}${endpoint}`);
         
         const url = `${this.baseURL}${endpoint}`;
         const token = this.getToken();
@@ -149,11 +149,11 @@ class APIService {
     }
 
     getMockResponse(endpoint, options) {
-        console.log('getMockResponse called for:', endpoint);
+        window.AppLogger?.debug('getMockResponse called for:', endpoint);
         return new Promise((resolve) => {
             setTimeout(() => {
                 if (endpoint === '/auth/login') {
-                    console.log('Returning mock login response');
+                    window.AppLogger?.debug('Returning mock login response');
                     resolve({
                         token: 'demo-token-' + Date.now(),
                         user: { email: 'admin@hutta.com', name: 'Admin User' }
@@ -161,7 +161,7 @@ class APIService {
                 } else if (endpoint.startsWith('/orders')) {
                     resolve({ data: [], pagination: { page: 1, limit: 5000, total: 0, pages: 1 } });
                 } else {
-                    console.log('Returning generic mock response');
+                    window.AppLogger?.debug('Returning generic mock response');
                     resolve({ success: true, data: [] });
                 }
             }, 500);
@@ -279,8 +279,8 @@ class APIService {
     }
 
     async createCustomer(customerData) {
-        console.log('Creating customer with data:', customerData);
-        console.log('Documents:', customerData.documents);
+        window.AppLogger?.debug('Creating customer with data:', customerData);
+        window.AppLogger?.debug('Documents:', customerData.documents);
         return this.request('/customers', {
             method: 'POST',
             body: JSON.stringify(customerData)
@@ -314,10 +314,10 @@ class APIService {
     }
 
     async createVendor(vendorData) {
-        console.log('Creating vendor with data:', vendorData);
-        console.log('Documents before stringify:', vendorData.documents);
+        window.AppLogger?.debug('Creating vendor with data:', vendorData);
+        window.AppLogger?.debug('Documents before stringify:', vendorData.documents);
         const body = JSON.stringify(vendorData);
-        console.log('Body after stringify:', body);
+        window.AppLogger?.debug('Body after stringify:', body);
         return this.request('/vendors', {
             method: 'POST',
             body: body

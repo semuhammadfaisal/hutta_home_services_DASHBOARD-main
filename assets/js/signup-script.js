@@ -193,5 +193,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     new SignupManager();
-    console.log('Signup system initialized');
+    window.AppLogger?.debug('Signup system initialized');
 });

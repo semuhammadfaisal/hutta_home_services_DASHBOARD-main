@@ -1,11 +1,11 @@
 // Timezone Configuration for Hutta Home Services
-// Uses America/Denver (Mountain Time: MDT/MST with automatic DST)
+// Uses America/Phoenix (Arizona Time: MST / GMT-7 year-round, no DST)
 
-const MDT_ZONE = 'America/Denver';
+const ARIZONA_ZONE = 'America/Phoenix';
 
 function getMDTParts(utcMs) {
     const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: MDT_ZONE,
+        timeZone: ARIZONA_ZONE,
         year: 'numeric',
         month: 'numeric',
         day: 'numeric',
@@ -46,7 +46,7 @@ function formatDateMDT(date, options = {}) {
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleString('en-US', {
-        timeZone: MDT_ZONE,
+        timeZone: ARIZONA_ZONE,
         ...options
     });
 }
@@ -56,7 +56,7 @@ function formatDateOnlyMDT(date, options = {}) {
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleDateString('en-US', {
-        timeZone: MDT_ZONE,
+        timeZone: ARIZONA_ZONE,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -69,7 +69,7 @@ function formatDateShortMDT(date, options = {}) {
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleDateString('en-US', {
-        timeZone: MDT_ZONE,
+        timeZone: ARIZONA_ZONE,
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -82,7 +82,7 @@ function formatTimeMDT(date) {
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleTimeString('en-US', {
-        timeZone: MDT_ZONE,
+        timeZone: ARIZONA_ZONE,
         hour: '2-digit',
         minute: '2-digit'
     });
@@ -101,7 +101,7 @@ function addDaysToDateString(dateString, days) {
     return formatForInput(new Date(start.getTime() + days * 86400000));
 }
 
-// Interpret YYYY-MM-DD as midnight in America/Denver
+// Interpret YYYY-MM-DD as midnight in America/Phoenix
 function dateInputToMDT(dateString) {
     if (!dateString) return null;
     const normalized = String(dateString).split('T')[0];
@@ -158,7 +158,7 @@ function isDateInRangeMDT(date, startDate, endDate) {
 }
 
 const timezoneApi = {
-    TIMEZONE: MDT_ZONE,
+    TIMEZONE: ARIZONA_ZONE,
     getMDTParts,
     getYmdInMDT,
     toMDT,

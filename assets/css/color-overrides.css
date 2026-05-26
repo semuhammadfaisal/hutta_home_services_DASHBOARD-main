@@ -18,10 +18,6 @@
 .menu-item.active a,
 .notification-badge,
 .kpi-icon,
-.customer-avatar,
-.vendor-avatar,
-.employee-avatar,
-.order-icon,
 .project-icon,
 .payment-icon {
     color: #FFFFFF !important;
@@ -44,10 +40,6 @@
     background: #0056B8 !important; 
 }
 
-.customer-avatar,
-.vendor-avatar,
-.employee-avatar,
-.order-icon,
 .project-icon,
 .payment-icon { 
     background: #0056B8 !important; 

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -43,7 +43,7 @@
             <div class="search-box">
                 <label class="visually-hidden" for="globalDashboardSearch">Search</label>
                 <i class="fas fa-search" aria-hidden="true"></i>
-                <input id="globalDashboardSearch" type="search" name="q" autocomplete="off" placeholder="Search orders, customers, vendorsâ€¦" enterkeyhint="search" aria-label="Search orders, customers, and vendors">
+                <input id="globalDashboardSearch" type="search" name="q" autocomplete="off" placeholder="Search orders, customers, vendors…" enterkeyhint="search" aria-label="Search orders, customers, and vendors">
             </div>
         </div>
         <div class="nav-right">
@@ -333,9 +333,9 @@
                         <div class="leaderboard-item skeleton">
                             <div class="rank">1</div>
                             <div class="employee-info">
-                                <div class="employee-name">Loadingâ€¦</div>
+                                <div class="employee-name">Loading…</div>
                                 <div class="employee-meta">
-                                    <span class="order-count">â€”</span>
+                                    <span class="order-count">—</span>
                                 </div>
                             </div>
                             <div class="leaderboard-revenue">
@@ -380,9 +380,9 @@
                         <p>Highest revenue customers for the selected period.</p>
                     </div>
                     <div class="top-customers-date-filter" role="group" aria-label="Top customers date range">
-                        <input type="date" id="topCustomersStartDate" class="date-input" aria-label="Top customers start date">
+                        <input type="date" id="topCustomersStartDate" class="date-input" aria-label="Top customers start date" autocomplete="off">
                         <span class="top-customers-date-sep">to</span>
-                        <input type="date" id="topCustomersEndDate" class="date-input" aria-label="Top customers end date">
+                        <input type="date" id="topCustomersEndDate" class="date-input" aria-label="Top customers end date" autocomplete="off">
                         <button type="button" class="btn-filter" onclick="filterTopCustomers()">
                             <i class="fas fa-filter" aria-hidden="true"></i> Filter
                         </button>
@@ -405,9 +405,9 @@
                         <p class="financial-subtitle">Totals from orders in the range below (revenue minus vendor cost).</p>
                     </div>
                     <div class="financial-date-filter" role="group" aria-label="Financial date range">
-                        <input type="date" id="financialStartDate" class="date-input" aria-label="Financial range start">
+                        <input type="date" id="financialStartDate" class="date-input" aria-label="Financial range start" autocomplete="off">
                         <span class="financial-date-sep">to</span>
-                        <input type="date" id="financialEndDate" class="date-input" aria-label="Financial range end">
+                        <input type="date" id="financialEndDate" class="date-input" aria-label="Financial range end" autocomplete="off">
                         <button type="button" class="btn-filter" onclick="applyFinancialFilter()">
                             <i class="fas fa-filter" aria-hidden="true"></i> Apply
                         </button>
@@ -466,10 +466,10 @@
                 <div class="orders-search-filter">
                     <div class="orders-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="orderSearchInput" placeholder="Search orders by ID, customer, or service...">
+                        <input type="text" id="orderSearchInput" placeholder="Search orders by ID, customer, or service..." autocomplete="off">
                     </div>
                     <div class="orders-filters">
-                        <select class="filter-select" id="orderStatusFilter">
+                        <select class="filter-select" id="orderStatusFilter" autocomplete="off">
                             <option value="all">All Status</option>
                             <option value="new">New</option>
                             <option value="in-progress">In Progress</option>
@@ -477,20 +477,20 @@
                             <option value="cancelled">Cancelled</option>
                             <option value="delayed">Delayed</option>
                         </select>
-                        <select class="filter-select" id="orderPriorityFilter">
+                        <select class="filter-select" id="orderPriorityFilter" autocomplete="off">
                             <option value="all">All Priority</option>
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
                             <option value="high">High</option>
                         </select>
-                        <select class="filter-select" id="orderTypeFilter">
+                        <select class="filter-select" id="orderTypeFilter" autocomplete="off">
                             <option value="all">All Orders</option>
                             <option value="recurring">Recurring Orders</option>
                             <option value="one-time">One-Time Orders</option>
                         </select>
                     </div>
                     <div class="orders-date-filter">
-                        <select class="filter-select" id="orderDateFilter" aria-label="Filter orders by date">
+                        <select class="filter-select" id="orderDateFilter" aria-label="Filter orders by date" autocomplete="off">
                             <option value="all">All Dates</option>
                             <option value="today">Today</option>
                             <option value="this-week">This Week</option>
@@ -499,9 +499,9 @@
                             <option value="custom">Custom Date Range</option>
                         </select>
                         <div class="orders-custom-date-range" id="orderCustomDateRange" hidden>
-                            <input type="date" id="orderStartDateFilter" class="date-input" aria-label="Order filter start date">
+                            <input type="date" id="orderStartDateFilter" class="date-input" aria-label="Order filter start date" autocomplete="off">
                             <span class="orders-date-separator">to</span>
-                            <input type="date" id="orderEndDateFilter" class="date-input" aria-label="Order filter end date">
+                            <input type="date" id="orderEndDateFilter" class="date-input" aria-label="Order filter end date" autocomplete="off">
                         </div>
                     </div>
                 </div>
@@ -524,6 +524,19 @@
             <!-- Orders Table -->
             <div class="orders-table-container">
                 <table class="orders-table">
+                    <colgroup>
+                        <col class="orders-col-order">
+                        <col class="orders-col-customer">
+                        <col class="orders-col-service">
+                        <col class="orders-col-vendor">
+                        <col class="orders-col-status">
+                        <col class="orders-col-priority">
+                        <col class="orders-col-date">
+                        <col class="orders-col-revenue">
+                        <col class="orders-col-cost">
+                        <col class="orders-col-profit">
+                        <col class="orders-col-actions">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Order</th>
@@ -563,43 +576,43 @@
                     <h3>Order Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
-                            <label>Order ID:</label>
+                            <span class="display-label">Order ID:</span>
                             <span id="detailOrderId">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Status:</label>
+                            <span class="display-label">Status:</span>
                             <span id="detailOrderStatus">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Priority:</label>
+                            <span class="display-label">Priority:</span>
                             <span id="detailOrderPriority">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Revenue:</label>
+                            <span class="display-label">Revenue:</span>
                             <span id="detailOrderRevenue">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Cost:</label>
+                            <span class="display-label">Cost:</span>
                             <span id="detailOrderCost">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Profit:</label>
+                            <span class="display-label">Profit:</span>
                             <span id="detailOrderProfit">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Service:</label>
+                            <span class="display-label">Service:</span>
                             <span id="detailOrderService">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Vendor:</label>
+                            <span class="display-label">Vendor:</span>
                             <span id="detailOrderVendor">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Start Date:</label>
+                            <span class="display-label">Start Date:</span>
                             <span id="detailOrderStartDate">-</span>
                         </div>
                         <div class="info-item">
-                            <label>End Date:</label>
+                            <span class="display-label">End Date:</span>
                             <span id="detailOrderEndDate">-</span>
                         </div>
                     </div>
@@ -609,19 +622,19 @@
                     <h3>Customer Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
-                            <label>Name:</label>
+                            <span class="display-label">Name:</span>
                             <span id="detailOrderCustomerName">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Email:</label>
+                            <span class="display-label">Email:</span>
                             <span id="detailOrderCustomerEmail">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Phone:</label>
+                            <span class="display-label">Phone:</span>
                             <span id="detailOrderCustomerPhone">-</span>
                         </div>
                         <div class="info-item full-width">
-                            <label>Address:</label>
+                            <span class="display-label">Address:</span>
                             <span id="detailOrderCustomerAddress">-</span>
                         </div>
                     </div>
@@ -630,11 +643,11 @@
                 <div class="detail-info-card">
                     <h3>Description & Notes</h3>
                     <div class="info-item full-width">
-                        <label>Description:</label>
+                        <span class="display-label">Description:</span>
                         <p id="detailOrderDescription" style="margin-top: 8px; line-height: 1.6;">-</p>
                     </div>
                     <div class="info-item full-width" style="margin-top: 16px;">
-                        <label>Notes:</label>
+                        <span class="display-label">Notes:</span>
                         <p id="detailOrderNotes" style="margin-top: 8px; line-height: 1.6;">-</p>
                     </div>
                 </div>
@@ -667,15 +680,15 @@
                 <div class="customers-search-filter">
                     <div class="customers-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="customersToolbarSearchInput" placeholder="Search customers by name, email, or phone...">
+                        <input type="text" id="customersToolbarSearchInput" placeholder="Search customers by name, email, or phone..." autocomplete="off">
                     </div>
                     <div class="customers-filters">
-                        <select class="filter-select" id="customerTypeFilter">
+                        <select class="filter-select" id="customerTypeFilter" autocomplete="off">
                             <option value="all">All Types</option>
                             <option value="recurring">Recurring</option>
                             <option value="one-time">One-time</option>
                         </select>
-                        <select class="filter-select" id="customerStatusFilter">
+                        <select class="filter-select" id="customerStatusFilter" autocomplete="off">
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
@@ -697,6 +710,16 @@
             <!-- Customers Table -->
             <div class="customers-table-container">
                 <table class="customers-table">
+                    <colgroup>
+                        <col class="customers-col-customer">
+                        <col class="customers-col-email">
+                        <col class="customers-col-phone">
+                        <col class="customers-col-city">
+                        <col class="customers-col-type">
+                        <col class="customers-col-status">
+                        <col class="customers-col-orders">
+                        <col class="customers-col-actions">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Customer</th>
@@ -731,23 +754,23 @@
                     <h3>Customer Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
-                            <label>Email:</label>
+                            <span class="display-label">Email:</span>
                             <span id="profileEmail">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Phone:</label>
+                            <span class="display-label">Phone:</span>
                             <span id="profilePhone">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Address:</label>
+                            <span class="display-label">Address:</span>
                             <span id="profileAddress">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Type:</label>
+                            <span class="display-label">Type:</span>
                             <span id="profileType">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Status:</label>
+                            <span class="display-label">Status:</span>
                             <span id="profileStatus">-</span>
                         </div>
                     </div>
@@ -825,10 +848,10 @@
                 <div class="vendors-search-filter">
                     <div class="vendors-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="vendorSearchInput" placeholder="Search vendors by name, email, or category...">
+                        <input type="text" id="vendorSearchInput" placeholder="Search vendors by name, email, or category..." autocomplete="off">
                     </div>
                     <div class="vendors-filters">
-                        <select class="filter-select" id="vendorCategoryFilter">
+                        <select class="filter-select" id="vendorCategoryFilter" autocomplete="off">
                             <option value="all">All Categories</option>
                             <option value="electrical">Electrical</option>
                             <option value="plumbing">Plumbing</option>
@@ -838,7 +861,7 @@
                             <option value="painting">Painting</option>
                             <option value="cleaning">Cleaning</option>
                         </select>
-                        <select class="filter-select" id="vendorStatusFilter">
+                        <select class="filter-select" id="vendorStatusFilter" autocomplete="off">
                             <option value="all">All Status</option>
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
@@ -860,6 +883,15 @@
             <!-- Vendors Table -->
             <div class="vendors-table-container">
                 <table class="vendors-table">
+                    <colgroup>
+                        <col class="vendors-col-vendor">
+                        <col class="vendors-col-email">
+                        <col class="vendors-col-phone">
+                        <col class="vendors-col-category">
+                        <col class="vendors-col-rating">
+                        <col class="vendors-col-status">
+                        <col class="vendors-col-actions">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Vendor</th>
@@ -892,31 +924,31 @@
                     <h3>Vendor Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
-                            <label>Email:</label>
+                            <span class="display-label">Email:</span>
                             <span id="detailVendorEmail">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Phone:</label>
+                            <span class="display-label">Phone:</span>
                             <span id="detailVendorPhone">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Category:</label>
+                            <span class="display-label">Category:</span>
                             <span id="detailVendorCategory">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Rating:</label>
+                            <span class="display-label">Rating:</span>
                             <span id="detailVendorRating">-</span>
                         </div>
                         <div class="info-item full-width">
-                            <label>Address:</label>
+                            <span class="display-label">Address:</span>
                             <span id="detailVendorAddress">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Status:</label>
+                            <span class="display-label">Status:</span>
                             <span id="detailVendorStatus">-</span>
                         </div>
                         <div class="info-item full-width">
-                            <label>Notes:</label>
+                            <span class="display-label">Notes:</span>
                             <span id="detailVendorNotes">-</span>
                         </div>
                     </div>
@@ -973,10 +1005,10 @@
                 <div class="employees-search-filter">
                     <div class="employees-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="employeeSearchInput" placeholder="Search employees by name, email, or role...">
+                        <input type="text" id="employeeSearchInput" placeholder="Search employees by name, email, or role..." autocomplete="off">
                     </div>
                     <div class="employees-filters">
-                        <select class="filter-select" id="employeeRoleFilter">
+                        <select class="filter-select" id="employeeRoleFilter" autocomplete="off">
                             <option value="all">All Roles</option>
                             <option value="electrician">Electrician</option>
                             <option value="plumber">Plumber</option>
@@ -986,7 +1018,7 @@
                             <option value="supervisor">Supervisor</option>
                             <option value="general-worker">General Worker</option>
                         </select>
-                        <select class="filter-select" id="employeeStatusFilter">
+                        <select class="filter-select" id="employeeStatusFilter" autocomplete="off">
                             <option value="all">All Status</option>
                             <option value="available">Available</option>
                             <option value="busy">Busy</option>
@@ -1010,6 +1042,16 @@
             <!-- Employees Table -->
             <div class="employees-table-container">
                 <table class="employees-table">
+                    <colgroup>
+                        <col class="employees-col-employee">
+                        <col class="employees-col-email">
+                        <col class="employees-col-phone">
+                        <col class="employees-col-role">
+                        <col class="employees-col-department">
+                        <col class="employees-col-status">
+                        <col class="employees-col-hire-date">
+                        <col class="employees-col-actions">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Employee</th>
@@ -1043,35 +1085,35 @@
                     <h3>Employee Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
-                            <label>Email:</label>
+                            <span class="display-label">Email:</span>
                             <span id="detailEmployeeEmail">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Phone:</label>
+                            <span class="display-label">Phone:</span>
                             <span id="detailEmployeePhone">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Role:</label>
+                            <span class="display-label">Role:</span>
                             <span id="detailEmployeeRole">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Department:</label>
+                            <span class="display-label">Department:</span>
                             <span id="detailEmployeeDepartment">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Status:</label>
+                            <span class="display-label">Status:</span>
                             <span id="detailEmployeeStatus">-</span>
                         </div>
                         <div class="info-item">
-                            <label>Hire Date:</label>
+                            <span class="display-label">Hire Date:</span>
                             <span id="detailEmployeeHireDate">-</span>
                         </div>
                         <div class="info-item full-width">
-                            <label>Address:</label>
+                            <span class="display-label">Address:</span>
                             <span id="detailEmployeeAddress">-</span>
                         </div>
                         <div class="info-item full-width">
-                            <label>Skills:</label>
+                            <span class="display-label">Skills:</span>
                             <span id="detailEmployeeSkills">-</span>
                         </div>
                     </div>
@@ -1081,23 +1123,23 @@
                     <h3><i class="fas fa-chart-line"></i> Performance Stats</h3>
                     <div class="info-grid">
                         <div class="info-item">
-                            <label>Total Orders:</label>
+                            <span class="display-label">Total Orders:</span>
                             <span id="employeeTotalOrders" style="font-weight: 600; color: #3b82f6;">0</span>
                         </div>
                         <div class="info-item">
-                            <label>Active Orders:</label>
+                            <span class="display-label">Active Orders:</span>
                             <span id="employeeActiveOrders" style="font-weight: 600; color: #f59e0b;">0</span>
                         </div>
                         <div class="info-item">
-                            <label>Completed Orders:</label>
+                            <span class="display-label">Completed Orders:</span>
                             <span id="employeeCompletedOrders" style="font-weight: 600; color: #10b981;">0</span>
                         </div>
                         <div class="info-item">
-                            <label>Total Revenue:</label>
+                            <span class="display-label">Total Revenue:</span>
                             <span id="employeeTotalRevenue" style="font-weight: 600; color: #3b82f6;">$0</span>
                         </div>
                         <div class="info-item">
-                            <label>Total Profit:</label>
+                            <span class="display-label">Total Profit:</span>
                             <span id="employeeTotalProfit" style="font-weight: 600; color: #10b981;">$0</span>
                         </div>
                     </div>
@@ -1146,7 +1188,7 @@
                 </div>
                 <div class="pipeline-search-bar">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)">
+                    <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)" autocomplete="off">
                     <button class="btn-clear-search" onclick="clearPipelineSearch()" style="display: none;">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1167,10 +1209,10 @@
                 <div class="payments-search-filter">
                     <div class="payments-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="paymentSearchInput" placeholder="Search payments by ID, customer, or transaction...">
+                        <input type="text" id="paymentSearchInput" placeholder="Search payments by ID, customer, or transaction..." autocomplete="off">
                     </div>
                     <div class="payments-filters">
-                        <select class="filter-select" id="paymentStatusFilter">
+                        <select class="filter-select" id="paymentStatusFilter" autocomplete="off">
                             <option value="all">All Status</option>
                             <option value="bidding">Bidding</option>
                             <option value="pending">Pending</option>
@@ -1179,7 +1221,7 @@
                             <option value="refunded">Refunded</option>
                             <option value="cancelled">Cancelled</option>
                         </select>
-                        <select class="filter-select" id="paymentMethodFilter">
+                        <select class="filter-select" id="paymentMethodFilter" autocomplete="off">
                             <option value="all">All Methods</option>
                             <option value="cash">Cash</option>
                             <option value="credit-card">Credit Card</option>
@@ -1205,6 +1247,17 @@
             <!-- Payments Table -->
             <div class="payments-table-container">
                 <table class="payments-table">
+                    <colgroup>
+                        <col class="payments-col-payment">
+                        <col class="payments-col-invoice">
+                        <col class="payments-col-customer">
+                        <col class="payments-col-amount">
+                        <col class="payments-col-method">
+                        <col class="payments-col-status">
+                        <col class="payments-col-date">
+                        <col class="payments-col-reference">
+                        <col class="payments-col-actions">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Payment</th>
@@ -1374,23 +1427,23 @@
                             <div class="forecast-form">
                                 <div class="form-group">
                                     <label for="avgJobsPerMonth">Average Jobs per Month</label>
-                                    <input type="number" id="avgJobsPerMonth" step="0.1" value="10">
+                                    <input type="number" id="avgJobsPerMonth" step="0.1" value="10" autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <label for="avgRevenuePerJob">Average Revenue per Job ($)</label>
-                                    <input type="number" id="avgRevenuePerJob" step="100" value="5000">
+                                    <input type="number" id="avgRevenuePerJob" step="100" value="5000" autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <label for="avgMarkupPercent">Average Markup (%)</label>
-                                    <input type="number" id="avgMarkupPercent" step="1" value="25">
+                                    <input type="number" id="avgMarkupPercent" step="1" value="25" autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <label for="monthlyRecurringRevenue">Monthly Recurring Revenue ($)</label>
-                                    <input type="number" id="monthlyRecurringRevenue" step="100" value="0">
+                                    <input type="number" id="monthlyRecurringRevenue" step="100" value="0" autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <label for="operatingExpensePercent">Operating Expense (% of Revenue)</label>
-                                    <input type="number" id="operatingExpensePercent" step="1" value="15">
+                                    <input type="number" id="operatingExpensePercent" step="1" value="15" autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <button class="btn-primary" onclick="saveForecastInputs()"><i class="fas fa-calculator"></i> Calculate Forecast</button>
@@ -1409,15 +1462,15 @@
                                     </div>
                                     <div class="scenario-metrics">
                                         <div class="metric">
-                                            <label>Total Revenue</label>
+                                            <span class="display-label">Total Revenue</span>
                                             <div class="value" id="conservativeRevenue">$0</div>
                                         </div>
                                         <div class="metric">
-                                            <label>Total Net Profit</label>
+                                            <span class="display-label">Total Net Profit</span>
                                             <div class="value" id="conservativeProfit">$0</div>
                                         </div>
                                         <div class="metric">
-                                            <label>Ending Cash</label>
+                                            <span class="display-label">Ending Cash</span>
                                             <div class="value" id="conservativeCash">$0</div>
                                         </div>
                                     </div>
@@ -1430,15 +1483,15 @@
                                     </div>
                                     <div class="scenario-metrics">
                                         <div class="metric">
-                                            <label>Total Revenue</label>
+                                            <span class="display-label">Total Revenue</span>
                                             <div class="value" id="expectedRevenue">$0</div>
                                         </div>
                                         <div class="metric">
-                                            <label>Total Net Profit</label>
+                                            <span class="display-label">Total Net Profit</span>
                                             <div class="value" id="expectedProfit">$0</div>
                                         </div>
                                         <div class="metric">
-                                            <label>Ending Cash</label>
+                                            <span class="display-label">Ending Cash</span>
                                             <div class="value" id="expectedCash">$0</div>
                                         </div>
                                     </div>
@@ -1451,15 +1504,15 @@
                                     </div>
                                     <div class="scenario-metrics">
                                         <div class="metric">
-                                            <label>Total Revenue</label>
+                                            <span class="display-label">Total Revenue</span>
                                             <div class="value" id="aggressiveRevenue">$0</div>
                                         </div>
                                         <div class="metric">
-                                            <label>Total Net Profit</label>
+                                            <span class="display-label">Total Net Profit</span>
                                             <div class="value" id="aggressiveProfit">$0</div>
                                         </div>
                                         <div class="metric">
-                                            <label>Ending Cash</label>
+                                            <span class="display-label">Ending Cash</span>
                                             <div class="value" id="aggressiveCash">$0</div>
                                         </div>
                                     </div>
@@ -1537,7 +1590,7 @@
                             </div>
                             
                             <div class="total-profit-card">
-                                <label>Total Net Profit (Completed & Paid Jobs)</label>
+                                <span class="display-label">Total Net Profit (Completed & Paid Jobs)</span>
                                 <div class="total-value" id="totalNetProfit">$0.00</div>
                             </div>
                         </div>
@@ -1556,22 +1609,22 @@
                             <div class="tracking-form">
                                 <div class="form-group">
                                     <label for="totalRetainedEarnings">Total Retained Earnings ($)</label>
-                                    <input type="number" id="totalRetainedEarnings" step="0.01" value="0">
+                                    <input type="number" id="totalRetainedEarnings" step="0.01" value="0" autocomplete="off">
                                     <small>Profits kept in the business</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="capitalReinvested">Capital Reinvested ($)</label>
-                                    <input type="number" id="capitalReinvested" step="0.01" value="0">
+                                    <input type="number" id="capitalReinvested" step="0.01" value="0" autocomplete="off">
                                     <small>Money put back into operations</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="investmentAccountGrowth">Investment Account Growth ($)</label>
-                                    <input type="number" id="investmentAccountGrowth" step="0.01" value="0">
+                                    <input type="number" id="investmentAccountGrowth" step="0.01" value="0" autocomplete="off">
                                     <small>External investments value</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="equipmentAssetsOwned">Equipment / Assets Owned ($)</label>
-                                    <input type="number" id="equipmentAssetsOwned" step="0.01" value="0">
+                                    <input type="number" id="equipmentAssetsOwned" step="0.01" value="0" autocomplete="off">
                                     <small>Value of owned equipment and assets</small>
                                 </div>
                                 <div class="form-group">
@@ -1586,7 +1639,7 @@
                                 <i class="fas fa-trophy"></i>
                             </div>
                             <div class="wealth-content">
-                                <label>Total Wealth Position</label>
+                                <span class="display-label">Total Wealth Position</span>
                                 <div class="wealth-value" id="totalWealthValue">$0.00</div>
                                 <p>Allocated wealth + tracked assets</p>
                             </div>
@@ -1623,12 +1676,12 @@
                                 <div class="exec-kpi-card">
                                     <div class="kpi-label">Avg Days to Get Paid</div>
                                     <div class="kpi-value" id="avgDaysToGetPaid">0 days</div>
-                                    <div class="kpi-desc">Job Created â†’ Payment Received</div>
+                                    <div class="kpi-desc">Job Created → Payment Received</div>
                                 </div>
                                 <div class="exec-kpi-card">
                                     <div class="kpi-label">Avg Contractor Payout Delay</div>
                                     <div class="kpi-value" id="avgPayoutDelay">0 days</div>
-                                    <div class="kpi-desc">Payment Received â†’ Contractor Paid</div>
+                                    <div class="kpi-desc">Payment Received → Contractor Paid</div>
                                 </div>
                                 <div class="exec-kpi-card">
                                     <div class="kpi-label">Revenue Per Client</div>
@@ -1671,17 +1724,17 @@
                             <h3>Business Valuation</h3>
                             <div class="valuation-formula">
                                 <div class="formula-item">
-                                    <label>EBITDA (Net Profit)</label>
+                                    <span class="display-label">EBITDA (Net Profit)</span>
                                     <div class="formula-value" id="ebitdaValue">$0</div>
                                 </div>
-                                <div class="formula-operator">Ã—</div>
+                                <div class="formula-operator">×</div>
                                 <div class="formula-item">
-                                    <label>Valuation Multiple</label>
-                                    <input type="number" id="valuationMultiple" step="0.1" value="3" onchange="updateValuationMultiple()" style="width: 80px; padding: 5px; font-size: 1.2rem; text-align: center;">
+                                    <label for="valuationMultiple">Valuation Multiple</label>
+                                    <input type="number" id="valuationMultiple" step="0.1" value="3" onchange="updateValuationMultiple()" style="width: 80px; padding: 5px; font-size: 1.2rem; text-align: center;" autocomplete="off">
                                 </div>
                                 <div class="formula-operator">=</div>
                                 <div class="formula-item result">
-                                    <label>Business Value</label>
+                                    <span class="display-label">Business Value</span>
                                     <div class="formula-value" id="businessValue">$0</div>
                                 </div>
                             </div>
@@ -1735,8 +1788,8 @@
                                         <div class="overview-label">Debt Leverage Ratio</div>
                                         <div class="overview-value" id="execDebtLeverage">0.00</div>
                                         <div class="debt-input-group">
-                                            <label>Total Debt: $</label>
-                                            <input type="number" id="totalDebtInput" step="1000" value="0" onchange="updateTotalDebt()" style="width: 120px; padding: 5px;">
+                                            <label for="totalDebtInput">Total Debt: $</label>
+                                            <input type="number" id="totalDebtInput" step="1000" value="0" onchange="updateTotalDebt()" style="width: 120px; padding: 5px;" autocomplete="off">
                                         </div>
                                     </div>
                                 </div>
@@ -1751,23 +1804,23 @@
                         <h2><i class="fas fa-chart-area"></i> Weekly Cash Flow Snapshot</h2>
                         <div class="cash-flow-grid">
                             <div class="cash-flow-item">
-                                <label>Total Outstanding Invoices</label>
+                                <span class="display-label">Total Outstanding Invoices</span>
                                 <div class="value" id="outstandingInvoices">$0.00</div>
                             </div>
                             <div class="cash-flow-item">
-                                <label>Total Pending Contractor Payouts</label>
+                                <span class="display-label">Total Pending Contractor Payouts</span>
                                 <div class="value" id="pendingContractorPayouts">$0.00</div>
                             </div>
                             <div class="cash-flow-item positive">
-                                <label>Net Projected Cash in 30 Days</label>
+                                <span class="display-label">Net Projected Cash in 30 Days</span>
                                 <div class="value" id="netProjected30">$0.00</div>
                             </div>
                             <div class="cash-flow-item positive">
-                                <label>Net Projected Cash in 60 Days</label>
+                                <span class="display-label">Net Projected Cash in 60 Days</span>
                                 <div class="value" id="netProjected60">$0.00</div>
                             </div>
                             <div class="cash-flow-item">
-                                <label>Break-Even Monthly Overhead</label>
+                                <span class="display-label">Break-Even Monthly Overhead</span>
                                 <div class="value" id="breakEvenOverhead">$0.00</div>
                             </div>
                         </div>
@@ -1788,36 +1841,36 @@
             <div class="reports-filter-bar">
                 <div class="report-search">
                     <i class="fas fa-search"></i>
-                    <input id="reportSearchInput" type="search" placeholder="Search reports, KPIs, customers..." oninput="filterReports()" aria-label="Search reports">
+                    <input id="reportSearchInput" type="search" placeholder="Search reports, KPIs, customers..." oninput="filterReports()" aria-label="Search reports" autocomplete="off">
                 </div>
                 <div class="report-filter-grid">
                     <label>
                         <span>Start</span>
-                        <input type="date" id="reportStartDate">
+                        <input type="date" id="reportStartDate" autocomplete="off">
                     </label>
                     <label>
                         <span>End</span>
-                        <input type="date" id="reportEndDate">
+                        <input type="date" id="reportEndDate" autocomplete="off">
                     </label>
                     <label>
                         <span>Customer</span>
-                        <select id="reportCustomerFilter"><option value="">All customers</option></select>
+                        <select id="reportCustomerFilter" autocomplete="off"><option value="">All customers</option></select>
                     </label>
                     <label>
                         <span>Technician</span>
-                        <select id="reportTechnicianFilter"><option value="">All technicians</option></select>
+                        <select id="reportTechnicianFilter" autocomplete="off"><option value="">All technicians</option></select>
                     </label>
                     <label>
                         <span>Service</span>
-                        <select id="reportServiceFilter"><option value="">All services</option></select>
+                        <select id="reportServiceFilter" autocomplete="off"><option value="">All services</option></select>
                     </label>
                     <label>
                         <span>Status</span>
-                        <select id="reportStatusFilter"><option value="">All statuses</option></select>
+                        <select id="reportStatusFilter" autocomplete="off"><option value="">All statuses</option></select>
                     </label>
                     <label>
                         <span>Location</span>
-                        <select id="reportLocationFilter"><option value="">All locations</option></select>
+                        <select id="reportLocationFilter" autocomplete="off"><option value="">All locations</option></select>
                     </label>
                 </div>
                 <div class="report-filter-actions">
@@ -1855,6 +1908,14 @@
             
             <div class="users-table-container">
                 <table class="users-table">
+                    <colgroup>
+                        <col class="users-col-user">
+                        <col class="users-col-email">
+                        <col class="users-col-role">
+                        <col class="users-col-signed-up">
+                        <col class="users-col-status">
+                        <col class="users-col-actions">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>User</th>
@@ -1888,14 +1949,14 @@
                     <div class="settings-grid">
                         <div class="setting-item">
                             <label for="settingsTheme">Theme</label>
-                            <select id="settingsTheme">
+                            <select id="settingsTheme" autocomplete="off">
                                 <option value="light">Light</option>
                                 <option value="dark">Dark</option>
                             </select>
                         </div>
                         <div class="setting-item">
                             <label for="settingsLanguage">Language</label>
-                            <select id="settingsLanguage">
+                            <select id="settingsLanguage" autocomplete="off">
                                 <option value="en">English</option>
                                 <option value="es">Spanish</option>
                                 <option value="fr">French</option>
@@ -1903,11 +1964,11 @@
                         </div>
                         <div class="setting-item">
                             <label for="settingsTimezone">Timezone</label>
-                            <select id="settingsTimezone">
+                            <select id="settingsTimezone" autocomplete="off">
                                 <option value="UTC">UTC</option>
                                 <option value="America/New_York">Eastern Time</option>
                                 <option value="America/Chicago">Central Time</option>
-                                <option value="America/Denver" selected>Mountain Time (MDT)</option>
+                                <option value="America/Phoenix" selected>Arizona Time (MST, GMT-7)</option>
                                 <option value="America/Los_Angeles">Pacific Time</option>
                             </select>
                         </div>
@@ -1948,7 +2009,7 @@
                     <div class="settings-grid">
                         <div class="setting-item">
                             <label for="dashboardItemsPerPage">Items Per Page</label>
-                            <select id="dashboardItemsPerPage">
+                            <select id="dashboardItemsPerPage" autocomplete="off">
                                 <option value="5">5</option>
                                 <option value="10">10</option>
                                 <option value="25">25</option>
@@ -1957,7 +2018,7 @@
                         </div>
                         <div class="setting-item">
                             <label for="dashboardDefaultView">Default View</label>
-                            <select id="dashboardDefaultView">
+                            <select id="dashboardDefaultView" autocomplete="off">
                                 <option value="table">Table</option>
                                 <option value="grid">Grid</option>
                             </select>
@@ -1971,7 +2032,7 @@
                         </div>
                         <div class="setting-item">
                             <label for="dashboardRefreshInterval">Refresh Interval (seconds)</label>
-                            <input type="number" id="dashboardRefreshInterval" min="10" max="300" value="30">
+                            <input type="number" id="dashboardRefreshInterval" min="10" max="300" value="30" autocomplete="off">
                         </div>
                     </div>
                 </div>
@@ -1982,23 +2043,23 @@
                     <div class="settings-grid">
                         <div class="setting-item full-width">
                             <label for="companyName">Company Name</label>
-                            <input type="text" id="companyName" placeholder="Hutta Home Services">
+                            <input type="text" id="companyName" placeholder="Hutta Home Services" autocomplete="name">
                         </div>
                         <div class="setting-item full-width">
                             <label for="companyAddress">Address</label>
-                            <textarea id="companyAddress" rows="3" placeholder="Company address..."></textarea>
+                            <textarea id="companyAddress" rows="3" placeholder="Company address..." autocomplete="street-address"></textarea>
                         </div>
                         <div class="setting-item">
                             <label for="companyPhone">Phone</label>
-                            <input type="tel" id="companyPhone" placeholder="+1 (555) 123-4567">
+                            <input type="tel" id="companyPhone" placeholder="+1 (555) 123-4567" autocomplete="tel">
                         </div>
                         <div class="setting-item">
                             <label for="companyEmail">Email</label>
-                            <input type="email" id="companyEmail" placeholder="info@company.com">
+                            <input type="email" id="companyEmail" placeholder="info@company.com" autocomplete="email">
                         </div>
                         <div class="setting-item full-width">
                             <label for="companyWebsite">Website</label>
-                            <input type="url" id="companyWebsite" placeholder="https://www.company.com">
+                            <input type="url" id="companyWebsite" placeholder="https://www.company.com" autocomplete="url">
                         </div>
                     </div>
                 </div>
@@ -2139,7 +2200,7 @@
                 <form id="orderForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="customerSelect">Select Customer</label>
+                            <label for="customerSearchInput">Select Customer</label>
                             <div class="searchable-select">
                                 <input type="text" id="customerSearchInput" placeholder="-- Select Existing Customer --" autocomplete="off" onclick="toggleCustomerDropdown(event)">
                                 <div class="select-dropdown" id="customerSelectDropdown">
@@ -2162,22 +2223,22 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="customerName">Customer Name *</label>
-                                <input type="text" id="customerName" required>
+                                <input type="text" id="customerName" required autocomplete="name">
                             </div>
                             <div class="form-group">
                                 <label for="customerEmail">Customer Email</label>
-                                <input type="email" id="customerEmail">
+                                <input type="email" id="customerEmail" autocomplete="email">
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="customerPhone">Phone</label>
-                                <input type="tel" id="customerPhone">
+                                <input type="tel" id="customerPhone" autocomplete="tel">
                             </div>
                             <div class="form-group">
                                 <label for="customerAddress">Address</label>
-                                <input type="text" id="customerAddress">
+                                <input type="text" id="customerAddress" autocomplete="street-address">
                             </div>
                         </div>
                     </div>
@@ -2185,33 +2246,33 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="service">Service *</label>
-                            <input type="text" id="service" required>
+                            <input type="text" id="service" required autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="amount">Revenue *</label>
-                            <input type="number" id="amount" step="0.01" required oninput="calculateProfit()">
+                            <input type="number" id="amount" step="0.01" required oninput="calculateProfit()" autocomplete="off">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="vendorCost">Cost</label>
-                            <input type="number" id="vendorCost" step="0.01" oninput="calculateProfit()">
+                            <input type="number" id="vendorCost" step="0.01" oninput="calculateProfit()" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="processingFee">Processing Fee (%)</label>
-                            <input type="number" id="processingFee" step="0.01" min="0" max="100" placeholder="0" oninput="calculateProfit()">
+                            <input type="number" id="processingFee" step="0.01" min="0" max="100" placeholder="0" oninput="calculateProfit()" autocomplete="off">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="profit">Profit</label>
-                            <input type="number" id="profit" step="0.01" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+                            <input type="number" id="profit" step="0.01" readonly style="background-color: #f3f4f6; cursor: not-allowed;" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="orderType">Order Type *</label>
-                            <select id="orderType" required onchange="toggleRecurringFields()">
+                            <select id="orderType" required onchange="toggleRecurringFields()" autocomplete="off">
                                 <option value="one-time">One Time Order</option>
                                 <option value="recurring">Recurring Order</option>
                             </select>
@@ -2221,18 +2282,18 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="startDate">Start Date *</label>
-                            <input type="date" id="startDate" required>
+                            <input type="date" id="startDate" required autocomplete="off">
                         </div>
                         <div class="form-group" id="endDateGroup">
                             <label for="endDate">End Date</label>
-                            <input type="date" id="endDate">
+                            <input type="date" id="endDate" autocomplete="off">
                         </div>
                     </div>
                     
                     <div id="recurringFields" style="display: none;">
                         <div class="form-group">
                             <label for="recurringFrequency">Recurring Frequency *</label>
-                            <select id="recurringFrequency" onchange="toggleCustomDaysField()">
+                            <select id="recurringFrequency" onchange="toggleCustomDaysField()" autocomplete="off">
                                 <option value="weekly">Weekly</option>
                                 <option value="bi-weekly">Bi-Weekly</option>
                                 <option value="monthly">Monthly</option>
@@ -2243,18 +2304,18 @@
                         
                         <div class="form-group" id="customDaysGroup" style="display: none;">
                             <label for="recurringCustomDays">Repeat Every (Days) *</label>
-                            <input type="number" id="recurringCustomDays" min="1" max="365" placeholder="e.g., 3, 4, 5">
+                            <input type="number" id="recurringCustomDays" min="1" max="365" placeholder="e.g., 3, 4, 5" autocomplete="off">
                             <small style="color: #6b7280; font-size: 12px;">Enter number of days between occurrences (1-365)</small>
                         </div>
                         
                         <div class="form-group">
                             <label for="recurringEndDate">Recurring End Date</label>
-                            <input type="date" id="recurringEndDate">
+                            <input type="date" id="recurringEndDate" autocomplete="off">
                         </div>
                         
                         <div class="form-group">
                             <label for="recurringNotes">Recurring Notes</label>
-                            <textarea id="recurringNotes" rows="2" placeholder="Notes about recurring schedule..."></textarea>
+                            <textarea id="recurringNotes" rows="2" placeholder="Notes about recurring schedule..." autocomplete="off"></textarea>
                         </div>
                     </div>
                     
@@ -2262,7 +2323,7 @@
                     <div id="customerAddressSelection" style="display: none;">
                         <div class="form-group">
                             <label for="customerAddressSelect">Select Address for Order</label>
-                            <select id="customerAddressSelect">
+                            <select id="customerAddressSelect" autocomplete="street-address">
                                 <option value="">Select an address...</option>
                             </select>
                         </div>
@@ -2271,13 +2332,13 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="vendor">Vendor</label>
-                            <select id="vendor">
+                            <select id="vendor" autocomplete="off">
                                 <option value="">Select Vendor</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="employee">Assign Employee</label>
-                            <select id="employee">
+                            <select id="employee" autocomplete="off">
                                 <option value="">Select Employee</option>
                             </select>
                         </div>
@@ -2286,7 +2347,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="status">Status</label>
-                            <select id="status">
+                            <select id="status" autocomplete="off">
                                 <option value="new">New</option>
                                 <option value="in-progress">In Progress</option>
                                 <option value="completed">Completed</option>
@@ -2296,7 +2357,7 @@
                         </div>
                         <div class="form-group">
                             <label for="priority">Priority</label>
-                            <select id="priority">
+                            <select id="priority" autocomplete="off">
                                 <option value="low">Low</option>
                                 <option value="medium" selected>Medium</option>
                                 <option value="high">High</option>
@@ -2306,12 +2367,12 @@
                     
                     <div class="form-group">
                         <label for="description">Description</label>
-                        <textarea id="description" rows="3"></textarea>
+                        <textarea id="description" rows="3" autocomplete="off"></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label for="notes">Notes</label>
-                        <textarea id="notes" rows="2"></textarea>
+                        <textarea id="notes" rows="2" autocomplete="off"></textarea>
                     </div>
                     
                     <div class="form-group" style="grid-column: 1 / -1;">
@@ -2345,20 +2406,20 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="paymentCustomer">Customer *</label>
-                            <select id="paymentCustomer" required>
+                            <select id="paymentCustomer" required autocomplete="off">
                                 <option value="">Select Customer</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="paymentAmount">Amount *</label>
-                            <input type="number" id="paymentAmount" step="0.01" required>
+                            <input type="number" id="paymentAmount" step="0.01" required autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="paymentMethod">Payment Method</label>
-                            <select id="paymentMethod">
+                            <select id="paymentMethod" autocomplete="off">
                                 <option value="">Not Set</option>
                                 <option value="cash">Cash</option>
                                 <option value="credit-card">Credit Card</option>
@@ -2370,7 +2431,7 @@
                         </div>
                         <div class="form-group">
                             <label for="paymentStatus">Status</label>
-                            <select id="paymentStatus">
+                            <select id="paymentStatus" autocomplete="off">
                                 <option value="bidding">Bidding</option>
                                 <option value="pending" selected>Pending</option>
                                 <option value="received">Received</option>
@@ -2385,7 +2446,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="paymentOrder">Related Order</label>
-                            <select id="paymentOrder">
+                            <select id="paymentOrder" autocomplete="off">
                                 <option value="">Select Order (Optional)</option>
                             </select>
                         </div>
@@ -2394,40 +2455,40 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="paymentDate">Payment Date *</label>
-                            <input type="date" id="paymentDate" required>
+                            <input type="date" id="paymentDate" required autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="paymentDueDate">Due Date</label>
-                            <input type="date" id="paymentDueDate">
+                            <input type="date" id="paymentDueDate" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="paymentInvoiceNumber">Invoice Number</label>
-                            <input type="text" id="paymentInvoiceNumber" placeholder="000000">
+                            <input type="text" id="paymentInvoiceNumber" placeholder="000000" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="paymentTransactionId">Transaction ID</label>
-                            <input type="text" id="paymentTransactionId">
+                            <input type="text" id="paymentTransactionId" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="paymentReceiptNumber">Receipt Number</label>
-                            <input type="text" id="paymentReceiptNumber">
+                            <input type="text" id="paymentReceiptNumber" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="paymentDescription">Description</label>
-                        <input type="text" id="paymentDescription" placeholder="Payment for services...">
+                        <input type="text" id="paymentDescription" placeholder="Payment for services..." autocomplete="off">
                     </div>
                     
                     <div class="form-group">
                         <label for="paymentNotes">Notes</label>
-                        <textarea id="paymentNotes" rows="3"></textarea>
+                        <textarea id="paymentNotes" rows="3" autocomplete="off"></textarea>
                     </div>
                 </form>
             </div>
@@ -2454,22 +2515,22 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="employeeName">Employee Name *</label>
-                            <input type="text" id="employeeName" required>
+                            <input type="text" id="employeeName" required autocomplete="name">
                         </div>
                         <div class="form-group">
                             <label for="employeeEmail">Email</label>
-                            <input type="email" id="employeeEmail">
+                            <input type="email" id="employeeEmail" autocomplete="email">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="employeePhone">Phone</label>
-                            <input type="tel" id="employeePhone">
+                            <input type="tel" id="employeePhone" autocomplete="tel">
                         </div>
                         <div class="form-group">
                             <label for="employeeRole">Role *</label>
-                            <select id="employeeRole" required>
+                            <select id="employeeRole" required autocomplete="off">
                                 <option value="">Select Role</option>
                                 <option value="electrician">Electrician</option>
                                 <option value="plumber">Plumber</option>
@@ -2484,28 +2545,28 @@
                     
                     <div class="form-group">
                         <label for="employeeAddress">Address</label>
-                        <textarea id="employeeAddress" rows="2"></textarea>
+                        <textarea id="employeeAddress" rows="2" autocomplete="street-address"></textarea>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="employeeDepartment">Department</label>
-                            <input type="text" id="employeeDepartment">
+                            <input type="text" id="employeeDepartment" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="employeeSalary">Salary</label>
-                            <input type="number" id="employeeSalary" step="0.01">
+                            <input type="number" id="employeeSalary" step="0.01" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="employeeHireDate">Hire Date</label>
-                            <input type="date" id="employeeHireDate">
+                            <input type="date" id="employeeHireDate" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="employeeStatus">Status</label>
-                            <select id="employeeStatus">
+                            <select id="employeeStatus" autocomplete="off">
                                 <option value="available">Available</option>
                                 <option value="busy">Busy</option>
                                 <option value="offline">Offline</option>
@@ -2516,7 +2577,7 @@
                     
                     <div class="form-group">
                         <label for="employeeSkills">Skills (comma separated)</label>
-                        <input type="text" id="employeeSkills" placeholder="e.g. Electrical wiring, Circuit repair, Installation">
+                        <input type="text" id="employeeSkills" placeholder="e.g. Electrical wiring, Circuit repair, Installation" autocomplete="off">
                     </div>
                     
                     <div class="form-group">
@@ -2549,12 +2610,12 @@
                 <form id="vendorForm">
                     <div class="form-group">
                         <label for="vendorName">Vendor Name *</label>
-                        <input type="text" id="vendorName" required>
+                        <input type="text" id="vendorName" required autocomplete="name">
                     </div>
                     
                     <div class="form-group">
                         <label for="vendorEmail">Email</label>
-                        <input type="email" id="vendorEmail">
+                        <input type="email" id="vendorEmail" autocomplete="email">
                         <button type="button" class="btn-add-field" onclick="addVendorEmail()">
                             <i class="fas fa-plus"></i> Add Email
                         </button>
@@ -2565,7 +2626,7 @@
                     
                     <div class="form-group">
                         <label for="vendorPhone">Phone</label>
-                        <input type="tel" id="vendorPhone">
+                        <input type="tel" id="vendorPhone" autocomplete="tel">
                         <button type="button" class="btn-add-field" onclick="addVendorPhone()">
                             <i class="fas fa-plus"></i> Add Phone
                         </button>
@@ -2576,12 +2637,12 @@
                     
                     <div class="form-group">
                         <label for="vendorAddress">Address</label>
-                        <textarea id="vendorAddress" rows="2"></textarea>
+                        <textarea id="vendorAddress" rows="2" autocomplete="street-address"></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label for="vendorCategory">Category *</label>
-                        <select id="vendorCategory" required onchange="handleVendorCategoryChange()">
+                        <select id="vendorCategory" required onchange="handleVendorCategoryChange()" autocomplete="off">
                             <option value="">Select Category</option>
                             <option value="electrical">Electrical</option>
                             <option value="plumbing">Plumbing</option>
@@ -2592,13 +2653,13 @@
                             <option value="cleaning">Cleaning</option>
                             <option value="__add_new__">+ Add New Category</option>
                         </select>
-                        <input type="text" id="vendorCategoryCustom" placeholder="Enter new category name" style="display: none; margin-top: 10px;">
+                        <input type="text" id="vendorCategoryCustom" placeholder="Enter new category name" style="display: none; margin-top: 10px;" autocomplete="name">
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="vendorRating">Rating</label>
-                            <select id="vendorRating">
+                            <select id="vendorRating" autocomplete="off">
                                 <option value="5">5 Stars</option>
                                 <option value="4">4 Stars</option>
                                 <option value="3">3 Stars</option>
@@ -2608,7 +2669,7 @@
                         </div>
                         <div class="form-group">
                             <label for="vendorStatus">Status</label>
-                            <select id="vendorStatus">
+                            <select id="vendorStatus" autocomplete="off">
                                 <option value="true">Active</option>
                                 <option value="false">Inactive</option>
                             </select>
@@ -2624,11 +2685,11 @@
                     
                     <div class="form-group">
                         <label for="vendorNotes">Notes</label>
-                        <textarea id="vendorNotes" rows="3" placeholder="Additional notes about the vendor..."></textarea>
+                        <textarea id="vendorNotes" rows="3" placeholder="Additional notes about the vendor..." autocomplete="off"></textarea>
                     </div>
                     
                     <div class="form-group">
-                        <label>Custom Fields</label>
+                        <span class="display-label">Custom Fields</span>
                         <button type="button" class="btn-add-field" onclick="addVendorCustomField()">
                             <i class="fas fa-plus"></i> Add Field
                         </button>
@@ -2658,12 +2719,12 @@
                 <form id="customerForm">
                     <div class="form-group">
                         <label for="customerNameField">Customer Name *</label>
-                        <input type="text" id="customerNameField" required>
+                        <input type="text" id="customerNameField" required autocomplete="name">
                     </div>
                     
                     <div class="form-group">
                         <label for="customerEmailField">Email</label>
-                        <input type="email" id="customerEmailField">
+                        <input type="email" id="customerEmailField" autocomplete="email">
                         <button type="button" class="btn-add-field" onclick="addEmailAddress()">
                             <i class="fas fa-plus"></i> Add Email
                         </button>
@@ -2674,7 +2735,7 @@
                     
                     <div class="form-group">
                         <label for="customerPhoneField">Phone</label>
-                        <input type="tel" id="customerPhoneField">
+                        <input type="tel" id="customerPhoneField" autocomplete="tel">
                         <button type="button" class="btn-add-field" onclick="addPhoneNumber()">
                             <i class="fas fa-plus"></i> Add Phone
                         </button>
@@ -2686,14 +2747,14 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="customerType">Customer Type</label>
-                            <select id="customerType">
+                            <select id="customerType" autocomplete="off">
                                 <option value="one-time">One-time</option>
                                 <option value="recurring">Recurring</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="customerStatus">Status</label>
-                            <select id="customerStatus">
+                            <select id="customerStatus" autocomplete="off">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
@@ -2702,7 +2763,7 @@
                     
                     <div class="form-group">
                         <label for="customerAddressField_0">Address</label>
-                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2"></textarea>
+                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2" autocomplete="street-address"></textarea>
                         <button type="button" class="btn-add-field" onclick="addPhysicalAddress()">
                             <i class="fas fa-plus"></i> Add Address
                         </button>
@@ -2713,7 +2774,7 @@
                     
                     <div class="form-group">
                         <label for="customerNotes">Notes</label>
-                        <textarea id="customerNotes" rows="3"></textarea>
+                        <textarea id="customerNotes" rows="3" autocomplete="off"></textarea>
                     </div>
                     
                     <div class="form-group" style="grid-column: 1 / -1;">
@@ -2724,7 +2785,7 @@
                     </div>
                     
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Custom Fields</label>
+                        <span class="display-label">Custom Fields</span>
                         <button type="button" class="btn-add-field" onclick="addCustomerCustomField()">
                             <i class="fas fa-plus"></i> Add Field
                         </button>
@@ -2765,27 +2826,27 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="firstName">First Name</label>
-                                <input type="text" id="firstName" name="firstName" value="Admin" required>
+                                <input type="text" id="firstName" name="firstName" value="Admin" required autocomplete="given-name">
                             </div>
                             <div class="form-group">
                                 <label for="lastName">Last Name</label>
-                                <input type="text" id="lastName" name="lastName" value="User" required>
+                                <input type="text" id="lastName" name="lastName" value="User" required autocomplete="family-name">
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label for="profileEmail">Email Address</label>
-                            <input type="email" id="profileEmail" name="email" value="admin@huttaservices.com" required>
+                            <input type="email" id="profileEmail" name="email" value="admin@huttaservices.com" required autocomplete="email">
                         </div>
                         
                         <div class="form-group">
                             <label for="phone">Phone Number</label>
-                            <input type="tel" id="phone" name="phone" value="+1 (555) 123-4567">
+                            <input type="tel" id="phone" name="phone" value="+1 (555) 123-4567" autocomplete="tel">
                         </div>
                         
                         <div class="form-group">
                             <label for="role">Role</label>
-                            <select id="role" name="role">
+                            <select id="role" name="role" autocomplete="name">
                                 <option value="administrator">Administrator</option>
                                 <option value="manager">Manager</option>
                                 <option value="supervisor">Supervisor</option>
@@ -2794,7 +2855,7 @@
                         
                         <div class="form-group">
                             <label for="department">Department</label>
-                            <input type="text" id="department" name="department" value="Operations">
+                            <input type="text" id="department" name="department" value="Operations" autocomplete="name">
                         </div>
                     </form>
                 </div>
@@ -2804,15 +2865,15 @@
                     <form class="password-form" id="passwordForm">
                         <div class="form-group">
                             <label for="currentPassword">Current Password</label>
-                            <input type="password" id="currentPassword" name="currentPassword" placeholder="Enter current password">
+                            <input type="password" id="currentPassword" name="currentPassword" placeholder="Enter current password" autocomplete="current-password">
                         </div>
                         <div class="form-group">
                             <label for="newPassword">New Password</label>
-                            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password">
+                            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" autocomplete="new-password">
                         </div>
                         <div class="form-group">
                             <label for="confirmPassword">Confirm New Password</label>
-                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm new password">
+                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm new password" autocomplete="new-password">
                         </div>
                     </form>
                 </div>
@@ -2839,7 +2900,7 @@
                     <input type="hidden" id="stageId">
                     <div class="form-group">
                         <label for="stageName">Stage Name *</label>
-                        <input type="text" id="stageName" required>
+                        <input type="text" id="stageName" required autocomplete="name">
                     </div>
                 </form>
             </div>
@@ -2873,7 +2934,7 @@
                         </div>
                         <div class="form-group">
                             <label for="recordWorkOrder"><i class="fas fa-file-alt"></i> Work Order</label>
-                            <select id="recordWorkOrder">
+                            <select id="recordWorkOrder" autocomplete="off">
                                 <option value="">Select customer first</option>
                             </select>
                         </div>
@@ -2882,53 +2943,53 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="recordEmail"><i class="fas fa-envelope"></i> Email</label>
-                            <input type="email" id="recordEmail" placeholder="customer@email.com">
+                            <input type="email" id="recordEmail" placeholder="customer@email.com" autocomplete="email">
                         </div>
                         <div class="form-group">
                             <label for="recordPhone"><i class="fas fa-phone"></i> Phone</label>
-                            <input type="tel" id="recordPhone" placeholder="+1 (555) 123-4567">
+                            <input type="tel" id="recordPhone" placeholder="+1 (555) 123-4567" autocomplete="tel">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="recordPriority"><i class="fas fa-flag"></i> Priority</label>
-                            <select id="recordPriority">
-                                <option value="low">ðŸŸ¢ Low</option>
-                                <option value="medium" selected>ðŸŸ¡ Medium</option>
-                                <option value="high">ðŸ”´ High</option>
+                            <select id="recordPriority" autocomplete="off">
+                                <option value="low">🟢 Low</option>
+                                <option value="medium" selected>🟡 Medium</option>
+                                <option value="high">🔴 High</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="recordBudget"><i class="fas fa-dollar-sign"></i> Budget</label>
-                            <input type="number" id="recordBudget" placeholder="0.00" step="0.01" min="0">
+                            <input type="number" id="recordBudget" placeholder="0.00" step="0.01" min="0" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="recordStartDate"><i class="fas fa-calendar-alt"></i> Start Date</label>
-                            <input type="date" id="recordStartDate">
+                            <input type="date" id="recordStartDate" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="recordStartTime"><i class="fas fa-clock"></i> Start Time</label>
-                            <input type="time" id="recordStartTime">
+                            <input type="time" id="recordStartTime" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="recordAddress"><i class="fas fa-map-marker-alt"></i> Address</label>
-                        <input type="text" id="recordAddress" placeholder="Project location address">
+                        <input type="text" id="recordAddress" placeholder="Project location address" autocomplete="street-address">
                     </div>
                     
                     <div class="form-group">
                         <label for="recordDescription"><i class="fas fa-align-left"></i> Description</label>
-                        <textarea id="recordDescription" rows="3" placeholder="Enter project details and requirements..."></textarea>
+                        <textarea id="recordDescription" rows="3" placeholder="Enter project details and requirements..." autocomplete="off"></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label for="recordNotes"><i class="fas fa-sticky-note"></i> Notes</label>
-                        <textarea id="recordNotes" rows="2" placeholder="Additional notes or comments..."></textarea>
+                        <textarea id="recordNotes" rows="2" placeholder="Additional notes or comments..." autocomplete="off"></textarea>
                     </div>
                 </form>
             </div>
@@ -2959,61 +3020,61 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="jobName">Job Name *</label>
-                            <input type="text" id="jobName" required>
+                            <input type="text" id="jobName" required autocomplete="name">
                         </div>
                         <div class="form-group">
                             <label for="jobCustomerName">Customer Name *</label>
-                            <input type="text" id="jobCustomerName" required>
+                            <input type="text" id="jobCustomerName" required autocomplete="name">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="jobContractorName">Contractor Name</label>
-                            <input type="text" id="jobContractorName">
+                            <input type="text" id="jobContractorName" autocomplete="name">
                         </div>
                         <div class="form-group">
                             <label for="contractorBid">Contractor Bid ($) *</label>
-                            <input type="number" id="contractorBid" step="0.01" required>
+                            <input type="number" id="contractorBid" step="0.01" required autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="markupPercent">Markup (%) *</label>
-                            <input type="number" id="markupPercent" step="0.01" required>
+                            <input type="number" id="markupPercent" step="0.01" required autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="overheadAllocation">Overhead Allocation ($)</label>
-                            <input type="number" id="overheadAllocation" step="0.01" value="0">
+                            <input type="number" id="overheadAllocation" step="0.01" value="0" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="paymentReceivedDate">Payment Received Date</label>
-                            <input type="date" id="paymentReceivedDate">
+                            <input type="date" id="paymentReceivedDate" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="contractorPaidDate">Contractor Paid Date</label>
-                            <input type="date" id="contractorPaidDate">
+                            <input type="date" id="contractorPaidDate" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="jobDueDate">Invoice Due Date</label>
-                            <input type="date" id="jobDueDate">
+                            <input type="date" id="jobDueDate" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="contractorDueDate">Contractor Payment Due</label>
-                            <input type="date" id="contractorDueDate">
+                            <input type="date" id="contractorDueDate" autocomplete="off">
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="jobStatus">Status</label>
-                        <select id="jobStatus">
+                        <select id="jobStatus" autocomplete="off">
                             <option value="pending">Pending</option>
                             <option value="in-progress">In Progress</option>
                             <option value="completed">Completed</option>
@@ -3044,47 +3105,47 @@
             <div class="modal-body">
                 <div class="job-detail-grid">
                     <div class="detail-item">
-                        <label>Job Name</label>
+                        <span class="display-label">Job Name</span>
                         <div class="value" id="detailJobName">-</div>
                     </div>
                     <div class="detail-item">
-                        <label>Customer Name</label>
+                        <span class="display-label">Customer Name</span>
                         <div class="value" id="detailCustomerName">-</div>
                     </div>
                     <div class="detail-item">
-                        <label>Contractor Bid</label>
+                        <span class="display-label">Contractor Bid</span>
                         <div class="value" id="detailContractorBid">-</div>
                     </div>
                     <div class="detail-item">
-                        <label>Markup %</label>
+                        <span class="display-label">Markup %</span>
                         <div class="value" id="detailMarkupPercent">-</div>
                     </div>
                     <div class="detail-item highlight">
-                        <label>Gross Revenue</label>
+                        <span class="display-label">Gross Revenue</span>
                         <div class="value" id="detailGrossRevenue">-</div>
                     </div>
                     <div class="detail-item highlight">
-                        <label>Gross Profit</label>
+                        <span class="display-label">Gross Profit</span>
                         <div class="value" id="detailGrossProfit">-</div>
                     </div>
                     <div class="detail-item">
-                        <label>Overhead Allocation</label>
+                        <span class="display-label">Overhead Allocation</span>
                         <div class="value" id="detailOverheadAllocation">-</div>
                     </div>
                     <div class="detail-item highlight">
-                        <label>Net Profit</label>
+                        <span class="display-label">Net Profit</span>
                         <div class="value" id="detailNetProfit">-</div>
                     </div>
                     <div class="detail-item">
-                        <label>Payment Received</label>
+                        <span class="display-label">Payment Received</span>
                         <div class="value" id="detailPaymentReceived">-</div>
                     </div>
                     <div class="detail-item">
-                        <label>Contractor Paid</label>
+                        <span class="display-label">Contractor Paid</span>
                         <div class="value" id="detailContractorPaid">-</div>
                     </div>
                     <div class="detail-item">
-                        <label>Status</label>
+                        <span class="display-label">Status</span>
                         <div class="value" id="detailStatus">-</div>
                     </div>
                 </div>
@@ -3113,20 +3174,20 @@
                     <strong>Warning:</strong> Payment has not been received from customer. This action requires admin approval.
                 </div>
                 <div class="form-group">
-                    <label>Job Name</label>
+                    <span class="display-label">Job Name</span>
                     <div id="overrideJobName" style="font-weight: bold; margin-bottom: 10px;">-</div>
                 </div>
                 <div class="form-group">
-                    <label>Payout Amount</label>
+                    <span class="display-label">Payout Amount</span>
                     <div id="overrideAmount" style="font-size: 1.5rem; font-weight: bold; color: #f44336; margin-bottom: 20px;">$0.00</div>
                 </div>
                 <div class="form-group">
                     <label for="overrideApprovalCode">Admin Approval Code *</label>
-                    <input type="password" id="overrideApprovalCode" placeholder="Enter admin code" required>
+                    <input type="password" id="overrideApprovalCode" placeholder="Enter admin code" required autocomplete="current-password">
                 </div>
                 <div class="form-group">
                     <label for="overrideAdminNotes">Admin Notes</label>
-                    <textarea id="overrideAdminNotes" rows="3" placeholder="Reason for override..."></textarea>
+                    <textarea id="overrideAdminNotes" rows="3" placeholder="Reason for override..." autocomplete="off"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -3155,28 +3216,28 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="newUserFirstName">First Name *</label>
-                            <input type="text" id="newUserFirstName" required>
+                            <input type="text" id="newUserFirstName" required autocomplete="given-name">
                         </div>
                         <div class="form-group">
                             <label for="newUserLastName">Last Name *</label>
-                            <input type="text" id="newUserLastName" required>
+                            <input type="text" id="newUserLastName" required autocomplete="family-name">
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="newUserEmail">Email *</label>
-                        <input type="email" id="newUserEmail" required>
+                        <input type="email" id="newUserEmail" required autocomplete="email">
                     </div>
                     
                     <div class="form-group">
                         <label for="newUserPassword">Password *</label>
-                        <input type="password" id="newUserPassword" required minlength="8">
+                        <input type="password" id="newUserPassword" required minlength="8" autocomplete="current-password">
                         <small style="color: #6b7280; font-size: 12px;">Minimum 8 characters</small>
                     </div>
                     
                     <div class="form-group">
                         <label for="newUserRole">Role *</label>
-                        <select id="newUserRole" required>
+                        <select id="newUserRole" required autocomplete="off">
                             <option value="">Select Role</option>
                             <option value="admin">Admin</option>
                             <option value="manager">Manager</option>
@@ -3218,43 +3279,43 @@
                         <h3>Order Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
-                                <label>Order ID:</label>
+                                <span class="display-label">Order ID:</span>
                                 <span id="modalDetailOrderId">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Status:</label>
+                                <span class="display-label">Status:</span>
                                 <span id="modalDetailOrderStatus">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Priority:</label>
+                                <span class="display-label">Priority:</span>
                                 <span id="modalDetailOrderPriority">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Revenue:</label>
+                                <span class="display-label">Revenue:</span>
                                 <span id="modalDetailOrderRevenue">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Cost:</label>
+                                <span class="display-label">Cost:</span>
                                 <span id="modalDetailOrderCost">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Profit:</label>
+                                <span class="display-label">Profit:</span>
                                 <span id="modalDetailOrderProfit">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Service:</label>
+                                <span class="display-label">Service:</span>
                                 <span id="modalDetailOrderService">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Vendor:</label>
+                                <span class="display-label">Vendor:</span>
                                 <span id="modalDetailOrderVendor">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Start Date:</label>
+                                <span class="display-label">Start Date:</span>
                                 <span id="modalDetailOrderStartDate">-</span>
                             </div>
                             <div class="info-item">
-                                <label>End Date:</label>
+                                <span class="display-label">End Date:</span>
                                 <span id="modalDetailOrderEndDate">-</span>
                             </div>
                         </div>
@@ -3263,19 +3324,19 @@
                         <h3>Customer Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
-                                <label>Name:</label>
+                                <span class="display-label">Name:</span>
                                 <span id="modalDetailOrderCustomerName">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Email:</label>
+                                <span class="display-label">Email:</span>
                                 <span id="modalDetailOrderCustomerEmail">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Phone:</label>
+                                <span class="display-label">Phone:</span>
                                 <span id="modalDetailOrderCustomerPhone">-</span>
                             </div>
                             <div class="info-item full-width">
-                                <label>Address:</label>
+                                <span class="display-label">Address:</span>
                                 <span id="modalDetailOrderCustomerAddress">-</span>
                             </div>
                         </div>
@@ -3283,11 +3344,11 @@
                     <div class="detail-info-card">
                         <h3>Description & Notes</h3>
                         <div class="info-item full-width">
-                            <label>Description:</label>
+                            <span class="display-label">Description:</span>
                             <p id="modalDetailOrderDescription" style="margin-top: 8px; line-height: 1.6;">-</p>
                         </div>
                         <div class="info-item full-width" style="margin-top: 16px;">
-                            <label>Notes:</label>
+                            <span class="display-label">Notes:</span>
                             <p id="modalDetailOrderNotes" style="margin-top: 8px; line-height: 1.6;">-</p>
                         </div>
                     </div>
@@ -3322,7 +3383,6 @@
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
     <script src="../assets/js/dashboard-script.js"></script>
-    <script src="../assets/js/button-fix.js"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script>
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {

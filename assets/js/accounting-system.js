@@ -1,4 +1,4 @@
-// Accounting System - Data Models and Business Logic (dates in Mountain Time)
+// Accounting System - Data Models and Business Logic (dates in Arizona Time)
 
 function accountingNow() {
     return window.TimezoneConfig ? window.TimezoneConfig.nowMDT() : new Date();
@@ -352,8 +352,8 @@ class AccountingSystem {
         if (!ar) return;
         
         const reminderStatus = this.getARReminderStatus(ar);
-        console.log(`[EMAIL TRIGGER] Sending ${reminderStatus.message} for AR ${arId}`);
-        console.log(`Amount: $${ar.amount}, Days Past Due: ${reminderStatus.days}`);
+        window.AppLogger?.debug(`[EMAIL TRIGGER] Sending ${reminderStatus.message} for AR ${arId}`);
+        window.AppLogger?.debug(`Amount: $${ar.amount}, Days Past Due: ${reminderStatus.days}`);
         
         // Mark reminder sent
         ar.lastReminderSent = new Date().toISOString();
@@ -666,7 +666,7 @@ function loadARTable() {
         <tr class="${reminderStatus.status}">
             <td>${job ? job.jobName : 'N/A'}</td>
             <td>$${ar.amount.toFixed(2)}</td>
-            <td>${ar.dueDate ? (window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(ar.dueDate) : new Date(ar.dueDate).toLocaleDateString('en-US', { timeZone: 'America/Denver' })) : 'N/A'}</td>
+            <td>${ar.dueDate ? (window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(ar.dueDate) : new Date(ar.dueDate).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })) : 'N/A'}</td>
             <td><span class="reminder-badge ${reminderStatus.status}">${reminderStatus.message}</span></td>
             <td>${reminderStatus.days > 0 ? `${reminderStatus.days} days` : '-'}</td>
             <td>

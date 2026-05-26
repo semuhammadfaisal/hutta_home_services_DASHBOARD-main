@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const invoiceInput = document.querySelector('.invoice-input');
     if (invoiceInput) {
         invoiceInput.addEventListener('blur', function() {
-            console.log('Invoice updated:', this.value);
+            window.AppLogger?.debug('Invoice updated:', this.value);
             // Add your save logic here
         });
     }

@@ -1,60 +1,84 @@
 /* Users Management Styles */
 .users-table-container {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    overflow: auto;
+    border: 1px solid #dbe4f0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - 330px);
+    min-height: 340px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
 }
 
 .users-table {
     width: 100%;
+    min-width: 900px;
+    table-layout: fixed;
     border-collapse: collapse;
+    font-size: 13px;
 }
+
+.users-col-user { width: 20%; }
+.users-col-email { width: 22%; }
+.users-col-role { width: 14%; }
+.users-col-signed-up { width: 12%; }
+.users-col-status { width: 12%; }
+.users-col-actions { width: 20%; }
 
 .users-table thead {
     background: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 1px solid #dbe4f0;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.users-table th,
+.users-table td {
+    padding: 10px 12px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
 }
 
 .users-table th {
-    padding: 12px 16px;
     text-align: left;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: #374151;
-    font-size: 14px;
+    white-space: nowrap;
 }
 
-.users-table td {
-    padding: 16px;
-    border-bottom: 1px solid #e5e7eb;
+.users-table tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .users-table tbody tr:hover {
-    background: #f9fafb;
+    background: #f8fbff;
+    box-shadow: inset 3px 0 0 var(--primary-blue, #0056b8);
 }
 
-.user-info {
+.user-identity,
+.user-details {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    min-width: 0;
 }
 
-.user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
+.user-identity {
     align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    font-size: 16px;
+    gap: 8px;
 }
 
 .user-details {
-    display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
 .user-name {
@@ -63,17 +87,39 @@
 }
 
 .user-id {
-    font-size: 12px;
+    font-size: 11px;
     color: #6b7280;
 }
 
-.role-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
+.user-name,
+.user-id,
+.user-email,
+.user-date-cell {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-email,
+.user-date-cell {
+    display: block;
+}
+
+.role-badge,
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    gap: 5px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: capitalize;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .role-badge.admin {
@@ -94,58 +140,16 @@
 .role-badge.pending {
     background: #fef3c7;
     color: #92400e;
-    animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-.role-select {
-    padding: 6px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    background: white;
-}
-
-.role-select:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.btn-assign-role {
-    padding: 6px 16px;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-assign-role:hover {
-    background: #2563eb;
-}
-
-.btn-assign-role:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-}
-
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
+.requested-role {
+    display: block;
+    margin-top: 4px;
+    color: #6b7280;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .status-badge.active {
@@ -158,18 +162,91 @@
     color: #92400e;
 }
 
+.user-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    min-width: 0;
+}
+
+.role-select {
+    width: 100%;
+    max-width: 132px;
+    padding: 6px 8px;
+    border: 1px solid #dbe4f0;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #ffffff;
+}
+
+.role-select:focus {
+    outline: none;
+    border-color: var(--primary-blue, #0056b8);
+    box-shadow: 0 0 0 3px rgba(0, 86, 184, 0.1);
+}
+
+.btn-assign-role {
+    height: 30px;
+    padding: 0 10px;
+    background: var(--primary-blue, #0056b8);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+    transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.btn-assign-role:hover {
+    background: #004494;
+}
+
+.btn-assign-role.approve {
+    background: #10b981;
+}
+
+.btn-assign-role.approve:hover {
+    background: #059669;
+}
+
+.btn-assign-role:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.users-table .action-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
 .header-stats {
     display: flex;
-    gap: 16px;
+    gap: 12px;
 }
 
 .stat-badge {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
+    padding: 8px 12px;
     border-radius: 8px;
     font-weight: 600;
+    font-size: 13px;
 }
 
 .stat-badge.pending {
@@ -183,7 +260,7 @@
 }
 
 .stat-badge i {
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .users-empty-state {
@@ -202,4 +279,78 @@
     font-size: 18px;
     color: #374151;
     margin-bottom: 8px;
+}
+
+@media (max-width: 1200px) {
+    .users-table { min-width: 780px; }
+
+    .users-table th:nth-child(4),
+    .users-table td:nth-child(4) {
+        display: none;
+    }
+
+    .users-col-signed-up {
+        width: 0;
+    }
+
+    .users-col-actions {
+        width: 26%;
+    }
+}
+
+@media (max-width: 768px) {
+    .users-table-container {
+        margin: 0 -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .users-table {
+        min-width: 650px;
+    }
+
+    .users-table th:nth-child(2),
+    .users-table td:nth-child(2) {
+        display: none;
+    }
+
+    .users-col-email {
+        width: 0;
+    }
+
+    .users-table th,
+    .users-table td {
+        padding: 9px 8px;
+        font-size: 12px;
+    }
+
+    .header-stats {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .users-table-container {
+        margin: 0 -15px;
+    }
+
+    .users-table {
+        min-width: 560px;
+    }
+
+    .users-table th:nth-child(5),
+    .users-table td:nth-child(5) {
+        display: none;
+    }
+
+    .users-col-status {
+        width: 0;
+    }
+
+    .btn-assign-role {
+        width: 30px;
+        padding: 0;
+        overflow: hidden;
+    }
 }

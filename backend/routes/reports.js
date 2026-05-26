@@ -77,7 +77,7 @@ function percentChange(current, previous) {
 }
 
 function compactMonth(date) {
-  return date.toLocaleString('en-US', { month: 'short', timeZone: 'America/Denver' });
+  return date.toLocaleString('en-US', { month: 'short', timeZone: 'America/Phoenix' });
 }
 
 function normalizeStatus(value = '') {

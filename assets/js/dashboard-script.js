@@ -1,4 +1,4 @@
-// Mountain Time (America/Denver) helpers — requires config/timezone-config.js
+// Arizona Time (America/Phoenix, MST / GMT-7) helpers — requires config/timezone-config.js
 function tz() {
     return window.TimezoneConfig;
 }
@@ -34,7 +34,7 @@ function formatDashboardDateTime(date = new Date()) {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-        timeZone: tz()?.TIMEZONE || 'America/Denver'
+        timeZone: tz()?.TIMEZONE || 'America/Phoenix'
     });
 }
 function updateDashboardDateTime() {
@@ -91,7 +91,7 @@ class DashboardManager {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetSection = item.getAttribute('data-section');
-                console.log('Menu clicked:', targetSection);
+                window.AppLogger?.debug('Menu clicked:', targetSection);
                 this.showSection(targetSection);
                 
                 // Load section-specific data
@@ -218,7 +218,7 @@ class DashboardManager {
                         window.APIService.getCustomers().catch(() => [])
                     ]);
 
-                    console.log('Dashboard heavy data:', {
+                    window.AppLogger?.debug('Dashboard heavy data:', {
                         orders: orders.length,
                         vendors: vendors.length,
                         employees: employees.length,
@@ -232,8 +232,8 @@ class DashboardManager {
 
                     if (orders.length === 0 && vendors.length === 0 && employees.length === 0 && customers.length === 0) {
                         console.warn('⚠️ All data arrays are empty - possible server connection issue');
-                        console.log('API Base URL:', window.APIService.baseURL);
-                        console.log('Token available:', !!window.APIService.getToken());
+                        window.AppLogger?.debug('API Base URL:', window.APIService.baseURL);
+                        window.AppLogger?.debug('Token available:', !!window.APIService.getToken());
                     }
 
                     this.renderEmployeeLeaderboard(orders, employees);
@@ -379,7 +379,7 @@ class DashboardManager {
         const tbody = document.getElementById('ordersTableBody');
         const ordersData = orders || this.data.orders;
         
-        console.log('renderOrdersTable called with:', ordersData ? ordersData.length : 0, 'orders');
+        window.AppLogger?.debug('renderOrdersTable called with:', ordersData ? ordersData.length : 0, 'orders');
         
         // Update stats
         updateOrderStats(ordersData);
@@ -406,17 +406,14 @@ class DashboardManager {
             const statusClass = order.pipelineStage ? 'pipeline' : order.status;
 
             return `
-            <tr style="cursor: pointer;" onclick="viewOrder('${order._id || order.id}')">
+            <tr onclick="viewOrder('${order._id || order.id}')">
                 <td>
                     <div class="order-id">
-                        <div class="order-icon">
-                            <i class="fas fa-file-alt"></i>
-                        </div>
                         <div class="order-info">
-                            <div class="order-number" style="display: flex; align-items: center; gap: 8px;">
+                            <div class="order-number">
                                 <span>${orderNumber}</span>
-                                <button class="btn-copy-order-id" onclick="event.stopPropagation(); copyOrderId('${orderNumber}')" title="Copy Order ID" style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.2s;">
-                                    <i class="fas fa-copy" style="font-size: 12px;"></i>
+                                <button class="btn-copy-order-id" onclick="event.stopPropagation(); copyOrderId('${orderNumber}')" title="Copy Order ID" aria-label="Copy order ID">
+                                    <i class="fas fa-copy"></i>
                                 </button>
                             </div>
                             <div class="order-date">${orderDate}</div>
@@ -429,14 +426,14 @@ class DashboardManager {
                         ${customerEmail ? `<div class="customer-email-text">${customerEmail}</div>` : ''}
                     </div>
                 </td>
-                <td><span class="service-badge">${order.service}</span></td>
+                <td><span class="service-badge" title="${order.service || ''}">${order.service || 'N/A'}</span></td>
                 <td><span class="order-vendor">${order.vendor?.name || 'N/A'}</span></td>
                 <td><span class="order-status-badge ${statusClass}">${this.formatStatus(statusDisplay)}</span></td>
                 <td><span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span></td>
-                <td>${order.startDate ? this.formatDate(order.startDate) : 'N/A'}</td>
-                <td><span class="order-amount" style="color: #10b981; font-weight: 600;">$${order.amount?.toLocaleString() || '0'}</span></td>
-                <td><span class="order-cost" style="color: #ef4444; font-weight: 600;">$${order.vendorCost?.toLocaleString() || '0'}</span></td>
-                <td><span class="order-profit" style="color: #3b82f6; font-weight: 600;">$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}</span></td>
+                <td><span class="order-date-cell">${order.startDate ? this.formatDate(order.startDate) : 'N/A'}</span></td>
+                <td><span class="order-amount">$${order.amount?.toLocaleString() || '0'}</span></td>
+                <td><span class="order-cost">$${order.vendorCost?.toLocaleString() || '0'}</span></td>
+                <td><span class="order-profit">$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}</span></td>
                 <td onclick="event.stopPropagation()">
                     <div class="order-actions">
                         <button class="action-btn edit" onclick="editOrder('${order._id || order.id}')" title="Edit">
@@ -726,7 +723,7 @@ function initializeSearch() {
         
         // Simple search simulation
         if (searchTerm.length > 2) {
-            console.log(`Searching for: ${searchTerm}`);
+            window.AppLogger?.debug(`Searching for: ${searchTerm}`);
             // In a real application, this would filter data
         }
     });
@@ -979,9 +976,9 @@ function closeNotificationPanel() {
 
 // Global function to test pipeline refresh
 window.testPipelineRefresh = function() {
-    console.log('=== TESTING PIPELINE REFRESH ===');
-    console.log('Dashboard object:', window.dashboard);
-    console.log('Refresh functions available:', {
+    window.AppLogger?.debug('=== TESTING PIPELINE REFRESH ===');
+    window.AppLogger?.debug('Dashboard object:', window.dashboard);
+    window.AppLogger?.debug('Refresh functions available:', {
         refreshDashboard: typeof window.refreshDashboard,
         refreshDashboardKPIs: typeof window.refreshDashboardKPIs,
         onPipelineStageChange: typeof window.onPipelineStageChange,
@@ -989,7 +986,7 @@ window.testPipelineRefresh = function() {
     });
     
     // Simulate pipeline stage change
-    console.log('Simulating pipeline stage change...');
+    window.AppLogger?.debug('Simulating pipeline stage change...');
     if (window.onPipelineStageChange) {
         window.onPipelineStageChange();
     } else {
@@ -999,16 +996,16 @@ window.testPipelineRefresh = function() {
 
 // Global function to manually refresh KPIs
 window.manualRefreshKPIs = async function() {
-    console.log('=== MANUAL KPI REFRESH ===');
+    window.AppLogger?.debug('=== MANUAL KPI REFRESH ===');
     if (window.dashboard) {
         // Clear cache first
         if (window.dashboard.clearCache) {
-            console.log('Clearing cache...');
+            window.AppLogger?.debug('Clearing cache...');
             window.dashboard.clearCache();
         }
-        console.log('Calling dashboard.renderDashboard()...');
+        window.AppLogger?.debug('Calling dashboard.renderDashboard()...');
         await window.dashboard.renderDashboard();
-        console.log('Manual refresh complete');
+        window.AppLogger?.debug('Manual refresh complete');
     } else {
         console.error('Dashboard object not found!');
     }
@@ -1016,7 +1013,7 @@ window.manualRefreshKPIs = async function() {
 
 // Global function to force refresh dashboard with fresh data
 window.forceRefreshDashboard = async function() {
-    console.log('=== FORCE REFRESH DASHBOARD ===');
+    window.AppLogger?.debug('=== FORCE REFRESH DASHBOARD ===');
     if (window.dashboard) {
         // Clear any cached data
         if (window.dashboard.clearCache) {
@@ -1025,7 +1022,7 @@ window.forceRefreshDashboard = async function() {
         
         // Force fresh data load
         await window.dashboard.renderDashboard();
-        console.log('Dashboard force refreshed');
+        window.AppLogger?.debug('Dashboard force refreshed');
     } else {
         console.error('Dashboard object not found!');
     }
@@ -1033,22 +1030,22 @@ window.forceRefreshDashboard = async function() {
 
 // Global function to check current order data
 window.checkOrderData = async function() {
-    console.log('=== CHECKING ORDER DATA ===');
+    window.AppLogger?.debug('=== CHECKING ORDER DATA ===');
     
     // Clear APIService cache first
     if (window.APIService && window.APIService.clearCache) {
-        console.log('Clearing APIService cache before check...');
+        window.AppLogger?.debug('Clearing APIService cache before check...');
         window.APIService.clearCache();
     }
     
     try {
         const orders = await window.APIService.getOrders();
-        console.log('Total orders:', orders.length);
+        window.AppLogger?.debug('Total orders:', orders.length);
         
         // Show all orders with their pipeline stages
-        console.log('All orders with pipeline info:');
+        window.AppLogger?.debug('All orders with pipeline info:');
         orders.forEach((order, index) => {
-            console.log(`Order ${index + 1}:`, {
+            window.AppLogger?.debug(`Order ${index + 1}:`, {
                 id: order._id,
                 orderId: order.orderId,
                 customer: order.customer?.name || order.customer,
@@ -1060,26 +1057,26 @@ window.checkOrderData = async function() {
         });
         
         const paidOrders = orders.filter(order => order.pipelineStage === 'Paid');
-        console.log('Orders in Paid stage:', paidOrders.length);
-        console.log('Paid orders:', paidOrders.map(o => ({ id: o._id, amount: o.amount, stage: o.pipelineStage })));
+        window.AppLogger?.debug('Orders in Paid stage:', paidOrders.length);
+        window.AppLogger?.debug('Paid orders:', paidOrders.map(o => ({ id: o._id, amount: o.amount, stage: o.pipelineStage })));
         
         const paymentsCollected = paidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
-        console.log('Calculated payments collected:', paymentsCollected);
+        window.AppLogger?.debug('Calculated payments collected:', paymentsCollected);
         
         const unpaidOrders = orders.filter(order => order.pipelineStage !== 'Paid');
-        console.log('Unpaid orders:', unpaidOrders.length);
-        console.log('Unpaid orders:', unpaidOrders.map(o => ({ id: o._id, amount: o.amount, stage: o.pipelineStage || 'no stage' })));
+        window.AppLogger?.debug('Unpaid orders:', unpaidOrders.length);
+        window.AppLogger?.debug('Unpaid orders:', unpaidOrders.map(o => ({ id: o._id, amount: o.amount, stage: o.pipelineStage || 'no stage' })));
         
         const pendingPayments = unpaidOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
-        console.log('Calculated pending payments:', pendingPayments);
+        window.AppLogger?.debug('Calculated pending payments:', pendingPayments);
         
         // Also check pipeline records
-        console.log('\n=== CHECKING PIPELINE RECORDS ===');
+        window.AppLogger?.debug('\n=== CHECKING PIPELINE RECORDS ===');
         const response = await fetch('/api/pipeline-records');
         const pipelineRecords = await response.json();
-        console.log('Total pipeline records:', pipelineRecords.length);
+        window.AppLogger?.debug('Total pipeline records:', pipelineRecords.length);
         pipelineRecords.forEach((record, index) => {
-            console.log(`Pipeline Record ${index + 1}:`, {
+            window.AppLogger?.debug(`Pipeline Record ${index + 1}:`, {
                 id: record._id,
                 orderId: record.orderId,
                 customerName: record.customerName,
@@ -1088,10 +1085,10 @@ window.checkOrderData = async function() {
         });
         
         // Check stages
-        console.log('\n=== CHECKING STAGES ===');
+        window.AppLogger?.debug('\n=== CHECKING STAGES ===');
         const stagesResponse = await fetch('/api/stages');
         const stages = await stagesResponse.json();
-        console.log('Stages:', stages.map(s => ({ id: s._id, name: s.name })));
+        window.AppLogger?.debug('Stages:', stages.map(s => ({ id: s._id, name: s.name })));
         
         return { orders, paidOrders, paymentsCollected, pendingPayments, pipelineRecords, stages };
     } catch (error) {
@@ -1102,7 +1099,7 @@ window.checkOrderData = async function() {
 // Global refresh dashboard function - force immediate refresh
 window.refreshDashboard = async function() {
     if (window.dashboard) {
-        console.log('Force refreshing dashboard...');
+        window.AppLogger?.debug('Force refreshing dashboard...');
         // Clear cache to ensure fresh data
         if (window.dashboard.clearCache) {
             window.dashboard.clearCache();
@@ -1114,7 +1111,7 @@ window.refreshDashboard = async function() {
 // Global function to refresh dashboard when pipeline changes - immediate refresh
 window.refreshDashboardKPIs = async function() {
     if (window.dashboard) {
-        console.log('Refreshing dashboard KPIs due to pipeline change...');
+        window.AppLogger?.debug('Refreshing dashboard KPIs due to pipeline change...');
         // Clear cache to ensure fresh data
         if (window.dashboard.clearCache) {
             window.dashboard.clearCache();
@@ -1125,7 +1122,7 @@ window.refreshDashboardKPIs = async function() {
 
 // Function to refresh dashboard from pipeline system
 window.onPipelineStageChange = async function() {
-    console.log('Pipeline stage changed - refreshing dashboard...');
+    window.AppLogger?.debug('Pipeline stage changed - refreshing dashboard...');
     if (window.dashboard) {
         // Clear cache to ensure fresh data
         if (window.dashboard.clearCache) {
@@ -1223,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
     
     if (!session) {
-        console.log('No session, redirecting to login...');
+        window.AppLogger?.debug('No session, redirecting to login...');
         window.location.href = '/pages/login.html';
         return;
     }
@@ -1232,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         sessionData = JSON.parse(session);
     } catch (error) {
-        console.log('Invalid session, redirecting to login...');
+        window.AppLogger?.debug('Invalid session, redirecting to login...');
         localStorage.removeItem('huttaSession');
         sessionStorage.removeItem('huttaSession');
         window.location.href = '/pages/login.html';
@@ -1240,12 +1237,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (!sessionData.isAuthenticated || !sessionData.token) {
-        console.log('Not authenticated, redirecting to login...');
+        window.AppLogger?.debug('Not authenticated, redirecting to login...');
         window.location.href = '/pages/login.html';
         return;
     }
     
-    console.log('Session valid, initializing dashboard...');
+    window.AppLogger?.debug('Session valid, initializing dashboard...');
     
     // Update user info in dashboard
     updateUserInfo(sessionData);
@@ -1262,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Apply saved theme on initialization
     applySavedTheme();
     
-    console.log('Hutta Home Services Admin Dashboard initialized successfully!');
+    window.AppLogger?.debug('Hutta Home Services Admin Dashboard initialized successfully!');
 });
 
 // Update user information in dashboard
@@ -1385,7 +1382,7 @@ function populateCustomerSelectOptions() {
             e.preventDefault();
             e.stopPropagation();
             
-            console.log('Customer clicked:', customer.name);
+            window.AppLogger?.debug('Customer clicked:', customer.name);
             
             // Set the input value to show only customer name
             const input = document.getElementById('customerSearchInput');
@@ -1399,8 +1396,8 @@ function populateCustomerSelectOptions() {
             input.dispatchEvent(new Event('change', { bubbles: true }));
             hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
             
-            console.log('Set input to:', input.value);
-            console.log('Set hidden select to:', hiddenSelect.value);
+            window.AppLogger?.debug('Set input to:', input.value);
+            window.AppLogger?.debug('Set hidden select to:', hiddenSelect.value);
             
             // Close dropdown
             dropdown.classList.remove('show');
@@ -1419,7 +1416,7 @@ function populateCustomerSelectOptions() {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log('Add New Customer clicked');
+        window.AppLogger?.debug('Add New Customer clicked');
         
         const input = document.getElementById('customerSearchInput');
         const hiddenSelect = document.getElementById('customerSelect');
@@ -1487,7 +1484,7 @@ function filterCustomerOptions(searchTerm) {
             e.preventDefault();
             e.stopPropagation();
             
-            console.log('Filtered customer clicked:', customer.name);
+            window.AppLogger?.debug('Filtered customer clicked:', customer.name);
             
             // Set the input value to show only customer name
             const input = document.getElementById('customerSearchInput');
@@ -1501,8 +1498,8 @@ function filterCustomerOptions(searchTerm) {
             input.dispatchEvent(new Event('change', { bubbles: true }));
             hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
             
-            console.log('Set input to:', input.value);
-            console.log('Set hidden select to:', hiddenSelect.value);
+            window.AppLogger?.debug('Set input to:', input.value);
+            window.AppLogger?.debug('Set hidden select to:', hiddenSelect.value);
             
             // Close dropdown
             dropdown.classList.remove('show');
@@ -1521,7 +1518,7 @@ function filterCustomerOptions(searchTerm) {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log('Add New Customer clicked (filtered)');
+        window.AppLogger?.debug('Add New Customer clicked (filtered)');
         
         const input = document.getElementById('customerSearchInput');
         const hiddenSelect = document.getElementById('customerSelect');
@@ -1627,10 +1624,10 @@ function handleCustomerSelect() {
     const customerAddressSelection = document.getElementById('customerAddressSelection');
     const selectedValue = hiddenSelect.value;
     
-    console.log('handleCustomerSelect called with value:', selectedValue);
+    window.AppLogger?.debug('handleCustomerSelect called with value:', selectedValue);
     
     if (selectedValue === 'new' || selectedValue === '') {
-        console.log('Showing new customer fields');
+        window.AppLogger?.debug('Showing new customer fields');
         // Show new customer fields
         newCustomerFields.style.display = 'block';
         customerAddressSelection.style.display = 'none';
@@ -1646,10 +1643,10 @@ function handleCustomerSelect() {
         document.getElementById('customerEmail').required = true;
         document.getElementById('customerAddressSelect').required = false;
     } else {
-        console.log('Showing address selection for existing customer');
+        window.AppLogger?.debug('Showing address selection for existing customer');
         // Hide new customer fields and show address selection
         const customer = orderCustomers.find(c => c._id === selectedValue);
-        console.log('Found customer:', customer);
+        window.AppLogger?.debug('Found customer:', customer);
         
         if (customer) {
             newCustomerFields.style.display = 'none';
@@ -2064,14 +2061,14 @@ async function saveOrder() {
     try {
         // Upload documents if any
         if (window.uploadedFiles && window.uploadedFiles.order && window.uploadedFiles.order.length > 0) {
-            console.log('Uploading order documents:', window.uploadedFiles.order.length, 'files');
+            window.AppLogger?.debug('Uploading order documents:', window.uploadedFiles.order.length, 'files');
             updateLoadingMessage('Uploading documents...');
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.order);
-            console.log('Upload response:', uploadedDocs);
+            window.AppLogger?.debug('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
                 const existingDocs = window.existingOrderDocs || [];
                 orderData.documents = [...existingDocs, ...uploadedDocs];
-                console.log('Documents added to orderData:', orderData.documents);
+                window.AppLogger?.debug('Documents added to orderData:', orderData.documents);
             } else {
                 // Upload failed, keep existing documents
                 orderData.documents = window.existingOrderDocs || [];
@@ -2118,7 +2115,7 @@ async function saveOrder() {
                 try {
                     await refreshCustomers();
                 } catch (error) {
-                    console.log('Customer refresh failed:', error);
+                    window.AppLogger?.debug('Customer refresh failed:', error);
                 }
             }
             
@@ -2126,7 +2123,7 @@ async function saveOrder() {
             try {
                 await refreshPayments();
             } catch (error) {
-                console.log('Payment refresh failed:', error);
+                window.AppLogger?.debug('Payment refresh failed:', error);
             }
             
             closeOrderModal();
@@ -2142,13 +2139,13 @@ async function saveOrder() {
         
         // Refresh pipeline if it's loaded
         if (typeof loadDataFromDB === 'function') {
-            console.log('Refreshing pipeline after order save...');
+            window.AppLogger?.debug('Refreshing pipeline after order save...');
             await loadDataFromDB();
         }
         
         // Refresh dashboard KPIs
         if (window.dashboard && window.dashboard.renderDashboard) {
-            console.log('Refreshing dashboard after order save...');
+            window.AppLogger?.debug('Refreshing dashboard after order save...');
             await window.dashboard.renderDashboard();
         }
     } catch (error) {
@@ -2440,7 +2437,7 @@ async function loadSettings() {
         currentSettings = {
             theme: 'light',
             language: 'en',
-            timezone: 'America/Denver',
+            timezone: 'America/Phoenix',
             notifications: {
                 email: true,
                 push: true,
@@ -2468,7 +2465,7 @@ function populateSettingsForm(settings) {
     // User Preferences
     document.getElementById('settingsTheme').value = settings.theme || 'light';
     document.getElementById('settingsLanguage').value = settings.language || 'en';
-    document.getElementById('settingsTimezone').value = settings.timezone || 'America/Denver';
+    document.getElementById('settingsTimezone').value = settings.timezone || 'America/Phoenix';
     
     // Notifications
     document.getElementById('notificationsEmail').checked = settings.notifications?.email ?? true;
@@ -3257,20 +3254,20 @@ function renderPaymentsTable(payments) {
     }
     
     tbody.innerHTML = payments.map(payment => `
-        <tr onclick="showPaymentDetail('${payment._id}')" style="cursor: pointer;">
+        <tr onclick="showPaymentDetail('${payment._id}')">
             <td>
-                ${payment.order ? `<strong>${payment.order.orderId || payment.order}</strong>` : '<span style="color: #9ca3af;">-</span>'}
+                ${payment.order ? `<strong class="payment-order-id">${payment.order.orderId || payment.order}</strong>` : '<span class="table-muted">-</span>'}
             </td>
             <td onclick="event.stopPropagation();">
-                <span style="color: #3b82f6; font-weight: 500; cursor: pointer;" onclick="editInvoiceNumber('${payment._id}', '${payment.invoiceNumber || ''}')" title="Click to edit invoice number">
-                    ${payment.invoiceNumber || '<span style="color: #9ca3af;">-</span>'}
+                <span class="payment-invoice-link" onclick="editInvoiceNumber('${payment._id}', '${payment.invoiceNumber || ''}')" title="Click to edit invoice number">
+                    ${payment.invoiceNumber || '<span class="table-muted">-</span>'}
                 </span>
             </td>
-            <td>${payment.customer?.name || 'N/A'}</td>
-            <td><strong>$${payment.amount.toLocaleString()}</strong></td>
+            <td><span class="payment-customer-name">${payment.customer?.name || 'N/A'}</span></td>
+            <td><strong class="payment-amount">$${payment.amount.toLocaleString()}</strong></td>
             <td><span class="method-badge ${payment.paymentMethod || 'pending'}">${payment.paymentMethod ? payment.paymentMethod.replace('-', ' ') : 'Not Set'}</span></td>
             <td onclick="event.stopPropagation();">
-                <select class="payment-status-select status-${payment.status}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value)" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 13px; font-weight: 500; cursor: pointer;">
+                <select class="payment-status-select status-${payment.status}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value)">
                     <option value="bidding" ${payment.status === 'bidding' ? 'selected' : ''}>Bidding</option>
                     <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
                     <option value="received" ${payment.status === 'received' ? 'selected' : ''}>✅ Received</option>
@@ -3282,7 +3279,7 @@ function renderPaymentsTable(payments) {
             </td>
             <td>${payment.paymentDate ? formatDisplayDate(payment.paymentDate) : 'Not Paid'}</td>
             <td>
-                ${payment.order ? `<span style="color: #6b7280;">${payment.order.orderId || payment.order}</span>` : 'N/A'}
+                ${payment.order ? `<span class="payment-reference">${payment.order.orderId || payment.order}</span>` : 'N/A'}
             </td>
             <td onclick="event.stopPropagation();">
                 <button class="btn-action" onclick="showPaymentDetail('${payment._id}')" title="View">
@@ -3528,8 +3525,8 @@ async function saveInvoiceNumber(paymentId) {
         // Get the payment data
         const payment = await window.APIService.getPayment(paymentId);
         
-        console.log('Current payment data:', payment);
-        console.log('New invoice number:', trimmedNumber ? 'INV-' + trimmedNumber : '(empty)');
+        window.AppLogger?.debug('Current payment data:', payment);
+        window.AppLogger?.debug('New invoice number:', trimmedNumber ? 'INV-' + trimmedNumber : '(empty)');
         
         // Update with new invoice number (add INV- prefix)
         const updateData = {
@@ -3547,12 +3544,12 @@ async function saveInvoiceNumber(paymentId) {
             notes: payment.notes || ''
         };
         
-        console.log('Sending update data:', updateData);
+        window.AppLogger?.debug('Sending update data:', updateData);
         
         // Save to backend
         const result = await window.APIService.updatePayment(paymentId, updateData);
         
-        console.log('Update result:', result);
+        window.AppLogger?.debug('Update result:', result);
         
         // Close modal
         if (modal) modal.remove();
@@ -3594,7 +3591,7 @@ function formatPaymentDate(value, fallback = '-') {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return fallback;
     return new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Denver',
+        timeZone: 'America/Phoenix',
         month: 'short',
         day: 'numeric',
         year: 'numeric'
@@ -3616,7 +3613,7 @@ function formatPaymentDateTime(value, fallback = '-') {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return fallback;
     return new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Denver',
+        timeZone: 'America/Phoenix',
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -4300,8 +4297,8 @@ async function saveEmployeePayment() {
             employeePaymentNotes: document.getElementById('employeePaymentNotes').value || ''
         };
 
-        console.log('Saving employee payment:', employeePaymentData);
-        console.log('Payment ID:', currentPaymentDetailData._id);
+        window.AppLogger?.debug('Saving employee payment:', employeePaymentData);
+        window.AppLogger?.debug('Payment ID:', currentPaymentDetailData._id);
 
         // Show loading state
         const saveBtn = document.querySelector('.payment-employee-section .btn-primary');
@@ -4311,7 +4308,7 @@ async function saveEmployeePayment() {
         }
 
         const result = await window.APIService.updatePayment(currentPaymentDetailData._id, employeePaymentData);
-        console.log('Save successful:', result);
+        window.AppLogger?.debug('Save successful:', result);
 
         showToast('Employee payment saved successfully', 'success');
         
@@ -4343,8 +4340,8 @@ async function saveVendorPayment() {
             vendorPaymentNotes: document.getElementById('vendorPaymentNotes').value || ''
         };
 
-        console.log('Saving vendor payment:', vendorPaymentData);
-        console.log('Payment ID:', currentPaymentDetailData._id);
+        window.AppLogger?.debug('Saving vendor payment:', vendorPaymentData);
+        window.AppLogger?.debug('Payment ID:', currentPaymentDetailData._id);
 
         // Show loading state
         const saveBtn = document.querySelector('.payment-vendor-section .btn-primary');
@@ -4354,7 +4351,7 @@ async function saveVendorPayment() {
         }
 
         const result = await window.APIService.updatePayment(currentPaymentDetailData._id, vendorPaymentData);
-        console.log('Save successful:', result);
+        window.AppLogger?.debug('Save successful:', result);
 
         showToast('Vendor payment saved successfully', 'success');
         
@@ -4515,15 +4512,15 @@ async function deleteEmployee(employeeId) {
 }
 
 function viewEmployee(employeeId) {
-    console.log('viewEmployee called with ID:', employeeId);
+    window.AppLogger?.debug('viewEmployee called with ID:', employeeId);
     showEmployeeDetail(employeeId);
 }
 
 async function showEmployeeDetail(employeeId) {
     try {
-        console.log('Loading employee details for:', employeeId);
+        window.AppLogger?.debug('Loading employee details for:', employeeId);
         const employee = await window.APIService.getEmployee(employeeId);
-        console.log('Employee data loaded:', employee);
+        window.AppLogger?.debug('Employee data loaded:', employee);
         
         document.getElementById('employeeDetailName').textContent = employee.name;
         document.getElementById('detailEmployeeEmail').textContent = employee.email || '-';
@@ -4536,10 +4533,10 @@ async function showEmployeeDetail(employeeId) {
         document.getElementById('detailEmployeeSkills').textContent = employee.skills && employee.skills.length > 0 ? employee.skills.join(', ') : '-';
         
         // Load performance stats
-        console.log('Loading employee stats...');
+        window.AppLogger?.debug('Loading employee stats...');
         const stats = await window.APIService.getEmployeeStats(employeeId);
-        console.log('Stats loaded:', stats);
-        console.log('Stats breakdown:', {
+        window.AppLogger?.debug('Stats loaded:', stats);
+        window.AppLogger?.debug('Stats breakdown:', {
             totalOrders: stats.totalOrders,
             totalRevenue: stats.totalRevenue,
             totalProfit: stats.totalProfit,
@@ -4554,7 +4551,7 @@ async function showEmployeeDetail(employeeId) {
         
         // Show message if no orders assigned
         if (stats.totalOrders === 0) {
-            console.log('No orders assigned to this employee yet');
+            window.AppLogger?.debug('No orders assigned to this employee yet');
         }
         
         const docsList = document.getElementById('employeeDocumentsList');
@@ -4584,7 +4581,7 @@ async function showEmployeeDetail(employeeId) {
             docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
         }
         
-        console.log('Showing employee-detail section');
+        window.AppLogger?.debug('Showing employee-detail section');
         showSection('employee-detail');
     } catch (error) {
         console.error('Failed to load employee details:', error);
@@ -4642,24 +4639,24 @@ function renderEmployeesTable(employees) {
     }
     
     tbody.innerHTML = employees.map(employee => {
-        const initials = employee.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         const employeeId = `#${employee._id.substring(0, 8).toUpperCase()}`;
         
         return `
-        <tr style="cursor: pointer;" onclick="viewEmployee('${employee._id}')">
+        <tr onclick="viewEmployee('${employee._id}')">
             <td>
-                <span class="employee-avatar">${initials}</span>
-                <div class="employee-info">
-                    <div class="employee-name">${employee.name}</div>
-                    <div class="employee-id">${employeeId}</div>
+                <div class="employee-identity">
+                    <div class="employee-info">
+                        <div class="employee-name">${employee.name}</div>
+                        <div class="employee-id">${employeeId}</div>
+                    </div>
                 </div>
             </td>
             <td><a href="mailto:${employee.email}" class="customer-email" onclick="event.stopPropagation()">${employee.email}</a></td>
             <td><span class="customer-phone">${employee.phone || 'N/A'}</span></td>
             <td><span class="employee-role-badge">${employee.role.replace('-', ' ')}</span></td>
-            <td>${employee.department || 'N/A'}</td>
+            <td><span class="employee-department">${employee.department || 'N/A'}</span></td>
             <td><span class="employee-status-badge ${employee.status}">${employee.status.replace('-', ' ')}</span></td>
-            <td>${employee.hireDate ? formatDisplayDate(employee.hireDate) : 'N/A'}</td>
+            <td><span class="employee-date-cell">${employee.hireDate ? formatDisplayDate(employee.hireDate) : 'N/A'}</span></td>
             <td onclick="event.stopPropagation()">
                 <div class="employee-actions">
                     <button class="action-btn edit" onclick="editEmployee('${employee._id}')" title="Edit">
@@ -5175,27 +5172,27 @@ async function saveVendor() {
         customFields: getVendorCustomFields()
     };
     
-    console.log('=== SAVING VENDOR ===');
-    console.log('Custom fields being saved:', vendorData.customFields);
+    window.AppLogger?.debug('=== SAVING VENDOR ===');
+    window.AppLogger?.debug('Custom fields being saved:', vendorData.customFields);
     
-    console.log('=== SAVING VENDOR ===');
-    console.log('Emails being saved:', emails);
-    console.log('Phones being saved:', phones);
-    console.log('Category being saved:', category);
-    console.log('Full vendor data:', vendorData);
+    window.AppLogger?.debug('=== SAVING VENDOR ===');
+    window.AppLogger?.debug('Emails being saved:', emails);
+    window.AppLogger?.debug('Phones being saved:', phones);
+    window.AppLogger?.debug('Category being saved:', category);
+    window.AppLogger?.debug('Full vendor data:', vendorData);
     
     try {
         // Upload documents if any
         if (window.uploadedFiles && window.uploadedFiles.vendor && window.uploadedFiles.vendor.length > 0) {
-            console.log('Uploading vendor documents:', window.uploadedFiles.vendor.length, 'files');
+            window.AppLogger?.debug('Uploading vendor documents:', window.uploadedFiles.vendor.length, 'files');
             updateLoadingMessage('Uploading documents...');
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.vendor);
-            console.log('Upload response:', uploadedDocs);
+            window.AppLogger?.debug('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
                 // Combine existing documents with newly uploaded ones
                 const existingDocs = window.currentVendorDocuments || [];
                 vendorData.documents = [...existingDocs, ...uploadedDocs];
-                console.log('Documents added to vendorData:', vendorData.documents);
+                window.AppLogger?.debug('Documents added to vendorData:', vendorData.documents);
             } else {
                 // Upload failed, keep existing documents
                 vendorData.documents = window.currentVendorDocuments || [];
@@ -5205,9 +5202,9 @@ async function saveVendor() {
             vendorData.documents = window.currentVendorDocuments || [];
         }
         
-        console.log('Final vendor data:', vendorData);
-        console.log('Documents type:', typeof vendorData.documents);
-        console.log('Documents is array:', Array.isArray(vendorData.documents));
+        window.AppLogger?.debug('Final vendor data:', vendorData);
+        window.AppLogger?.debug('Documents type:', typeof vendorData.documents);
+        window.AppLogger?.debug('Documents is array:', Array.isArray(vendorData.documents));
         
         if (currentVendorId) {
             updateLoadingMessage('Updating vendor...');
@@ -5327,17 +5324,17 @@ function renderVendorsTable(vendors) {
     });
     
     tbody.innerHTML = sortedVendors.map(vendor => {
-        const initials = vendor.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         const vendorId = `#${vendor._id.substring(0, 8).toUpperCase()}`;
         const stars = '★'.repeat(vendor.rating) + '☆'.repeat(5 - vendor.rating);
         
         return `
-        <tr style="cursor: pointer;" onclick="showVendorDetail('${vendor._id}')">
+        <tr onclick="showVendorDetail('${vendor._id}')">
             <td>
-                <span class="vendor-avatar">${initials}</span>
-                <div class="vendor-info">
-                    <div class="vendor-name">${vendor.name}</div>
-                    <div class="vendor-id">${vendorId}</div>
+                <div class="vendor-identity">
+                    <div class="vendor-info">
+                        <div class="vendor-name">${vendor.name}</div>
+                        <div class="vendor-id">${vendorId}</div>
+                    </div>
                 </div>
             </td>
             <td><a href="mailto:${vendor.email}" class="customer-email" onclick="event.stopPropagation()">${vendor.email}</a></td>
@@ -5900,8 +5897,8 @@ async function saveCustomer() {
         customFields: getCustomerCustomFields()
     };
     
-    console.log('=== SAVING CUSTOMER ===');
-    console.log('Custom fields being saved:', customerData.customFields);
+    window.AppLogger?.debug('=== SAVING CUSTOMER ===');
+    window.AppLogger?.debug('Custom fields being saved:', customerData.customFields);
     
     // For backward compatibility, set primary address fields
     if (addresses.length > 0) {
@@ -5914,14 +5911,14 @@ async function saveCustomer() {
     try {
         // Upload documents if any
         if (window.uploadedFiles && window.uploadedFiles.customer && window.uploadedFiles.customer.length > 0) {
-            console.log('Uploading customer documents:', window.uploadedFiles.customer.length, 'files');
+            window.AppLogger?.debug('Uploading customer documents:', window.uploadedFiles.customer.length, 'files');
             updateLoadingMessage('Uploading documents...');
             const uploadedDocs = await window.uploadFiles(window.uploadedFiles.customer);
-            console.log('Upload response:', uploadedDocs);
+            window.AppLogger?.debug('Upload response:', uploadedDocs);
             if (uploadedDocs && uploadedDocs.length > 0) {
                 const existingDocs = window.existingCustomerDocs || [];
                 customerData.documents = [...existingDocs, ...uploadedDocs];
-                console.log('Documents added to customerData:', customerData.documents);
+                window.AppLogger?.debug('Documents added to customerData:', customerData.documents);
             } else {
                 // Upload failed, keep existing documents
                 customerData.documents = window.existingCustomerDocs || [];
@@ -6022,11 +6019,11 @@ async function showCustomerProfile(customerId) {
         document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
         
         // Display custom fields
-        console.log('Customer custom fields:', profileData.customer.customFields);
+        window.AppLogger?.debug('Customer custom fields:', profileData.customer.customFields);
         const customFieldsContainer = document.getElementById('profileCustomFields');
-        console.log('Custom fields container found:', customFieldsContainer);
+        window.AppLogger?.debug('Custom fields container found:', customFieldsContainer);
         if (profileData.customer.customFields && profileData.customer.customFields.length > 0) {
-            console.log('Displaying', profileData.customer.customFields.length, 'custom fields');
+            window.AppLogger?.debug('Displaying', profileData.customer.customFields.length, 'custom fields');
             customFieldsContainer.innerHTML = profileData.customer.customFields.map(field => 
                 `<div class="info-item">
                     <label>${field.name}:</label>
@@ -6035,7 +6032,7 @@ async function showCustomerProfile(customerId) {
             ).join('');
             customFieldsContainer.style.display = 'grid';
         } else {
-            console.log('No custom fields to display');
+            window.AppLogger?.debug('No custom fields to display');
             customFieldsContainer.style.display = 'none';
         }
         
@@ -6176,14 +6173,12 @@ function renderCustomersTable(customers) {
     }
     
     tbody.innerHTML = customers.map(customer => {
-        const initials = customer.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         const customerId = `#${customer._id.substring(0, 8).toUpperCase()}`;
         
         return `
-        <tr style="cursor: pointer;" onclick="viewCustomer('${customer._id}')">
+        <tr onclick="viewCustomer('${customer._id}')">
             <td>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div class="customer-avatar">${initials}</div>
+                <div class="customer-identity">
                     <div class="customer-info">
                         <div class="customer-name">${customer.name}</div>
                         <div class="customer-id">${customerId}</div>
@@ -6427,7 +6422,7 @@ let allOrders = [];
 
 async function loadOrdersSection() {
     try {
-        console.log('loadOrdersSection called');
+        window.AppLogger?.debug('loadOrdersSection called');
         if (window.ordersLoading) return; // Prevent duplicate calls
         window.ordersLoading = true;
         
@@ -6436,7 +6431,7 @@ async function loadOrdersSection() {
         if (tableContainer) setTableLoading(tableContainer, true);
         
         allOrders = await window.APIService.getOrders();
-        console.log('Orders loaded:', allOrders.length);
+        window.AppLogger?.debug('Orders loaded:', allOrders.length);
         initializeOrderFilters();
         updateOrderStatusFilterOptions(allOrders);
         filterOrdersImmediate();
@@ -6887,7 +6882,7 @@ document.head.appendChild(styleSheet);
 
 // Pipeline section loader
 function loadPipelineSection() {
-    console.log('Loading pipeline section...');
+    window.AppLogger?.debug('Loading pipeline section...');
     
     // Show loading state immediately
     const stagesContainer = document.getElementById('stagesContainer');
@@ -6903,7 +6898,7 @@ function loadPipelineSection() {
     // The pipeline-mongodb.js script should already be loaded and initialized
     // Just make sure the data is loaded
     if (typeof loadDataFromDB === 'function') {
-        console.log('Calling loadDataFromDB from pipeline script...');
+        window.AppLogger?.debug('Calling loadDataFromDB from pipeline script...');
         loadDataFromDB();
     } else {
         console.error('Pipeline script not loaded or loadDataFromDB function not found');
@@ -6934,17 +6929,17 @@ window.loadAccountingSection = loadAccountingSection;
 async function showVendorDetail(vendorId) {
     try {
         const vendor = await window.APIService.getVendor(vendorId);
-        console.log('Vendor data received:', vendor);
-        console.log('Vendor notes:', vendor.notes);
-        console.log('Vendor notes type:', typeof vendor.notes);
+        window.AppLogger?.debug('Vendor data received:', vendor);
+        window.AppLogger?.debug('Vendor notes:', vendor.notes);
+        window.AppLogger?.debug('Vendor notes type:', typeof vendor.notes);
         
         document.getElementById('vendorDetailName').textContent = vendor.name;
         
         // Display all emails
         const emailElement = document.getElementById('detailVendorEmail');
-        console.log('Full vendor object:', vendor);
-        console.log('Vendor emails array:', vendor.emails);
-        console.log('Vendor email field:', vendor.email);
+        window.AppLogger?.debug('Full vendor object:', vendor);
+        window.AppLogger?.debug('Vendor emails array:', vendor.emails);
+        window.AppLogger?.debug('Vendor email field:', vendor.email);
         
         // Build emails array from both sources
         let emailsToDisplay = [];
@@ -6957,19 +6952,19 @@ async function showVendorDetail(vendorId) {
         }
         
         if (emailsToDisplay.length > 0) {
-            console.log('Displaying emails:', emailsToDisplay);
+            window.AppLogger?.debug('Displaying emails:', emailsToDisplay);
             emailElement.innerHTML = emailsToDisplay.map((email, index) => 
                 `<div style="margin-bottom: ${index < emailsToDisplay.length - 1 ? '5px' : '0'};"><strong>${email.label || 'Email ' + (index + 1)}:</strong> ${email.address || '-'}</div>`
             ).join('');
         } else {
-            console.log('No email data found');
+            window.AppLogger?.debug('No email data found');
             emailElement.textContent = '-';
         }
         
         // Display all phones
         const phoneElement = document.getElementById('detailVendorPhone');
-        console.log('Vendor phones array:', vendor.phones);
-        console.log('Vendor phone field:', vendor.phone);
+        window.AppLogger?.debug('Vendor phones array:', vendor.phones);
+        window.AppLogger?.debug('Vendor phone field:', vendor.phone);
         
         // Build phones array from both sources
         let phonesToDisplay = [];
@@ -6982,12 +6977,12 @@ async function showVendorDetail(vendorId) {
         }
         
         if (phonesToDisplay.length > 0) {
-            console.log('Displaying phones:', phonesToDisplay);
+            window.AppLogger?.debug('Displaying phones:', phonesToDisplay);
             phoneElement.innerHTML = phonesToDisplay.map((phone, index) => 
                 `<div style="margin-bottom: ${index < phonesToDisplay.length - 1 ? '5px' : '0'};"><strong>${phone.label || 'Phone ' + (index + 1)}:</strong> ${phone.number || '-'}</div>`
             ).join('');
         } else {
-            console.log('No phone data found');
+            window.AppLogger?.debug('No phone data found');
             phoneElement.textContent = '-';
         }
         
@@ -7002,16 +6997,16 @@ async function showVendorDetail(vendorId) {
         const notesElement = document.getElementById('detailVendorNotes');
         if (notesElement) {
             const notesText = vendor.notes && vendor.notes.trim() ? vendor.notes.trim() : 'No notes available';
-            console.log('Setting notes text to:', notesText);
+            window.AppLogger?.debug('Setting notes text to:', notesText);
             notesElement.textContent = notesText;
         }
         
         // Display custom fields
-        console.log('Vendor custom fields:', vendor.customFields);
+        window.AppLogger?.debug('Vendor custom fields:', vendor.customFields);
         const customFieldsContainer = document.getElementById('detailVendorCustomFields');
-        console.log('Custom fields container found:', customFieldsContainer);
+        window.AppLogger?.debug('Custom fields container found:', customFieldsContainer);
         if (vendor.customFields && vendor.customFields.length > 0) {
-            console.log('Displaying', vendor.customFields.length, 'custom fields');
+            window.AppLogger?.debug('Displaying', vendor.customFields.length, 'custom fields');
             customFieldsContainer.innerHTML = vendor.customFields.map(field => 
                 `<div class="info-item">
                     <label>${field.name}:</label>
@@ -7020,7 +7015,7 @@ async function showVendorDetail(vendorId) {
             ).join('');
             customFieldsContainer.style.display = 'grid';
         } else {
-            console.log('No custom fields to display');
+            window.AppLogger?.debug('No custom fields to display');
             customFieldsContainer.style.display = 'none';
         }
         
@@ -7196,7 +7191,7 @@ function renderUsersTable(users) {
     if (!users || users.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="users-empty-state">
+                <td colspan="6" class="users-empty-state">
                     <i class="fas fa-users-cog"></i>
                     <h3>No Users Found</h3>
                     <p>No users have signed up yet</p>
@@ -7207,7 +7202,6 @@ function renderUsersTable(users) {
     }
     
     tbody.innerHTML = users.map(user => {
-        const initials = ((user.firstName || '')[0] + (user.lastName || '')[0]).toUpperCase() || 'U';
         const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
         const userId = `#${user._id.substring(0, 8).toUpperCase()}`;
         const signupDate = formatDisplayDate(user.createdAt);
@@ -7217,20 +7211,19 @@ function renderUsersTable(users) {
         return `
         <tr>
             <td>
-                <div class="user-info">
-                    <div class="user-avatar">${initials}</div>
+                <div class="user-identity">
                     <div class="user-details">
                         <div class="user-name">${fullName}</div>
                         <div class="user-id">${userId}</div>
                     </div>
                 </div>
             </td>
-            <td>${user.email}</td>
+            <td><span class="user-email">${user.email}</span></td>
             <td>
                 <span class="role-badge ${user.role}">${user.role.replace('_', ' ')}</span>
-                ${isPending && user.requestedRole ? `<br><small style="color: #6b7280; font-size: 11px;">Wants: ${requestedRoleName}</small>` : ''}
+                ${isPending && user.requestedRole ? `<span class="requested-role">Wants: ${requestedRoleName}</span>` : ''}
             </td>
-            <td>${signupDate}</td>
+            <td><span class="user-date-cell">${signupDate}</span></td>
             <td>
                 <span class="status-badge ${isPending ? 'pending' : 'active'}">
                     <i class="fas fa-${isPending ? 'clock' : 'check-circle'}"></i>
@@ -7238,33 +7231,33 @@ function renderUsersTable(users) {
                 </span>
             </td>
             <td>
-                ${isPending ? `
-                    ${user.requestedRole ? `
-                        <button class="btn-assign-role" onclick="approveUserRole('${user._id}', '${user.requestedRole}')" style="background: #10b981; margin-right: 8px;">
-                            <i class="fas fa-check"></i> Approve
+                <div class="user-actions">
+                    ${isPending ? `
+                        ${user.requestedRole ? `
+                            <button class="btn-assign-role approve" onclick="approveUserRole('${user._id}', '${user.requestedRole}')" title="Approve requested role">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                        ` : ''}
+                        <select class="role-select" id="role-${user._id}">
+                            <option value="">Or assign...</option>
+                            <option value="admin">Admin</option>
+                            <option value="manager">Manager</option>
+                            <option value="account_rep">Account Rep</option>
+                        </select>
+                        <button class="btn-assign-role" onclick="assignUserRole('${user._id}')" title="Assign selected role">
+                            <i class="fas fa-user-check"></i> Assign
                         </button>
-                    ` : ''}
-                    <select class="role-select" id="role-${user._id}" style="width: auto; display: inline-block;">
-                        <option value="">Or assign...</option>
-                        <option value="admin">Admin</option>
-                        <option value="manager">Manager</option>
-                        <option value="account_rep">Account Rep</option>
-                    </select>
-                    <button class="btn-assign-role" onclick="assignUserRole('${user._id}')">
-                        <i class="fas fa-user-check"></i> Assign
+                    ` : `
+                        <select class="role-select" id="role-${user._id}" onchange="changeUserRole('${user._id}')">
+                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option>
+                            <option value="account_rep" ${user.role === 'account_rep' ? 'selected' : ''}>Account Rep</option>
+                        </select>
+                    `}
+                    <button class="action-btn delete" onclick="deleteUser('${user._id}')" title="Delete User">
+                        <i class="fas fa-trash"></i>
                     </button>
-                ` : `
-                    <select class="role-select" id="role-${user._id}" onchange="changeUserRole('${user._id}')">
-                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                        <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option>
-                        <option value="account_rep" ${user.role === 'account_rep' ? 'selected' : ''}>Account Rep</option>
-                    </select>
-                `}
-            </td>
-            <td>
-                <button class="action-btn delete" onclick="deleteUser('${user._id}')" title="Delete User">
-                    <i class="fas fa-trash"></i>
-                </button>
+                </div>
             </td>
         </tr>
     `;

@@ -152,9 +152,9 @@ async function importVendorsFromCSV() {
                         continue;
                     }
                     
-                    console.log('Importing vendor:', vendorData);
+                    window.AppLogger?.debug('Importing vendor:', vendorData);
                     const result = await window.APIService.createVendor(vendorData);
-                    console.log('Vendor created:', result);
+                    window.AppLogger?.debug('Vendor created:', result);
                     successCount++;
                 } catch (error) {
                     console.error('Failed to import vendor:', vendor.name, error);
@@ -164,7 +164,7 @@ async function importVendorsFromCSV() {
             }
             
             if (errors.length > 0) {
-                console.log('Import errors:', errors);
+                window.AppLogger?.debug('Import errors:', errors);
             }
             
             if (successCount > 0) {
@@ -223,7 +223,7 @@ async function importEmployeesFromCSV() {
                         skills: employee.skills ? employee.skills.split(';').map(s => s.trim()) : []
                     };
                     
-                    console.log('Importing employee:', employeeData);
+                    window.AppLogger?.debug('Importing employee:', employeeData);
                     
                     if (!employeeData.name || !employeeData.email) {
                         errors.push(`Row skipped: Missing name or email`);
@@ -232,7 +232,7 @@ async function importEmployeesFromCSV() {
                     }
                     
                     const result = await window.APIService.createEmployee(employeeData);
-                    console.log('Employee created:', result);
+                    window.AppLogger?.debug('Employee created:', result);
                     successCount++;
                 } catch (error) {
                     console.error('Failed to import employee:', employee.name, error);
@@ -242,7 +242,7 @@ async function importEmployeesFromCSV() {
             }
             
             if (errors.length > 0) {
-                console.log('Import errors:', errors);
+                window.AppLogger?.debug('Import errors:', errors);
             }
             
             if (successCount > 0) {
@@ -328,7 +328,7 @@ async function importCustomersFromCSV() {
                         notes: customer.notes || ''
                     };
                     
-                    console.log('Importing customer:', customerData);
+                    window.AppLogger?.debug('Importing customer:', customerData);
                     
                     if (!customerData.name || !customerData.email) {
                         errors.push(`Row skipped: Missing name or email`);
@@ -337,7 +337,7 @@ async function importCustomersFromCSV() {
                     }
                     
                     const result = await window.APIService.createCustomer(customerData);
-                    console.log('Customer created:', result);
+                    window.AppLogger?.debug('Customer created:', result);
                     successCount++;
                 } catch (error) {
                     console.error('Failed to import customer:', customer.name, error);
@@ -347,7 +347,7 @@ async function importCustomersFromCSV() {
             }
             
             if (errors.length > 0) {
-                console.log('Import errors:', errors);
+                window.AppLogger?.debug('Import errors:', errors);
             }
             
             if (successCount > 0) {

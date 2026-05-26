@@ -217,7 +217,8 @@
     border-left: 4px solid #2196F3;
 }
 
-.cash-flow-item label {
+.cash-flow-item label,
+.cash-flow-item .display-label {
     display: block;
     font-size: 0.9rem;
     color: #7f8c8d;
@@ -290,7 +291,8 @@
     border-radius: 8px;
 }
 
-.detail-item label {
+.detail-item label,
+.detail-item .display-label {
     display: block;
     font-size: 0.85rem;
     color: #7f8c8d;
@@ -668,7 +670,8 @@
     flex-direction: column;
 }
 
-.scenario-metrics .metric label {
+.scenario-metrics .metric label,
+.scenario-metrics .metric .display-label {
     font-size: 0.85rem;
     color: #7f8c8d;
     margin-bottom: 5px;
@@ -1257,7 +1260,8 @@
     text-align: center;
 }
 
-.formula-item label {
+.formula-item label,
+.formula-item .display-label {
     display: block;
     font-size: 0.9rem;
     color: #7f8c8d;
@@ -1277,7 +1281,8 @@
     border-radius: 10px;
 }
 
-.formula-item.result label {
+.formula-item.result label,
+.formula-item.result .display-label {
     color: white;
     opacity: 0.9;
 }
