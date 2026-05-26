@@ -985,8 +985,32 @@ body {
     border-color: rgba(0, 86, 184, 0.15);
 }
 
+.financial-item.ytd-revenue {
+    border-color: rgba(34, 197, 94, 0.18);
+}
+
+.financial-item.month-revenue {
+    border-color: rgba(37, 99, 235, 0.18);
+}
+
+.financial-item.month-sales {
+    border-color: rgba(217, 119, 6, 0.18);
+}
+
 .financial-item.revenue::before {
     background: linear-gradient(180deg, #0056B8, #003d85);
+}
+
+.financial-item.ytd-revenue::before {
+    background: linear-gradient(180deg, #22c55e, #15803d);
+}
+
+.financial-item.month-revenue::before {
+    background: linear-gradient(180deg, #60a5fa, #2563eb);
+}
+
+.financial-item.month-sales::before {
+    background: linear-gradient(180deg, #fbbf24, #d97706);
 }
 
 .financial-item.cost {
@@ -1019,16 +1043,13 @@ body {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
-.financial-item.revenue .financial-icon {
-    background: linear-gradient(135deg, #0056B8, #003d85);
-}
-
-.financial-item.cost .financial-icon {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-
+.financial-item.revenue .financial-icon,
+.financial-item.ytd-revenue .financial-icon,
+.financial-item.month-revenue .financial-icon,
+.financial-item.month-sales .financial-icon,
+.financial-item.cost .financial-icon,
 .financial-item.profit .financial-icon {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: #1d6fd4;
 }
 
 .financial-content {
@@ -1060,6 +1081,27 @@ body {
 
 .financial-item.revenue .financial-value {
     background: linear-gradient(135deg, #0056B8, #003d85);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.financial-item.ytd-revenue .financial-value {
+    background: linear-gradient(135deg, #22c55e, #15803d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.financial-item.month-revenue .financial-value {
+    background: linear-gradient(135deg, #60a5fa, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.financial-item.month-sales .financial-value {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

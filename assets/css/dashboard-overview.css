@@ -1558,6 +1558,18 @@
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(236, 253, 245, 0.65));
 }
 
+#dashboard.dashboard-overview .financial-item.ytd-revenue {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 244, 0.72));
+}
+
+#dashboard.dashboard-overview .financial-item.month-revenue {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.72));
+}
+
+#dashboard.dashboard-overview .financial-item.month-sales {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 237, 0.72));
+}
+
 #dashboard.dashboard-overview .financial-item.cost {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(254, 242, 242, 0.7));
 }
@@ -1584,18 +1596,13 @@
     flex-shrink: 0;
 }
 
-#dashboard.dashboard-overview .financial-item.revenue .financial-icon {
-    background: linear-gradient(145deg, #34d399, #059669);
-    color: #fff;
-}
-
-#dashboard.dashboard-overview .financial-item.cost .financial-icon {
-    background: linear-gradient(145deg, #f87171, #dc2626);
-    color: #fff;
-}
-
+#dashboard.dashboard-overview .financial-item.revenue .financial-icon,
+#dashboard.dashboard-overview .financial-item.ytd-revenue .financial-icon,
+#dashboard.dashboard-overview .financial-item.month-revenue .financial-icon,
+#dashboard.dashboard-overview .financial-item.month-sales .financial-icon,
+#dashboard.dashboard-overview .financial-item.cost .financial-icon,
 #dashboard.dashboard-overview .financial-item.profit .financial-icon {
-    background: linear-gradient(145deg, #1d6fd4, var(--do-accent));
+    background: #1d6fd4;
     color: #fff;
 }
 
@@ -1623,6 +1630,18 @@
 
 #dashboard.dashboard-overview .financial-item.revenue .financial-value {
     color: #047857;
+}
+
+#dashboard.dashboard-overview .financial-item.ytd-revenue .financial-value {
+    color: #15803d;
+}
+
+#dashboard.dashboard-overview .financial-item.month-revenue .financial-value {
+    color: #1d4ed8;
+}
+
+#dashboard.dashboard-overview .financial-item.month-sales .financial-value {
+    color: #b45309;
 }
 
 #dashboard.dashboard-overview .financial-item.cost .financial-value {

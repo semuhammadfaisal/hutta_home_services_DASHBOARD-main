@@ -635,31 +635,39 @@ class DashboardManager {
     }
 
     renderFinancialOverview(orders, payments) {
+        const ordersData = Array.isArray(orders) ? orders : [];
         const revenueEl = document.getElementById('financialRevenue');
         const costEl = document.getElementById('financialCost');
         const profitEl = document.getElementById('financialProfit');
+        const ytdRevenueEl = document.getElementById('financialYtdRevenue');
+        const monthRevenueEl = document.getElementById('financialMonthRevenue');
+        const monthSalesEl = document.getElementById('financialMonthSales');
         const periodLabel = document.getElementById('financialPeriodLabel');
         
         // Get date range from inputs
         const startDateInput = document.getElementById('financialStartDate');
         const endDateInput = document.getElementById('financialEndDate');
         
-        let filteredOrders = orders;
+        let filteredOrders = ordersData;
         let periodText = 'All time';
+        let referenceDateInput = todayDateInput();
         
         if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
             const startDate = startDateInput.value;
             const endDate = endDateInput.value;
+            referenceDateInput = endDate;
             
-            filteredOrders = orders.filter(order => {
+            filteredOrders = ordersData.filter(order => {
+                const orderDate = this.getOrderFinancialDate(order);
+                if (!orderDate) return false;
                 if (tz()) {
-                    return tz().isDateInRangeMDT(order.createdAt, startDate, endDate);
+                    return tz().isDateInRangeMDT(orderDate, startDate, endDate);
                 }
-                const orderDate = new Date(order.createdAt);
+                const parsedOrderDate = new Date(orderDate);
                 const start = new Date(startDate);
                 const end = new Date(endDate);
                 end.setHours(23, 59, 59, 999);
-                return orderDate >= start && orderDate <= end;
+                return parsedOrderDate >= start && parsedOrderDate <= end;
             });
             
             periodText = `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
@@ -668,11 +676,97 @@ class DashboardManager {
         const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
         const totalCost = filteredOrders.reduce((sum, order) => sum + (order.vendorCost || 0), 0);
         const totalProfit = totalRevenue - totalCost;
+        const referenceYmd = this.getFinancialReferenceYmd(referenceDateInput);
+        const currentMonthRange = this.getFinancialMonthRange(referenceYmd);
+        const ytdRange = this.getFinancialYtdRange(referenceYmd);
+        const ytdRevenue = this.sumRevenueInRange(ordersData, ytdRange.start, ytdRange.end);
+        const monthRevenue = this.sumRevenueInRange(ordersData, currentMonthRange.start, currentMonthRange.end);
+        const monthSales = this.countSalesInRange(ordersData, currentMonthRange.start, currentMonthRange.end);
+        const selectedMonthLabel = this.formatFinancialMonthLabel(referenceYmd);
         
         if (revenueEl) revenueEl.textContent = `$${totalRevenue.toLocaleString()}`;
         if (costEl) costEl.textContent = `$${totalCost.toLocaleString()}`;
         if (profitEl) profitEl.textContent = `$${totalProfit.toLocaleString()}`;
-        if (periodLabel) periodLabel.textContent = periodText;
+        if (ytdRevenueEl) ytdRevenueEl.textContent = `$${ytdRevenue.toLocaleString()}`;
+        if (monthRevenueEl) monthRevenueEl.textContent = `$${monthRevenue.toLocaleString()}`;
+        if (monthSalesEl) monthSalesEl.textContent = monthSales.toLocaleString();
+        if (periodLabel) periodLabel.textContent = `${periodText} | Monthly stats: ${selectedMonthLabel}`;
+    }
+
+    getOrderFinancialDate(order) {
+        return order?.createdAt || order?.startDate || order?.date || null;
+    }
+
+    getFinancialReferenceYmd(dateInput) {
+        const config = tz();
+        const ymd = config ? config.getYmdInMDT(config.dateInputToMDT(dateInput)) : null;
+        if (ymd) return ymd;
+
+        const fallback = new Date(dateInput || new Date());
+        if (!Number.isNaN(fallback.getTime())) {
+            return {
+                year: fallback.getFullYear(),
+                month: fallback.getMonth(),
+                day: fallback.getDate()
+            };
+        }
+
+        const today = new Date();
+        return { year: today.getFullYear(), month: today.getMonth(), day: today.getDate() };
+    }
+
+    getFinancialMonthRange(referenceYmd) {
+        const start = `${referenceYmd.year}-${String(referenceYmd.month + 1).padStart(2, '0')}-01`;
+        const end = `${referenceYmd.year}-${String(referenceYmd.month + 1).padStart(2, '0')}-${String(referenceYmd.day).padStart(2, '0')}`;
+        return { start, end };
+    }
+
+    getFinancialYtdRange(referenceYmd) {
+        return {
+            start: `${referenceYmd.year}-01-01`,
+            end: `${referenceYmd.year}-${String(referenceYmd.month + 1).padStart(2, '0')}-${String(referenceYmd.day).padStart(2, '0')}`
+        };
+    }
+
+    isOrderInFinancialRange(order, startDate, endDate) {
+        const orderDate = this.getOrderFinancialDate(order);
+        if (!orderDate || !startDate || !endDate) return false;
+
+        const config = tz();
+        if (config) {
+            return config.isDateInRangeMDT(orderDate, startDate, endDate);
+        }
+
+        const parsedOrderDate = new Date(orderDate);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        return !Number.isNaN(parsedOrderDate.getTime()) && parsedOrderDate >= start && parsedOrderDate <= end;
+    }
+
+    sumRevenueInRange(orders, startDate, endDate) {
+        return (orders || []).reduce((sum, order) => {
+            if (!this.isOrderInFinancialRange(order, startDate, endDate)) return sum;
+            return sum + Number(order.amount || 0);
+        }, 0);
+    }
+
+    countSalesInRange(orders, startDate, endDate) {
+        const completedStatuses = new Set(['completed', 'paid', 'closed']);
+        return (orders || []).filter(order => {
+            const status = String(order.status || '').toLowerCase();
+            const pipelineStage = String(order.pipelineStage || '').toLowerCase();
+            const isCompletedOrPaid = completedStatuses.has(status) || completedStatuses.has(pipelineStage);
+            return isCompletedOrPaid && this.isOrderInFinancialRange(order, startDate, endDate);
+        }).length;
+    }
+
+    formatFinancialMonthLabel(referenceYmd) {
+        return new Date(Date.UTC(referenceYmd.year, referenceYmd.month, 1)).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'UTC'
+        });
     }
 
 
