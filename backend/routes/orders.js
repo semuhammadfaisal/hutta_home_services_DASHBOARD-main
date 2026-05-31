@@ -269,6 +269,8 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     const vendorCost = Number(req.body.vendorCost) || 0;
     const processingFee = Number(req.body.processingFee) || 0;
     const profit = amount - vendorCost - processingFee;
+    const createdDate = parseMdtDateInput(req.body.startDate);
+    const scheduleDate = parseMdtDateInput(req.body.scheduleDate || req.body.startDate);
     const endDate = parseMdtDateInput(req.body.endDate);
     
     // Prepare order data
@@ -287,7 +289,8 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       vendorCost,
       processingFee,
       profit,
-      startDate: parseMdtDateInput(req.body.startDate),
+      startDate: createdDate,
+      scheduleDate,
       endDate,
       status: req.body.status || 'new',
       priority: req.body.priority || 'medium',
@@ -415,13 +418,19 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     };
     
     // Convert dates if provided
-    if (req.body.startDate) {
+    if (req.body.startDate !== undefined) {
       updateData.startDate = parseMdtDateInput(req.body.startDate);
-      if (existingOrder.startDate?.getTime() !== updateData.startDate.getTime()) {
+      if (existingOrder.startDate?.getTime() !== updateData.startDate?.getTime()) {
         changes.startDate = updateData.startDate;
       }
     }
-    if (req.body.endDate) {
+    if (req.body.scheduleDate !== undefined) {
+      updateData.scheduleDate = parseMdtDateInput(req.body.scheduleDate);
+      if ((existingOrder.scheduleDate || existingOrder.startDate)?.getTime() !== updateData.scheduleDate?.getTime()) {
+        changes.scheduleDate = updateData.scheduleDate;
+      }
+    }
+    if (req.body.endDate !== undefined) {
       updateData.endDate = parseMdtDateInput(req.body.endDate);
     }
     
@@ -543,7 +552,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
           if (changes.address !== undefined) pipelineRecord.address = changes.address;
           if (changes.priority) pipelineRecord.priority = changes.priority;
           if (changes.amount !== undefined) pipelineRecord.budget = changes.amount;
-          if (changes.startDate) pipelineRecord.startDate = changes.startDate;
+          if (changes.scheduleDate) pipelineRecord.startDate = changes.scheduleDate;
           if (changes.description !== undefined) pipelineRecord.description = changes.description;
           if (changes.notes !== undefined) pipelineRecord.notes = changes.notes;
           

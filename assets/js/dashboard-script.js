@@ -387,7 +387,7 @@ class DashboardManager {
         if (!ordersData || ordersData.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="11" class="orders-empty-state">
+                    <td colspan="12" class="orders-empty-state">
                         <i class="fas fa-clipboard-list"></i>
                         <h3>No Orders Found</h3>
                         <p>Start by creating your first order</p>
@@ -431,6 +431,7 @@ class DashboardManager {
                 <td><span class="order-status-badge ${statusClass}">${this.formatStatus(statusDisplay)}</span></td>
                 <td><span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span></td>
                 <td><span class="order-date-cell">${order.startDate ? this.formatDate(order.startDate) : 'N/A'}</span></td>
+                <td><span class="order-date-cell">${(order.scheduleDate || order.startDate) ? this.formatDate(order.scheduleDate || order.startDate) : 'N/A'}</span></td>
                 <td><span class="order-amount">$${order.amount?.toLocaleString() || '0'}</span></td>
                 <td><span class="order-cost">$${order.vendorCost?.toLocaleString() || '0'}</span></td>
                 <td><span class="order-profit">$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}</span></td>
@@ -1857,6 +1858,7 @@ function showAddOrderModal() {
     // Set default dates
     const today = todayDateInput();
     document.getElementById('startDate').value = today;
+    document.getElementById('scheduleDate').value = today;
     
     // Reset order type and recurring fields
     document.getElementById('orderType').value = 'one-time';
@@ -1927,6 +1929,7 @@ async function editOrder(orderId) {
         document.getElementById('processingFee').value = order.processingFee || '';
         document.getElementById('profit').value = order.profit || '';
         document.getElementById('startDate').value = order.startDate ? order.startDate.split('T')[0] : '';
+        document.getElementById('scheduleDate').value = (order.scheduleDate || order.startDate) ? (order.scheduleDate || order.startDate).split('T')[0] : '';
         document.getElementById('endDate').value = order.endDate ? order.endDate.split('T')[0] : '';
         document.getElementById('status').value = order.status || 'new';
         document.getElementById('priority').value = order.priority || 'medium';
@@ -2060,7 +2063,7 @@ async function saveOrder() {
                 address: customerData.address,
                 priority: document.getElementById('priority').value || 'medium',
                 budget: parseFloat(document.getElementById('amount').value) || 0,
-                startDate: document.getElementById('startDate').value,
+                startDate: document.getElementById('scheduleDate').value || document.getElementById('startDate').value,
                 description: document.getElementById('description').value || '',
                 notes: document.getElementById('notes').value || ''
             };
@@ -2116,6 +2119,7 @@ async function saveOrder() {
         vendor: document.getElementById('vendor').value || null,
         employee: document.getElementById('employee').value || null,
         startDate: document.getElementById('startDate').value,
+        scheduleDate: document.getElementById('scheduleDate').value,
         endDate: document.getElementById('orderType').value === 'recurring' ? null : (document.getElementById('endDate').value || null),
         status: document.getElementById('status').value || 'new',
         priority: document.getElementById('priority').value || 'medium',
@@ -2286,6 +2290,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             document.getElementById('modalDetailOrderService').textContent = order.service || '-';
             document.getElementById('modalDetailOrderVendor').textContent = order.vendor?.name || '-';
             document.getElementById('modalDetailOrderStartDate').textContent = order.startDate ? formatDisplayDate(order.startDate) : '-';
+            document.getElementById('modalDetailOrderScheduleDate').textContent = (order.scheduleDate || order.startDate) ? formatDisplayDate(order.scheduleDate || order.startDate) : '-';
             document.getElementById('modalDetailOrderEndDate').textContent = order.endDate ? formatDisplayDate(order.endDate) : '-';
             document.getElementById('modalDetailOrderCustomerName').textContent = order.customer?.name || '-';
             document.getElementById('modalDetailOrderCustomerEmail').textContent = order.customer?.email || '-';
@@ -2362,6 +2367,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         const detailOrderService = document.getElementById('detailOrderService');
         const detailOrderVendor = document.getElementById('detailOrderVendor');
         const detailOrderStartDate = document.getElementById('detailOrderStartDate');
+        const detailOrderScheduleDate = document.getElementById('detailOrderScheduleDate');
         const detailOrderEndDate = document.getElementById('detailOrderEndDate');
         const detailOrderCustomerName = document.getElementById('detailOrderCustomerName');
         const detailOrderCustomerEmail = document.getElementById('detailOrderCustomerEmail');
@@ -2379,6 +2385,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         if (detailOrderService) detailOrderService.textContent = order.service || '-';
         if (detailOrderVendor) detailOrderVendor.textContent = order.vendor?.name || 'N/A';
         if (detailOrderStartDate) detailOrderStartDate.textContent = order.startDate ? formatDisplayDate(order.startDate) : '-';
+        if (detailOrderScheduleDate) detailOrderScheduleDate.textContent = (order.scheduleDate || order.startDate) ? formatDisplayDate(order.scheduleDate || order.startDate) : '-';
         if (detailOrderEndDate) detailOrderEndDate.textContent = order.endDate ? formatDisplayDate(order.endDate) : '-';
         
         if (detailOrderCustomerName) detailOrderCustomerName.textContent = order.customer?.name || order.customer || '-';
@@ -7165,7 +7172,7 @@ async function showVendorDetail(vendorId) {
                             <span><i class="fas fa-user"></i> ${order.customer?.name || order.customer}</span>
                             <span><i class="fas fa-wrench"></i> ${order.service}</span>
                             <span><i class="fas fa-dollar-sign"></i> $${order.amount?.toLocaleString() || '0'}</span>
-                            <span><i class="fas fa-calendar"></i> ${order.startDate ? formatDisplayDate(order.startDate) : 'N/A'}</span>
+                            <span><i class="fas fa-calendar"></i> ${(order.scheduleDate || order.startDate) ? formatDisplayDate(order.scheduleDate || order.startDate) : 'N/A'}</span>
                         </div>
                     </div>
                     <button class="btn-icon" onclick="viewOrder('${order._id}')" title="View Order">

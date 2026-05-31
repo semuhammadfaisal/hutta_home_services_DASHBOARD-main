@@ -559,6 +559,7 @@
                         <col class="orders-col-status">
                         <col class="orders-col-priority">
                         <col class="orders-col-date">
+                        <col class="orders-col-date">
                         <col class="orders-col-revenue">
                         <col class="orders-col-cost">
                         <col class="orders-col-profit">
@@ -572,7 +573,8 @@
                             <th>Vendor</th>
                             <th>Status</th>
                             <th>Priority</th>
-                            <th>Start Date</th>
+                            <th>Created Date</th>
+                            <th>Schedule Date</th>
                             <th>Revenue</th>
                             <th>Cost</th>
                             <th>Profit</th>
@@ -635,8 +637,12 @@
                             <span id="detailOrderVendor">-</span>
                         </div>
                         <div class="info-item">
-                            <span class="display-label">Start Date:</span>
+                            <span class="display-label">Created Date:</span>
                             <span id="detailOrderStartDate">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="display-label">Schedule Date:</span>
+                            <span id="detailOrderScheduleDate">-</span>
                         </div>
                         <div class="info-item">
                             <span class="display-label">End Date:</span>
@@ -2308,9 +2314,16 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="startDate">Start Date *</label>
-                            <input type="date" id="startDate" required autocomplete="off">
+                            <label for="startDate">Created Date</label>
+                            <input type="date" id="startDate" autocomplete="off">
                         </div>
+                        <div class="form-group">
+                            <label for="scheduleDate">Schedule Date</label>
+                            <input type="date" id="scheduleDate" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-group" id="endDateGroup">
                             <label for="endDate">End Date</label>
                             <input type="date" id="endDate" autocomplete="off">
@@ -2481,8 +2494,8 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="paymentDate">Payment Date *</label>
-                            <input type="date" id="paymentDate" required autocomplete="off">
+                            <label for="paymentDate">Payment Date</label>
+                            <input type="date" id="paymentDate" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="paymentDueDate">Due Date</label>
@@ -3338,8 +3351,12 @@
                                 <span id="modalDetailOrderVendor">-</span>
                             </div>
                             <div class="info-item">
-                                <span class="display-label">Start Date:</span>
+                                <span class="display-label">Created Date:</span>
                                 <span id="modalDetailOrderStartDate">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="display-label">Schedule Date:</span>
+                                <span id="modalDetailOrderScheduleDate">-</span>
                             </div>
                             <div class="info-item">
                                 <span class="display-label">End Date:</span>

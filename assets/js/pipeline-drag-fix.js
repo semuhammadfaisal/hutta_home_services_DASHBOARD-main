@@ -238,7 +238,7 @@ async function addOrderToPipeline(orderId, stageId) {
                 phone: order.customer?.phone || '',
                 address: order.customer?.address || '',
                 budget: order.amount || '',
-                startDate: order.startDate || '',
+                startDate: order.scheduleDate || order.startDate || '',
                 description: order.description || '',
                 notes: order.notes || '',
                 priority: order.priority || 'medium'

@@ -25,7 +25,8 @@ const orderSchema = new mongoose.Schema({
   profit: { type: Number, default: 0 },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
-  startDate: { type: Date, required: true },
+  startDate: { type: Date },
+  scheduleDate: { type: Date },
   endDate: { type: Date },
   status: { type: String, default: 'new' },
   priority: { type: String, default: 'medium' },
@@ -48,6 +49,7 @@ orderSchema.index({ vendor: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ pipelineRecordId: 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ scheduleDate: 1 });
 orderSchema.index({ orderId: 1 });
 orderSchema.index({ 'customer.email': 1 });
 

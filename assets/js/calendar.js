@@ -99,8 +99,10 @@ function getEventsForDate(year, month, day) {
         const isRecurring = order.orderType === 'recurring';
         if (isRecurring) return;
 
-        if (order.startDate) {
-            const startYmd = getCalendarFieldYmd(order.startDate);
+        const orderScheduleDate = order.scheduleDate || order.startDate;
+
+        if (orderScheduleDate) {
+            const startYmd = getCalendarFieldYmd(orderScheduleDate);
             if (sameYmd(startYmd, year, month, day)) {
                 events.push({
                     type: 'order',
@@ -114,7 +116,7 @@ function getEventsForDate(year, month, day) {
         if (order.endDate) {
             const endYmd = getCalendarFieldYmd(order.endDate);
             if (sameYmd(endYmd, year, month, day)) {
-                const startYmd = order.startDate ? getCalendarFieldYmd(order.startDate) : null;
+                const startYmd = orderScheduleDate ? getCalendarFieldYmd(orderScheduleDate) : null;
                 if (!sameYmd(startYmd, year, month, day)) {
                     events.push({
                         type: 'order',
@@ -382,8 +384,8 @@ async function showEventDetail(event) {
                     <div class="value">$${data.amount?.toLocaleString() || '0'}</div>
                 </div>
                 <div class="detail-item">
-                    <label>Start Date</label>
-                    <div class="value">${formatCalendarDate(data.startDate)}</div>
+                    <label>Schedule Date</label>
+                    <div class="value">${formatCalendarDate(data.scheduleDate || data.startDate)}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>
@@ -416,12 +418,12 @@ function openOrderModalWithDate(date) {
         window.showAddOrderModal();
         
         setTimeout(() => {
-            const startDateInput = document.getElementById('startDate');
+            const scheduleDateInput = document.getElementById('scheduleDate');
             const endDateInput = document.getElementById('endDate');
             
-            if (startDateInput) {
-                startDateInput.value = formattedDate;
-                window.AppLogger?.debug('Start date set to:', formattedDate);
+            if (scheduleDateInput) {
+                scheduleDateInput.value = formattedDate;
+                window.AppLogger?.debug('Schedule date set to:', formattedDate);
             }
             
             if (endDateInput) {
@@ -459,8 +461,9 @@ function getRecurringEventsForDate(year, month, day) {
     const targetOrdinal = ymdToOrdinal(targetYmd);
     
     recurringCachedOrders.forEach(order => {
-        if (order.startDate && order.recurringFrequency) {
-            const startYmd = getCalendarFieldYmd(order.startDate);
+        const orderScheduleDate = order.scheduleDate || order.startDate;
+        if (orderScheduleDate && order.recurringFrequency) {
+            const startYmd = getCalendarFieldYmd(orderScheduleDate);
             const startOrdinal = ymdToOrdinal(startYmd);
             const endYmd = order.recurringEndDate ? getCalendarFieldYmd(order.recurringEndDate) : null;
             const endOrdinal = ymdToOrdinal(endYmd);
@@ -675,8 +678,8 @@ async function showRecurringEventDetail(event) {
                 <div class="value">$${data.amount?.toLocaleString() || '0'}</div>
             </div>
             <div class="detail-item">
-                <label>Start Date</label>
-                <div class="value">${formatCalendarDate(data.startDate)}</div>
+                <label>Schedule Date</label>
+                <div class="value">${formatCalendarDate(data.scheduleDate || data.startDate)}</div>
             </div>
             ${data.recurringEndDate ? `
             <div class="detail-item">

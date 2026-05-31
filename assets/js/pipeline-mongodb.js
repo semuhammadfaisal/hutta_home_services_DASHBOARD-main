@@ -736,7 +736,7 @@ function populateFromWorkOrder(order) {
         recordPhone: order.customer?.phone || '',
         recordAddress: order.customer?.address || '',
         recordBudget: order.amount || '',
-        recordStartDate: order.startDate ? order.startDate.split('T')[0] : '',
+        recordStartDate: (order.scheduleDate || order.startDate) ? (order.scheduleDate || order.startDate).split('T')[0] : '',
         recordDescription: order.description || '',
         recordNotes: order.notes || ''
     };
@@ -900,7 +900,8 @@ async function saveRecord(event) {
                                     address: address || currentOrder.customer?.address
                                 },
                                 amount: budget || currentOrder.amount,
-                                startDate: startDate || currentOrder.startDate,
+                                startDate: currentOrder.startDate,
+                                scheduleDate: startDate || currentOrder.scheduleDate || currentOrder.startDate,
                                 endDate: startDate || currentOrder.endDate,
                                 description: description || currentOrder.description,
                                 notes: notes || currentOrder.notes,
@@ -1585,7 +1586,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
         const phone = order.customer?.phone || '';
         const address = order.customer?.address || '';
         const budget = order.amount || '';
-        const startDate = order.startDate || '';
+        const startDate = order.scheduleDate || order.startDate || '';
         const description = order.description || '';
         const notes = order.notes || '';
         const priority = order.priority || 'medium';
