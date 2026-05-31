@@ -91,6 +91,9 @@
 .notification-icon.order { background: #f3e5f5; color: #7b1fa2; }
 .notification-icon.payment { background: #e0f2f1; color: #00796b; }
 .notification-icon.system { background: #fafafa; color: #616161; }
+.notification-icon.update { background: #ecfdf5; color: #15803d; }
+.notification-icon.feature { background: #eff6ff; color: #0056B8; }
+.notification-icon.improvement { background: #f0f9ff; color: #0369a1; }
 
 .notification-content {
     flex: 1;
@@ -137,6 +140,22 @@
     top: -5px;
     right: -5px;
     background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.updates-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #16a34a;
     color: white;
     border-radius: 50%;
     width: 18px;

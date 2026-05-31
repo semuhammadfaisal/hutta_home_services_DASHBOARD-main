@@ -1069,6 +1069,115 @@ function closeNotificationPanel() {
     if (panel) panel.remove();
 }
 
+// Software update feed
+const SOFTWARE_UPDATES = [
+    {
+        id: '2026-05-31-orders-toolbar-design',
+        type: 'improvement',
+        icon: 'sliders-h',
+        title: 'Improved Orders Toolbar',
+        message: 'The orders search, filters, date range, and summary stats are now better aligned and easier to scan.',
+        createdAt: '2026-05-31T00:00:00Z'
+    },
+    {
+        id: '2026-05-31-order-date-fields',
+        type: 'feature',
+        icon: 'calendar-plus',
+        title: 'Created Date and Schedule Date',
+        message: 'Orders now separate the date the order was created from the date service is scheduled to begin.',
+        createdAt: '2026-05-31T00:00:00Z'
+    },
+    {
+        id: '2026-05-31-optional-date-fields',
+        type: 'improvement',
+        icon: 'calendar-check',
+        title: 'Optional Date Fields',
+        message: 'Date fields no longer require an asterisk before saving orders, projects, or payments.',
+        createdAt: '2026-05-31T00:00:00Z'
+    }
+];
+
+function initializeSoftwareUpdates() {
+    const updatesIcon = document.querySelector('.updates-icon');
+    if (!updatesIcon) return;
+
+    updateSoftwareUpdatesBadge();
+
+    updatesIcon.addEventListener('click', (event) => {
+        event.stopPropagation();
+        showSoftwareUpdatesPanel();
+    });
+}
+
+function getUnseenSoftwareUpdatesCount() {
+    const latestSeenId = localStorage.getItem('huttaLatestSeenSoftwareUpdate');
+    if (!latestSeenId) return SOFTWARE_UPDATES.length;
+
+    const latestSeenIndex = SOFTWARE_UPDATES.findIndex(update => update.id === latestSeenId);
+    return latestSeenIndex > 0 ? latestSeenIndex : 0;
+}
+
+function updateSoftwareUpdatesBadge() {
+    const badge = document.querySelector('.updates-badge');
+    if (!badge) return;
+
+    const unseenCount = getUnseenSoftwareUpdatesCount();
+    if (unseenCount > 0) {
+        badge.textContent = unseenCount;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function showSoftwareUpdatesPanel() {
+    closeNotificationPanel();
+    closeSoftwareUpdatesPanel();
+
+    const panel = document.createElement('div');
+    panel.id = 'softwareUpdatesPanel';
+    panel.className = 'notification-panel software-updates-panel';
+
+    const updateList = SOFTWARE_UPDATES.length > 0
+        ? SOFTWARE_UPDATES.map(update => `
+            <div class="notification-item software-update-item" data-id="${update.id}">
+                <div class="notification-icon ${update.type}">
+                    <i class="fas fa-${update.icon}"></i>
+                </div>
+                <div class="notification-content">
+                    <h4>${update.title}</h4>
+                    <p>${update.message}</p>
+                    <span class="notification-time">${formatDisplayDate(update.createdAt)}</span>
+                </div>
+            </div>
+        `).join('')
+        : '<div class="no-notifications">No software updates yet</div>';
+
+    panel.innerHTML = `
+        <div class="notification-header">
+            <h3>What's New</h3>
+            <button onclick="closeSoftwareUpdatesPanel()" class="close-panel">&times;</button>
+        </div>
+        <div class="notification-list">${updateList}</div>
+    `;
+
+    document.body.appendChild(panel);
+
+    if (SOFTWARE_UPDATES[0]) {
+        localStorage.setItem('huttaLatestSeenSoftwareUpdate', SOFTWARE_UPDATES[0].id);
+        updateSoftwareUpdatesBadge();
+    }
+
+    setTimeout(() => {
+        document.addEventListener('click', closeSoftwareUpdatesPanel, { once: true });
+    }, 100);
+}
+
+function closeSoftwareUpdatesPanel() {
+    const panel = document.getElementById('softwareUpdatesPanel');
+    if (panel) panel.remove();
+}
+
 // Global function to test pipeline refresh
 window.testPipelineRefresh = function() {
     window.AppLogger?.debug('=== TESTING PIPELINE REFRESH ===');
@@ -1349,6 +1458,7 @@ document.addEventListener('DOMContentLoaded', function() {
     addHoverEffects();
     initializeSearch();
     initializeNotifications();
+    initializeSoftwareUpdates();
     initializeLogout();
     
     // Apply saved theme on initialization

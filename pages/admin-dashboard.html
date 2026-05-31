@@ -47,6 +47,10 @@
             </div>
         </div>
         <div class="nav-right">
+            <button type="button" class="updates-icon" aria-label="Software updates" title="Software updates">
+                <i class="fas fa-rocket" aria-hidden="true"></i>
+                <span class="updates-badge" aria-hidden="true" style="display: none;">0</span>
+            </button>
             <button type="button" class="notification-icon" aria-label="Notifications">
                 <i class="fas fa-bell" aria-hidden="true"></i>
                 <span class="notification-badge" aria-hidden="true">3</span>
@@ -496,35 +500,49 @@
                         <input type="text" id="orderSearchInput" placeholder="Search orders by ID, customer, or service..." autocomplete="off">
                     </div>
                     <div class="orders-filters">
-                        <select class="filter-select" id="orderStatusFilter" autocomplete="off">
-                            <option value="all">All Status</option>
-                            <option value="new">New</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                            <option value="delayed">Delayed</option>
-                        </select>
-                        <select class="filter-select" id="orderPriorityFilter" autocomplete="off">
-                            <option value="all">All Priority</option>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                        </select>
-                        <select class="filter-select" id="orderTypeFilter" autocomplete="off">
-                            <option value="all">All Orders</option>
-                            <option value="recurring">Recurring Orders</option>
-                            <option value="one-time">One-Time Orders</option>
-                        </select>
+                        <span class="orders-filter-label"><i class="fas fa-sliders-h"></i> Filters</span>
+                        <label class="orders-filter-control">
+                            <span>Status</span>
+                            <select class="filter-select" id="orderStatusFilter" autocomplete="off">
+                                <option value="all">All Status</option>
+                                <option value="new">New</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="delayed">Delayed</option>
+                            </select>
+                        </label>
+                        <label class="orders-filter-control">
+                            <span>Priority</span>
+                            <select class="filter-select" id="orderPriorityFilter" autocomplete="off">
+                                <option value="all">All Priority</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </label>
+                        <label class="orders-filter-control">
+                            <span>Type</span>
+                            <select class="filter-select" id="orderTypeFilter" autocomplete="off">
+                                <option value="all">All Orders</option>
+                                <option value="recurring">Recurring Orders</option>
+                                <option value="one-time">One-Time Orders</option>
+                            </select>
+                        </label>
                     </div>
                     <div class="orders-date-filter">
-                        <select class="filter-select" id="orderDateFilter" aria-label="Filter orders by date" autocomplete="off">
-                            <option value="all">All Dates</option>
-                            <option value="today">Today</option>
-                            <option value="this-week">This Week</option>
-                            <option value="this-month">This Month</option>
-                            <option value="last-month">Last Month</option>
-                            <option value="custom">Custom Date Range</option>
-                        </select>
+                        <span class="orders-filter-label"><i class="fas fa-calendar-alt"></i> Date</span>
+                        <label class="orders-filter-control orders-date-select">
+                            <span>Range</span>
+                            <select class="filter-select" id="orderDateFilter" aria-label="Filter orders by date" autocomplete="off">
+                                <option value="all">All Dates</option>
+                                <option value="today">Today</option>
+                                <option value="this-week">This Week</option>
+                                <option value="this-month">This Month</option>
+                                <option value="last-month">Last Month</option>
+                                <option value="custom">Custom Date Range</option>
+                            </select>
+                        </label>
                         <div class="orders-custom-date-range" id="orderCustomDateRange" hidden>
                             <input type="date" id="orderStartDateFilter" class="date-input" aria-label="Order filter start date" autocomplete="off">
                             <span class="orders-date-separator">to</span>
