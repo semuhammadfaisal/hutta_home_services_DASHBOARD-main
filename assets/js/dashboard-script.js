@@ -1110,11 +1110,21 @@ function initializeSoftwareUpdates() {
 }
 
 function getUnseenSoftwareUpdatesCount() {
-    const latestSeenId = localStorage.getItem('huttaLatestSeenSoftwareUpdate');
-    if (!latestSeenId) return SOFTWARE_UPDATES.length;
+    const latestReadId = localStorage.getItem('huttaLatestReadSoftwareUpdate');
+    if (!latestReadId) return SOFTWARE_UPDATES.length;
 
-    const latestSeenIndex = SOFTWARE_UPDATES.findIndex(update => update.id === latestSeenId);
-    return latestSeenIndex > 0 ? latestSeenIndex : 0;
+    const latestReadIndex = SOFTWARE_UPDATES.findIndex(update => update.id === latestReadId);
+    return latestReadIndex >= 0 ? latestReadIndex : SOFTWARE_UPDATES.length;
+}
+
+function isSoftwareUpdateUnread(updateId) {
+    const latestReadId = localStorage.getItem('huttaLatestReadSoftwareUpdate');
+    if (!latestReadId) return true;
+
+    const updateIndex = SOFTWARE_UPDATES.findIndex(update => update.id === updateId);
+    const latestReadIndex = SOFTWARE_UPDATES.findIndex(update => update.id === latestReadId);
+    if (updateIndex === -1 || latestReadIndex === -1) return true;
+    return updateIndex < latestReadIndex;
 }
 
 function updateSoftwareUpdatesBadge() {
@@ -1140,7 +1150,7 @@ function showSoftwareUpdatesPanel() {
 
     const updateList = SOFTWARE_UPDATES.length > 0
         ? SOFTWARE_UPDATES.map(update => `
-            <div class="notification-item software-update-item" data-id="${update.id}">
+            <div class="notification-item software-update-item ${isSoftwareUpdateUnread(update.id) ? 'unread' : 'read'}" data-id="${update.id}">
                 <div class="notification-icon ${update.type}">
                     <i class="fas fa-${update.icon}"></i>
                 </div>
@@ -1149,6 +1159,7 @@ function showSoftwareUpdatesPanel() {
                     <p>${update.message}</p>
                     <span class="notification-time">${formatDisplayDate(update.createdAt)}</span>
                 </div>
+                ${isSoftwareUpdateUnread(update.id) ? '<div class="unread-dot"></div>' : ''}
             </div>
         `).join('')
         : '<div class="no-notifications">No software updates yet</div>';
@@ -1156,21 +1167,33 @@ function showSoftwareUpdatesPanel() {
     panel.innerHTML = `
         <div class="notification-header">
             <h3>What's New</h3>
+            <button onclick="markSoftwareUpdatesAsRead()" class="mark-all-read">Mark as read</button>
             <button onclick="closeSoftwareUpdatesPanel()" class="close-panel">&times;</button>
         </div>
         <div class="notification-list">${updateList}</div>
     `;
 
     document.body.appendChild(panel);
-
-    if (SOFTWARE_UPDATES[0]) {
-        localStorage.setItem('huttaLatestSeenSoftwareUpdate', SOFTWARE_UPDATES[0].id);
-        updateSoftwareUpdatesBadge();
-    }
+    panel.addEventListener('click', event => event.stopPropagation());
 
     setTimeout(() => {
         document.addEventListener('click', closeSoftwareUpdatesPanel, { once: true });
     }, 100);
+}
+
+function markSoftwareUpdatesAsRead() {
+    if (SOFTWARE_UPDATES[0]) {
+        localStorage.setItem('huttaLatestReadSoftwareUpdate', SOFTWARE_UPDATES[0].id);
+    }
+
+    document.querySelectorAll('.software-update-item.unread').forEach(item => {
+        item.classList.remove('unread');
+        item.classList.add('read');
+        const dot = item.querySelector('.unread-dot');
+        if (dot) dot.remove();
+    });
+
+    updateSoftwareUpdatesBadge();
 }
 
 function closeSoftwareUpdatesPanel() {
