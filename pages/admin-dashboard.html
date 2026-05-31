@@ -611,23 +611,36 @@
 
         <!-- Order Detail Section -->
         <section id="order-detail" class="content-section">
-            <div class="page-header">
-                <button class="btn-secondary" onclick="backToOrders()">
-                    <i class="fas fa-arrow-left"></i> Back to Orders
-                </button>
-                <h1 id="orderDetailTitle">Order Details</h1>
+            <div class="page-header order-detail-header">
+                <div class="order-detail-header-main">
+                    <button class="btn-secondary order-detail-back-btn" onclick="backToOrders()">
+                        <i class="fas fa-arrow-left"></i> Back to Orders
+                    </button>
+                    <div>
+                        <span class="order-detail-eyebrow">Order Details</span>
+                        <h1 id="orderDetailTitle">Order Details</h1>
+                    </div>
+                </div>
+                <div class="order-detail-actions">
+                    <button type="button" class="btn-secondary order-detail-edit-btn" onclick="editCurrentDetailOrder()">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button type="button" class="btn-danger order-detail-delete-btn" onclick="deleteCurrentDetailOrder()">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
             </div>
             
-            <div class="detail-container">
-                <div class="detail-info-card">
-                    <h3>Order Information</h3>
+            <div class="detail-container order-detail-layout">
+                <div class="detail-info-card order-summary-card">
+                    <h3><i class="fas fa-clipboard-list"></i> Order Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Order ID:</span>
                             <span id="detailOrderId">-</span>
                         </div>
                         <div class="info-item">
-                            <span class="display-label">Status:</span>
+                            <span class="display-label">Pipeline Stage:</span>
                             <span id="detailOrderStatus">-</span>
                         </div>
                         <div class="info-item">
@@ -669,8 +682,8 @@
                     </div>
                 </div>
                 
-                <div class="detail-info-card">
-                    <h3>Customer Information</h3>
+                <div class="detail-info-card order-customer-card">
+                    <h3><i class="fas fa-user"></i> Customer Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Name:</span>
@@ -691,19 +704,19 @@
                     </div>
                 </div>
                 
-                <div class="detail-info-card">
-                    <h3>Description & Notes</h3>
+                <div class="detail-info-card order-notes-card">
+                    <h3><i class="fas fa-align-left"></i> Description & Notes</h3>
                     <div class="info-item full-width">
                         <span class="display-label">Description:</span>
-                        <p id="detailOrderDescription" style="margin-top: 8px; line-height: 1.6;">-</p>
+                        <p id="detailOrderDescription">-</p>
                     </div>
-                    <div class="info-item full-width" style="margin-top: 16px;">
+                    <div class="info-item full-width">
                         <span class="display-label">Notes:</span>
-                        <p id="detailOrderNotes" style="margin-top: 8px; line-height: 1.6;">-</p>
+                        <p id="detailOrderNotes">-</p>
                     </div>
                 </div>
                 
-                <div class="detail-info-card">
+                <div class="detail-info-card order-documents-card">
                     <h3><i class="fas fa-paperclip"></i> Documents</h3>
                     <div id="orderDocumentsList" class="documents-list">
                         <p class="no-documents">No documents uploaded</p>
@@ -802,7 +815,7 @@
             
             <div class="profile-container">
                 <div class="profile-info-card">
-                    <h3>Customer Information</h3>
+                    <h3><i class="fas fa-user"></i> Customer Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Email:</span>
@@ -854,7 +867,7 @@
                 </div>
                 
                 <div class="profile-orders-card">
-                    <h3>Work Orders</h3>
+                    <h3><i class="fas fa-clipboard-list"></i> Work Orders</h3>
                     <table class="profile-orders-table">
                         <thead>
                             <tr>
@@ -972,7 +985,7 @@
             
             <div class="detail-container">
                 <div class="detail-info-card">
-                    <h3>Vendor Information</h3>
+                    <h3><i class="fas fa-handshake"></i> Vendor Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Email:</span>
@@ -1133,7 +1146,7 @@
             
             <div class="detail-container">
                 <div class="detail-info-card">
-                    <h3>Employee Information</h3>
+                    <h3><i class="fas fa-user-tie"></i> Employee Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Email:</span>
@@ -3332,16 +3345,16 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="detail-container" style="display: flex; flex-direction: column; gap: 20px;">
-                    <div class="detail-info-card">
-                        <h3>Order Information</h3>
+                <div class="detail-container modal-order-detail-layout">
+                    <div class="detail-info-card modal-order-summary-card">
+                        <h3><i class="fas fa-clipboard-list"></i> Order Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="display-label">Order ID:</span>
                                 <span id="modalDetailOrderId">-</span>
                             </div>
                             <div class="info-item">
-                                <span class="display-label">Status:</span>
+                                <span class="display-label">Pipeline Stage:</span>
                                 <span id="modalDetailOrderStatus">-</span>
                             </div>
                             <div class="info-item">
@@ -3382,8 +3395,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="detail-info-card">
-                        <h3>Customer Information</h3>
+                    <div class="detail-info-card modal-order-customer-card">
+                        <h3><i class="fas fa-user"></i> Customer Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="display-label">Name:</span>
@@ -3403,18 +3416,18 @@
                             </div>
                         </div>
                     </div>
-                    <div class="detail-info-card">
-                        <h3>Description & Notes</h3>
+                    <div class="detail-info-card modal-order-notes-card">
+                        <h3><i class="fas fa-align-left"></i> Description & Notes</h3>
                         <div class="info-item full-width">
                             <span class="display-label">Description:</span>
-                            <p id="modalDetailOrderDescription" style="margin-top: 8px; line-height: 1.6;">-</p>
+                            <p id="modalDetailOrderDescription">-</p>
                         </div>
-                        <div class="info-item full-width" style="margin-top: 16px;">
+                        <div class="info-item full-width">
                             <span class="display-label">Notes:</span>
-                            <p id="modalDetailOrderNotes" style="margin-top: 8px; line-height: 1.6;">-</p>
+                            <p id="modalDetailOrderNotes">-</p>
                         </div>
                     </div>
-                    <div class="detail-info-card">
+                    <div class="detail-info-card modal-order-documents-card">
                         <h3><i class="fas fa-paperclip"></i> Documents</h3>
                         <div id="modalOrderDocumentsList" class="documents-list">
                             <p class="no-documents">No documents uploaded</p>

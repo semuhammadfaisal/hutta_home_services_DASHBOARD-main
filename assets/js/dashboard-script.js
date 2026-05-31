@@ -1072,6 +1072,14 @@ function closeNotificationPanel() {
 // Software update feed
 const SOFTWARE_UPDATES = [
     {
+        id: '2026-05-31-detail-page-redesign',
+        type: 'improvement',
+        icon: 'file-alt',
+        title: 'Detail Page Redesign',
+        message: 'Order, customer, vendor, employee, and pipeline order details now use cleaner stacked cards with row-style information.',
+        createdAt: '2026-05-31T00:00:00Z'
+    },
+    {
         id: '2026-05-31-orders-toolbar-design',
         type: 'improvement',
         icon: 'sliders-h',
@@ -1553,6 +1561,7 @@ function initializeLogout() {
 
 // Order Management Functions
 let currentOrderId = null;
+let currentDetailOrderId = null;
 let vendors = [];
 let orderCustomers = [];
 let employees = [];
@@ -2397,6 +2406,10 @@ async function deleteOrder(orderId) {
         await window.APIService.deleteOrder(orderId);
         showToast('Order deleted successfully!', 'success');
         await refreshOrders();
+        if (currentDetailOrderId === orderId) {
+            currentDetailOrderId = null;
+            backToOrders();
+        }
     } catch (error) {
         showToast('Failed to delete order: ' + error.message, 'error');
     }
@@ -2406,16 +2419,34 @@ function viewOrder(orderId, fromRecentActivity = false) {
     showOrderDetail(orderId, false, fromRecentActivity);
 }
 
+function getOrderStageDisplay(order) {
+    const stage = order?.pipelineStage || '';
+    const status = order?.status || '';
+    const displayValue = stage || status || '-';
+    const classValue = stage ? 'pipeline' : normalizeOrderFilterValue(status || 'new');
+
+    return {
+        label: formatOrderFilterLabel(displayValue),
+        className: classValue
+    };
+}
+
+function renderOrderStageBadge(order) {
+    const stageDisplay = getOrderStageDisplay(order);
+    return `<span class="order-status-badge ${stageDisplay.className}">${stageDisplay.label}</span>`;
+}
+
 async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity = false) {
     try {
         const order = await window.APIService.getOrder(orderId);
+        currentDetailOrderId = order._id || order.id || orderId;
         
         // If opened from pipeline, show modal instead of full page
         if (fromPipeline) {
             // Populate modal fields
             document.getElementById('modalOrderDetailTitle').textContent = `Order Details - ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
             document.getElementById('modalDetailOrderId').textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
-            document.getElementById('modalDetailOrderStatus').innerHTML = `<span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>`;
+            document.getElementById('modalDetailOrderStatus').innerHTML = renderOrderStageBadge(order);
             document.getElementById('modalDetailOrderPriority').innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
             document.getElementById('modalDetailOrderRevenue').textContent = order.amount ? `$${order.amount.toLocaleString()}` : '-';
             document.getElementById('modalDetailOrderCost').textContent = order.vendorCost ? `$${order.vendorCost.toLocaleString()}` : '-';
@@ -2492,7 +2523,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         
         document.getElementById('orderDetailTitle').textContent = `Order ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
         const detailOrderId = document.getElementById('detailOrderId');
-        const detailOrderStatus = document.getElementById('detailOrderStatusValue');
+        const detailOrderStatus = document.getElementById('detailOrderStatus');
         const detailOrderPriority = document.getElementById('detailOrderPriority');
         const detailOrderRevenue = document.getElementById('detailOrderRevenue');
         const detailOrderCost = document.getElementById('detailOrderCost');
@@ -2510,7 +2541,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         const detailOrderNotes = document.getElementById('detailOrderNotes');
         
         if (detailOrderId) detailOrderId.textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
-        if (detailOrderStatus) detailOrderStatus.innerHTML = `<span class="order-status-badge ${order.status}">${order.status.replace('-', ' ')}</span>`;
+        if (detailOrderStatus) detailOrderStatus.innerHTML = renderOrderStageBadge(order);
         if (detailOrderPriority) detailOrderPriority.innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
         if (detailOrderRevenue) detailOrderRevenue.textContent = '$' + (order.amount?.toLocaleString() || '0');
         if (detailOrderCost) detailOrderCost.textContent = '$' + (order.vendorCost?.toLocaleString() || '0');
@@ -2567,6 +2598,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
 }
 
 function backToOrders() {
+    currentDetailOrderId = null;
     showSection('orders');
 }
 
@@ -2576,6 +2608,16 @@ function closeOrderDetailModal() {
 
 window.showOrderDetail = showOrderDetail;
 window.backToOrders = backToOrders;
+window.editCurrentDetailOrder = function() {
+    if (currentDetailOrderId) {
+        editOrder(currentDetailOrderId);
+    }
+};
+window.deleteCurrentDetailOrder = function() {
+    if (currentDetailOrderId) {
+        deleteOrder(currentDetailOrderId);
+    }
+};
 window.closeOrderDetailModal = closeOrderDetailModal;
 
 function closeOrderModal() {
