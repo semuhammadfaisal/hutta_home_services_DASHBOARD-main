@@ -824,7 +824,7 @@ function generateWeeklyCashReport() {
         <head>
             <title>Weekly Cash Summary Report</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+                body { font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
                 h1 { color: #2c3e50; border-bottom: 3px solid #2196F3; padding-bottom: 10px; }
                 .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 30px 0; }
                 .summary-item { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #2196F3; }

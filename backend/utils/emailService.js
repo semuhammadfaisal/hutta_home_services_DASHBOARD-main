@@ -35,7 +35,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          body { font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .header { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
@@ -102,7 +102,7 @@ const sendWelcomeEmail = async (email, password, firstName) => {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif; 
             line-height: 1.6; 
             color: #333333; 
             background-color: #f5f7fa;

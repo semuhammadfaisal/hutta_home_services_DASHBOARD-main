@@ -3,6 +3,8 @@ body.payment-detail-open {
 }
 
 :root {
+    --font-body: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif;
+    --font-heading: "Plus Jakarta Sans", "Inter", "Manrope", sans-serif;
     --payment-brand-blue: var(--primary-blue, #0056B8);
     --payment-brand-blue-dark: #004494;
     --payment-brand-blue-soft: #E6F0FF;
@@ -11,6 +13,18 @@ body.payment-detail-open {
     --payment-brand-border: #E5E7EB;
     --payment-brand-surface: #FFFFFF;
     --payment-brand-surface-alt: #F8FAFC;
+}
+
+body,
+.payment-detail-modal {
+    font-family: var(--font-body);
+}
+
+.payment-detail-header h2,
+.payment-detail-content h1,
+.payment-detail-content h2,
+.payment-detail-content h3 {
+    font-family: var(--font-heading);
 }
 
 .payment-detail-modal {

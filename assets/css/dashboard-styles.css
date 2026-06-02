@@ -6,7 +6,7 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif;
     background-color: #f5f7fa;
     color: #333;
     line-height: 1.6;
@@ -27,6 +27,34 @@ body {
     --danger: #000000;
     --sidebar-width: 260px;
     --topnav-height: 70px;
+    --font-body: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif;
+    --font-heading: "Plus Jakarta Sans", "Inter", "Manrope", sans-serif;
+}
+
+.dashboard-title,
+.section-title,
+.page-header h1,
+.header-text h1,
+.modal-header h2,
+.overview-section-title,
+.kpi-board-title,
+.reports-header h1,
+.reports-section-heading h2,
+.settings-section h2,
+.pipeline-header-bar h1,
+.stage-title h3,
+.calendar-header h2,
+.cash-management-dashboard h2,
+.jobs-section h2,
+.cash-flow-snapshot h2,
+.ar-section h2,
+.forecast-section h2,
+.wealth-section h2,
+.executive-section h2,
+h1,
+h2,
+h3 {
+    font-family: var(--font-heading);
 }
 
 /* Top Navigation */

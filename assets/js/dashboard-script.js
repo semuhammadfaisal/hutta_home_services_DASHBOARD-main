@@ -1845,7 +1845,7 @@ function updateUserInfo(sessionData) {
             } else {
                 const firstLetter = (user.firstName || user.email).charAt(0).toUpperCase();
                 // Use data URI instead of placeholder service
-                adminAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
+                adminAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter' font-size='20' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
             }
             adminAvatar.alt = displayName;
         }
@@ -7357,7 +7357,7 @@ function showProfile() {
                 profileAvatar.src = user.avatar;
             } else {
                 const firstLetter = (user.firstName || 'A').charAt(0).toUpperCase();
-                profileAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='50' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
+                profileAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter' font-size='50' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
             }
         }
     }
