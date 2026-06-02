@@ -40,7 +40,22 @@ function formatDashboardDateTime(date = new Date()) {
 function updateDashboardDateTime() {
     const currentDateElement = document.getElementById('currentDate');
     if (!currentDateElement) return;
-    currentDateElement.textContent = formatDashboardDateTime(nowInMDT());
+    const now = nowInMDT();
+    const timezone = tz()?.TIMEZONE || 'America/Phoenix';
+    const dateText = now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: timezone
+    });
+    const timeText = now.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone
+    });
+    currentDateElement.innerHTML = `${dateText}<small>${timeText}</small>`;
 }
 
 // Dashboard Data and Functionality
@@ -491,6 +506,10 @@ class DashboardManager {
             const rawName = order.customer?.name || order.customer || 'Customer';
             const customerName = escapePaymentHtml(rawName);
             const timeSafe = escapePaymentHtml(timeAgo);
+            const orderNumber = escapePaymentHtml(order.orderId || (order._id ? `#${String(order._id).slice(-6).toUpperCase()}` : 'New order'));
+            const amount = Number(order.amount) || 0;
+            const amountText = `$${amount.toLocaleString(undefined, { minimumFractionDigits: amount % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+            const status = escapePaymentHtml(this.formatStatus(order.pipelineStage || order.status || 'created'));
             const orderId = order._id || order.id;
             if (!orderId) {
                 return `
@@ -499,9 +518,10 @@ class DashboardManager {
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div class="activity-content">
-                        <p>New order from ${customerName}</p>
-                        <span>${timeSafe}</span>
+                        <p>Order ${orderNumber} created</p>
+                        <span>${customerName} &bull; ${amountText} &bull; ${status}</span>
                     </div>
+                    <time class="activity-time">${timeSafe}</time>
                 </div>`;
             }
             const idAttr = escapePaymentHtml(String(orderId));
@@ -511,9 +531,10 @@ class DashboardManager {
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div class="activity-content">
-                        <p>New order from ${customerName}</p>
-                        <span>${timeSafe}</span>
+                        <p>Order ${orderNumber} created</p>
+                        <span>${customerName} &bull; ${amountText} &bull; ${status}</span>
                     </div>
+                    <time class="activity-time">${timeSafe}</time>
                 </div>`;
         }).join('');
     }
@@ -600,9 +621,11 @@ class DashboardManager {
                         <div class="employee-name">${nameSafe}</div>
                         <div class="employee-meta">
                             <span class="order-count">${ordersSafe}</span>
+                            ${rank === 1 ? '<span class="top-performer"><i class="fas fa-star" aria-hidden="true"></i> Top performer</span>' : ''}
                         </div>
                     </div>
                     <div class="leaderboard-revenue">
+                        <span class="revenue-label">Revenue</span>
                         <span class="revenue-amount">${revSafe}</span>
                     </div>
                 </div>
@@ -615,12 +638,14 @@ class DashboardManager {
         const plumbingCount = document.getElementById('plumbingVendors');
         const civilCount = document.getElementById('civilVendors');
         const carpentryCount = document.getElementById('carpentryVendors');
+        const totalCount = document.getElementById('totalVendorCategoryCount');
         
         if (!vendors || vendors.length === 0) {
             if (electricalCount) electricalCount.textContent = '0';
             if (plumbingCount) plumbingCount.textContent = '0';
             if (civilCount) civilCount.textContent = '0';
             if (carpentryCount) carpentryCount.textContent = '0';
+            if (totalCount) totalCount.textContent = '0';
             return;
         }
         
@@ -633,6 +658,7 @@ class DashboardManager {
         if (plumbingCount) plumbingCount.textContent = plumbing;
         if (civilCount) civilCount.textContent = civil;
         if (carpentryCount) carpentryCount.textContent = carpentry;
+        if (totalCount) totalCount.textContent = vendors.length;
     }
 
     renderFinancialOverview(orders, payments) {
@@ -674,16 +700,18 @@ class DashboardManager {
             periodText = `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
         }
         
-        const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
-        const totalCost = filteredOrders.reduce((sum, order) => sum + (order.vendorCost || 0), 0);
+        const totalRevenue = filteredOrders.reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
+        const totalCost = filteredOrders.reduce((sum, order) => sum + (Number(order.vendorCost) || 0), 0);
         const totalProfit = totalRevenue - totalCost;
         const referenceYmd = this.getFinancialReferenceYmd(referenceDateInput);
-        const currentMonthRange = this.getFinancialMonthRange(referenceYmd);
+        const currentMonth = this.getCurrentFinancialMonthRange();
+        const currentMonthYmd = currentMonth.ymd;
+        const currentMonthRange = currentMonth.range;
         const ytdRange = this.getFinancialYtdRange(referenceYmd);
         const ytdRevenue = this.sumRevenueInRange(ordersData, ytdRange.start, ytdRange.end);
         const monthRevenue = this.sumRevenueInRange(ordersData, currentMonthRange.start, currentMonthRange.end);
-        const monthSales = this.countSalesInRange(ordersData, currentMonthRange.start, currentMonthRange.end);
-        const selectedMonthLabel = this.formatFinancialMonthLabel(referenceYmd);
+        const monthSales = this.countOrdersInRange(ordersData, currentMonthRange.start, currentMonthRange.end);
+        const selectedMonthLabel = this.formatFinancialMonthLabel(currentMonthYmd);
         
         if (revenueEl) revenueEl.textContent = `$${totalRevenue.toLocaleString()}`;
         if (costEl) costEl.textContent = `$${totalCost.toLocaleString()}`;
@@ -695,7 +723,7 @@ class DashboardManager {
     }
 
     getOrderFinancialDate(order) {
-        return order?.createdAt || order?.startDate || order?.date || null;
+        return order?.scheduleDate || order?.startDate || order?.endDate || order?.date || order?.createdAt || null;
     }
 
     getFinancialReferenceYmd(dateInput) {
@@ -718,8 +746,18 @@ class DashboardManager {
 
     getFinancialMonthRange(referenceYmd) {
         const start = `${referenceYmd.year}-${String(referenceYmd.month + 1).padStart(2, '0')}-01`;
-        const end = `${referenceYmd.year}-${String(referenceYmd.month + 1).padStart(2, '0')}-${String(referenceYmd.day).padStart(2, '0')}`;
+        const lastDay = new Date(referenceYmd.year, referenceYmd.month + 1, 0).getDate();
+        const end = `${referenceYmd.year}-${String(referenceYmd.month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
         return { start, end };
+    }
+
+    getCurrentFinancialMonthRange() {
+        const config = tz();
+        const nowYmd = config?.nowYmdMDT ? config.nowYmdMDT() : this.getFinancialReferenceYmd(todayDateInput());
+        return {
+            ymd: nowYmd,
+            range: this.getFinancialMonthRange(nowYmd)
+        };
     }
 
     getFinancialYtdRange(referenceYmd) {
@@ -760,6 +798,10 @@ class DashboardManager {
             const isCompletedOrPaid = completedStatuses.has(status) || completedStatuses.has(pipelineStage);
             return isCompletedOrPaid && this.isOrderInFinancialRange(order, startDate, endDate);
         }).length;
+    }
+
+    countOrdersInRange(orders, startDate, endDate) {
+        return (orders || []).filter(order => this.isOrderInFinancialRange(order, startDate, endDate)).length;
     }
 
     formatFinancialMonthLabel(referenceYmd) {
@@ -1071,6 +1113,14 @@ function closeNotificationPanel() {
 
 // Software update feed
 const SOFTWARE_UPDATES = [
+    {
+        id: '2026-06-02-dashboard-overview-refresh',
+        type: 'improvement',
+        icon: 'chart-line',
+        title: 'Dashboard Overview Refresh',
+        message: 'The dashboard overview now has cleaner metric cards, redesigned action and activity panels, refreshed customer and financial sections, and corrected monthly financial totals.',
+        createdAt: '2026-06-02T00:00:00Z'
+    },
     {
         id: '2026-05-31-detail-page-redesign',
         type: 'improvement',

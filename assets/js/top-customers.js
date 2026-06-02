@@ -86,30 +86,40 @@ function renderTopCustomers(customers = topCustomersData) {
     const topCustomer = customers[0];
     const visibleCustomers = showAllTopCustomers ? customers : customers.slice(0, 3);
     const hasMoreCustomers = customers.length > 3;
+    const rankedCount = showAllTopCustomers ? customers.length : Math.min(customers.length, 3);
 
     grid.innerHTML = `
         <div class="top-customers-summary">
-            <div class="top-customers-summary-item">
-                <span class="summary-label">Ranked Customers</span>
-                <strong>${showAllTopCustomers ? customers.length : Math.min(customers.length, 3)}</strong>
+            <div class="top-customers-summary-item customers">
+                <span class="summary-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
+                <span class="summary-label">Ranked customers</span>
+                <strong>${rankedCount}</strong>
+                <small>Total in this period</small>
             </div>
-            <div class="top-customers-summary-item">
-                <span class="summary-label">Top Revenue</span>
+            <div class="top-customers-summary-item revenue">
+                <span class="summary-icon" aria-hidden="true"><i class="fas fa-dollar-sign"></i></span>
+                <span class="summary-label">Top revenue</span>
                 <strong>$${(topCustomer?.totalRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+                <small>Highest customer value</small>
             </div>
-            <div class="top-customers-summary-item">
-                <span class="summary-label">Ranked Revenue</span>
+            <div class="top-customers-summary-item ranked-revenue">
+                <span class="summary-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+                <span class="summary-label">Ranked revenue</span>
                 <strong>$${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
+                <small>All ranked customers</small>
             </div>
-            <div class="top-customers-summary-item">
-                <span class="summary-label">Ranked Orders</span>
+            <div class="top-customers-summary-item orders">
+                <span class="summary-icon" aria-hidden="true"><i class="fas fa-shopping-bag"></i></span>
+                <span class="summary-label">Ranked orders</span>
                 <strong>${totalOrders}</strong>
+                <small>Total order count</small>
             </div>
         </div>
         <div class="top-customers-list">
             ${visibleCustomers.map((customer, index) => {
         const rank = index + 1;
         const rankClass = rank <= 3 ? `rank-${rank}` : '';
+        const customerType = rank === 1 ? 'Top customer' : rank === 2 ? 'Premium customer' : 'Repeat customer';
         return `
             <div class="top-customer-card">
                 <div class="top-customer-rank ${rankClass}">${rank}</div>
@@ -120,6 +130,7 @@ function renderTopCustomers(customers = topCustomersData) {
                             <i class="fas fa-envelope"></i>
                             ${customer.email || 'No email'}
                         </div>
+                        <span class="top-customer-badge">${customerType}</span>
                     </div>
                 </div>
                 <div class="top-customer-stats">
@@ -130,8 +141,10 @@ function renderTopCustomers(customers = topCustomersData) {
                     <div class="top-customer-stat">
                         <span class="top-customer-stat-label">Total Orders</span>
                         <span class="top-customer-stat-value orders">${customer.totalOrders}</span>
+                        <span class="top-customer-stat-icon" aria-hidden="true"><i class="fas fa-shopping-bag"></i></span>
                     </div>
                 </div>
+                <span class="top-customer-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
             </div>
         `;
     }).join('')}
@@ -139,7 +152,8 @@ function renderTopCustomers(customers = topCustomersData) {
         ${hasMoreCustomers ? `
             <div class="top-customers-actions">
                 <button type="button" class="top-customers-toggle" onclick="toggleTopCustomersList()">
-                    ${showAllTopCustomers ? 'Show Top 3' : `View All ${customers.length}`}
+                    ${showAllTopCustomers ? 'Show top 3' : `View All ${customers.length} Customers`}
+                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </button>
             </div>
         ` : ''}

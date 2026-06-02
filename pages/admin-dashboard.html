@@ -173,8 +173,8 @@
                 <div class="header-content">
                     <div class="header-text">
                         <p class="overview-eyebrow">Operations</p>
-                        <h1>Dashboard overview</h1>
-                        <p class="overview-lead">Key numbers for your business. Use <strong>Refresh</strong> to pull the latest data from the server.</p>
+                        <h1>Dashboard overview <span class="overview-wave" aria-hidden="true">👋</span></h1>
+                        <p class="overview-lead">Here's what's happening with your business today.</p>
                     </div>
                     <div class="header-actions">
                         <div class="date-range" title="Current date and time">
@@ -191,8 +191,10 @@
 
             <section class="kpi-board" aria-labelledby="kpiBoardHeading">
                 <header class="kpi-board-head">
-                    <h2 id="kpiBoardHeading" class="kpi-board-title">Key metrics</h2>
-                    <p class="kpi-board-lead">Live totals from your workspace</p>
+                    <div>
+                        <h2 id="kpiBoardHeading" class="kpi-board-title">Key metrics</h2>
+                        <p class="kpi-board-lead">Live totals from your workspace</p>
+                    </div>
                 </header>
                 <div class="kpi-board-metrics" role="list" aria-label="Key performance indicators">
                     <article class="kpi-stat kpi-card orders-card" role="listitem">
@@ -202,6 +204,10 @@
                         <p class="kpi-label">Total orders</p>
                         <h3 class="kpi-value" id="totalOrders">0</h3>
                         <p class="kpi-desc">All orders in the system</p>
+                        <div class="kpi-trend-row">
+                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>12.5%</span>
+                            <span class="kpi-period">vs last month</span>
+                        </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="orders"></div>
                         </div>
@@ -214,6 +220,10 @@
                         <p class="kpi-label">Total revenue</p>
                         <h3 class="kpi-value" id="totalRevenue">$0</h3>
                         <p class="kpi-desc">Sum of order values</p>
+                        <div class="kpi-trend-row">
+                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>18.7%</span>
+                            <span class="kpi-period">vs last month</span>
+                        </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="revenue"></div>
                         </div>
@@ -226,6 +236,10 @@
                         <p class="kpi-label">Payments collected</p>
                         <h3 class="kpi-value" id="paymentsCollected">$0</h3>
                         <p class="kpi-desc">From paid orders</p>
+                        <div class="kpi-trend-row">
+                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>8.3%</span>
+                            <span class="kpi-period">vs last month</span>
+                        </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="payments"></div>
                         </div>
@@ -238,6 +252,10 @@
                         <p class="kpi-label">Vendors</p>
                         <h3 class="kpi-value" id="totalVendors">0</h3>
                         <p class="kpi-desc">Active vendor records</p>
+                        <div class="kpi-trend-row">
+                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>5.0%</span>
+                            <span class="kpi-period">vs last month</span>
+                        </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="vendors"></div>
                         </div>
@@ -250,6 +268,10 @@
                         <p class="kpi-label">Customers</p>
                         <h3 class="kpi-value" id="totalCustomers">0</h3>
                         <p class="kpi-desc">Unique customer profiles</p>
+                        <div class="kpi-trend-row">
+                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>10.2%</span>
+                            <span class="kpi-period">vs last month</span>
+                        </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="customers"></div>
                         </div>
@@ -265,64 +287,101 @@
             <!-- Quick Actions & Recent Activity -->
             <div class="dashboard-grid">
                 <div class="quick-actions-card">
-                    <h3><i class="fas fa-bolt" aria-hidden="true"></i> Quick actions</h3>
+                    <div class="overview-card-head">
+                        <div class="overview-card-icon quick" aria-hidden="true">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="overview-card-title">
+                            <h3>Quick actions</h3>
+                            <p>Save time with your most used actions</p>
+                        </div>
+                    </div>
                     <div class="quick-actions">
                         <button type="button" class="quick-action" onclick="showAddOrderModal()">
                             <i class="fas fa-plus-circle" aria-hidden="true"></i>
                             <span>New order</span>
+                            <small>Create a new service order</small>
                         </button>
                         <button type="button" class="quick-action" onclick="showAddCustomerModal()">
                             <i class="fas fa-user-plus" aria-hidden="true"></i>
                             <span>Add customer</span>
-                        </button>
-                        <button type="button" class="quick-action" onclick="showAddVendorModal()">
-                            <i class="fas fa-handshake" aria-hidden="true"></i>
-                            <span>Add vendor</span>
-                        </button>
-                        <button type="button" class="quick-action" onclick="showAddEmployeeModal()">
-                            <i class="fas fa-user-tie" aria-hidden="true"></i>
-                            <span>Add employee</span>
+                            <small>Add a new customer profile</small>
                         </button>
                         <button type="button" class="quick-action" onclick="showAddPaymentModal()">
                             <i class="fas fa-credit-card" aria-hidden="true"></i>
                             <span>Record payment</span>
-                        </button>
-                        <button type="button" class="quick-action" onclick="loadReportsSection(); window.dashboard.showSection('reports'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=reports]').parentElement.classList.add('active');">
-                            <i class="fas fa-chart-bar" aria-hidden="true"></i>
-                            <span>View reports</span>
+                            <small>Record a new payment received</small>
                         </button>
                     </div>
+                    <details class="more-actions">
+                        <summary>
+                            <span class="more-actions-icon" aria-hidden="true"><i class="fas fa-handshake"></i></span>
+                            <span class="more-actions-text">
+                                <strong>More actions</strong>
+                                <small>Add vendor, add employee, view reports and more</small>
+                            </span>
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </summary>
+                        <div class="more-actions-list">
+                            <button type="button" onclick="showAddVendorModal()">
+                                <i class="fas fa-handshake" aria-hidden="true"></i>
+                                <span>Add vendor</span>
+                            </button>
+                            <button type="button" onclick="showAddEmployeeModal()">
+                                <i class="fas fa-user-tie" aria-hidden="true"></i>
+                                <span>Add employee</span>
+                            </button>
+                            <button type="button" onclick="loadReportsSection(); window.dashboard.showSection('reports'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=reports]').parentElement.classList.add('active');">
+                                <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                                <span>View reports</span>
+                            </button>
+                        </div>
+                    </details>
                 </div>
                 
                 <div class="recent-activity-card">
-                    <h3><i class="fas fa-clock" aria-hidden="true"></i> Recent activity</h3>
+                    <div class="overview-card-head">
+                        <div class="overview-card-icon recent" aria-hidden="true">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="overview-card-title">
+                            <h3>Recent activity</h3>
+                            <p>Stay updated with what's happening</p>
+                        </div>
+                        <button type="button" class="overview-card-link" onclick="window.dashboard.showSection('orders'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=orders]').parentElement.classList.add('active'); loadOrdersSection();">
+                            View all
+                        </button>
+                    </div>
                     <div class="activity-list" id="recentActivity">
                         <div class="activity-item">
                             <div class="activity-icon orders" aria-hidden="true">
                                 <i class="fas fa-clipboard-list"></i>
                             </div>
                             <div class="activity-content">
-                                <p>New order created</p>
-                                <span>2 minutes ago</span>
+                                <p>Order #ORD-1046 created</p>
+                                <span>Matt Essex &bull; $1,250 &bull; Pending</span>
                             </div>
+                            <time class="activity-time">2 min ago</time>
                         </div>
                         <div class="activity-item">
                             <div class="activity-icon payments" aria-hidden="true">
                                 <i class="fas fa-dollar-sign"></i>
                             </div>
                             <div class="activity-content">
-                                <p>Payment received</p>
-                                <span>15 minutes ago</span>
+                                <p>Payment of $1,250 received</p>
+                                <span>Order #ORD-1045</span>
                             </div>
+                            <time class="activity-time">12 min ago</time>
                         </div>
                         <div class="activity-item">
                             <div class="activity-icon orders" aria-hidden="true">
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="activity-content">
-                                <p>Order completed</p>
-                                <span>1 hour ago</span>
+                                <p>Order #ORD-1044 status changed</p>
+                                <span>$875 &bull; From Pending to In Progress</span>
                             </div>
+                            <time class="activity-time">2 hours ago</time>
                         </div>
                     </div>
                 </div>
@@ -331,8 +390,15 @@
             <!-- Employee Leaderboard & Vendor Summary -->
             <div class="summary-grid">
                 <div class="summary-card leaderboard-card">
-                    <h3><i class="fas fa-trophy" aria-hidden="true"></i> Employee leaderboard</h3>
-                    <p class="leaderboard-subtitle">Top team members by revenue on orders they are assigned to.</p>
+                    <div class="summary-card-head">
+                        <div class="summary-card-icon leaderboard" aria-hidden="true">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="summary-card-title">
+                            <h3>Employee leaderboard</h3>
+                            <p>Top performers by revenue and completed work</p>
+                        </div>
+                    </div>
                     <div class="leaderboard-list" id="employeeLeaderboard">
                         <div class="leaderboard-item skeleton">
                             <div class="rank">1</div>
@@ -343,35 +409,69 @@
                                 </div>
                             </div>
                             <div class="leaderboard-revenue">
+                                <span class="revenue-label">Revenue</span>
                                 <span class="revenue-amount">$0</span>
                             </div>
                         </div>
                     </div>
+                    <div class="leaderboard-footer">
+                        <span><i class="fas fa-users" aria-hidden="true"></i> Showing top performers</span>
+                        <button type="button" onclick="window.dashboard.showSection('employees'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=employees]').parentElement.classList.add('active'); loadEmployeesSection();">
+                            View full leaderboard <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="summary-card vendor-categories-card">
-                    <h3><i class="fas fa-th-large" aria-hidden="true"></i> Vendor categories</h3>
-                    <p class="vendor-categories-subtitle">How many vendors you have registered in each trade.</p>
+                    <div class="summary-card-head">
+                        <div class="summary-card-icon vendors" aria-hidden="true">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <div class="summary-card-title">
+                            <h3>Vendor categories</h3>
+                            <p>Overview of vendors by category</p>
+                        </div>
+                        <button type="button" class="summary-card-link" onclick="window.dashboard.showSection('vendors'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=vendors]').parentElement.classList.add('active'); loadVendorsSection();">
+                            View all <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
                     <div class="vendor-categories">
                         <div class="vendor-category electrical">
                             <span class="vc-icon" aria-hidden="true"><i class="fas fa-bolt"></i></span>
-                            <span class="vc-label">Electrical</span>
+                            <span class="vc-copy">
+                                <span class="vc-label">Electrical</span>
+                                <span class="vc-meta">Active vendors</span>
+                            </span>
                             <span class="category-count" id="electricalVendors">0</span>
                         </div>
                         <div class="vendor-category plumbing">
                             <span class="vc-icon" aria-hidden="true"><i class="fas fa-wrench"></i></span>
-                            <span class="vc-label">Plumbing</span>
+                            <span class="vc-copy">
+                                <span class="vc-label">Plumbing</span>
+                                <span class="vc-meta">Active vendors</span>
+                            </span>
                             <span class="category-count" id="plumbingVendors">0</span>
                         </div>
                         <div class="vendor-category civil">
                             <span class="vc-icon" aria-hidden="true"><i class="fas fa-hard-hat"></i></span>
-                            <span class="vc-label">Civil</span>
+                            <span class="vc-copy">
+                                <span class="vc-label">Civil</span>
+                                <span class="vc-meta">Active vendors</span>
+                            </span>
                             <span class="category-count" id="civilVendors">0</span>
                         </div>
                         <div class="vendor-category carpentry">
                             <span class="vc-icon" aria-hidden="true"><i class="fas fa-hammer"></i></span>
-                            <span class="vc-label">Carpentry</span>
+                            <span class="vc-copy">
+                                <span class="vc-label">Carpentry</span>
+                                <span class="vc-meta">Active vendors</span>
+                            </span>
                             <span class="category-count" id="carpentryVendors">0</span>
                         </div>
+                    </div>
+                    <div class="vendor-total-panel">
+                        <span class="vendor-total-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
+                        <span class="vendor-total-value" id="totalVendorCategoryCount">0</span>
+                        <span class="vendor-total-label">Total vendors</span>
                     </div>
                 </div>
             </div>
@@ -380,8 +480,11 @@
             <div class="top-customers-report dashboard-overview-panel">
                 <div class="top-customers-header">
                     <div class="top-customers-title-block">
-                        <h3><i class="fas fa-trophy" aria-hidden="true"></i> Top Customers</h3>
-                        <p>Highest revenue customers for the selected period.</p>
+                        <span class="top-customers-title-icon" aria-hidden="true"><i class="fas fa-trophy"></i></span>
+                        <span class="top-customers-title-copy">
+                            <h3>Top Customers</h3>
+                            <p>Highest revenue customers for the selected period.</p>
+                        </span>
                     </div>
                     <div class="top-customers-date-filter" role="group" aria-label="Top customers date range">
                         <input type="date" id="topCustomersStartDate" class="date-input" aria-label="Top customers start date" autocomplete="off">
