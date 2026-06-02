@@ -251,7 +251,9 @@ class DashboardManager {
                         window.AppLogger?.debug('Token available:', !!window.APIService.getToken());
                     }
 
+                    this.data.orders = orders;
                     this.renderEmployeeLeaderboard(orders, employees);
+                    this.renderRevenueOverview(orders);
                     this.renderFinancialOverview(orders, payments);
                     this.renderWorkflowFromOrders(orders);
                     this.renderOrdersTable(orders);
@@ -659,6 +661,273 @@ class DashboardManager {
         if (civilCount) civilCount.textContent = civil;
         if (carpentryCount) carpentryCount.textContent = carpentry;
         if (totalCount) totalCount.textContent = vendors.length;
+    }
+
+    renderRevenueOverview(orders) {
+        const ordersData = Array.isArray(orders) ? orders : [];
+        const chartEl = document.getElementById('revenueOverviewChart');
+        const totalEl = document.getElementById('revenueOverviewTotal');
+        const ordersEl = document.getElementById('revenueOverviewOrders');
+        const averageEl = document.getElementById('revenueOverviewAverage');
+        const periodSelect = document.getElementById('revenueOverviewPeriod');
+        if (!chartEl) return;
+
+        const period = periodSelect?.value || 'current-month';
+        const range = this.getRevenueOverviewRange(period, ordersData);
+        const filteredOrders = ordersData.filter(order => this.isOrderInFinancialRange(order, range.start, range.end));
+        const buckets = this.buildRevenueOverviewBuckets(range, filteredOrders);
+        const totalRevenue = filteredOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+        const orderCount = filteredOrders.length;
+        const averageRevenue = orderCount ? totalRevenue / orderCount : 0;
+
+        if (totalEl) totalEl.textContent = this.formatRevenueOverviewCurrency(totalRevenue);
+        if (ordersEl) ordersEl.textContent = orderCount.toLocaleString();
+        if (averageEl) averageEl.textContent = this.formatRevenueOverviewCurrency(averageRevenue);
+
+        if (!buckets.length || totalRevenue <= 0) {
+            chartEl.innerHTML = `
+                <div class="revenue-overview-empty" role="status">
+                    <i class="fas fa-chart-line" aria-hidden="true"></i>
+                    <p>No revenue in this period</p>
+                </div>
+            `;
+            return;
+        }
+
+        chartEl.innerHTML = this.renderRevenueOverviewChartSvg(buckets, range);
+    }
+
+    getRevenueOverviewRange(period, orders = []) {
+        const todayInput = todayDateInput();
+        const todayYmd = this.getFinancialReferenceYmd(todayInput);
+        const currentMonth = this.getFinancialMonthRange(todayYmd);
+        const config = tz();
+        const addDays = (dateString, days) => {
+            if (config?.addDaysToDateString) return config.addDaysToDateString(dateString, days);
+            return this.addRevenueDays(dateString, days);
+        };
+
+        if (period === 'last-month') {
+            const month = todayYmd.month === 0 ? 11 : todayYmd.month - 1;
+            const year = todayYmd.month === 0 ? todayYmd.year - 1 : todayYmd.year;
+            const monthRange = this.getFinancialMonthRange({ year, month, day: 1 });
+            return { ...monthRange, bucketMode: 'day', label: 'Last Month' };
+        }
+
+        if (period === 'last-30') {
+            return { start: addDays(todayInput, -29), end: todayInput, bucketMode: 'day', label: 'Last 30 Days' };
+        }
+
+        if (period === 'year-to-date') {
+            return { start: `${todayYmd.year}-01-01`, end: todayInput, bucketMode: 'month', label: 'Year to Date' };
+        }
+
+        if (period === 'all-time') {
+            const datedOrders = orders
+                .map(order => this.getRevenueOrderDateInput(order))
+                .filter(Boolean)
+                .sort();
+            const start = datedOrders[0] || currentMonth.start;
+            const end = datedOrders[datedOrders.length - 1] || currentMonth.end;
+            const spanDays = this.getRevenueDateSpanDays(start, end);
+            return { start, end, bucketMode: spanDays > 45 ? 'month' : 'day', label: 'All Time' };
+        }
+
+        return { ...currentMonth, bucketMode: 'day', label: 'This Month' };
+    }
+
+    buildRevenueOverviewBuckets(range, orders) {
+        return range.bucketMode === 'month'
+            ? this.buildRevenueMonthlyBuckets(range, orders)
+            : this.buildRevenueDailyBuckets(range, orders);
+    }
+
+    buildRevenueDailyBuckets(range, orders) {
+        const dates = this.getRevenueDateSeries(range.start, range.end);
+        const amountByDate = new Map();
+        orders.forEach(order => {
+            const dateInput = this.getRevenueOrderDateInput(order);
+            if (!dateInput) return;
+            amountByDate.set(dateInput, (amountByDate.get(dateInput) || 0) + Number(order.amount || 0));
+        });
+
+        return dates.map(dateInput => ({
+            key: dateInput,
+            label: this.formatRevenueBucketLabel(dateInput),
+            tooltipLabel: formatDisplayDate(dateInput),
+            value: amountByDate.get(dateInput) || 0
+        }));
+    }
+
+    buildRevenueMonthlyBuckets(range, orders) {
+        const months = this.getRevenueMonthSeries(range.start, range.end);
+        const amountByMonth = new Map();
+        orders.forEach(order => {
+            const dateInput = this.getRevenueOrderDateInput(order);
+            if (!dateInput) return;
+            const monthKey = dateInput.slice(0, 7);
+            amountByMonth.set(monthKey, (amountByMonth.get(monthKey) || 0) + Number(order.amount || 0));
+        });
+
+        return months.map(monthKey => ({
+            key: monthKey,
+            label: new Date(`${monthKey}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short' }),
+            tooltipLabel: new Date(`${monthKey}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            value: amountByMonth.get(monthKey) || 0
+        }));
+    }
+
+    renderRevenueOverviewChartSvg(buckets, range) {
+        const width = 900;
+        const height = 238;
+        const pad = { top: 16, right: 24, bottom: 36, left: 50 };
+        const plotWidth = width - pad.left - pad.right;
+        const plotHeight = height - pad.top - pad.bottom;
+        const maxValue = Math.max(...buckets.map(bucket => bucket.value), 1);
+        const niceMax = this.getRevenueNiceMax(maxValue);
+        const xStep = buckets.length > 1 ? plotWidth / (buckets.length - 1) : plotWidth;
+        const points = buckets.map((bucket, index) => {
+            const x = pad.left + (buckets.length > 1 ? index * xStep : plotWidth / 2);
+            const y = pad.top + plotHeight - ((bucket.value / niceMax) * plotHeight);
+            return { ...bucket, x, y };
+        });
+        const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
+        const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${pad.top + plotHeight} L ${points[0].x.toFixed(2)} ${pad.top + plotHeight} Z`;
+        const labelEvery = Math.max(1, Math.ceil(points.length / 6));
+        const yTicks = [niceMax, niceMax * 0.75, niceMax * 0.5, niceMax * 0.25, 0];
+        const renderPointTooltip = (point) => {
+            const x = Math.min(Math.max(point.x - 62, pad.left + 6), width - 154);
+            const y = Math.max(8, point.y - 70);
+            return `
+                <g class="revenue-point-tooltip" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">
+                    <rect width="142" height="56" rx="8"></rect>
+                    <text x="14" y="22">${escapePaymentHtml(point.tooltipLabel)}</text>
+                    <text class="revenue-tooltip-value" x="14" y="41">${escapePaymentHtml(this.formatRevenueOverviewCurrency(point.value))}</text>
+                </g>
+            `;
+        };
+
+        return `
+            <svg class="revenue-overview-svg" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false">
+                <defs>
+                    <linearGradient id="revenueOverviewArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#2f63f6" stop-opacity="0.24"/>
+                        <stop offset="100%" stop-color="#2f63f6" stop-opacity="0"/>
+                    </linearGradient>
+                    <filter id="revenueOverviewShadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#2f63f6" flood-opacity="0.16"/>
+                    </filter>
+                </defs>
+                ${yTicks.map(tick => {
+                    const y = pad.top + plotHeight - ((tick / niceMax) * plotHeight);
+                    return `
+                        <line class="revenue-grid-line" x1="${pad.left}" y1="${y.toFixed(2)}" x2="${width - pad.right}" y2="${y.toFixed(2)}"></line>
+                        <text class="revenue-y-label" x="${pad.left - 14}" y="${(y + 4).toFixed(2)}" text-anchor="end">${this.formatRevenueAxisLabel(tick)}</text>
+                    `;
+                }).join('')}
+                <path class="revenue-area-path" d="${areaPath}"></path>
+                <path class="revenue-line-path" d="${linePath}" filter="url(#revenueOverviewShadow)"></path>
+                ${points.map((point, index) => `
+                    <g class="revenue-point-group">
+                        <circle class="revenue-point-hit" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="13"></circle>
+                        <circle class="revenue-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4.5"></circle>
+                        ${renderPointTooltip(point)}
+                    </g>
+                    ${(index % labelEvery === 0 || index === points.length - 1) ? `<text class="revenue-x-label" x="${point.x.toFixed(2)}" y="${height - 12}" text-anchor="middle">${escapePaymentHtml(point.label)}</text>` : ''}
+                `).join('')}
+            </svg>
+            <span class="revenue-overview-period-label">${escapePaymentHtml(range.label)}</span>
+        `;
+    }
+
+    getRevenueOrderDateInput(order) {
+        const value = this.getOrderFinancialDate(order);
+        if (!value) return null;
+        const config = tz();
+        if (config?.formatForInput) return config.formatForInput(value);
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : this.toRevenueDateInput(date);
+    }
+
+    getRevenueDateSeries(start, end) {
+        const dates = [];
+        const config = tz();
+        let current = start;
+        let guard = 0;
+        while (current <= end && guard < 370) {
+            dates.push(current);
+            current = config?.addDaysToDateString ? config.addDaysToDateString(current, 1) : this.addRevenueDays(current, 1);
+            guard += 1;
+        }
+        return dates.length ? dates : [start];
+    }
+
+    getRevenueMonthSeries(start, end) {
+        const months = [];
+        const startParts = start.split('-').map(Number);
+        const endKey = end.slice(0, 7);
+        let year = startParts[0];
+        let month = startParts[1] - 1;
+        let guard = 0;
+        while (guard < 120) {
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+            months.push(key);
+            if (key >= endKey) break;
+            month += 1;
+            if (month > 11) {
+                month = 0;
+                year += 1;
+            }
+            guard += 1;
+        }
+        return months;
+    }
+
+    addRevenueDays(dateInput, days) {
+        const date = new Date(`${dateInput}T00:00:00`);
+        date.setDate(date.getDate() + days);
+        return this.toRevenueDateInput(date);
+    }
+
+    getRevenueDateSpanDays(start, end) {
+        const startDate = new Date(`${start}T00:00:00`);
+        const endDate = new Date(`${end}T00:00:00`);
+        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 0;
+        return Math.max(0, Math.round((endDate - startDate) / 86400000));
+    }
+
+    toRevenueDateInput(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    formatRevenueBucketLabel(dateInput) {
+        const date = new Date(`${dateInput}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return dateInput;
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    getRevenueNiceMax(value) {
+        if (value <= 0) return 1;
+        const magnitude = 10 ** Math.floor(Math.log10(value));
+        const normalized = value / magnitude;
+        const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+        return nice * magnitude;
+    }
+
+    formatRevenueAxisLabel(value) {
+        if (value >= 1000000) return `${Math.round(value / 1000000)}M`;
+        if (value >= 1000) return `${Math.round(value / 1000)}K`;
+        return Math.round(value).toLocaleString();
+    }
+
+    formatRevenueOverviewCurrency(value) {
+        const amount = Number(value) || 0;
+        return amount.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: amount % 1 ? 2 : 0,
+            maximumFractionDigits: 2
+        });
     }
 
     renderFinancialOverview(orders, payments) {
@@ -1113,6 +1382,14 @@ function closeNotificationPanel() {
 
 // Software update feed
 const SOFTWARE_UPDATES = [
+    {
+        id: '2026-06-02-revenue-overview-chart',
+        type: 'feature',
+        icon: 'chart-line',
+        title: 'Revenue Overview Chart',
+        message: 'Revenue overview now appears after Vendor categories with all-time default totals, live order revenue data, period filtering, and hover details on each chart point.',
+        createdAt: '2026-06-02T12:00:00Z'
+    },
     {
         id: '2026-06-02-dashboard-overview-refresh',
         type: 'improvement',
@@ -7812,6 +8089,16 @@ function copyOrderId(orderId) {
 }
 
 window.copyOrderId = copyOrderId;
+
+async function applyRevenueOverviewFilter() {
+    if (!window.dashboard) return;
+    const cachedOrders = Array.isArray(window.dashboard.data?.orders) ? window.dashboard.data.orders : null;
+    const orders = cachedOrders || await window.APIService.getOrders().catch(() => []);
+    window.dashboard.data.orders = orders;
+    window.dashboard.renderRevenueOverview(orders);
+}
+
+window.applyRevenueOverviewFilter = applyRevenueOverviewFilter;
 
 // Financial Filter Functions
 async function applyFinancialFilter() {

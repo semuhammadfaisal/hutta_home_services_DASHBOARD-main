@@ -1257,6 +1257,307 @@
 
 /* —— Financial overview (dashboard home) —— */
 
+/* Revenue overview chart */
+
+#dashboard.dashboard-overview .revenue-overview-card.dashboard-overview-panel {
+    position: relative;
+    overflow: hidden;
+    margin: 0 0 28px 0;
+    padding: clamp(16px, 2vw, 22px);
+    border: 1px solid var(--do-border);
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: var(--do-shadow);
+}
+
+#dashboard.dashboard-overview .revenue-overview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+#dashboard.dashboard-overview .revenue-overview-title-block {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 12px;
+}
+
+#dashboard.dashboard-overview .revenue-overview-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    color: #2f63f6;
+    background: linear-gradient(145deg, #eef4ff, #e7efff);
+    border: 1px solid rgba(47, 99, 246, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+#dashboard.dashboard-overview .revenue-overview-icon i {
+    display: block;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1;
+}
+
+#dashboard.dashboard-overview .revenue-overview-title-copy {
+    min-width: 0;
+}
+
+#dashboard.dashboard-overview .revenue-overview-title-copy h3 {
+    margin: 0 0 4px 0;
+    padding: 0;
+    border: 0;
+    color: var(--do-text);
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: 0;
+}
+
+#dashboard.dashboard-overview .revenue-overview-title-copy p {
+    margin: 0;
+    color: #66738f;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+#dashboard.dashboard-overview .revenue-overview-filter {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+#dashboard.dashboard-overview .revenue-overview-filter select {
+    min-width: 136px;
+    height: 38px;
+    padding: 0 34px 0 14px;
+    appearance: none;
+    border: 1px solid #dbe4f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #172033;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+#dashboard.dashboard-overview .revenue-overview-filter select:focus {
+    outline: none;
+    border-color: #2f63f6;
+    box-shadow: 0 0 0 3px rgba(47, 99, 246, 0.14);
+}
+
+#dashboard.dashboard-overview .revenue-overview-filter i {
+    position: absolute;
+    right: 14px;
+    color: #66738f;
+    font-size: 11px;
+    pointer-events: none;
+}
+
+#dashboard.dashboard-overview .revenue-overview-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+#dashboard.dashboard-overview .revenue-overview-stat {
+    padding: 10px 12px;
+    border: 1px solid #e8eef6;
+    border-radius: 8px;
+    background: #fbfdff;
+}
+
+#dashboard.dashboard-overview .revenue-overview-stat-label {
+    display: block;
+    margin-bottom: 4px;
+    color: #66738f;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+#dashboard.dashboard-overview .revenue-overview-stat strong {
+    display: block;
+    color: #172033;
+    font-size: 0.98rem;
+    font-weight: 850;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+
+#dashboard.dashboard-overview .revenue-overview-chart {
+    position: relative;
+    min-height: 220px;
+    border-radius: 10px;
+}
+
+#dashboard.dashboard-overview .revenue-overview-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 220px;
+    overflow: visible;
+}
+
+#dashboard.dashboard-overview .revenue-grid-line {
+    stroke: #edf2f8;
+    stroke-width: 1;
+}
+
+#dashboard.dashboard-overview .revenue-y-label,
+#dashboard.dashboard-overview .revenue-x-label {
+    fill: #53627f;
+    font-size: 12px;
+    font-weight: 750;
+    font-family: inherit;
+}
+
+#dashboard.dashboard-overview .revenue-area-path {
+    fill: url(#revenueOverviewArea);
+}
+
+#dashboard.dashboard-overview .revenue-line-path {
+    fill: none;
+    stroke: #2f63f6;
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#dashboard.dashboard-overview .revenue-point-hit {
+    fill: transparent;
+    cursor: pointer;
+}
+
+#dashboard.dashboard-overview .revenue-point {
+    fill: #ffffff;
+    stroke: #2f63f6;
+    stroke-width: 3.4;
+    transition: fill 0.16s ease, r 0.16s ease;
+}
+
+#dashboard.dashboard-overview .revenue-point-group:hover .revenue-point {
+    fill: #2f63f6;
+    r: 6px;
+}
+
+#dashboard.dashboard-overview .revenue-point-tooltip {
+    opacity: 0;
+    pointer-events: none;
+    transform-box: fill-box;
+    transition: opacity 0.16s ease;
+}
+
+#dashboard.dashboard-overview .revenue-point-group:hover .revenue-point-tooltip {
+    opacity: 1;
+}
+
+#dashboard.dashboard-overview .revenue-point-tooltip rect {
+    fill: #ffffff;
+    stroke: #e6edf6;
+    filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.12));
+}
+
+#dashboard.dashboard-overview .revenue-point-tooltip text {
+    fill: #30405f;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .revenue-point-tooltip .revenue-tooltip-value {
+    fill: #172033;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .revenue-overview-period-label {
+    position: absolute;
+    right: 10px;
+    bottom: 0;
+    color: #8a98b3;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .revenue-overview-empty {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.68);
+    color: #66738f;
+    text-align: center;
+}
+
+#dashboard.dashboard-overview .revenue-overview-empty i {
+    font-size: 28px;
+    color: #9aa9c2;
+}
+
+#dashboard.dashboard-overview .revenue-overview-empty p {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+@media (max-width: 720px) {
+    #dashboard.dashboard-overview .revenue-overview-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #dashboard.dashboard-overview .revenue-overview-filter,
+    #dashboard.dashboard-overview .revenue-overview-filter select {
+        width: 100%;
+    }
+
+    #dashboard.dashboard-overview .revenue-overview-stats {
+        grid-template-columns: 1fr;
+    }
+
+    #dashboard.dashboard-overview .revenue-overview-chart {
+        overflow-x: auto;
+        min-height: 230px;
+    }
+
+    #dashboard.dashboard-overview .revenue-overview-svg {
+        width: 760px;
+        max-width: none;
+        min-height: 230px;
+    }
+}
+
+@media (max-width: 420px) {
+    #dashboard.dashboard-overview .revenue-overview-title-block {
+        align-items: flex-start;
+    }
+
+    #dashboard.dashboard-overview .revenue-overview-icon {
+        width: 42px;
+        height: 42px;
+    }
+}
+
 /* Top customers (dashboard home) */
 
 #dashboard.dashboard-overview .top-customers-report.dashboard-overview-panel {
