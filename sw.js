@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_NAME = 'hutta-static-v1';
+const CACHE_NAME = 'hutta-static-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -14,6 +14,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+  if (!['http:', 'https:'].includes(url.protocol)) return;
   if (url.pathname.startsWith('/api/')) return;
 
   const ext = url.pathname.split('.').pop() || '';
@@ -24,8 +25,8 @@ self.addEventListener('fetch', (event) => {
     caches.open(CACHE_NAME).then((cache) =>
       fetch(req)
         .then((res) => {
-          if (res && res.ok) {
-            cache.put(req, res.clone());
+          if (res && res.ok && ['http:', 'https:'].includes(new URL(req.url).protocol)) {
+            cache.put(req, res.clone()).catch(() => {});
           }
           return res;
         })

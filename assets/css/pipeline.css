@@ -19,6 +19,9 @@
 
 #pipeline .pipeline-page {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 #pipeline .pipeline-title-block {
@@ -70,7 +73,15 @@
 }
 
 #pipeline #stagesContainer.stages-container {
+    display: flex;
+    flex-wrap: nowrap;
     gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
     padding: 8px 2px 28px;
     scroll-padding-inline: 8px;
 }
@@ -78,6 +89,7 @@
 #pipeline .stage-column {
     min-width: 300px;
     max-width: 320px;
+    flex: 0 0 300px;
     background: var(--pipe-surface);
     border-radius: var(--pipe-radius-lg);
     border: 1px solid var(--pipe-border);
@@ -227,6 +239,182 @@
 #pipeline .record-actions .icon-btn:hover {
     background: var(--pipe-accent-soft);
     color: var(--pipe-accent);
+}
+
+#pipeline .record-actions .record-pickup-btn {
+    background: var(--pipe-accent-soft);
+    color: var(--pipe-accent);
+}
+
+#pipeline .record-actions .record-pickup-btn:hover {
+    background: var(--pipe-accent);
+    color: #fff;
+}
+
+#pipeline .record-card.picked-up {
+    border-color: var(--pipe-accent);
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+    box-shadow: 0 0 0 2px rgba(0, 86, 184, 0.16), 0 12px 28px rgba(0, 86, 184, 0.14);
+}
+
+#pipeline .record-card.picked-up::after {
+    content: "Picked up - choose Place here";
+    display: inline-flex;
+    margin-top: 10px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: var(--pipe-accent-soft);
+    color: var(--pipe-accent);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+#pipeline .record-card.placing-picked {
+    opacity: 0.72;
+    pointer-events: none;
+}
+
+#pipeline .pipeline-pickup-bar {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 86, 184, 0.2);
+    border-radius: 10px;
+    background: #f4f8ff;
+    box-shadow: 0 8px 20px rgba(0, 86, 184, 0.08);
+    color: var(--pipe-text);
+}
+
+#pipeline .pipeline-pickup-bar[hidden] {
+    display: none;
+}
+
+#pipeline .pipeline-pickup-bar-main,
+#pipeline .pipeline-pickup-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+#pipeline .pipeline-pickup-bar-main i {
+    color: var(--pipe-accent);
+}
+
+#pipeline .pipeline-pickup-bar-label {
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#pipeline .pipeline-pickup-bar-actions {
+    color: var(--pipe-text-secondary);
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+#pipeline .pipeline-pickup-bar-actions .cancel-picked-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--pipe-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--pipe-text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+#pipeline .pipeline-pickup-bar-actions .cancel-picked-btn:hover {
+    color: #b91c1c;
+    border-color: #fecaca;
+    background: #fff7f7;
+}
+
+#pipeline .place-picked-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 86, 184, 0.3);
+    border-radius: 9px;
+    background: linear-gradient(180deg, #0875e1 0%, var(--pipe-accent) 100%);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 8px 18px rgba(0, 86, 184, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+#pipeline .place-picked-btn,
+#pipeline .place-picked-btn span,
+#pipeline .place-picked-btn i {
+    color: #fff;
+}
+
+#pipeline .place-picked-btn i {
+    font-size: 11px;
+}
+
+#pipeline .place-picked-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #0b82f5 0%, #004c9f 100%);
+    box-shadow: 0 10px 22px rgba(0, 86, 184, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    transform: translateY(-1px);
+}
+
+#pipeline .place-picked-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 5px 12px rgba(0, 86, 184, 0.18);
+}
+
+#pipeline .place-picked-btn:focus-visible {
+    outline: 3px solid rgba(0, 86, 184, 0.22);
+    outline-offset: 2px;
+}
+
+#pipeline .place-picked-btn:disabled {
+    background: #8bbff4;
+    border-color: #8bbff4;
+    box-shadow: none;
+    opacity: 0.85;
+    cursor: wait;
+}
+
+#pipeline .stage-column.can-place-picked {
+    border-color: rgba(0, 86, 184, 0.28);
+    box-shadow: 0 0 0 2px rgba(0, 86, 184, 0.08), var(--pipe-shadow);
+}
+
+@media (max-width: 900px) {
+    #pipeline .place-picked-btn {
+        width: 34px;
+        padding: 0;
+    }
+
+    #pipeline .place-picked-btn span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
 }
 
 #pipeline .record-actions .icon-btn.delete:hover {
@@ -816,8 +1004,14 @@
 
 .stages-container {
     display: flex;
+    flex-wrap: nowrap;
     gap: 20px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     overflow-x: auto;
+    overflow-y: hidden;
     padding: 20px 0;
     min-height: 500px;
     -webkit-overflow-scrolling: touch;
@@ -2087,4 +2281,30 @@
     .loading-text {
         font-size: 14px;
     }
+}
+
+/* Final pipeline rail override: keep the Kanban columns inside a real horizontal scroller. */
+body #pipeline .pipeline-page {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+body #pipeline #stagesContainer.stages-container {
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    box-sizing: border-box !important;
+    overscroll-behavior-x: contain;
+}
+
+body #pipeline #stagesContainer.stages-container > .stage-column {
+    flex: 0 0 300px !important;
+    min-width: 300px !important;
+    max-width: 320px !important;
 }

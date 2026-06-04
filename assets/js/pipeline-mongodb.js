@@ -44,10 +44,357 @@ let newOrders = []; // Store new orders for suggestions
 let employeeCache = new Map(); // Cache employee data
 let orderCache = new Map(); // Cache order data
 let autoScrollInterval = null; // For auto-scroll during drag
+let pickedPipelineItem = null;
+let pipelineAutoScrollFrame = null;
+let pipelineAutoScrollPointerX = 0;
+let pipelineAutoScrollVelocity = 0;
+let pipelineAutoScrollActive = false;
+let pipelineAutoScrollZones = null;
+let pipelinePointerDrag = null;
+
+const PIPELINE_AUTO_SCROLL_EDGE_PX = 96;
+const PIPELINE_AUTO_SCROLL_MAX_STEP = 30;
+const PIPELINE_POINTER_SCROLL_EDGE_PX = 140;
+const PIPELINE_POINTER_SCROLL_MAX_STEP = 36;
+
+function clampPipelineAutoScroll(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function getPipelineScrollContainer() {
+    return document.getElementById('stagesContainer');
+}
+
+function ensurePipelineHorizontalScrollLayout() {
+    const container = getPipelineScrollContainer();
+    if (!container) return;
+
+    const page = container.closest('.pipeline-page');
+    if (page) {
+        page.style.maxWidth = '100%';
+        page.style.minWidth = '0';
+        page.style.overflow = 'hidden';
+    }
+
+    Object.assign(container.style, {
+        display: 'flex',
+        flexWrap: 'nowrap',
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: '0',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        boxSizing: 'border-box'
+    });
+
+    container.querySelectorAll('.stage-column').forEach((column) => {
+        column.style.flex = '0 0 300px';
+        column.style.minWidth = '300px';
+        column.style.maxWidth = '320px';
+    });
+}
+
+function getPipelineAutoScrollContainers() {
+    const containers = [];
+    const stagesContainer = getPipelineScrollContainer();
+    const pageScroller = document.scrollingElement || document.documentElement;
+
+    if (stagesContainer) {
+        containers.push(stagesContainer);
+
+        let parent = stagesContainer.parentElement;
+        while (parent && parent !== document.body) {
+            if (parent.scrollWidth > parent.clientWidth + 1) {
+                containers.push(parent);
+            }
+            parent = parent.parentElement;
+        }
+    }
+
+    if (pageScroller && pageScroller.scrollWidth > pageScroller.clientWidth + 1 && !containers.includes(pageScroller)) {
+        containers.push(pageScroller);
+    }
+
+    return containers;
+}
+
+function hasActivePipelineCardDrag() {
+    return pipelineAutoScrollActive && (
+        draggedRecordId ||
+        draggedOrderId ||
+        draggedIsNewOrder ||
+        window.draggedRecordId ||
+        window.draggedOrderId ||
+        window.draggedIsNewOrder ||
+        document.querySelector('.record-card.dragging, .new-order-card.dragging')
+    );
+}
+
+function updatePipelineAutoScrollVelocity(clientX) {
+    const container = getPipelineScrollContainer();
+    const scrollContainers = getPipelineAutoScrollContainers();
+    if (!container || scrollContainers.length === 0 || !hasActivePipelineCardDrag() || typeof clientX !== 'number') {
+        pipelineAutoScrollVelocity = 0;
+        return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const visibleLeft = Math.max(rect.left, 0);
+    const visibleRight = Math.min(rect.right, window.innerWidth || document.documentElement.clientWidth);
+    const canScrollLeft = scrollContainers.some((scrollContainer) => scrollContainer.scrollLeft > 0);
+    const canScrollRight = scrollContainers.some((scrollContainer) => (
+        scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth - 1
+    ));
+
+    if (visibleRight <= visibleLeft) {
+        pipelineAutoScrollVelocity = 0;
+        return;
+    }
+
+    if (clientX >= visibleRight - PIPELINE_AUTO_SCROLL_EDGE_PX && clientX <= visibleRight + 24 && canScrollRight) {
+        const intensity = (clientX - (visibleRight - PIPELINE_AUTO_SCROLL_EDGE_PX)) / PIPELINE_AUTO_SCROLL_EDGE_PX;
+        pipelineAutoScrollVelocity = clampPipelineAutoScroll(intensity * PIPELINE_AUTO_SCROLL_MAX_STEP, 5, PIPELINE_AUTO_SCROLL_MAX_STEP);
+    } else if (clientX <= visibleLeft + PIPELINE_AUTO_SCROLL_EDGE_PX && clientX >= visibleLeft - 24 && canScrollLeft) {
+        const intensity = ((visibleLeft + PIPELINE_AUTO_SCROLL_EDGE_PX) - clientX) / PIPELINE_AUTO_SCROLL_EDGE_PX;
+        pipelineAutoScrollVelocity = -clampPipelineAutoScroll(intensity * PIPELINE_AUTO_SCROLL_MAX_STEP, 5, PIPELINE_AUTO_SCROLL_MAX_STEP);
+    } else {
+        pipelineAutoScrollVelocity = 0;
+    }
+}
+
+function updatePipelineAutoScrollVelocityFromRect(dragRect, shouldSchedule = true) {
+    const container = getPipelineScrollContainer();
+    const scrollContainers = getPipelineAutoScrollContainers();
+    if (!container || !dragRect || scrollContainers.length === 0 || !hasActivePipelineCardDrag()) {
+        pipelineAutoScrollVelocity = 0;
+        return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const visibleLeft = Math.max(rect.left, 0);
+    const visibleRight = Math.min(rect.right, window.innerWidth || document.documentElement.clientWidth);
+    const canScrollLeft = scrollContainers.some((scrollContainer) => scrollContainer.scrollLeft > 0);
+    const canScrollRight = scrollContainers.some((scrollContainer) => (
+        scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth - 1
+    ));
+
+    if (dragRect.right >= visibleRight - PIPELINE_AUTO_SCROLL_EDGE_PX && canScrollRight) {
+        const intensity = (dragRect.right - (visibleRight - PIPELINE_AUTO_SCROLL_EDGE_PX)) / PIPELINE_AUTO_SCROLL_EDGE_PX;
+        pipelineAutoScrollVelocity = clampPipelineAutoScroll(intensity * PIPELINE_AUTO_SCROLL_MAX_STEP, 6, PIPELINE_AUTO_SCROLL_MAX_STEP);
+    } else if (dragRect.left <= visibleLeft + PIPELINE_AUTO_SCROLL_EDGE_PX && canScrollLeft) {
+        const intensity = ((visibleLeft + PIPELINE_AUTO_SCROLL_EDGE_PX) - dragRect.left) / PIPELINE_AUTO_SCROLL_EDGE_PX;
+        pipelineAutoScrollVelocity = -clampPipelineAutoScroll(intensity * PIPELINE_AUTO_SCROLL_MAX_STEP, 6, PIPELINE_AUTO_SCROLL_MAX_STEP);
+    } else {
+        pipelineAutoScrollVelocity = 0;
+    }
+
+    if (shouldSchedule) {
+        schedulePipelineAutoScroll();
+    }
+}
+
+function runPipelineAutoScroll() {
+    pipelineAutoScrollFrame = null;
+
+    if (!hasActivePipelineCardDrag()) return;
+
+    if (pipelineAutoScrollVelocity !== 0) {
+        getPipelineAutoScrollContainers().forEach((scrollContainer) => {
+            const canMoveLeft = pipelineAutoScrollVelocity < 0 && scrollContainer.scrollLeft > 0;
+            const canMoveRight = pipelineAutoScrollVelocity > 0 &&
+                scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth - 1;
+
+            if (canMoveLeft || canMoveRight) {
+                scrollContainer.scrollLeft += pipelineAutoScrollVelocity;
+            }
+        });
+
+        if (pipelinePointerDrag?.active && pipelinePointerDrag.ghost) {
+            updatePipelineAutoScrollVelocityFromRect(pipelinePointerDrag.ghost.getBoundingClientRect(), false);
+        } else {
+            updatePipelineAutoScrollVelocity(pipelineAutoScrollPointerX);
+        }
+    }
+
+    if (pipelineAutoScrollVelocity !== 0 && !pipelineAutoScrollFrame) {
+        pipelineAutoScrollFrame = requestAnimationFrame(runPipelineAutoScroll);
+    }
+}
+
+function schedulePipelineAutoScroll() {
+    if (pipelineAutoScrollVelocity !== 0 && !pipelineAutoScrollFrame) {
+        pipelineAutoScrollFrame = requestAnimationFrame(runPipelineAutoScroll);
+    }
+}
+
+function setPipelineAutoScrollVelocity(direction) {
+    if (!pipelineAutoScrollActive) return;
+
+    const containers = getPipelineAutoScrollContainers();
+    const canScrollLeft = containers.some((container) => container.scrollLeft > 0);
+    const canScrollRight = containers.some((container) => (
+        container.scrollLeft + container.clientWidth < container.scrollWidth - 1
+    ));
+
+    if (direction > 0 && canScrollRight) {
+        pipelineAutoScrollVelocity = PIPELINE_AUTO_SCROLL_MAX_STEP;
+    } else if (direction < 0 && canScrollLeft) {
+        pipelineAutoScrollVelocity = -PIPELINE_AUTO_SCROLL_MAX_STEP;
+    } else {
+        pipelineAutoScrollVelocity = 0;
+    }
+
+    schedulePipelineAutoScroll();
+}
+
+function deactivatePipelineAutoScrollZones() {
+    if (!pipelineAutoScrollZones) return;
+
+    pipelineAutoScrollZones.left.style.pointerEvents = 'none';
+    pipelineAutoScrollZones.right.style.pointerEvents = 'none';
+    pipelineAutoScrollZones.left.style.display = 'none';
+    pipelineAutoScrollZones.right.style.display = 'none';
+}
+
+function positionPipelineAutoScrollZones() {
+    if (!pipelineAutoScrollZones) return;
+    
+    const container = getPipelineScrollContainer();
+    const rect = container?.getBoundingClientRect();
+    const visibleTop = rect ? Math.max(rect.top, 0) : 0;
+    const visibleBottom = rect ? Math.min(rect.bottom, window.innerHeight || document.documentElement.clientHeight) : (window.innerHeight || document.documentElement.clientHeight);
+    const visibleLeft = rect ? Math.max(rect.left, 0) : 0;
+    const visibleRight = rect ? Math.min(rect.right, window.innerWidth || document.documentElement.clientWidth) : (window.innerWidth || document.documentElement.clientWidth);
+
+    pipelineAutoScrollZones.left.style.top = `${visibleTop}px`;
+    pipelineAutoScrollZones.left.style.height = `${Math.max(visibleBottom - visibleTop, 120)}px`;
+    pipelineAutoScrollZones.left.style.left = `${visibleLeft}px`;
+    pipelineAutoScrollZones.right.style.top = `${visibleTop}px`;
+    pipelineAutoScrollZones.right.style.height = `${Math.max(visibleBottom - visibleTop, 120)}px`;
+    pipelineAutoScrollZones.right.style.left = `${Math.max(visibleRight - PIPELINE_AUTO_SCROLL_EDGE_PX, 0)}px`;
+}
+
+function createPipelineAutoScrollZones() {
+    if (pipelineAutoScrollZones) {
+        positionPipelineAutoScrollZones();
+        return;
+    }
+
+    const makeZone = (side, direction) => {
+        const zone = document.createElement('div');
+        zone.className = `pipeline-drag-scroll-zone pipeline-drag-scroll-zone-${side}`;
+        zone.setAttribute('aria-hidden', 'true');
+        Object.assign(zone.style, {
+            position: 'fixed',
+            top: '0',
+            height: '0',
+            width: `${PIPELINE_AUTO_SCROLL_EDGE_PX}px`,
+            zIndex: '2147483647',
+            pointerEvents: 'none',
+            display: 'none',
+            background: 'rgba(0, 86, 184, 0.01)'
+        });
+
+        zone.style.left = '0';
+
+        zone.addEventListener('dragenter', () => setPipelineAutoScrollVelocity(direction));
+        zone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            setPipelineAutoScrollVelocity(direction);
+        });
+        zone.addEventListener('dragleave', () => {
+            pipelineAutoScrollVelocity = 0;
+        });
+        zone.addEventListener('drop', () => stopPipelineAutoScroll());
+
+        document.body.appendChild(zone);
+        return zone;
+    };
+
+    pipelineAutoScrollZones = {
+        left: makeZone('left', -1),
+        right: makeZone('right', 1)
+    };
+
+    positionPipelineAutoScrollZones();
+}
+
+function activatePipelineAutoScrollZones() {
+    createPipelineAutoScrollZones();
+    positionPipelineAutoScrollZones();
+
+    if (!pipelineAutoScrollZones) return;
+
+    pipelineAutoScrollZones.left.style.display = 'block';
+    pipelineAutoScrollZones.right.style.display = 'block';
+    pipelineAutoScrollZones.left.style.pointerEvents = 'auto';
+    pipelineAutoScrollZones.right.style.pointerEvents = 'auto';
+}
+
+function startPipelineAutoScroll(clientX) {
+    pipelineAutoScrollActive = true;
+    pipelineAutoScrollPointerX = typeof clientX === 'number' ? clientX : pipelineAutoScrollPointerX;
+    getPipelineAutoScrollContainers().forEach((container) => {
+        container.dataset.previousScrollBehavior = container.style.scrollBehavior || '';
+        container.style.scrollBehavior = 'auto';
+    });
+    activatePipelineAutoScrollZones();
+    updatePipelineAutoScrollVelocity(pipelineAutoScrollPointerX);
+    schedulePipelineAutoScroll();
+}
+
+function updatePipelineAutoScroll(clientX) {
+    if (!pipelineAutoScrollActive || typeof clientX !== 'number') return;
+    pipelineAutoScrollPointerX = clientX;
+    updatePipelineAutoScrollVelocity(clientX);
+    schedulePipelineAutoScroll();
+}
+
+function handlePipelineAutoScrollDragEvent(event) {
+    if (!event) return;
+
+    let clientX = Number.isFinite(event.clientX) ? event.clientX : null;
+    if ((!clientX || clientX < 0) && Number.isFinite(event.pageX)) {
+        clientX = event.pageX - window.scrollX;
+    }
+    if ((!clientX || clientX < 0) && Number.isFinite(event.screenX)) {
+        clientX = event.screenX - window.screenX;
+    }
+
+    if (Number.isFinite(clientX) && clientX >= 0) {
+        updatePipelineAutoScroll(clientX);
+    } else if (pipelineAutoScrollPointerX) {
+        updatePipelineAutoScroll(pipelineAutoScrollPointerX);
+    }
+}
+
+function stopPipelineAutoScroll() {
+    pipelineAutoScrollActive = false;
+    pipelineAutoScrollVelocity = 0;
+    deactivatePipelineAutoScrollZones();
+
+    getPipelineAutoScrollContainers().forEach((container) => {
+        container.style.scrollBehavior = container.dataset.previousScrollBehavior || '';
+        delete container.dataset.previousScrollBehavior;
+    });
+
+    if (pipelineAutoScrollFrame) {
+        cancelAnimationFrame(pipelineAutoScrollFrame);
+        pipelineAutoScrollFrame = null;
+    }
+}
+
+window.PipelineAutoScroll = {
+    start: startPipelineAutoScroll,
+    update: updatePipelineAutoScroll,
+    handleDragEvent: handlePipelineAutoScrollDragEvent,
+    stop: stopPipelineAutoScroll
+};
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     window.AppLogger?.debug('Pipeline MongoDB script loaded');
+    createPipelineAutoScrollZones();
     
     const pipelineSection = document.getElementById('pipeline');
     if (pipelineSection && pipelineSection.classList.contains('active')) {
@@ -58,14 +405,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // CRITICAL: Prevent default dragover on document to allow drop
     document.addEventListener('dragover', (e) => {
         e.preventDefault();
-        window.AppLogger?.debug('Global dragover detected on:', e.target.className);
-    }, false);
+        handlePipelineAutoScrollDragEvent(e);
+    }, true);
     
     // Also prevent default drop on document
     document.addEventListener('drop', (e) => {
         e.preventDefault();
+        stopPipelineAutoScroll();
         window.AppLogger?.debug('Global drop detected (prevented)');
     }, false);
+
+    document.addEventListener('dragend', stopPipelineAutoScroll, true);
+    document.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            updatePipelineAutoScroll(e.touches[0].clientX);
+        }
+    }, { capture: true, passive: true });
+    document.addEventListener('keyup', (e) => {
+        if (e.key === 'Escape') stopPipelineAutoScroll();
+    });
 });
 
 // Load all data from MongoDB
@@ -173,8 +531,226 @@ function bindPipelineStagesContainerOnce(container) {
     if (!container || container.dataset.pipelineUiBound === '1') return;
     container.dataset.pipelineUiBound = '1';
     container.addEventListener('click', pipelineStagesContainerClick);
+    container.addEventListener('pointerdown', pipelinePointerDragStart, true);
     // Removed event delegation for drag - using direct handlers instead
 }
+
+function shouldIgnorePipelinePointerDrag(target) {
+    return target.closest('button, .record-actions, .icon-btn, input, textarea, select, a');
+}
+
+function setPipelineDraggedCardData(card) {
+    if (card.classList.contains('new-order-card')) {
+        draggedOrderId = card.dataset.orderId;
+        draggedRecordId = null;
+        draggedIsNewOrder = true;
+        window.draggedOrderId = card.dataset.orderId;
+        window.draggedRecordId = null;
+        window.draggedIsNewOrder = true;
+    } else {
+        draggedRecordId = card.dataset.recordId;
+        draggedOrderId = null;
+        draggedIsNewOrder = false;
+        window.draggedRecordId = card.dataset.recordId;
+        window.draggedOrderId = null;
+        window.draggedIsNewOrder = false;
+    }
+}
+
+function createPipelinePointerGhost(card) {
+    const rect = card.getBoundingClientRect();
+    const ghost = card.cloneNode(true);
+    ghost.classList.add('pipeline-pointer-drag-ghost');
+    Object.assign(ghost.style, {
+        position: 'fixed',
+        left: '0',
+        top: '0',
+        width: `${rect.width}px`,
+        zIndex: '2147483646',
+        pointerEvents: 'none',
+        opacity: '0.92',
+        transform: `translate(${rect.left}px, ${rect.top}px)`,
+        boxShadow: '0 16px 32px rgba(15, 23, 42, 0.18)'
+    });
+    document.body.appendChild(ghost);
+    return ghost;
+}
+
+function movePipelinePointerGhost(state, clientX, clientY) {
+    if (!state.ghost) return;
+    state.ghost.style.transform = `translate(${clientX - state.offsetX}px, ${clientY - state.offsetY}px)`;
+    state.lastClientX = clientX;
+    updatePipelinePointerRailScroll(state);
+}
+
+function getPipelinePointerRailScrollStep(state) {
+    const container = getPipelineScrollContainer();
+    if (!container || !state) return 0;
+
+    const railRect = container.getBoundingClientRect();
+    const visibleLeft = Math.max(railRect.left, 0);
+    const visibleRight = Math.min(railRect.right, window.innerWidth || document.documentElement.clientWidth);
+    const canScrollLeft = container.scrollLeft > 0;
+    const canScrollRight = container.scrollLeft + container.clientWidth < container.scrollWidth - 1;
+    const pointerX = state.lastClientX;
+
+    if (typeof pointerX !== 'number') return 0;
+
+    if (pointerX >= visibleRight - PIPELINE_POINTER_SCROLL_EDGE_PX && canScrollRight) {
+        const intensity = (pointerX - (visibleRight - PIPELINE_POINTER_SCROLL_EDGE_PX)) / PIPELINE_POINTER_SCROLL_EDGE_PX;
+        return clampPipelineAutoScroll(intensity * PIPELINE_POINTER_SCROLL_MAX_STEP, 8, PIPELINE_POINTER_SCROLL_MAX_STEP);
+    }
+
+    if (pointerX <= visibleLeft + PIPELINE_POINTER_SCROLL_EDGE_PX && canScrollLeft) {
+        const intensity = ((visibleLeft + PIPELINE_POINTER_SCROLL_EDGE_PX) - pointerX) / PIPELINE_POINTER_SCROLL_EDGE_PX;
+        return -clampPipelineAutoScroll(intensity * PIPELINE_POINTER_SCROLL_MAX_STEP, 8, PIPELINE_POINTER_SCROLL_MAX_STEP);
+    }
+
+    return 0;
+}
+
+function scrollPipelineRailBy(amount) {
+    const container = getPipelineScrollContainer();
+    if (!container || amount === 0) return;
+
+    const next = clampPipelineAutoScroll(
+        container.scrollLeft + amount,
+        0,
+        Math.max(container.scrollWidth - container.clientWidth, 0)
+    );
+    container.scrollLeft = next;
+}
+
+function runPipelinePointerRailScroll() {
+    const state = pipelinePointerDrag;
+    if (!state?.active) return;
+
+    state.railScrollFrame = null;
+    const step = getPipelinePointerRailScrollStep(state);
+    state.railScrollStep = step;
+
+    if (step !== 0) {
+        scrollPipelineRailBy(step);
+        state.railScrollFrame = requestAnimationFrame(runPipelinePointerRailScroll);
+    }
+}
+
+function updatePipelinePointerRailScroll(state) {
+    if (!state?.active) return;
+
+    state.railScrollStep = getPipelinePointerRailScrollStep(state);
+    scrollPipelineRailBy(state.railScrollStep);
+    if (state.railScrollStep !== 0 && !state.railScrollFrame) {
+        state.railScrollFrame = requestAnimationFrame(runPipelinePointerRailScroll);
+    }
+}
+
+function cleanupPipelinePointerDrag() {
+    if (!pipelinePointerDrag) return;
+
+    const { card, originalDraggable, ghost } = pipelinePointerDrag;
+    if (pipelinePointerDrag.railScrollFrame) {
+        cancelAnimationFrame(pipelinePointerDrag.railScrollFrame);
+    }
+    if (ghost) ghost.remove();
+    if (card) {
+        card.classList.remove('dragging');
+        card.style.opacity = '';
+        card.draggable = originalDraggable;
+    }
+
+    document.querySelectorAll('.drag-over').forEach((el) => el.classList.remove('drag-over'));
+    stopPipelineAutoScroll();
+    pipelinePointerDrag = null;
+}
+
+function pipelinePointerDragStart(event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    const card = event.target.closest('.record-card, .new-order-card');
+    if (!card || shouldIgnorePipelinePointerDrag(event.target)) return;
+
+    const rect = card.getBoundingClientRect();
+    pipelinePointerDrag = {
+        card,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastClientX: event.clientX,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        active: false,
+        ghost: null,
+        originalDraggable: card.draggable
+    };
+
+    card.draggable = false;
+}
+
+function activatePipelinePointerDrag(state, event) {
+    state.active = true;
+    setPipelineDraggedCardData(state.card);
+    state.card.classList.add('dragging');
+    state.card.style.opacity = '0.35';
+    state.ghost = createPipelinePointerGhost(state.card);
+    startPipelineAutoScroll(event.clientX);
+    movePipelinePointerGhost(state, event.clientX, event.clientY);
+}
+
+document.addEventListener('pointermove', (event) => {
+    const state = pipelinePointerDrag;
+    if (!state || state.pointerId !== event.pointerId) return;
+
+    const distance = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+    if (!state.active && distance < 5) return;
+    if (!state.active) activatePipelinePointerDrag(state, event);
+
+    movePipelinePointerGhost(state, event.clientX, event.clientY);
+    event.preventDefault();
+}, true);
+
+document.addEventListener('pointerup', (event) => {
+    const state = pipelinePointerDrag;
+    if (!state || state.pointerId !== event.pointerId) return;
+
+    if (state.active) {
+        const dropTarget = document.elementFromPoint(event.clientX, event.clientY)?.closest('.stage-body');
+        if (dropTarget) {
+            drop.call(dropTarget, {
+                preventDefault() {},
+                stopPropagation() {}
+            });
+        }
+        event.preventDefault();
+    }
+
+    cleanupPipelinePointerDrag();
+}, true);
+
+document.addEventListener('pointercancel', (event) => {
+    if (pipelinePointerDrag && pipelinePointerDrag.pointerId === event.pointerId) {
+        cleanupPipelinePointerDrag();
+    }
+}, true);
+
+document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!target?.closest) return;
+
+    const pickupControl = target.closest('.record-pickup-btn, .place-picked-btn, .cancel-picked-btn');
+    if (!pickupControl || pickupControl.closest('#stagesContainer')) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (pickupControl.classList.contains('record-pickup-btn')) {
+        pickUpPipelineRecord(pickupControl.dataset.recordId);
+    } else if (pickupControl.classList.contains('place-picked-btn')) {
+        placePickedPipelineItem(pickupControl.dataset.stageId);
+    } else {
+        cancelPickedPipelineItem();
+    }
+}, true);
 
 function pipelineStagesContainerDragStart(e) {
     const card = e.target.closest('.record-card, .new-order-card');
@@ -185,7 +761,7 @@ function pipelineStagesContainerDragStart(e) {
         return;
     }
     
-    if (!card.draggable) card.draggable = true;
+    card.draggable = false;
     card.classList.add('dragging');
     
     if (card.classList.contains('new-order-card')) {
@@ -197,6 +773,8 @@ function pipelineStagesContainerDragStart(e) {
         draggedOrderId = null;
         draggedIsNewOrder = false;
     }
+
+    startPipelineAutoScroll(e.clientX);
     
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', 'dragging');
@@ -216,9 +794,32 @@ function pipelineStagesContainerDragEnd(e) {
     if (e && e.dataTransfer) {
         e.dataTransfer.clearData();
     }
+
+    stopPipelineAutoScroll();
 }
 
 function pipelineStagesContainerClick(e) {
+    const pickupBtn = e.target.closest('.record-pickup-btn');
+    if (pickupBtn) {
+        e.stopPropagation();
+        pickUpPipelineRecord(pickupBtn.dataset.recordId);
+        return;
+    }
+
+    const placeBtn = e.target.closest('.place-picked-btn');
+    if (placeBtn) {
+        e.stopPropagation();
+        placePickedPipelineItem(placeBtn.dataset.stageId);
+        return;
+    }
+
+    const cancelPickupBtn = e.target.closest('.cancel-picked-btn');
+    if (cancelPickupBtn) {
+        e.stopPropagation();
+        cancelPickedPipelineItem();
+        return;
+    }
+
     const editStageBtn = e.target.closest('.edit-stage-btn');
     if (editStageBtn) {
         e.stopPropagation();
@@ -295,6 +896,158 @@ function pipelineStagesContainerClick(e) {
     }
 }
 
+function pickUpPipelineRecord(recordId) {
+    const record = records.find((item) => item._id === recordId);
+    if (!record) return;
+
+    pickedPipelineItem = {
+        type: 'record',
+        id: record._id,
+        fromStageId: record.stageId,
+        label: record.orderIdDisplay || record.customerName || 'Selected record'
+    };
+
+    if (window.showToast) {
+        window.showToast(`Picked up ${pickedPipelineItem.label}. Scroll and choose "Place here".`, 'info');
+    }
+
+    syncPickedPipelineUI();
+}
+
+function cancelPickedPipelineItem() {
+    pickedPipelineItem = null;
+    syncPickedPipelineUI();
+    if (window.showToast) {
+        window.showToast('Pickup cancelled', 'info');
+    }
+}
+
+async function placePickedPipelineItem(stageId) {
+    if (!pickedPipelineItem || !stageId) return;
+
+    if (pickedPipelineItem.type === 'record') {
+        if (pickedPipelineItem.fromStageId === stageId) {
+            cancelPickedPipelineItem();
+            return;
+        }
+
+        const recordId = pickedPipelineItem.id;
+        const pickedLabel = pickedPipelineItem.label;
+        pickedPipelineItem = null;
+        syncPickedPipelineUI({ placingRecordId: recordId, placingStageId: stageId });
+        draggedRecordId = recordId;
+        draggedOrderId = null;
+        draggedIsNewOrder = false;
+        window.draggedRecordId = recordId;
+        window.draggedOrderId = null;
+        window.draggedIsNewOrder = false;
+
+        const stageBody = document.querySelector(`.stage-body[data-stage-id="${stageId}"]`);
+        if (!stageBody) return;
+
+        await drop.call(stageBody, {
+            preventDefault() {},
+            stopPropagation() {}
+        });
+
+        draggedRecordId = null;
+        draggedOrderId = null;
+        draggedIsNewOrder = false;
+        window.draggedRecordId = null;
+        window.draggedOrderId = null;
+        window.draggedIsNewOrder = false;
+
+        if (window.showToast) {
+            window.showToast(`${pickedLabel} moved`, 'success');
+        }
+    }
+}
+
+function getPickedPipelineBar() {
+    let bar = document.getElementById('pipelinePickupBar');
+    const container = getPipelineScrollContainer();
+    if (!container) return null;
+
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'pipelinePickupBar';
+        bar.className = 'pipeline-pickup-bar';
+        container.parentElement.insertBefore(bar, container);
+    }
+
+    return bar;
+}
+
+function syncPickedPipelineUI(options = {}) {
+    const bar = getPickedPipelineBar();
+    const hasPickedItem = Boolean(pickedPipelineItem);
+
+    if (bar) {
+        if (hasPickedItem) {
+            bar.hidden = false;
+            bar.innerHTML = `
+                <div class="pipeline-pickup-bar-main">
+                    <i class="fas fa-hand-paper" aria-hidden="true"></i>
+                    <span class="pipeline-pickup-bar-label">${pickedPipelineItem.label}</span>
+                </div>
+                <div class="pipeline-pickup-bar-actions">
+                    <span>Scroll to a stage and choose Place here</span>
+                    <button type="button" class="cancel-picked-btn">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                        Cancel
+                    </button>
+                </div>
+            `;
+        } else {
+            bar.hidden = true;
+            bar.innerHTML = '';
+        }
+    }
+
+    document.querySelectorAll('.record-card').forEach((card) => {
+        const isPicked = hasPickedItem && pickedPipelineItem.type === 'record' && pickedPipelineItem.id === card.dataset.recordId;
+        const isPlacing = options.placingRecordId === card.dataset.recordId;
+        card.classList.toggle('picked-up', isPicked);
+        card.classList.toggle('placing-picked', isPlacing);
+
+        const pickupBtn = card.querySelector('.record-pickup-btn');
+        const cancelBtn = card.querySelector('.record-cancel-pickup-btn');
+        if (pickupBtn) pickupBtn.hidden = hasPickedItem;
+        if (cancelBtn && !isPicked) cancelBtn.remove();
+    });
+
+    document.querySelectorAll('.place-picked-btn').forEach((button) => button.remove());
+
+    if (!hasPickedItem) {
+        document.querySelectorAll('.stage-column.can-place-picked').forEach((stageColumn) => {
+            stageColumn.classList.remove('can-place-picked');
+        });
+        return;
+    }
+
+    document.querySelectorAll('.stage-column').forEach((stageColumn) => {
+        const stageId = stageColumn.dataset.stageId;
+        const canPlace = Boolean(stageId && stageId !== pickedPipelineItem.fromStageId);
+        stageColumn.classList.toggle('can-place-picked', canPlace);
+        if (!canPlace) return;
+
+        const actions = stageColumn.querySelector('.stage-actions');
+        if (!actions) return;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'place-picked-btn';
+        button.dataset.stageId = stageId;
+        button.title = 'Place picked card here';
+        button.innerHTML = `
+            <i class="fas fa-download" aria-hidden="true"></i>
+            <span>${options.placingStageId === stageId ? 'Placing...' : 'Place here'}</span>
+        `;
+        if (options.placingStageId === stageId) button.disabled = true;
+        actions.prepend(button);
+    });
+}
+
 // Load and render stages
 function loadStages() {
     const container = document.getElementById('stagesContainer');
@@ -309,6 +1062,8 @@ function loadStages() {
         container.appendChild(createStageColumn(stage));
     }
 
+    ensurePipelineHorizontalScrollLayout();
+    createPipelineAutoScrollZones();
     bindPipelineStagesContainerOnce(container);
 
     // Ensure all cards are draggable with proper event handlers
@@ -316,8 +1071,8 @@ function loadStages() {
         const allCards = container.querySelectorAll('.record-card, .new-order-card');
         window.AppLogger?.debug('Setting up drag for', allCards.length, 'cards');
         allCards.forEach(card => {
-            card.setAttribute('draggable', 'true');
-            card.draggable = true;
+            card.setAttribute('draggable', 'false');
+            card.draggable = false;
             
             // Add mousedown to verify events work
             card.onmousedown = function(e) {
@@ -358,6 +1113,8 @@ function loadStages() {
                     draggedIsNewOrder = false;
                     window.AppLogger?.debug('Set draggedRecordId:', draggedRecordId);
                 }
+
+                startPipelineAutoScroll(e.clientX);
                 
                 try {
                     e.dataTransfer.effectAllowed = 'move';
@@ -374,6 +1131,11 @@ function loadStages() {
                 this.classList.remove('dragging');
                 this.style.opacity = '';
                 document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                stopPipelineAutoScroll();
+            };
+
+            card.ondrag = function(e) {
+                handlePipelineAutoScrollDragEvent(e);
             };
         });
         
@@ -389,11 +1151,13 @@ function loadStages() {
     });
 
     updateStatistics();
+    syncPickedPipelineUI();
 }
 
 // Create stage column
 function createStageColumn(stage) {
     const count = records.filter(r => r.stageId === stage._id).length;
+    const canPlacePickedItem = pickedPipelineItem && pickedPipelineItem.fromStageId !== stage._id;
     
     const column = document.createElement('div');
     column.className = 'stage-column';
@@ -415,6 +1179,12 @@ function createStageColumn(stage) {
                 ${stage.isNoBid ? '<i class="fas fa-ban" style="margin-right: 6px;"></i>' : ''}${stage.name}
             </h3>
             <div class="stage-actions">
+                ${canPlacePickedItem ? `
+                    <button type="button" class="place-picked-btn" data-stage-id="${stage._id}" title="Place picked card here">
+                        <i class="fas fa-download" aria-hidden="true"></i>
+                        <span>Place here</span>
+                    </button>
+                ` : ''}
                 <button type="button" class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
                 <button type="button" class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
                 <button type="button" class="icon-btn delete delete-stage-btn" data-stage-id="${stage._id}" title="Delete Stage"><i class="fas fa-trash"></i></button>
@@ -436,9 +1206,9 @@ function createStageColumn(stage) {
     stageBody.ondragover = function(e) {
         e.preventDefault();
         e.stopPropagation();
+        handlePipelineAutoScrollDragEvent(e);
         e.dataTransfer.dropEffect = 'move';
         this.classList.add('drag-over');
-        window.AppLogger?.debug('Drag over stage:', this.dataset.stageId);
     };
     
     stageBody.ondragleave = function(e) {
@@ -452,6 +1222,7 @@ function createStageColumn(stage) {
         window.AppLogger?.debug('Drop event triggered on stage:', this.dataset.stageId);
         e.preventDefault();
         e.stopPropagation();
+        stopPipelineAutoScroll();
         this.classList.remove('drag-over');
         drop.call(this, e);
     };
@@ -492,11 +1263,18 @@ function renderRecords(stageId) {
         }
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         const displayTitle = record.orderIdDisplay || record.customerName;
+        const isPicked = pickedPipelineItem?.type === 'record' && pickedPipelineItem.id === record._id;
         return `
-        <div class="record-card" data-record-id="${record._id}">
+        <div class="record-card ${isPicked ? 'picked-up' : ''}" data-record-id="${record._id}">
             <div class="record-header">
                 <div class="record-title">${displayTitle}</div>
                 <div class="record-actions">
+                    ${isPicked ? `
+                        <button class="icon-btn record-cancel-pickup-btn cancel-picked-btn" data-record-id="${record._id}" title="Cancel pickup"><i class="fas fa-times"></i></button>
+                    ` : ''}
+                    ${pickedPipelineItem ? '' : `
+                        <button class="icon-btn record-pickup-btn" data-record-id="${record._id}" title="Pick up card"><i class="fas fa-hand-paper"></i></button>
+                    `}
                     <button class="icon-btn record-view-btn" data-record-id="${record._id}" title="View Details"><i class="fas fa-eye"></i></button>
                     <button class="icon-btn record-edit-btn" data-record-id="${record._id}" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="icon-btn delete record-delete-btn" data-record-id="${record._id}" title="Delete"><i class="fas fa-trash"></i></button>
@@ -1550,10 +2328,11 @@ function loadNewOrdersSuggestions() {
     const container = document.querySelector('.new-orders-column .stage-body');
     if (container) {
         container.innerHTML = renderNewOrders();
+        ensurePipelineHorizontalScrollLayout();
         requestAnimationFrame(() => {
             container.querySelectorAll('.new-order-card').forEach(card => {
-                card.setAttribute('draggable', 'true');
-                card.draggable = true;
+                card.setAttribute('draggable', 'false');
+                card.draggable = false;
                 
                 card.ondragstart = function(e) {
                     if (e.target.closest('button')) {
@@ -1564,6 +2343,7 @@ function loadNewOrdersSuggestions() {
                     draggedOrderId = this.dataset.orderId;
                     draggedRecordId = null;
                     draggedIsNewOrder = true;
+                    startPipelineAutoScroll(e.clientX);
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', 'dragging');
                 };
@@ -1571,6 +2351,11 @@ function loadNewOrdersSuggestions() {
                 card.ondragend = function(e) {
                     this.classList.remove('dragging');
                     document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                    stopPipelineAutoScroll();
+                };
+
+                card.ondrag = function(e) {
+                    handlePipelineAutoScrollDragEvent(e);
                 };
             });
         });
@@ -1711,11 +2496,12 @@ function expandNewOrders() {
     `;
     
     container.innerHTML = allOrdersHtml + collapseBtn;
+    ensurePipelineHorizontalScrollLayout();
     
     requestAnimationFrame(() => {
         container.querySelectorAll('.new-order-card').forEach(card => {
-            card.setAttribute('draggable', 'true');
-            card.draggable = true;
+            card.setAttribute('draggable', 'false');
+            card.draggable = false;
             
             card.ondragstart = function(e) {
                 if (e.target.closest('button')) {
@@ -1726,6 +2512,7 @@ function expandNewOrders() {
                 draggedOrderId = this.dataset.orderId;
                 draggedRecordId = null;
                 draggedIsNewOrder = true;
+                startPipelineAutoScroll(e.clientX);
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', 'dragging');
             };
@@ -1733,6 +2520,11 @@ function expandNewOrders() {
             card.ondragend = function(e) {
                 this.classList.remove('dragging');
                 document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                stopPipelineAutoScroll();
+            };
+
+            card.ondrag = function(e) {
+                handlePipelineAutoScrollDragEvent(e);
             };
         });
     });
@@ -1744,11 +2536,12 @@ function collapseNewOrders() {
     if (!container) return;
     
     container.innerHTML = renderNewOrders();
+    ensurePipelineHorizontalScrollLayout();
     
     requestAnimationFrame(() => {
         container.querySelectorAll('.new-order-card').forEach(card => {
-            card.setAttribute('draggable', 'true');
-            card.draggable = true;
+            card.setAttribute('draggable', 'false');
+            card.draggable = false;
             
             card.ondragstart = function(e) {
                 if (e.target.closest('button')) {
@@ -1759,6 +2552,7 @@ function collapseNewOrders() {
                 draggedOrderId = this.dataset.orderId;
                 draggedRecordId = null;
                 draggedIsNewOrder = true;
+                startPipelineAutoScroll(e.clientX);
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', 'dragging');
             };
@@ -1766,6 +2560,11 @@ function collapseNewOrders() {
             card.ondragend = function(e) {
                 this.classList.remove('dragging');
                 document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                stopPipelineAutoScroll();
+            };
+
+            card.ondrag = function(e) {
+                handlePipelineAutoScrollDragEvent(e);
             };
         });
     });

@@ -35,7 +35,8 @@ function setupDragAndDrop() {
     window.AppLogger?.debug('🔧 Found', cards.length, 'cards');
     
     cards.forEach(card => {
-        card.draggable = true;
+        card.draggable = false;
+        card.setAttribute('draggable', 'false');
         card.style.cursor = 'grab';
         
         card.ondragstart = function(e) {
@@ -54,12 +55,19 @@ function setupDragAndDrop() {
                 window.draggedOrderId = null;
                 window.draggedIsNewOrder = false;
             }
+
+            window.PipelineAutoScroll?.start(e.clientX);
         };
         
         card.ondragend = function(e) {
             window.AppLogger?.debug('🔧 DRAG END');
+            window.PipelineAutoScroll?.stop();
             this.style.opacity = '';
             this.style.cursor = 'grab';
+        };
+
+        card.ondrag = function(e) {
+            window.PipelineAutoScroll?.handleDragEvent?.(e);
         };
     });
     
@@ -70,6 +78,7 @@ function setupDragAndDrop() {
     zones.forEach(zone => {
         zone.ondragover = function(e) {
             e.preventDefault();
+            window.PipelineAutoScroll?.handleDragEvent?.(e);
             e.dataTransfer.dropEffect = 'move';
             this.style.background = '#e3f2fd';
             return false;
@@ -82,6 +91,7 @@ function setupDragAndDrop() {
         zone.ondrop = function(e) {
             e.preventDefault();
             e.stopPropagation();
+            window.PipelineAutoScroll?.stop();
             this.style.background = '';
             
             const stageId = this.dataset.stageId;
