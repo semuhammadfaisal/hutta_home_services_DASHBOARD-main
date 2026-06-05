@@ -22,6 +22,10 @@ function addMonths(date, months) {
   return d;
 }
 
+function formatMonthKey(date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
 function growthPercent(current, previous) {
   if (!previous) return current ? 100 : 0;
   return Number((((current - previous) / previous) * 100).toFixed(1));
@@ -60,14 +64,16 @@ function orderMatch(noBidOrderIds, extra = {}) {
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const topCustomersRange = parseDateRange(req.query.topStartDate, req.query.topEndDate);
+    const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
     const cacheKey = `top:${req.query.topStartDate || ''}:${req.query.topEndDate || ''}`;
-    const cached = getDashboardStatsCache(cacheKey);
+    const cached = forceRefresh ? null : getDashboardStatsCache(cacheKey);
     if (cached) return res.json(cached);
 
     const now = new Date();
     const currentMonthStart = startOfMonthMDT();
     const nextMonthStart = addMonths(currentMonthStart, 1);
     const previousMonthStart = addMonths(currentMonthStart, -1);
+    const sixMonthsStart = addMonths(currentMonthStart, -5);
     const currentYearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
     const noBidOrderIds = await getNoBidOrderIds();
     const baseOrderMatch = orderMatch(noBidOrderIds);
@@ -84,7 +90,9 @@ router.get('/stats', authenticateToken, async (req, res) => {
       totalCustomers,
       totalVendors,
       totalEmployees,
-      paymentTotals
+      paymentTotals,
+      monthlyProfit,
+      customerTypes
     ] = await Promise.all([
       Order.aggregate([
         { $match: baseOrderMatch },
@@ -199,6 +207,33 @@ router.get('/stats', authenticateToken, async (req, res) => {
           }
         },
         { $group: { _id: null, paymentsCollected: { $sum: { $ifNull: ['$amount', 0] } } } }
+      ]),
+      Order.aggregate([
+        {
+          $match: orderMatch(noBidOrderIds, {
+            createdAt: { $gte: sixMonthsStart, $lt: nextMonthStart }
+          })
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m', date: '$createdAt', timezone: TZ } },
+            revenue: { $sum: { $ifNull: ['$amount', 0] } },
+            cost: { $sum: { $ifNull: ['$vendorCost', 0] } },
+            profit: {
+              $sum: {
+                $subtract: [
+                  { $ifNull: ['$amount', 0] },
+                  { $ifNull: ['$vendorCost', 0] }
+                ]
+              }
+            }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      Customer.aggregate([
+        { $group: { _id: '$customerType', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
       ])
     ]);
 
@@ -211,6 +246,20 @@ router.get('/stats', authenticateToken, async (req, res) => {
     const paymentsCollected = Math.max(paidOrderTotal, receivedPaymentTotal);
     const totalRevenue = totals.totalRevenue || 0;
     const totalCost = totals.totalCost || 0;
+    const monthlyProfitByKey = new Map(monthlyProfit.map(row => [row._id, row]));
+    const monthlyProfitTimeline = Array.from({ length: 6 }, (_, index) => {
+      const monthDate = addMonths(sixMonthsStart, index);
+      const month = formatMonthKey(monthDate);
+      const row = monthlyProfitByKey.get(month) || {};
+      const revenue = row.revenue || 0;
+      const cost = row.cost || 0;
+      return {
+        month,
+        revenue,
+        cost,
+        profit: row.profit ?? (revenue - cost)
+      };
+    });
 
     const payload = {
       totalOrders: totals.totalOrders || 0,
@@ -237,6 +286,15 @@ router.get('/stats', authenticateToken, async (req, res) => {
       employeeLeaderboard: topEmployees,
       recentActivity: recentOrders,
       topCustomers,
+      orderStatusBreakdown: statusBreakdown.map(row => ({
+        status: row._id || 'unknown',
+        count: row.count || 0
+      })),
+      monthlyProfitTimeline,
+      customerTypeBreakdown: customerTypes.map(row => ({
+        type: row._id || 'unknown',
+        count: row.count || 0
+      })),
       revenueTimeline: revenueTimeline.map(row => ({
         date: row._id,
         amount: row.amount || 0,

@@ -282,6 +282,57 @@
                 </div>
             </section>
 
+            <section class="mini-charts-panel" aria-labelledby="miniChartsHeading">
+                <div class="mini-charts-header">
+                    <div>
+                        <h2 id="miniChartsHeading">Mini Charts</h2>
+                        <p>Fast visual pulse across revenue, orders, profit, and customers.</p>
+                    </div>
+                </div>
+                <div class="mini-charts-grid">
+                    <article class="mini-chart-card revenue-trend">
+                        <div class="mini-chart-card-head">
+                            <span class="mini-chart-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+                            <div>
+                                <h3>Revenue trend</h3>
+                                <p id="miniRevenueTrendMeta">All revenue</p>
+                            </div>
+                        </div>
+                        <div class="mini-chart-body" id="miniRevenueTrendChart" role="img" aria-label="Revenue trend chart"></div>
+                    </article>
+                    <article class="mini-chart-card orders-status">
+                        <div class="mini-chart-card-head">
+                            <span class="mini-chart-icon" aria-hidden="true"><i class="fas fa-tasks"></i></span>
+                            <div>
+                                <h3>Orders by status</h3>
+                                <p id="miniOrdersStatusMeta">Current order mix</p>
+                            </div>
+                        </div>
+                        <div class="mini-chart-body" id="miniOrdersStatusChart" role="img" aria-label="Orders by status chart"></div>
+                    </article>
+                    <article class="mini-chart-card monthly-profit">
+                        <div class="mini-chart-card-head">
+                            <span class="mini-chart-icon" aria-hidden="true"><i class="fas fa-coins"></i></span>
+                            <div>
+                                <h3>Monthly profit</h3>
+                                <p id="miniMonthlyProfitMeta">Last 6 months</p>
+                            </div>
+                        </div>
+                        <div class="mini-chart-body" id="miniMonthlyProfitChart" role="img" aria-label="Monthly profit chart"></div>
+                    </article>
+                    <article class="mini-chart-card customer-type">
+                        <div class="mini-chart-card-head">
+                            <span class="mini-chart-icon" aria-hidden="true"><i class="fas fa-user-friends"></i></span>
+                            <div>
+                                <h3>Customer type</h3>
+                                <p id="miniCustomerTypeMeta">Recurring vs one-time</p>
+                            </div>
+                        </div>
+                        <div class="mini-chart-body" id="miniCustomerTypeChart" role="img" aria-label="Customer type chart"></div>
+                    </article>
+                </div>
+            </section>
+
             <div class="overview-section-head">
                 <h2 class="overview-section-title">Shortcuts &amp; activity</h2>
                 <span class="overview-section-hint">Common tasks and latest movement</span>

@@ -272,6 +272,7 @@ class APIService {
         const params = new URLSearchParams();
         if (filters.topStartDate) params.append('topStartDate', filters.topStartDate);
         if (filters.topEndDate) params.append('topEndDate', filters.topEndDate);
+        if (filters.refresh) params.append('refresh', '1');
         const query = params.toString();
         try {
             return await this.request(`/dashboard/stats${query ? `?${query}` : ''}`);
@@ -343,14 +344,34 @@ class APIService {
         });
 
         const revenueByDate = new Map();
+        const statusMap = new Map();
+        const profitByMonth = new Map();
         (orders || []).forEach(order => {
             const date = new Date(order.createdAt || order.startDate);
-            if (Number.isNaN(date.getTime())) return;
-            const key = date.toISOString().slice(0, 10);
-            const current = revenueByDate.get(key) || { date: key, amount: 0, orders: 0 };
-            current.amount += Number(order.amount || 0);
-            current.orders += 1;
-            revenueByDate.set(key, current);
+            const status = order.status || 'unknown';
+            statusMap.set(status, (statusMap.get(status) || 0) + 1);
+            if (!Number.isNaN(date.getTime())) {
+                const key = date.toISOString().slice(0, 10);
+                const monthKey = key.slice(0, 7);
+                const current = revenueByDate.get(key) || { date: key, amount: 0, orders: 0 };
+                const monthly = profitByMonth.get(monthKey) || { month: monthKey, revenue: 0, cost: 0, profit: 0 };
+                const revenue = Number(order.amount || 0);
+                const cost = Number(order.vendorCost || 0);
+                current.amount += revenue;
+                current.orders += 1;
+                monthly.revenue += revenue;
+                monthly.cost += cost;
+                monthly.profit += revenue - cost;
+                revenueByDate.set(key, current);
+                profitByMonth.set(monthKey, monthly);
+            }
+        });
+
+        const customerTypeMap = new Map();
+        const customers = await this.getCustomers().catch(() => []);
+        (customers || []).forEach(customer => {
+            const type = customer.customerType || 'unknown';
+            customerTypeMap.set(type, (customerTypeMap.get(type) || 0) + 1);
         });
 
         return {
@@ -375,6 +396,9 @@ class APIService {
                 .filter(customer => customer.totalRevenue > 0)
                 .sort((a, b) => b.totalRevenue - a.totalRevenue)
                 .slice(0, 10),
+            orderStatusBreakdown: [...statusMap.entries()].map(([status, count]) => ({ status, count })),
+            monthlyProfitTimeline: [...profitByMonth.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-6),
+            customerTypeBreakdown: [...customerTypeMap.entries()].map(([type, count]) => ({ type, count })),
             revenueTimeline: [...revenueByDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
             financialOverview: {
                 totalRevenue,

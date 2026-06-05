@@ -202,12 +202,16 @@ class DashboardManager {
         try {
             this.showLoadingState();
 
-            const stats = await window.APIService.getDashboardStats();
+            const stats = await window.APIService.getDashboardStats({
+                refresh: this.forceFreshDashboardStats
+            });
+            this.forceFreshDashboardStats = false;
 
             this.renderKPIs(stats);
             this.renderVendorCategoriesFromStats(stats.vendorCategories, stats.totalVendors);
             this.renderEmployeeLeaderboardFromStats(stats.employeeLeaderboard);
             this.renderRevenueOverviewFromStats(stats.revenueTimeline);
+            this.renderMiniCharts(stats);
             this.renderFinancialOverviewSummary(stats.financialOverview);
             this.renderWorkflowSummary(stats.workflow);
             this.renderRecentActivity(stats.recentActivity || []);
@@ -222,6 +226,7 @@ class DashboardManager {
             this.renderVendorCategoriesFromStats();
             this.renderEmployeeLeaderboardFromStats();
             this.renderRevenueOverviewFromStats();
+            this.renderMiniCharts();
             this.renderFinancialOverviewSummary();
             this.renderWorkflowSummary();
             this.renderRecentActivity([]);
@@ -289,6 +294,319 @@ class DashboardManager {
             if (totalVendorsEl) totalVendorsEl.textContent = '0';
             if (totalCustomersEl) totalCustomersEl.textContent = '0';
         }
+    }
+
+    renderMiniCharts(stats = {}) {
+        this.renderMiniRevenueTrend(stats.revenueTimeline || []);
+        this.renderMiniOrdersByStatus(stats.orderStatusBreakdown || []);
+        this.renderMiniMonthlyProfit(stats.monthlyProfitTimeline || []);
+        this.renderMiniCustomerType(stats.customerTypeBreakdown || []);
+    }
+
+    renderMiniRevenueTrend(points = []) {
+        const chartEl = document.getElementById('miniRevenueTrendChart');
+        const metaEl = document.getElementById('miniRevenueTrendMeta');
+        if (!chartEl) return;
+
+        const data = (Array.isArray(points) ? points : [])
+            .filter(point => point && point.date)
+            .slice(-14)
+            .map(point => ({
+                label: this.formatMiniDateLabel(point.date),
+                value: Number(point.amount || 0),
+                orders: Number(point.orders || 0)
+            }));
+        const total = data.reduce((sum, point) => sum + point.value, 0);
+        const orders = data.reduce((sum, point) => sum + point.orders, 0);
+        const latest = [...data].reverse().find(point => point.value > 0 || point.orders > 0) || data[data.length - 1];
+        if (metaEl) metaEl.textContent = total > 0 ? `${this.formatMiniCurrency(total)} latest ${data.length} day${data.length === 1 ? '' : 's'}` : 'No revenue yet';
+        chartEl.innerHTML = `
+            ${this.renderMiniValueStrip([
+                { label: 'Revenue', value: this.formatMiniCurrency(total) },
+                { label: 'Orders', value: orders.toLocaleString() },
+                { label: latest ? latest.label : 'Latest', value: latest ? this.formatMiniCurrency(latest.value) : '$0' }
+            ])}
+            ${this.renderMiniLineChart(data, '#1d6fd4', 'Revenue')}
+        `;
+    }
+
+    renderMiniOrdersByStatus(rows = []) {
+        const chartEl = document.getElementById('miniOrdersStatusChart');
+        const metaEl = document.getElementById('miniOrdersStatusMeta');
+        if (!chartEl) return;
+
+        const data = (Array.isArray(rows) ? rows : [])
+            .filter(row => Number(row.count || 0) > 0)
+            .sort((a, b) => Number(b.count || 0) - Number(a.count || 0))
+            .slice(0, 5)
+            .map(row => ({
+                label: this.formatStatus(row.status || 'unknown'),
+                value: Number(row.count || 0)
+        }));
+        const total = data.reduce((sum, row) => sum + row.value, 0);
+        const topStatus = data[0];
+        if (metaEl) metaEl.textContent = total ? `${total.toLocaleString()} real order${total === 1 ? '' : 's'} by status` : 'No orders yet';
+        chartEl.innerHTML = `
+            ${this.renderMiniValueStrip([
+                { label: 'Total', value: total.toLocaleString() },
+                { label: 'Top status', value: topStatus ? topStatus.label : '-' },
+                { label: 'Top count', value: topStatus ? topStatus.value.toLocaleString() : '0' }
+            ])}
+            ${this.renderMiniHorizontalBars(data, ['#1d6fd4', '#0f9f8f', '#f59e0b', '#7c3aed', '#64748b'])}
+        `;
+    }
+
+    renderMiniMonthlyProfit(rows = []) {
+        const chartEl = document.getElementById('miniMonthlyProfitChart');
+        const metaEl = document.getElementById('miniMonthlyProfitMeta');
+        if (!chartEl) return;
+
+        const data = (Array.isArray(rows) ? rows : []).slice(-6).map(row => ({
+            label: this.formatMiniMonthLabel(row.month),
+            value: Number(row.profit || 0)
+        }));
+        const total = data.reduce((sum, row) => sum + row.value, 0);
+        const latest = data[data.length - 1];
+        const best = data.reduce((winner, row) => !winner || row.value > winner.value ? row : winner, null);
+        if (metaEl) metaEl.textContent = data.length ? `${this.formatMiniCurrency(total)} real profit total` : 'No profit data yet';
+        chartEl.innerHTML = `
+            ${this.renderMiniValueStrip([
+                { label: '6-mo profit', value: this.formatMiniCurrency(total) },
+                { label: latest ? latest.label : 'Latest', value: latest ? this.formatMiniCurrency(latest.value) : '$0' },
+                { label: best ? `Best ${best.label}` : 'Best', value: best ? this.formatMiniCurrency(best.value) : '$0' }
+            ])}
+            ${this.renderMiniColumnChart(data, '#0f9f8f')}
+        `;
+    }
+
+    renderMiniCustomerType(rows = []) {
+        const chartEl = document.getElementById('miniCustomerTypeChart');
+        const metaEl = document.getElementById('miniCustomerTypeMeta');
+        if (!chartEl) return;
+
+        const data = (Array.isArray(rows) ? rows : [])
+            .filter(row => Number(row.count || 0) > 0)
+            .map(row => ({
+                label: this.formatCustomerTypeLabel(row.type),
+                value: Number(row.count || 0)
+        }));
+        const total = data.reduce((sum, row) => sum + row.value, 0);
+        const recurring = data.find(row => row.label.toLowerCase() === 'recurring')?.value || 0;
+        const oneTime = data.find(row => row.label.toLowerCase() === 'one-time')?.value || 0;
+        if (metaEl) metaEl.textContent = total ? `${total.toLocaleString()} real customer${total === 1 ? '' : 's'}` : 'No customers yet';
+        chartEl.innerHTML = `
+            ${this.renderMiniValueStrip([
+                { label: 'Total', value: total.toLocaleString() },
+                { label: 'Recurring', value: recurring.toLocaleString() },
+                { label: 'One-time', value: oneTime.toLocaleString() }
+            ])}
+            ${this.renderMiniDonutChart(data, ['#1d6fd4', '#0f9f8f', '#f59e0b'])}
+        `;
+    }
+
+    renderMiniValueStrip(items = []) {
+        return `
+            <div class="mini-value-strip" aria-label="Mini chart real values">
+                ${items.map(item => `
+                    <span class="mini-value-item">
+                        <small>${escapePaymentHtml(item.label)}</small>
+                        <strong title="${escapePaymentHtml(item.value)}">${escapePaymentHtml(item.value)}</strong>
+                    </span>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderMiniLineChart(data, color, label) {
+        const values = data.map(point => point.value);
+        if (!values.length || Math.max(...values) <= 0) return this.renderMiniEmptyChart('chart-line', `No ${label.toLowerCase()} data`);
+
+        const width = 320;
+        const height = 128;
+        const pad = { top: 14, right: 14, bottom: 28, left: 16 };
+        const plotWidth = width - pad.left - pad.right;
+        const plotHeight = height - pad.top - pad.bottom;
+        const max = Math.max(...values, 1);
+        const points = data.map((point, index) => {
+            const x = pad.left + (data.length > 1 ? (index / (data.length - 1)) * plotWidth : plotWidth / 2);
+            const y = pad.top + plotHeight - ((point.value / max) * plotHeight);
+            return { ...point, x, y };
+        });
+        const path = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
+        const areaPath = `${path} L ${points[points.length - 1].x.toFixed(2)} ${height - pad.bottom} L ${points[0].x.toFixed(2)} ${height - pad.bottom} Z`;
+
+        return `
+            <svg class="mini-chart-svg mini-line-svg" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false">
+                <path class="mini-chart-area" d="${areaPath}" style="--mini-chart-color: ${color}"></path>
+                <path class="mini-chart-line" d="${path}" stroke="${color}"></path>
+                ${points.map(point => `
+                    <g class="mini-chart-point-group">
+                        <circle class="mini-chart-hit" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="11"></circle>
+                        <circle class="mini-chart-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.2" fill="${color}"></circle>
+                        ${this.renderMiniSvgTooltip({
+                            x: point.x,
+                            y: point.y,
+                            label: point.label,
+                            value: this.formatRevenueOverviewCurrency(point.value),
+                            meta: point.orders !== undefined ? `${point.orders.toLocaleString()} order${point.orders === 1 ? '' : 's'}` : label
+                        })}
+                    </g>
+                `).join('')}
+                ${this.renderMiniXAxisLabels(points, height - 8)}
+            </svg>
+        `;
+    }
+
+    renderMiniHorizontalBars(data, colors) {
+        if (!data.length) return this.renderMiniEmptyChart('tasks', 'No status data');
+        const max = Math.max(...data.map(row => row.value), 1);
+        return `
+            <div class="mini-bars" aria-hidden="true">
+                ${data.map((row, index) => {
+                    const width = Math.max(5, (row.value / max) * 100);
+                    return `
+                        <div class="mini-bar-row" data-tooltip-title="${escapePaymentHtml(row.label)}" data-tooltip-value="${escapePaymentHtml(row.value.toLocaleString())}" data-tooltip-meta="${escapePaymentHtml(`${((row.value / max) * 100).toFixed(1)}% of top status`)}">
+                            <span class="mini-bar-label">${escapePaymentHtml(row.label)}</span>
+                            <span class="mini-bar-track"><span class="mini-bar-fill" style="width: ${width.toFixed(2)}%; background: ${colors[index % colors.length]};"></span></span>
+                            <strong>${row.value.toLocaleString()}</strong>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    renderMiniColumnChart(data, color) {
+        if (!data.length) return this.renderMiniEmptyChart('coins', 'No profit data');
+        const width = 320;
+        const height = 128;
+        const pad = { top: 14, right: 14, bottom: 28, left: 16 };
+        const plotWidth = width - pad.left - pad.right;
+        const plotHeight = height - pad.top - pad.bottom;
+        const values = data.map(row => row.value);
+        const minValue = Math.min(0, ...values);
+        const maxValue = Math.max(0, ...values);
+        const range = Math.max(maxValue - minValue, 1);
+        const yForValue = (value) => pad.top + plotHeight - (((value - minValue) / range) * plotHeight);
+        const zeroY = yForValue(0);
+        const gap = 8;
+        const barWidth = Math.max(18, (plotWidth - gap * (data.length - 1)) / Math.max(data.length, 1));
+
+        return `
+            <svg class="mini-chart-svg mini-column-svg" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false">
+                <line class="mini-chart-baseline" x1="${pad.left}" y1="${zeroY}" x2="${width - pad.right}" y2="${zeroY}"></line>
+                ${data.map((row, index) => {
+                    const valueY = yForValue(row.value);
+                    const h = Math.max(3, Math.abs(zeroY - valueY));
+                    const x = pad.left + index * (barWidth + gap);
+                    const y = Math.min(valueY, zeroY);
+                    const fill = row.value >= 0 ? color : '#ef4444';
+                    return `
+                        <g class="mini-chart-column-group">
+                            <rect class="mini-chart-column-hit" x="${x.toFixed(2)}" y="${pad.top}" width="${barWidth.toFixed(2)}" height="${plotHeight}" rx="6"></rect>
+                            <rect class="mini-chart-column" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barWidth.toFixed(2)}" height="${h.toFixed(2)}" rx="5" fill="${fill}"></rect>
+                            ${this.renderMiniSvgTooltip({
+                                x: x + barWidth / 2,
+                                y,
+                                label: row.label,
+                                value: this.formatRevenueOverviewCurrency(row.value),
+                                meta: row.value >= 0 ? 'Profit' : 'Loss'
+                            })}
+                        </g>
+                    `;
+                }).join('')}
+                ${data.map((row, index) => {
+                    const x = pad.left + index * (barWidth + gap) + barWidth / 2;
+                    return `<text class="mini-chart-x-label" x="${x.toFixed(2)}" y="${height - 8}" text-anchor="middle">${escapePaymentHtml(row.label)}</text>`;
+                }).join('')}
+            </svg>
+        `;
+    }
+
+    renderMiniDonutChart(data, colors) {
+        if (!data.length) return this.renderMiniEmptyChart('user-friends', 'No customer data');
+        const total = data.reduce((sum, row) => sum + row.value, 0);
+        let running = 0;
+        const gradientStops = data.map((row, index) => {
+            const start = (running / total) * 100;
+            running += row.value;
+            const end = (running / total) * 100;
+            const color = colors[index % colors.length];
+            return `${color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+        }).join(', ');
+
+        return `
+            <div class="mini-donut-wrap" aria-hidden="true">
+                <div class="mini-donut" style="background: conic-gradient(${gradientStops});">
+                    <span>${total.toLocaleString()}</span>
+                </div>
+                <div class="mini-donut-legend">
+                    ${data.map((row, index) => `
+                        <span data-tooltip-title="${escapePaymentHtml(row.label)}" data-tooltip-value="${escapePaymentHtml(row.value.toLocaleString())}" data-tooltip-meta="${escapePaymentHtml(`${((row.value / total) * 100).toFixed(1)}% of customers`)}"><i style="background: ${colors[index % colors.length]};"></i>${escapePaymentHtml(row.label)} <strong>${row.value.toLocaleString()}</strong></span>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderMiniSvgTooltip({ x, y, label, value, meta }) {
+        const width = 124;
+        const height = meta ? 58 : 44;
+        const tx = Math.min(Math.max(x - width / 2, 8), 320 - width - 8);
+        const ty = Math.max(4, y - height - 10);
+
+        return `
+            <g class="mini-svg-tooltip" transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)})">
+                <rect width="${width}" height="${height}" rx="8"></rect>
+                <text x="12" y="18">${escapePaymentHtml(label)}</text>
+                <text class="mini-svg-tooltip-value" x="12" y="36">${escapePaymentHtml(value)}</text>
+                ${meta ? `<text class="mini-svg-tooltip-meta" x="12" y="51">${escapePaymentHtml(meta)}</text>` : ''}
+            </g>
+        `;
+    }
+
+    renderMiniXAxisLabels(points, y) {
+        if (!points.length) return '';
+        const indexes = points.length > 2 ? [0, Math.floor((points.length - 1) / 2), points.length - 1] : points.map((_, index) => index);
+        return indexes.map(index => `<text class="mini-chart-x-label" x="${points[index].x.toFixed(2)}" y="${y}" text-anchor="middle">${escapePaymentHtml(points[index].label)}</text>`).join('');
+    }
+
+    renderMiniEmptyChart(icon, message) {
+        return `
+            <div class="mini-chart-empty" role="status">
+                <i class="fas fa-${icon}" aria-hidden="true"></i>
+                <span>${escapePaymentHtml(message)}</span>
+            </div>
+        `;
+    }
+
+    formatMiniDateLabel(value) {
+        const date = new Date(`${value}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    formatMiniMonthLabel(value) {
+        if (!value) return '';
+        const date = new Date(`${value}-01T00:00:00`);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleDateString('en-US', { month: 'short' });
+    }
+
+    formatCustomerTypeLabel(value) {
+        const normalized = String(value || 'unknown').toLowerCase();
+        if (normalized === 'one-time') return 'One-time';
+        if (normalized === 'recurring') return 'Recurring';
+        return this.formatStatus(normalized);
+    }
+
+    formatMiniCurrency(value) {
+        const amount = Number(value) || 0;
+        const sign = amount < 0 ? '-' : '';
+        const absolute = Math.abs(amount);
+        if (absolute >= 1000000) return `${sign}$${(absolute / 1000000).toFixed(absolute >= 10000000 ? 0 : 1)}M`;
+        if (absolute >= 1000) return `${sign}$${(absolute / 1000).toFixed(absolute >= 10000 ? 0 : 1)}K`;
+        return `${sign}$${Math.round(absolute).toLocaleString()}`;
     }
 
     renderWorkflowFromOrders(orders) {
@@ -1617,6 +1935,10 @@ window.manualRefreshKPIs = async function() {
             window.AppLogger?.debug('Clearing cache...');
             window.dashboard.clearCache();
         }
+        if (window.APIService && window.APIService.clearCache) {
+            window.APIService.clearCache();
+        }
+        window.dashboard.forceFreshDashboardStats = true;
         window.AppLogger?.debug('Calling dashboard.renderDashboard()...');
         await window.dashboard.renderDashboard();
         window.AppLogger?.debug('Manual refresh complete');
@@ -1633,6 +1955,10 @@ window.forceRefreshDashboard = async function() {
         if (window.dashboard.clearCache) {
             window.dashboard.clearCache();
         }
+        if (window.APIService && window.APIService.clearCache) {
+            window.APIService.clearCache();
+        }
+        window.dashboard.forceFreshDashboardStats = true;
         
         // Force fresh data load
         await window.dashboard.renderDashboard();
@@ -1718,6 +2044,10 @@ window.refreshDashboard = async function() {
         if (window.dashboard.clearCache) {
             window.dashboard.clearCache();
         }
+        if (window.APIService && window.APIService.clearCache) {
+            window.APIService.clearCache();
+        }
+        window.dashboard.forceFreshDashboardStats = true;
         await window.dashboard.renderDashboard();
     }
 };
@@ -1730,6 +2060,10 @@ window.refreshDashboardKPIs = async function() {
         if (window.dashboard.clearCache) {
             window.dashboard.clearCache();
         }
+        if (window.APIService && window.APIService.clearCache) {
+            window.APIService.clearCache();
+        }
+        window.dashboard.forceFreshDashboardStats = true;
         await window.dashboard.renderDashboard();
     }
 };
@@ -1742,6 +2076,10 @@ window.onPipelineStageChange = async function() {
         if (window.dashboard.clearCache) {
             window.dashboard.clearCache();
         }
+        if (window.APIService && window.APIService.clearCache) {
+            window.APIService.clearCache();
+        }
+        window.dashboard.forceFreshDashboardStats = true;
         await window.dashboard.renderDashboard();
     }
 };
