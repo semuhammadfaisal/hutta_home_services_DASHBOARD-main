@@ -1352,7 +1352,7 @@ class DashboardManager {
         const periodSelect = document.getElementById('revenueOverviewPeriod');
         if (!chartEl) return;
 
-        const period = periodSelect?.value || 'current-month';
+        const period = periodSelect?.value || 'last-30';
         const range = this.getRevenueOverviewRange(period, ordersData);
         const filteredOrders = ordersData.filter(order => this.isOrderInFinancialRange(order, range.start, range.end));
         const buckets = this.buildRevenueOverviewBuckets(range, filteredOrders);

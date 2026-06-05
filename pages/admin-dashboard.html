@@ -355,6 +355,50 @@
                 <div class="service-category-grid" id="serviceCategoryOverview" role="list" aria-label="Category order and revenue overview"></div>
             </section>
 
+            <!-- Revenue Overview -->
+            <div class="revenue-overview-card dashboard-overview-panel">
+                <div class="revenue-overview-header">
+                    <div class="revenue-overview-title-block">
+                        <span class="revenue-overview-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+                        <span class="revenue-overview-title-copy">
+                            <h3>Revenue overview</h3>
+                            <p>Overview of your revenue performance</p>
+                        </span>
+                    </div>
+                    <label class="revenue-overview-filter">
+                        <span class="visually-hidden">Revenue period</span>
+                        <select id="revenueOverviewPeriod" autocomplete="off" onchange="applyRevenueOverviewFilter()">
+                            <option value="current-month">This Month</option>
+                            <option value="last-month">Last Month</option>
+                            <option value="last-30" selected>Last 30 Days</option>
+                            <option value="year-to-date">Year to Date</option>
+                            <option value="all-time">All Time</option>
+                        </select>
+                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                    </label>
+                </div>
+                <div class="revenue-overview-stats" aria-label="Revenue overview summary">
+                    <div class="revenue-overview-stat">
+                        <span class="revenue-overview-stat-label">Revenue</span>
+                        <strong id="revenueOverviewTotal">$0</strong>
+                    </div>
+                    <div class="revenue-overview-stat">
+                        <span class="revenue-overview-stat-label">Orders</span>
+                        <strong id="revenueOverviewOrders">0</strong>
+                    </div>
+                    <div class="revenue-overview-stat">
+                        <span class="revenue-overview-stat-label">Average</span>
+                        <strong id="revenueOverviewAverage">$0</strong>
+                    </div>
+                </div>
+                <div class="revenue-overview-chart" id="revenueOverviewChart" role="img" aria-label="Revenue trend chart">
+                    <div class="revenue-overview-empty" role="status">
+                        <i class="fas fa-chart-line" aria-hidden="true"></i>
+                        <p>No revenue in this period</p>
+                    </div>
+                </div>
+            </div>
+
             <section class="top-performance-panel" aria-labelledby="topPerformanceHeading">
                 <div class="top-performance-head">
                     <div>
@@ -558,50 +602,6 @@
                         <span class="vendor-total-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
                         <span class="vendor-total-value" id="totalVendorCategoryCount">0</span>
                         <span class="vendor-total-label">Total vendors</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Revenue Overview -->
-            <div class="revenue-overview-card dashboard-overview-panel">
-                <div class="revenue-overview-header">
-                    <div class="revenue-overview-title-block">
-                        <span class="revenue-overview-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
-                        <span class="revenue-overview-title-copy">
-                            <h3>Revenue overview</h3>
-                            <p>Overview of your revenue performance</p>
-                        </span>
-                    </div>
-                    <label class="revenue-overview-filter">
-                        <span class="visually-hidden">Revenue period</span>
-                        <select id="revenueOverviewPeriod" autocomplete="off" onchange="applyRevenueOverviewFilter()">
-                            <option value="current-month">This Month</option>
-                            <option value="last-month">Last Month</option>
-                            <option value="last-30">Last 30 Days</option>
-                            <option value="year-to-date">Year to Date</option>
-                            <option value="all-time" selected>All Time</option>
-                        </select>
-                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                    </label>
-                </div>
-                <div class="revenue-overview-stats" aria-label="Revenue overview summary">
-                    <div class="revenue-overview-stat">
-                        <span class="revenue-overview-stat-label">Revenue</span>
-                        <strong id="revenueOverviewTotal">$0</strong>
-                    </div>
-                    <div class="revenue-overview-stat">
-                        <span class="revenue-overview-stat-label">Orders</span>
-                        <strong id="revenueOverviewOrders">0</strong>
-                    </div>
-                    <div class="revenue-overview-stat">
-                        <span class="revenue-overview-stat-label">Average</span>
-                        <strong id="revenueOverviewAverage">$0</strong>
-                    </div>
-                </div>
-                <div class="revenue-overview-chart" id="revenueOverviewChart" role="img" aria-label="Revenue trend chart">
-                    <div class="revenue-overview-empty" role="status">
-                        <i class="fas fa-chart-line" aria-hidden="true"></i>
-                        <p>No revenue in this period</p>
                     </div>
                 </div>
             </div>
