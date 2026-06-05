@@ -15,6 +15,7 @@ const {
 
 const router = express.Router();
 const TZ = 'America/Phoenix';
+const DASHBOARD_STATS_CACHE_VERSION = 'orders-overview-real-orders-v2';
 
 function addMonths(date, months) {
   const d = new Date(date);
@@ -61,11 +62,50 @@ function orderMatch(noBidOrderIds, extra = {}) {
   return match;
 }
 
+function normalizeOrderText(value) {
+  return String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+}
+
+function getOrdersOverviewStatus(order) {
+  const status = normalizeOrderText(order.status);
+  const stage = normalizeOrderText(order.pipelineStage);
+  const combined = `${status} ${stage}`;
+
+  if (/(cancel|lost)/.test(combined)) return 'cancelled';
+  if (status === 'delayed' || /delayed|on-hold|hold/.test(stage)) return 'delayed';
+  if (status === 'completed' || /completed|complete|paid|closed|done/.test(stage)) return 'completed';
+  if (status === 'in-progress' || /in-progress|work|active|scheduled|assigned|dispatch/.test(stage)) return 'inProgress';
+  if (status === 'new' || /new|lead|request|intake/.test(stage)) return 'newOrders';
+  return null;
+}
+
+function buildOrdersOverview(orders = []) {
+  const overview = {
+    version: 'real-orders-v2',
+    newOrders: 0,
+    inProgress: 0,
+    completed: 0,
+    delayed: 0,
+    cancelled: 0,
+    highPriority: 0
+  };
+
+  orders.forEach(order => {
+    const bucket = getOrdersOverviewStatus(order);
+    if (bucket) overview[bucket] += 1;
+    if (['high', 'urgent'].includes(normalizeOrderText(order.priority))) {
+      overview.highPriority += 1;
+    }
+  });
+
+  return overview;
+}
+
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const topCustomersRange = parseDateRange(req.query.topStartDate, req.query.topEndDate);
     const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
-    const cacheKey = `top:${req.query.topStartDate || ''}:${req.query.topEndDate || ''}`;
+    const cacheKey = `${DASHBOARD_STATS_CACHE_VERSION}:top:${req.query.topStartDate || ''}:${req.query.topEndDate || ''}`;
     const cached = forceRefresh ? null : getDashboardStatsCache(cacheKey);
     if (cached) return res.json(cached);
 
@@ -92,7 +132,11 @@ router.get('/stats', authenticateToken, async (req, res) => {
       totalEmployees,
       paymentTotals,
       monthlyProfit,
-      customerTypes
+      customerTypes,
+      serviceCategories,
+      topVendors,
+      highestRevenueJobs,
+      ordersOverviewOrders
     ] = await Promise.all([
       Order.aggregate([
         { $match: baseOrderMatch },
@@ -234,13 +278,102 @@ router.get('/stats', authenticateToken, async (req, res) => {
       Customer.aggregate([
         { $group: { _id: '$customerType', count: { $sum: 1 } } },
         { $sort: { _id: 1 } }
-      ])
+      ]),
+      Order.aggregate([
+        { $match: baseOrderMatch },
+        {
+          $project: {
+            serviceLabel: {
+              $trim: {
+                input: {
+                  $ifNull: ['$service', 'Uncategorized']
+                }
+              }
+            },
+            amount: { $ifNull: ['$amount', 0] }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              $cond: [
+                { $eq: ['$serviceLabel', ''] },
+                'Uncategorized',
+                '$serviceLabel'
+              ]
+            },
+            orders: { $sum: 1 },
+            revenue: { $sum: '$amount' }
+          }
+        },
+        { $sort: { revenue: -1, orders: -1, _id: 1 } },
+        {
+          $project: {
+            _id: 0,
+            key: '$_id',
+            label: '$_id',
+            orders: 1,
+            revenue: 1
+          }
+        }
+      ]),
+      Order.aggregate([
+        { $match: { ...baseOrderMatch, vendor: { $ne: null } } },
+        {
+          $group: {
+            _id: '$vendor',
+            revenue: { $sum: { $ifNull: ['$amount', 0] } },
+            cost: { $sum: { $ifNull: ['$vendorCost', 0] } },
+            orderCount: { $sum: 1 }
+          }
+        },
+        { $sort: { revenue: -1, orderCount: -1 } },
+        { $limit: 1 },
+        { $lookup: { from: 'vendors', localField: '_id', foreignField: '_id', as: 'vendor' } },
+        { $unwind: '$vendor' },
+        {
+          $project: {
+            _id: 0,
+            id: '$_id',
+            name: '$vendor.name',
+            category: '$vendor.category',
+            revenue: 1,
+            cost: 1,
+            orderCount: 1
+          }
+        }
+      ]),
+      Order.find(baseOrderMatch)
+        .select('orderId customer service amount vendorCost profit status pipelineStage createdAt')
+        .sort({ amount: -1, createdAt: -1 })
+        .limit(1)
+        .lean(),
+      Order.find(baseOrderMatch)
+        .select('status priority pipelineStage')
+        .lean()
     ]);
+
+    const mostRequestedService = [...serviceCategories].sort((a, b) => {
+      if ((b.orders || 0) !== (a.orders || 0)) return (b.orders || 0) - (a.orders || 0);
+      if ((b.revenue || 0) !== (a.revenue || 0)) return (b.revenue || 0) - (a.revenue || 0);
+      return String(a.label || '').localeCompare(String(b.label || ''));
+    })[0] || null;
+    const highestRevenueJob = highestRevenueJobs[0] ? {
+      id: highestRevenueJobs[0]._id,
+      orderId: highestRevenueJobs[0].orderId,
+      customerName: highestRevenueJobs[0].customer?.name || 'Customer',
+      service: highestRevenueJobs[0].service || 'Service',
+      revenue: highestRevenueJobs[0].amount || 0,
+      cost: highestRevenueJobs[0].vendorCost || 0,
+      profit: highestRevenueJobs[0].profit ?? ((highestRevenueJobs[0].amount || 0) - (highestRevenueJobs[0].vendorCost || 0)),
+      status: highestRevenueJobs[0].pipelineStage || highestRevenueJobs[0].status || 'unknown'
+    } : null;
 
     const totals = orderTotals[0] || {};
     const currentMonth = monthlyTotals.find(row => row._id === 'current') || {};
     const previousMonth = monthlyTotals.find(row => row._id === 'previous') || {};
     const statusCounts = Object.fromEntries(statusBreakdown.map(row => [row._id || 'unknown', row.count]));
+    const ordersOverview = buildOrdersOverview(ordersOverviewOrders);
     const paidOrderTotal = totals.paymentsCollectedFromPaidOrders || 0;
     const receivedPaymentTotal = paymentTotals[0]?.paymentsCollected || 0;
     const paymentsCollected = Math.max(paidOrderTotal, receivedPaymentTotal);
@@ -260,7 +393,6 @@ router.get('/stats', authenticateToken, async (req, res) => {
         profit: row.profit ?? (revenue - cost)
       };
     });
-
     const payload = {
       totalOrders: totals.totalOrders || 0,
       totalCustomers,
@@ -290,11 +422,20 @@ router.get('/stats', authenticateToken, async (req, res) => {
         status: row._id || 'unknown',
         count: row.count || 0
       })),
+      ordersOverview,
       monthlyProfitTimeline,
       customerTypeBreakdown: customerTypes.map(row => ({
         type: row._id || 'unknown',
         count: row.count || 0
       })),
+      serviceCategoryOverview: serviceCategories,
+      topPerformance: {
+        topCustomer: topCustomers[0] || null,
+        topVendor: topVendors[0] || null,
+        topEmployee: topEmployees[0] || null,
+        mostRequestedService,
+        highestRevenueJob
+      },
       revenueTimeline: revenueTimeline.map(row => ({
         date: row._id,
         amount: row.amount || 0,

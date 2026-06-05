@@ -68,6 +68,7 @@ class DashboardManager {
 
     initializeData() {
         // Data will be loaded from API
+        this.categoryOverviewExpanded = false;
         this.data = {
             kpis: {
                 totalOrders: 0,
@@ -212,6 +213,11 @@ class DashboardManager {
             this.renderEmployeeLeaderboardFromStats(stats.employeeLeaderboard);
             this.renderRevenueOverviewFromStats(stats.revenueTimeline);
             this.renderMiniCharts(stats);
+            const ordersOverview = await this.getSyncedOrdersOverview(stats);
+            this.renderOrdersOverview(stats, ordersOverview);
+            const serviceCategoryOverview = await this.getSyncedServiceCategoryOverview(stats);
+            this.renderServiceCategoryOverview(serviceCategoryOverview);
+            this.renderTopPerformanceCards(stats.topPerformance, serviceCategoryOverview);
             this.renderFinancialOverviewSummary(stats.financialOverview);
             this.renderWorkflowSummary(stats.workflow);
             this.renderRecentActivity(stats.recentActivity || []);
@@ -227,6 +233,9 @@ class DashboardManager {
             this.renderEmployeeLeaderboardFromStats();
             this.renderRevenueOverviewFromStats();
             this.renderMiniCharts();
+            this.renderOrdersOverview();
+            this.renderServiceCategoryOverview();
+            this.renderTopPerformanceCards();
             this.renderFinancialOverviewSummary();
             this.renderWorkflowSummary();
             this.renderRecentActivity([]);
@@ -301,6 +310,307 @@ class DashboardManager {
         this.renderMiniOrdersByStatus(stats.orderStatusBreakdown || []);
         this.renderMiniMonthlyProfit(stats.monthlyProfitTimeline || []);
         this.renderMiniCustomerType(stats.customerTypeBreakdown || []);
+    }
+
+    normalizeOrderOverviewText(value) {
+        return String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+    }
+
+    getOrderOverviewStatus(order = {}) {
+        const status = this.normalizeOrderOverviewText(order.status);
+        const stage = this.normalizeOrderOverviewText(order.pipelineStage);
+        const combined = `${status} ${stage}`;
+
+        if (/(cancel|lost)/.test(combined)) return 'cancelled';
+        if (status === 'delayed' || /delayed|on-hold|hold/.test(stage)) return 'delayed';
+        if (status === 'completed' || /completed|complete|paid|closed|done/.test(stage)) return 'completed';
+        if (status === 'in-progress' || /in-progress|work|active|scheduled|assigned|dispatch/.test(stage)) return 'inProgress';
+        if (status === 'new' || /new|lead|request|intake/.test(stage)) return 'newOrders';
+        return null;
+    }
+
+    buildOrdersOverviewFromOrders(orders = []) {
+        const overview = {
+            version: 'real-orders-v2',
+            newOrders: 0,
+            inProgress: 0,
+            completed: 0,
+            delayed: 0,
+            cancelled: 0,
+            highPriority: 0
+        };
+
+        (Array.isArray(orders) ? orders : []).forEach(order => {
+            const bucket = this.getOrderOverviewStatus(order);
+            if (bucket) overview[bucket] += 1;
+            if (['high', 'urgent'].includes(this.normalizeOrderOverviewText(order.priority))) {
+                overview.highPriority += 1;
+            }
+        });
+
+        return overview;
+    }
+
+    async getSyncedOrdersOverview(stats = {}) {
+        if (stats.ordersOverview?.version === 'real-orders-v2') {
+            return stats.ordersOverview;
+        }
+
+        try {
+            const orders = await window.APIService.getOrdersFresh();
+            return this.buildOrdersOverviewFromOrders(orders);
+        } catch (error) {
+            console.warn('Unable to sync orders overview from orders:', error);
+            return {};
+        }
+    }
+
+    renderOrdersOverview(stats = {}, syncedOverview = null) {
+        const container = document.getElementById('ordersOverviewCards');
+        const totalEl = document.getElementById('ordersOverviewTotal');
+        if (!container) return;
+
+        const statusCounts = new Map((Array.isArray(stats.orderStatusBreakdown) ? stats.orderStatusBreakdown : [])
+            .map(row => [String(row.status || 'unknown').toLowerCase(), Number(row.count || 0)]));
+        const overview = syncedOverview || stats.ordersOverview || {};
+        const cards = [
+            { key: 'new', label: 'New Orders', value: Number(overview.newOrders ?? statusCounts.get('new') ?? 0), icon: 'plus-circle' },
+            { key: 'progress', label: 'In Progress', value: Number(overview.inProgress ?? statusCounts.get('in-progress') ?? 0), icon: 'spinner' },
+            { key: 'completed', label: 'Completed', value: Number(overview.completed ?? statusCounts.get('completed') ?? 0), icon: 'check-circle' },
+            { key: 'delayed', label: 'Delayed', value: Number(overview.delayed ?? statusCounts.get('delayed') ?? 0), icon: 'clock' },
+            { key: 'cancelled', label: 'Cancelled', value: Number(overview.cancelled ?? statusCounts.get('cancelled') ?? statusCounts.get('canceled') ?? 0), icon: 'times-circle' },
+            { key: 'priority', label: 'High Priority Orders', value: Number(overview.highPriority ?? 0), icon: 'exclamation-circle' }
+        ];
+        const total = Number(stats.totalOrders ?? cards.slice(0, 5).reduce((sum, card) => sum + card.value, 0));
+        if (totalEl) totalEl.textContent = `${total.toLocaleString()} order${total === 1 ? '' : 's'}`;
+
+        container.innerHTML = cards.map(card => `
+            <article class="orders-overview-card ${escapePaymentHtml(card.key)}" role="listitem">
+                <span class="orders-overview-icon" aria-hidden="true"><i class="fas fa-${escapePaymentHtml(card.icon)}"></i></span>
+                <div>
+                    <small>${escapePaymentHtml(card.label)}</small>
+                    <strong>${card.value.toLocaleString()}</strong>
+                </div>
+            </article>
+        `).join('');
+    }
+
+    getCategoryOverviewPalette() {
+        return [
+            '#1d6fd4',
+            '#0f9f8f',
+            '#7c3aed',
+            '#b45309',
+            '#0369a1',
+            '#16a34a',
+            '#dc2626',
+            '#475569',
+            '#c026d3',
+            '#0891b2'
+        ];
+    }
+
+    getCategoryOverviewIcon(label = '') {
+        const normalized = String(label || '').toLowerCase();
+        if (normalized.includes('electric')) return 'bolt';
+        if (normalized.includes('plumb') || normalized.includes('pipe') || normalized.includes('drain')) return 'tint';
+        if (normalized.includes('clean')) return 'broom';
+        if (normalized.includes('hvac') || normalized.includes('air') || normalized.includes('heat') || normalized.includes('cool')) return 'wind';
+        if (normalized.includes('carpent') || normalized.includes('wood') || normalized.includes('door')) return 'hammer';
+        if (normalized.includes('civil') || normalized.includes('construct') || normalized.includes('masonry')) return 'hard-hat';
+        return 'tools';
+    }
+
+    buildServiceCategoryOverviewFromOrders(orders = []) {
+        const categoryMap = new Map();
+
+        (Array.isArray(orders) ? orders : []).forEach(order => {
+            const label = String(order.service || '').trim() || 'Uncategorized';
+            const key = label.toLowerCase();
+            const current = categoryMap.get(key) || { key, label, orders: 0, revenue: 0 };
+            current.orders += 1;
+            current.revenue += Number(order.amount || 0);
+            categoryMap.set(key, current);
+        });
+
+        return Array.from(categoryMap.values())
+            .sort((a, b) => {
+                if (b.revenue !== a.revenue) return b.revenue - a.revenue;
+                if (b.orders !== a.orders) return b.orders - a.orders;
+                return a.label.localeCompare(b.label);
+            });
+    }
+
+    async getSyncedServiceCategoryOverview(stats = {}) {
+        if (Array.isArray(stats.serviceCategoryOverview)) {
+            return stats.serviceCategoryOverview;
+        }
+
+        try {
+            const orders = await window.APIService.getOrdersFresh();
+            return this.buildServiceCategoryOverviewFromOrders(orders);
+        } catch (error) {
+            console.warn('Unable to sync service category overview from orders:', error);
+            return [];
+        }
+    }
+
+    renderServiceCategoryOverview(rows = []) {
+        const container = document.getElementById('serviceCategoryOverview');
+        const totalEl = document.getElementById('serviceCategoryTotal');
+        if (!container) return;
+
+        const palette = this.getCategoryOverviewPalette();
+        const data = (Array.isArray(rows) ? rows : []).map((row, index) => {
+            const label = String(row.label || row.key || 'Uncategorized').trim() || 'Uncategorized';
+            return {
+                key: String(row.key || label).toLowerCase(),
+                label,
+                icon: row.icon || this.getCategoryOverviewIcon(label),
+                color: row.color || palette[index % palette.length],
+                orders: Number(row.orders || row.count || 0),
+                revenue: Number(row.revenue || 0)
+            };
+        }).sort((a, b) => {
+            if (b.revenue !== a.revenue) return b.revenue - a.revenue;
+            if (b.orders !== a.orders) return b.orders - a.orders;
+            return a.label.localeCompare(b.label);
+        });
+        const totalOrders = data.reduce((sum, category) => sum + category.orders, 0);
+        const totalRevenue = data.reduce((sum, category) => sum + category.revenue, 0);
+        if (totalEl) {
+            totalEl.textContent = `${totalOrders.toLocaleString()} order${totalOrders === 1 ? '' : 's'} | ${this.formatMiniCurrency(totalRevenue)}`;
+        }
+
+        if (!data.length) {
+            container.innerHTML = `
+                <div class="service-category-empty" role="status">
+                    <i class="fas fa-tools" aria-hidden="true"></i>
+                    <span>No category data yet</span>
+                </div>
+            `;
+            return;
+        }
+
+        const visibleLimit = 6;
+        const hasMoreCategories = data.length > visibleLimit;
+        const visibleData = this.categoryOverviewExpanded ? data : data.slice(0, visibleLimit);
+        const hiddenCount = Math.max(data.length - visibleLimit, 0);
+
+        container.innerHTML = visibleData.map((category, index) => {
+            return `
+                <article class="service-category-card" role="listitem" style="--service-color: ${category.color};">
+                    <span class="service-category-rank" aria-label="Revenue rank ${index + 1}">#${index + 1}</span>
+                    <div class="service-category-card-head">
+                        <span class="service-category-icon" aria-hidden="true"><i class="fas fa-${category.icon}"></i></span>
+                        <div>
+                            <h3>${escapePaymentHtml(category.label)}</h3>
+                            <p>${category.orders.toLocaleString()} order${category.orders === 1 ? '' : 's'}</p>
+                        </div>
+                    </div>
+                    <div class="service-category-values">
+                        <span>
+                            <small>Revenue</small>
+                            <strong>${this.formatRevenueOverviewCurrency(category.revenue)}</strong>
+                        </span>
+                        <span>
+                            <small>Revenue share</small>
+                            <strong>${totalRevenue > 0 ? `${((category.revenue / totalRevenue) * 100).toFixed(1)}%` : '0%'}</strong>
+                        </span>
+                    </div>
+                </article>
+            `;
+        }).join('') + (hasMoreCategories ? `
+            <button type="button" class="service-category-toggle" id="serviceCategoryToggle" aria-expanded="${this.categoryOverviewExpanded ? 'true' : 'false'}">
+                <span>${this.categoryOverviewExpanded ? 'Show top 6' : `Show all ${data.length} categories`}</span>
+                <small>${this.categoryOverviewExpanded ? 'Collapse category list' : `${hiddenCount} more categor${hiddenCount === 1 ? 'y' : 'ies'}`}</small>
+                <i class="fas fa-chevron-${this.categoryOverviewExpanded ? 'up' : 'down'}" aria-hidden="true"></i>
+            </button>
+        ` : '');
+
+        const toggleButton = document.getElementById('serviceCategoryToggle');
+        if (toggleButton) {
+            toggleButton.addEventListener('click', () => {
+                this.categoryOverviewExpanded = !this.categoryOverviewExpanded;
+                this.renderServiceCategoryOverview(rows);
+            });
+        }
+    }
+
+    renderTopPerformanceCards(topPerformance = {}, categoryOverview = []) {
+        const container = document.getElementById('topPerformanceCards');
+        if (!container) return;
+
+        const mostRequestedService = topPerformance?.mostRequestedService || [...(Array.isArray(categoryOverview) ? categoryOverview : [])]
+            .sort((a, b) => {
+                if (Number(b.orders || 0) !== Number(a.orders || 0)) return Number(b.orders || 0) - Number(a.orders || 0);
+                return Number(b.revenue || 0) - Number(a.revenue || 0);
+            })[0];
+        const cards = [
+            {
+                type: 'customer',
+                icon: 'user-tie',
+                rank: '01',
+                label: 'Top Customer',
+                title: topPerformance?.topCustomer?.name || 'No customer data',
+                value: this.formatRevenueOverviewCurrency(topPerformance?.topCustomer?.totalRevenue || 0),
+                metric: 'Total revenue',
+                meta: topPerformance?.topCustomer ? `${Number(topPerformance.topCustomer.totalOrders || 0).toLocaleString()} order${Number(topPerformance.topCustomer.totalOrders || 0) === 1 ? '' : 's'}` : 'Revenue leader'
+            },
+            {
+                type: 'vendor',
+                icon: 'truck',
+                rank: '02',
+                label: 'Top Vendor',
+                title: topPerformance?.topVendor?.name || 'No vendor data',
+                value: this.formatRevenueOverviewCurrency(topPerformance?.topVendor?.revenue || 0),
+                metric: 'Order revenue',
+                meta: topPerformance?.topVendor ? `${Number(topPerformance.topVendor.orderCount || 0).toLocaleString()} order${Number(topPerformance.topVendor.orderCount || 0) === 1 ? '' : 's'}${topPerformance.topVendor.category ? ` | ${topPerformance.topVendor.category}` : ''}` : 'Revenue leader'
+            },
+            {
+                type: 'employee',
+                icon: 'id-badge',
+                rank: '03',
+                label: 'Top Employee',
+                title: topPerformance?.topEmployee?.name || 'No employee data',
+                value: this.formatRevenueOverviewCurrency(topPerformance?.topEmployee?.revenue || 0),
+                metric: 'Handled revenue',
+                meta: topPerformance?.topEmployee ? `${Number(topPerformance.topEmployee.orderCount || 0).toLocaleString()} order${Number(topPerformance.topEmployee.orderCount || 0) === 1 ? '' : 's'}` : 'Revenue leader'
+            },
+            {
+                type: 'service',
+                icon: mostRequestedService ? this.getCategoryOverviewIcon(mostRequestedService.label) : 'tools',
+                rank: '04',
+                label: 'Most Requested Service',
+                title: mostRequestedService?.label || 'No service data',
+                value: `${Number(mostRequestedService?.orders || 0).toLocaleString()} order${Number(mostRequestedService?.orders || 0) === 1 ? '' : 's'}`,
+                metric: 'Request volume',
+                meta: `${this.formatRevenueOverviewCurrency(mostRequestedService?.revenue || 0)} revenue`
+            },
+            {
+                type: 'job',
+                icon: 'briefcase',
+                rank: 'Featured',
+                label: 'Highest Revenue Job',
+                title: topPerformance?.highestRevenueJob?.orderId || 'No job data',
+                value: this.formatRevenueOverviewCurrency(topPerformance?.highestRevenueJob?.revenue || 0),
+                metric: 'Largest job',
+                meta: topPerformance?.highestRevenueJob ? `${topPerformance.highestRevenueJob.customerName || 'Customer'} | ${topPerformance.highestRevenueJob.service || 'Service'}` : 'Largest order'
+            }
+        ];
+        container.innerHTML = cards.map(card => `
+            <article class="top-performance-card ${escapePaymentHtml(card.type)}" role="listitem">
+                <div class="top-performance-card-head">
+                    <small>${escapePaymentHtml(card.label)}</small>
+                    <em>${escapePaymentHtml(card.rank)}</em>
+                </div>
+                <div class="top-performance-content">
+                    <strong>${escapePaymentHtml(card.value)}</strong>
+                    <h3 title="${escapePaymentHtml(card.title)}">${escapePaymentHtml(card.title)}</h3>
+                    <p title="${escapePaymentHtml(card.meta)}">${escapePaymentHtml(card.metric)} | ${escapePaymentHtml(card.meta)}</p>
+                </div>
+            </article>
+        `).join('');
     }
 
     renderMiniRevenueTrend(points = []) {

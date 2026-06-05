@@ -346,10 +346,48 @@ class APIService {
         const revenueByDate = new Map();
         const statusMap = new Map();
         const profitByMonth = new Map();
+        const serviceCategoryMap = new Map();
+        const normalizeOrderOverviewText = (value) => String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+        const getOrderOverviewStatus = (order = {}) => {
+            const status = normalizeOrderOverviewText(order.status);
+            const stage = normalizeOrderOverviewText(order.pipelineStage);
+            const combined = `${status} ${stage}`;
+            if (/(cancel|lost)/.test(combined)) return 'cancelled';
+            if (status === 'delayed' || /delayed|on-hold|hold/.test(stage)) return 'delayed';
+            if (status === 'completed' || /completed|complete|paid|closed|done/.test(stage)) return 'completed';
+            if (status === 'in-progress' || /in-progress|work|active|scheduled|assigned|dispatch/.test(stage)) return 'inProgress';
+            if (status === 'new' || /new|lead|request|intake/.test(stage)) return 'newOrders';
+            return null;
+        };
+        const ordersOverview = {
+            version: 'real-orders-v2',
+            newOrders: 0,
+            inProgress: 0,
+            completed: 0,
+            delayed: 0,
+            cancelled: 0,
+            highPriority: 0
+        };
         (orders || []).forEach(order => {
             const date = new Date(order.createdAt || order.startDate);
             const status = order.status || 'unknown';
             statusMap.set(status, (statusMap.get(status) || 0) + 1);
+            const overviewBucket = getOrderOverviewStatus(order);
+            if (overviewBucket) ordersOverview[overviewBucket] += 1;
+            if (['high', 'urgent'].includes(normalizeOrderOverviewText(order.priority))) {
+                ordersOverview.highPriority += 1;
+            }
+            const serviceLabel = String(order.service || '').trim() || 'Uncategorized';
+            const serviceKey = serviceLabel.toLowerCase();
+            const serviceCategory = serviceCategoryMap.get(serviceKey) || {
+                key: serviceKey,
+                label: serviceLabel,
+                orders: 0,
+                revenue: 0
+            };
+            serviceCategory.orders += 1;
+            serviceCategory.revenue += Number(order.amount || 0);
+            serviceCategoryMap.set(serviceKey, serviceCategory);
             if (!Number.isNaN(date.getTime())) {
                 const key = date.toISOString().slice(0, 10);
                 const monthKey = key.slice(0, 7);
@@ -373,6 +411,50 @@ class APIService {
             const type = customer.customerType || 'unknown';
             customerTypeMap.set(type, (customerTypeMap.get(type) || 0) + 1);
         });
+        const topCustomer = [...customerMap.values()]
+            .filter(customer => customer.totalRevenue > 0)
+            .sort((a, b) => b.totalRevenue - a.totalRevenue)
+            .slice(0, 1)[0] || null;
+        const topEmployee = employeeLeaderboard[0] || null;
+        const topVendorMap = new Map();
+        (orders || []).forEach(order => {
+            if (!order.vendor) return;
+            const vendorId = typeof order.vendor === 'object' ? order.vendor._id : order.vendor;
+            const key = String(vendorId || order.vendor?.name || 'unknown');
+            const current = topVendorMap.get(key) || {
+                id: vendorId,
+                name: typeof order.vendor === 'object' ? order.vendor.name : 'Vendor',
+                category: typeof order.vendor === 'object' ? order.vendor.category : '',
+                revenue: 0,
+                cost: 0,
+                orderCount: 0
+            };
+            current.revenue += Number(order.amount || 0);
+            current.cost += Number(order.vendorCost || 0);
+            current.orderCount += 1;
+            topVendorMap.set(key, current);
+        });
+        const serviceCategoryOverview = [...serviceCategoryMap.values()].sort((a, b) => {
+            if (b.revenue !== a.revenue) return b.revenue - a.revenue;
+            if (b.orders !== a.orders) return b.orders - a.orders;
+            return a.label.localeCompare(b.label);
+        });
+        const mostRequestedService = [...serviceCategoryOverview].sort((a, b) => {
+            if (b.orders !== a.orders) return b.orders - a.orders;
+            if (b.revenue !== a.revenue) return b.revenue - a.revenue;
+            return a.label.localeCompare(b.label);
+        })[0] || null;
+        const highestRevenueOrder = [...(orders || [])].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0))[0];
+        const highestRevenueJob = highestRevenueOrder ? {
+            id: highestRevenueOrder._id,
+            orderId: highestRevenueOrder.orderId,
+            customerName: highestRevenueOrder.customer?.name || 'Customer',
+            service: highestRevenueOrder.service || 'Service',
+            revenue: Number(highestRevenueOrder.amount || 0),
+            cost: Number(highestRevenueOrder.vendorCost || 0),
+            profit: Number(highestRevenueOrder.profit ?? (Number(highestRevenueOrder.amount || 0) - Number(highestRevenueOrder.vendorCost || 0))),
+            status: highestRevenueOrder.pipelineStage || highestRevenueOrder.status || 'unknown'
+        } : null;
 
         return {
             totalOrders: statsApi.totalOrders ?? orders.length,
@@ -397,8 +479,20 @@ class APIService {
                 .sort((a, b) => b.totalRevenue - a.totalRevenue)
                 .slice(0, 10),
             orderStatusBreakdown: [...statusMap.entries()].map(([status, count]) => ({ status, count })),
+            ordersOverview,
             monthlyProfitTimeline: [...profitByMonth.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-6),
             customerTypeBreakdown: [...customerTypeMap.entries()].map(([type, count]) => ({ type, count })),
+            serviceCategoryOverview,
+            topPerformance: {
+                topCustomer,
+                topVendor: [...topVendorMap.values()].sort((a, b) => {
+                    if (b.revenue !== a.revenue) return b.revenue - a.revenue;
+                    return b.orderCount - a.orderCount;
+                })[0] || null,
+                topEmployee,
+                mostRequestedService,
+                highestRevenueJob
+            },
             revenueTimeline: [...revenueByDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
             financialOverview: {
                 totalRevenue,
