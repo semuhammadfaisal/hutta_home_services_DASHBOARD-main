@@ -2,6 +2,7 @@ const express = require('express');
 const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const router = express.Router();
 
 // Get all vendors
@@ -46,6 +47,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
     await vendor.save();
     console.log('Vendor after save:', vendor);
     console.log('Vendor notes after save:', vendor.notes);
+    invalidateDashboardStatsCache();
     res.status(201).json(vendor);
   } catch (error) {
     console.error('Vendor creation error:', error);
@@ -68,6 +70,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
       return res.status(404).json({ message: 'Vendor not found' });
     }
     
+    invalidateDashboardStatsCache();
     res.json(vendor);
   } catch (error) {
     console.error('Vendor update error:', error);
@@ -82,6 +85,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
+    invalidateDashboardStatsCache();
     res.json({ message: 'Vendor deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

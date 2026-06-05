@@ -17,9 +17,9 @@
 
 ## Status Badge Colors
 
-- 🟡 **Pending** - Yellow badge (default)
-- 🟢 **Paid** - Green badge
-- 🔴 **Cancelled** - Red badge
+-  **Pending** - Yellow badge (default)
+-  **Paid** - Green badge
+-  **Cancelled** - Red badge
 
 ## Common Workflows
 
@@ -46,11 +46,11 @@
 
 ## Tips
 
-✅ Employee section only shows if order has assigned employee
-✅ All fields are optional - save what you need
-✅ Changes save immediately on button click
-✅ Employee payment is separate from customer payment
-✅ Use Notes field for payment references or details
+ Employee section only shows if order has assigned employee
+ All fields are optional - save what you need
+ Changes save immediately on button click
+ Employee payment is separate from customer payment
+ Use Notes field for payment references or details
 
 ## Keyboard Shortcuts
 

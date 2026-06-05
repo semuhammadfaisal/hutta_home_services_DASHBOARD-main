@@ -8,7 +8,7 @@ async function listUsers() {
     
     const users = await User.find({}, 'email role firstName lastName createdAt');
     
-    console.log('\n📋 All Users in Database:\n');
+    console.log('\n All Users in Database:\n');
     console.log('═'.repeat(80));
     console.log('Email'.padEnd(35), 'Name'.padEnd(25), 'Role');
     console.log('═'.repeat(80));
@@ -18,8 +18,8 @@ async function listUsers() {
     } else {
       users.forEach(user => {
         const name = `${user.firstName} ${user.lastName}`;
-        const role = user.role || '⚠️  NO ROLE';
-        const roleColor = user.role ? role : '⚠️  NO ROLE';
+        const role = user.role || '  NO ROLE';
+        const roleColor = user.role ? role : '  NO ROLE';
         console.log(
           user.email.padEnd(35),
           name.padEnd(25),
@@ -42,13 +42,13 @@ async function listUsers() {
     console.log(`  Managers:        ${managerCount}`);
     console.log(`  Account Reps:    ${repCount}`);
     if (noRoleCount > 0) {
-      console.log(`  ⚠️  No Role:       ${noRoleCount} (needs assignment)`);
+      console.log(`    No Role:       ${noRoleCount} (needs assignment)`);
     }
     console.log('');
     
     await mongoose.disconnect();
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error(' Error:', error.message);
     process.exit(1);
   }
 }

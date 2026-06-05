@@ -6,6 +6,7 @@ const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const memCache = require('../utils/memoryCache');
+const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { startOfMonthMDT, dateInputToMDT } = require('../utils/timezone');
 const router = express.Router();
 
@@ -14,6 +15,7 @@ const STATS_TTL_MS = parseInt(process.env.ORDERS_STATS_CACHE_MS || '60000', 10);
 
 function invalidateOrderStatsCache() {
   memCache.del(STATS_CACHE_KEY);
+  invalidateDashboardStatsCache();
 }
 
 function parseMdtDateInput(value) {
@@ -32,11 +34,11 @@ router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const cached = memCache.get(STATS_CACHE_KEY);
     if (cached) {
-      console.log('📦 Returning cached stats');
+      console.log(' Returning cached stats');
       return res.json(cached);
     }
     
-    console.log('🔄 Calculating fresh stats...');
+    console.log(' Calculating fresh stats...');
 
     const Stage = require('../models/Stage');
     const PipelineRecord = require('../models/PipelineRecord');
@@ -49,7 +51,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
     }).select('orderId').lean();
     const noBidOrderIds = noBidRecords.map(r => r.orderId).filter(Boolean);
     
-    console.log(`🚫 Excluding ${noBidOrderIds.length} NO BID orders from stats`);
+    console.log(` Excluding ${noBidOrderIds.length} NO BID orders from stats`);
     if (noBidOrderIds.length > 0) {
       const noBidOrders = await Order.find({ _id: { $in: noBidOrderIds } }).select('orderId amount').lean();
       console.log('NO BID orders:', noBidOrders.map(o => `${o.orderId} ($${o.amount})`).join(', '));
@@ -349,7 +351,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
     console.log('ORDER SAVED:', order._id, 'with ID:', orderId, 'WO:', workOrderNumber);
     console.log('Customer ID for payment:', customerId);
     
-    // Auto-create pending payment for this order
+    // Auto-create bidding payment for this order
     try {
       const Payment = require('../models/Payment');
       
@@ -387,17 +389,17 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
         customer: customerId,
         amount: amount,
         paymentMethod: null, // Will be set later when payment is received
-        status: 'pending',
+        status: 'bidding',
         description: `Payment for ${orderId} - ${req.body.service}`,
         dueDate: endDate,
         processedBy: req.user.userId
       });
       
       await payment.save();
-      console.log('✅ AUTO-CREATED PAYMENT:', payment._id, 'with ID:', paymentId, 'for order:', orderId);
-      console.log('Payment details:', { paymentId, orderId, customerId, amount, status: 'pending' });
+      console.log(' AUTO-CREATED PAYMENT:', payment._id, 'with ID:', paymentId, 'for order:', orderId);
+      console.log('Payment details:', { paymentId, orderId, customerId, amount, status: 'bidding' });
     } catch (paymentError) {
-      console.error('❌ PAYMENT CREATION ERROR:', paymentError.message);
+      console.error(' PAYMENT CREATION ERROR:', paymentError.message);
       console.error('Payment error details:', paymentError);
       console.error('Stack:', paymentError.stack);
       // Don't fail the order creation if payment creation fails
@@ -548,10 +550,10 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
         if (payment) {
           payment.amount = changes.amount;
           await payment.save();
-          console.log('✅ Synced payment amount:', payment.paymentId, 'to', changes.amount);
+          console.log(' Synced payment amount:', payment.paymentId, 'to', changes.amount);
         }
       } catch (paymentError) {
-        console.error('❌ Error syncing payment amount:', paymentError.message);
+        console.error(' Error syncing payment amount:', paymentError.message);
       }
     }
     
@@ -576,10 +578,10 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
           if (changes.notes !== undefined) pipelineRecord.notes = changes.notes;
           
           await pipelineRecord.save();
-          console.log('✅ Synced changes to pipeline record:', pipelineRecord._id, changes);
+          console.log(' Synced changes to pipeline record:', pipelineRecord._id, changes);
         }
       } catch (pipelineError) {
-        console.error('❌ Error syncing to pipeline record:', pipelineError.message);
+        console.error(' Error syncing to pipeline record:', pipelineError.message);
       }
     }
     
@@ -608,9 +610,9 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
       try {
         const PipelineRecord = require('../models/PipelineRecord');
         await PipelineRecord.findByIdAndDelete(order.pipelineRecordId);
-        console.log('✅ Associated pipeline record deleted:', order.pipelineRecordId);
+        console.log(' Associated pipeline record deleted:', order.pipelineRecordId);
       } catch (pipelineError) {
-        console.error('❌ Error deleting pipeline record:', pipelineError.message);
+        console.error(' Error deleting pipeline record:', pipelineError.message);
       }
     }
     

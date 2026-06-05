@@ -268,6 +268,125 @@ class APIService {
         return this.request('/orders/stats');
     }
 
+    async getDashboardStats(filters = {}) {
+        const params = new URLSearchParams();
+        if (filters.topStartDate) params.append('topStartDate', filters.topStartDate);
+        if (filters.topEndDate) params.append('topEndDate', filters.topEndDate);
+        const query = params.toString();
+        try {
+            return await this.request(`/dashboard/stats${query ? `?${query}` : ''}`);
+        } catch (error) {
+            if (!/not found|404/i.test(error.message || '')) {
+                throw error;
+            }
+
+            console.warn('Dashboard stats endpoint not available; using legacy dashboard data fallback.');
+            return this.getLegacyDashboardStats(filters);
+        }
+    }
+
+    async getLegacyDashboardStats(filters = {}) {
+        const [statsApi, vendors, employees, kpi, orders, payments] = await Promise.all([
+            this.getOrderStats().catch(() => ({})),
+            this.getVendors().catch(() => []),
+            this.getEmployees().catch(() => []),
+            this.getPaymentsCollected().catch(() => ({ paymentsCollected: 0 })),
+            this.getOrdersFresh().catch(() => []),
+            this.getPayments().catch(() => [])
+        ]);
+
+        const totalRevenue = Number(statsApi.totalRevenue || 0);
+        const paymentsCollected = Number(kpi.paymentsCollected || 0);
+        const vendorCategories = (vendors || []).reduce((acc, vendor) => {
+            const key = vendor.category || 'uncategorized';
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+
+        const employeeLeaderboard = (employees || []).map(employee => {
+            const employeeOrders = (orders || []).filter(order =>
+                order.employee &&
+                (order.employee._id === employee._id || order.employee === employee._id)
+            );
+            return {
+                id: employee._id,
+                name: employee.name,
+                revenue: employeeOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0),
+                orderCount: employeeOrders.length
+            };
+        }).filter(employee => employee.revenue > 0)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+
+        const filteredTopOrders = (orders || []).filter(order => {
+            if (!filters.topStartDate && !filters.topEndDate) return true;
+            const date = new Date(order.createdAt || order.startDate);
+            if (Number.isNaN(date.getTime())) return false;
+            const start = filters.topStartDate ? new Date(`${filters.topStartDate}T00:00:00`) : null;
+            const end = filters.topEndDate ? new Date(`${filters.topEndDate}T23:59:59.999`) : null;
+            return (!start || date >= start) && (!end || date <= end);
+        });
+
+        const customerMap = new Map();
+        filteredTopOrders.forEach(order => {
+            const customer = order.customer || {};
+            const key = order.customerId || customer.email || customer.name || 'unknown';
+            const current = customerMap.get(String(key)) || {
+                name: customer.name || 'Customer',
+                email: customer.email || '',
+                totalRevenue: 0,
+                totalOrders: 0
+            };
+            current.totalRevenue += Number(order.amount || 0);
+            current.totalOrders += 1;
+            customerMap.set(String(key), current);
+        });
+
+        const revenueByDate = new Map();
+        (orders || []).forEach(order => {
+            const date = new Date(order.createdAt || order.startDate);
+            if (Number.isNaN(date.getTime())) return;
+            const key = date.toISOString().slice(0, 10);
+            const current = revenueByDate.get(key) || { date: key, amount: 0, orders: 0 };
+            current.amount += Number(order.amount || 0);
+            current.orders += 1;
+            revenueByDate.set(key, current);
+        });
+
+        return {
+            totalOrders: statsApi.totalOrders ?? orders.length,
+            totalCustomers: statsApi.totalCustomers ?? 0,
+            totalVendors: vendors.length,
+            totalEmployees: employees.length,
+            totalRevenue,
+            paymentsCollected,
+            pendingPayments: Math.max(totalRevenue - paymentsCollected, 0),
+            monthlyGrowth: { orders: 0, revenue: 0 },
+            workflow: {
+                newRequests: orders.filter(order => order.status === 'new').length,
+                workOrders: orders.filter(order => order.status === 'in-progress').length,
+                activeWork: orders.filter(order => ['in-progress', 'delayed'].includes(order.status)).length,
+                completedWork: orders.filter(order => order.status === 'completed').length
+            },
+            vendorCategories,
+            employeeLeaderboard,
+            recentActivity: [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
+            topCustomers: [...customerMap.values()]
+                .filter(customer => customer.totalRevenue > 0)
+                .sort((a, b) => b.totalRevenue - a.totalRevenue)
+                .slice(0, 10),
+            revenueTimeline: [...revenueByDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
+            financialOverview: {
+                totalRevenue,
+                totalCost: orders.reduce((sum, order) => sum + Number(order.vendorCost || 0), 0),
+                totalProfit: orders.reduce((sum, order) => sum + Number(order.profit || 0), 0),
+                ytdRevenue: totalRevenue,
+                monthRevenue: statsApi.monthlyRevenue || 0,
+                monthSales: 0
+            }
+        };
+    }
+
     // Customers
     async getCustomers() {
         const raw = await this.request('/customers?limit=5000');

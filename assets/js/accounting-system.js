@@ -629,7 +629,7 @@ function loadJobsTable() {
     
     tbody.innerHTML = accountingSystem.jobs.map(job => {
         const slaAlert = accountingSystem.checkInvoiceSLA(job);
-        const slaBadge = slaAlert ? `<span class="badge-alert" title="${slaAlert.message}">⚠️</span>` : '';
+        const slaBadge = slaAlert ? `<span class="badge-alert" title="${slaAlert.message}"></span>` : '';
         
         return `
         <tr>
@@ -1207,7 +1207,7 @@ function loadExecutiveTab() {
     const concentrationEl = document.getElementById('concentrationRisk');
     concentrationEl.textContent = `${kpis.concentrationRisk.toFixed(1)}%`;
     if (kpis.hasConcentrationRisk) {
-        concentrationEl.innerHTML += ' <span class="risk-badge">⚠️ HIGH RISK</span>';
+        concentrationEl.innerHTML += ' <span class="risk-badge"> HIGH RISK</span>';
         if (kpis.topClient) {
             document.getElementById('concentrationWarning').innerHTML = `
                 <div class="alert alert-warning">

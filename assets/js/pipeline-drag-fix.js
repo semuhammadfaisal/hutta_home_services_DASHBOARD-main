@@ -1,15 +1,15 @@
 // SIMPLE DRAG AND DROP FIX
-window.AppLogger?.debug('🔧 Drag fix script loaded');
+window.AppLogger?.debug(' Drag fix script loaded');
 
 // Wait for DOM and pipeline to be ready
 window.addEventListener('load', function() {
-    window.AppLogger?.debug('🔧 Window loaded, waiting for pipeline...');
+    window.AppLogger?.debug(' Window loaded, waiting for pipeline...');
     
     const waitForPipeline = setInterval(() => {
         const container = document.getElementById('stagesContainer');
         if (container && typeof window.loadStages === 'function') {
             clearInterval(waitForPipeline);
-            window.AppLogger?.debug('🔧 Pipeline ready, initializing drag fix');
+            window.AppLogger?.debug(' Pipeline ready, initializing drag fix');
             initDragFix();
         }
     }, 100);
@@ -28,11 +28,11 @@ function initDragFix() {
 }
 
 function setupDragAndDrop() {
-    window.AppLogger?.debug('🔧 Setting up drag and drop');
+    window.AppLogger?.debug(' Setting up drag and drop');
     
     // Setup all cards
     const cards = document.querySelectorAll('.record-card, .new-order-card');
-    window.AppLogger?.debug('🔧 Found', cards.length, 'cards');
+    window.AppLogger?.debug(' Found', cards.length, 'cards');
     
     cards.forEach(card => {
         card.draggable = false;
@@ -40,7 +40,7 @@ function setupDragAndDrop() {
         card.style.cursor = 'grab';
         
         card.ondragstart = function(e) {
-            window.AppLogger?.debug('🔧 DRAG START:', this.dataset.recordId || this.dataset.orderId);
+            window.AppLogger?.debug(' DRAG START:', this.dataset.recordId || this.dataset.orderId);
             this.style.opacity = '0.5';
             this.style.cursor = 'grabbing';
             e.dataTransfer.effectAllowed = 'move';
@@ -60,7 +60,7 @@ function setupDragAndDrop() {
         };
         
         card.ondragend = function(e) {
-            window.AppLogger?.debug('🔧 DRAG END');
+            window.AppLogger?.debug(' DRAG END');
             window.PipelineAutoScroll?.stop();
             this.style.opacity = '';
             this.style.cursor = 'grab';
@@ -73,7 +73,7 @@ function setupDragAndDrop() {
     
     // Setup all drop zones
     const zones = document.querySelectorAll('.stage-body');
-    window.AppLogger?.debug('🔧 Found', zones.length, 'drop zones');
+    window.AppLogger?.debug(' Found', zones.length, 'drop zones');
     
     zones.forEach(zone => {
         zone.ondragover = function(e) {
@@ -95,13 +95,13 @@ function setupDragAndDrop() {
             this.style.background = '';
             
             const stageId = this.dataset.stageId;
-            window.AppLogger?.debug('🔧 DROPPED on stage:', stageId);
+            window.AppLogger?.debug(' DROPPED on stage:', stageId);
             
             if (window.draggedRecordId) {
-                window.AppLogger?.debug('🔧 Moving record:', window.draggedRecordId);
+                window.AppLogger?.debug(' Moving record:', window.draggedRecordId);
                 moveRecordOptimistic(window.draggedRecordId, stageId);
             } else if (window.draggedOrderId) {
-                window.AppLogger?.debug('🔧 Adding order:', window.draggedOrderId);
+                window.AppLogger?.debug(' Adding order:', window.draggedOrderId);
                 addOrderToPipeline(window.draggedOrderId, stageId);
             }
             
@@ -111,7 +111,7 @@ function setupDragAndDrop() {
 }
     
 async function moveRecordOptimistic(recordId, newStageId) {
-    window.AppLogger?.debug('🔧 moveRecord called:', recordId, newStageId);
+    window.AppLogger?.debug(' moveRecord called:', recordId, newStageId);
     
     // Find the card element
     const card = document.querySelector(`[data-record-id="${recordId}"]`);
@@ -127,7 +127,7 @@ async function moveRecordOptimistic(recordId, newStageId) {
     try {
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
         if (!session) {
-            console.error('❌ No session found');
+            console.error(' No session found');
             // Revert on error
             if (card && oldStage) oldStage.appendChild(card);
             alert('Session expired. Please login again.');
@@ -146,20 +146,20 @@ async function moveRecordOptimistic(recordId, newStageId) {
         });
         
         if (response.ok) {
-            window.AppLogger?.debug('✅ Record moved successfully');
+            window.AppLogger?.debug(' Record moved successfully');
             // Refresh in background to sync any other changes
             if (window.loadDataFromDB) {
                 window.loadDataFromDB();
             }
         } else {
             const error = await response.text();
-            console.error('❌ Move failed:', response.status, error);
+            console.error(' Move failed:', response.status, error);
             // Revert on error
             if (card && oldStage) oldStage.appendChild(card);
             alert('Failed to move record: ' + error);
         }
     } catch (err) {
-        console.error('❌ Move error:', err);
+        console.error(' Move error:', err);
         // Revert on error
         if (card && oldStage) oldStage.appendChild(card);
         alert('Error moving record: ' + err.message);
@@ -167,17 +167,17 @@ async function moveRecordOptimistic(recordId, newStageId) {
 }
 
 async function moveRecord(recordId, newStageId) {
-    window.AppLogger?.debug('🔧 moveRecord called:', recordId, newStageId);
+    window.AppLogger?.debug(' moveRecord called:', recordId, newStageId);
     try {
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
         if (!session) {
-            console.error('❌ No session found');
+            console.error(' No session found');
             alert('Session expired. Please login again.');
             return;
         }
         
         const token = JSON.parse(session).token;
-        window.AppLogger?.debug('🔧 Making API call...');
+        window.AppLogger?.debug(' Making API call...');
         
         const response = await fetch(`/api/pipeline-records/${recordId}/stage`, {
             method: 'PATCH',
@@ -188,50 +188,50 @@ async function moveRecord(recordId, newStageId) {
             body: JSON.stringify({ stageId: newStageId })
         });
         
-        window.AppLogger?.debug('🔧 API response:', response.status);
+        window.AppLogger?.debug(' API response:', response.status);
         
         if (response.ok) {
-            window.AppLogger?.debug('✅ Record moved successfully');
+            window.AppLogger?.debug(' Record moved successfully');
             if (window.loadDataFromDB) {
                 await window.loadDataFromDB();
             }
         } else {
             const error = await response.text();
-            console.error('❌ Move failed:', response.status, error);
+            console.error(' Move failed:', response.status, error);
             alert('Failed to move record: ' + error);
         }
     } catch (err) {
-        console.error('❌ Move error:', err);
+        console.error(' Move error:', err);
         alert('Error moving record: ' + err.message);
     }
 }
     
 async function addOrderToPipeline(orderId, stageId) {
-    window.AppLogger?.debug('🔧 addOrderToPipeline called:', orderId, stageId);
+    window.AppLogger?.debug(' addOrderToPipeline called:', orderId, stageId);
     
     try {
         const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
         if (!session) {
-            console.error('❌ No session found');
+            console.error(' No session found');
             alert('Session expired. Please login again.');
             return;
         }
         
         const token = JSON.parse(session).token;
-        window.AppLogger?.debug('🔧 Fetching order details...');
+        window.AppLogger?.debug(' Fetching order details...');
         
         const orderResponse = await fetch(`/api/orders/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!orderResponse.ok) {
-            console.error('❌ Failed to fetch order');
+            console.error(' Failed to fetch order');
             alert('Failed to fetch order details');
             return;
         }
         
         const order = await orderResponse.json();
-        window.AppLogger?.debug('🔧 Order fetched, creating pipeline record...');
+        window.AppLogger?.debug(' Order fetched, creating pipeline record...');
         
         const response = await fetch('/api/pipeline-records', {
             method: 'POST',
@@ -255,20 +255,20 @@ async function addOrderToPipeline(orderId, stageId) {
             })
         });
         
-        window.AppLogger?.debug('🔧 API response:', response.status);
+        window.AppLogger?.debug(' API response:', response.status);
         
         if (response.ok) {
-            window.AppLogger?.debug('✅ Order added to pipeline successfully');
+            window.AppLogger?.debug(' Order added to pipeline successfully');
             if (window.loadDataFromDB) {
                 await window.loadDataFromDB();
             }
         } else {
             const error = await response.text();
-            console.error('❌ Failed to add order:', response.status, error);
+            console.error(' Failed to add order:', response.status, error);
             alert('Failed to add order to pipeline: ' + error);
         }
     } catch (err) {
-        console.error('❌ Add order error:', err);
+        console.error(' Add order error:', err);
         alert('Error adding order: ' + err.message);
     }
 }

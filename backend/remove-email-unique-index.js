@@ -12,10 +12,10 @@ async function removeEmailUniqueIndex() {
     // Drop the unique index on email
     try {
       await collection.dropIndex('email_1');
-      console.log('✓ Removed unique index on email field');
+      console.log(' Removed unique index on email field');
     } catch (error) {
       if (error.code === 27) {
-        console.log('✓ Index does not exist (already removed)');
+        console.log(' Index does not exist (already removed)');
       } else {
         throw error;
       }

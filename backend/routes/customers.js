@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const router = express.Router();
 
 // Get all customers (paginated)
@@ -150,6 +151,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
   try {
     const customer = new Customer(req.body);
     await customer.save();
+    invalidateDashboardStatsCache();
     res.status(201).json(customer);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -169,6 +171,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
       return res.status(404).json({ message: 'Customer not found' });
     }
     
+    invalidateDashboardStatsCache();
     res.json(customer);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -182,6 +185,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
+    invalidateDashboardStatsCache();
     res.json({ message: 'Customer deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

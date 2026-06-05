@@ -2,6 +2,7 @@ const express = require('express');
 const Payment = require('../models/Payment');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const router = express.Router();
 
 function normalizeMilestones(milestones = [], paymentAmount = 0) {
@@ -173,6 +174,7 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
       .populate('project', 'projectId name')
       .populate('processedBy', 'firstName lastName');
     
+    invalidateDashboardStatsCache();
     res.status(201).json(populatedPayment);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -230,6 +232,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
     }
     
     console.log('Payment updated successfully');
+    invalidateDashboardStatsCache();
     res.json(payment);
   } catch (error) {
     console.error('Update payment error:', error);
@@ -244,6 +247,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     if (!payment) {
       return res.status(404).json({ message: 'Payment not found' });
     }
+    invalidateDashboardStatsCache();
     res.json({ message: 'Payment deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

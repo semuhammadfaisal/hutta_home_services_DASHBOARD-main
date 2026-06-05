@@ -17,7 +17,7 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    console.log('❌ No token for:', req.method, req.originalUrl);
+    console.log(' No token for:', req.method, req.originalUrl);
     return res.status(401).json({ message: 'Access token required' });
   }
 
@@ -34,7 +34,7 @@ const authenticateToken = (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.log('❌ Invalid token for:', req.method, req.originalUrl);
+    console.log(' Invalid token for:', req.method, req.originalUrl);
     return res.status(403).json({ message: 'Invalid token' });
   }
 };

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Employee = require('../models/Employee');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const router = express.Router();
 
 // Get all employees
@@ -84,6 +85,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
   try {
     const employee = new Employee(req.body);
     await employee.save();
+    invalidateDashboardStatsCache();
     res.status(201).json(employee);
   } catch (error) {
     console.error('Employee creation error:', error);
@@ -110,6 +112,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
       return res.status(404).json({ message: 'Employee not found' });
     }
     
+    invalidateDashboardStatsCache();
     res.json(employee);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -123,6 +126,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
+    invalidateDashboardStatsCache();
     res.json({ message: 'Employee deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

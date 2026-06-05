@@ -1,6 +1,6 @@
 # Order Attachments - Visual Guide
 
-## 📸 What You'll See
+##  What You'll See
 
 ### 1. Order Modal - Documents Section
 
@@ -13,7 +13,7 @@ When creating or editing an order, scroll down to find the **Documents** section
 │  │ Additional notes about the order...   │ │
 │  └───────────────────────────────────────┘ │
 │                                             │
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌───────────────────────────────────────┐ │
 │  │ Choose Files                          │ │
 │  └───────────────────────────────────────┘ │
@@ -30,7 +30,7 @@ Files appear in preview with remove option:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌───────────────────────────────────────┐ │
 │  │ Choose Files                          │ │
 │  └───────────────────────────────────────┘ │
@@ -38,11 +38,11 @@ Files appear in preview with remove option:
 │  other documents                            │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
-│  │ 📄 invoice.pdf                  ❌  │   │
+│  │  invoice.pdf                    │   │
 │  ├─────────────────────────────────────┤   │
-│  │ 📷 before-photo.jpg             ❌  │   │
+│  │  before-photo.jpg               │   │
 │  ├─────────────────────────────────────┤   │
-│  │ 📝 contract.docx                ❌  │   │
+│  │  contract.docx                  │   │
 │  └─────────────────────────────────────┘   │
 └─────────────────────────────────────────────┘
 ```
@@ -53,7 +53,7 @@ Existing files shown with links:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌───────────────────────────────────────┐ │
 │  │ Choose Files                          │ │
 │  └───────────────────────────────────────┘ │
@@ -62,25 +62,25 @@ Existing files shown with links:
 │                                             │
 │  Existing Documents:                        │
 │  ┌─────────────────────────────────────┐   │
-│  │ 📄 invoice.pdf (link)           ❌  │   │
+│  │  invoice.pdf (link)             │   │
 │  ├─────────────────────────────────────┤   │
-│  │ 📷 before-photo.jpg (link)      ❌  │   │
+│  │  before-photo.jpg (link)        │   │
 │  └─────────────────────────────────────┘   │
 │                                             │
 │  [Click "Choose Files" to add more]        │
 └─────────────────────────────────────────────┘
 ```
 
-## 🎨 File Icons
+##  File Icons
 
 Different file types show different icons:
 
-- 📄 **PDF files**: `file-pdf` icon (red)
-- 📝 **Word docs**: `file-word` icon (blue)
-- 📷 **Images**: `file-image` icon (green)
-- 📋 **Other**: `file-alt` icon (gray)
+-  **PDF files**: `file-pdf` icon (red)
+-  **Word docs**: `file-word` icon (blue)
+-  **Images**: `file-image` icon (green)
+-  **Other**: `file-alt` icon (gray)
 
-## 🔄 User Flow Diagrams
+##  User Flow Diagrams
 
 ### Creating Order with Attachments
 
@@ -123,7 +123,7 @@ Existing files shown in preview
 │ Add Files?  │ Remove Files?│
 └─────────────┴─────────────┘
       ↓              ↓
-Click "Choose    Click ❌ icon
+Click "Choose    Click  icon
 Files"           on file
       ↓              ↓
 Select new       File removed
@@ -143,7 +143,7 @@ appear           ↓
             End
 ```
 
-## 🎯 Button States
+##  Button States
 
 ### Choose Files Button
 
@@ -161,19 +161,19 @@ appear           ↓
 └───────────────────────────────┘
 ```
 
-### Remove File Icon (❌)
+### Remove File Icon ()
 
 **Normal State:**
 ```
-📄 invoice.pdf                  ❌
+ invoice.pdf                  
 ```
 
 **Hover State:**
 ```
-📄 invoice.pdf                  ❌ (red, cursor: pointer)
+ invoice.pdf                   (red, cursor: pointer)
 ```
 
-## 📱 Responsive Design
+##  Responsive Design
 
 ### Desktop View
 ```
@@ -183,7 +183,7 @@ appear           ↓
 │  │ Order notes here...                        │ │
 │  └────────────────────────────────────────────┘ │
 │                                                  │
-│  📎 Documents                                    │
+│   Documents                                    │
 │  ┌────────────────────────────────────────────┐ │
 │  │ Choose Files                               │ │
 │  └────────────────────────────────────────────┘ │
@@ -191,8 +191,8 @@ appear           ↓
 │  documents                                       │
 │                                                  │
 │  ┌────────────────────────────────────────────┐ │
-│  │ 📄 invoice.pdf                         ❌  │ │
-│  │ 📷 photo.jpg                           ❌  │ │
+│  │  invoice.pdf                           │ │
+│  │  photo.jpg                             │ │
 │  └────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────┘
 ```
@@ -205,23 +205,23 @@ appear           ↓
 │  │ Order notes   │  │
 │  └────────────────┘  │
 │                      │
-│  📎 Documents        │
+│   Documents        │
 │  ┌────────────────┐  │
 │  │ Choose Files  │  │
 │  └────────────────┘  │
 │  Upload documents    │
 │                      │
 │  ┌────────────────┐  │
-│  │ 📄 invoice.pdf │  │
-│  │            ❌  │  │
+│  │  invoice.pdf │  │
+│  │              │  │
 │  ├────────────────┤  │
-│  │ 📷 photo.jpg   │  │
-│  │            ❌  │  │
+│  │  photo.jpg   │  │
+│  │              │  │
 │  └────────────────┘  │
 └──────────────────────┘
 ```
 
-## 🎨 Color Scheme
+##  Color Scheme
 
 - **Section Label**: Dark gray (#374151)
 - **Helper Text**: Light gray (#6b7280)
@@ -233,12 +233,12 @@ appear           ↓
   - Image: Green (#10b981)
   - Other: Gray (#6b7280)
 
-## 💡 Visual Cues
+##  Visual Cues
 
 ### Empty State
 ```
 ┌─────────────────────────────────────────────┐
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌───────────────────────────────────────┐ │
 │  │ Choose Files                          │ │
 │  └───────────────────────────────────────┘ │
@@ -252,7 +252,7 @@ appear           ↓
 ### With Files
 ```
 ┌─────────────────────────────────────────────┐
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌───────────────────────────────────────┐ │
 │  │ Choose Files                          │ │
 │  └───────────────────────────────────────┘ │
@@ -260,9 +260,9 @@ appear           ↓
 │  other documents                            │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
-│  │ 📄 invoice.pdf                  ❌  │   │
-│  │ 📷 before-photo.jpg             ❌  │   │
-│  │ 📝 contract.docx                ❌  │   │
+│  │  invoice.pdf                    │   │
+│  │  before-photo.jpg               │   │
+│  │  contract.docx                  │   │
 │  └─────────────────────────────────────┘   │
 │                                             │
 │  [3 files ready to upload]                 │
@@ -272,7 +272,7 @@ appear           ↓
 ### Loading State (During Upload)
 ```
 ┌─────────────────────────────────────────────┐
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌───────────────────────────────────────┐ │
 │  │ Choose Files                          │ │
 │  └───────────────────────────────────────┘ │
@@ -280,23 +280,23 @@ appear           ↓
 │  other documents                            │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
-│  │ 📄 invoice.pdf                  ❌  │   │
-│  │ 📷 before-photo.jpg             ❌  │   │
-│  │ 📝 contract.docx                ❌  │   │
+│  │  invoice.pdf                    │   │
+│  │  before-photo.jpg               │   │
+│  │  contract.docx                  │   │
 │  └─────────────────────────────────────┘   │
 │                                             │
-│  ⏳ Uploading documents...                 │
+│   Uploading documents...                 │
 └─────────────────────────────────────────────┘
 ```
 
-## 🎬 Animation States
+##  Animation States
 
 1. **File Added**: Fade in from top
 2. **File Removed**: Fade out and collapse
 3. **Hover**: Scale up slightly (1.02x)
 4. **Click**: Brief scale down (0.98x)
 
-## 📏 Spacing
+##  Spacing
 
 - Section padding: 16px
 - File item padding: 8px
@@ -304,22 +304,22 @@ appear           ↓
 - Icon size: 16px
 - Button padding: 12px 24px
 
-## 🎨 Typography
+##  Typography
 
 - **Section Label**: 14px, semi-bold
 - **Helper Text**: 12px, regular
 - **File Name**: 14px, regular
 - **Button Text**: 14px, medium
 
-## ✨ Accessibility
+##  Accessibility
 
-- ✅ Keyboard navigation supported
-- ✅ Screen reader friendly labels
-- ✅ High contrast colors
-- ✅ Focus indicators visible
-- ✅ ARIA labels on buttons
+-  Keyboard navigation supported
+-  Screen reader friendly labels
+-  High contrast colors
+-  Focus indicators visible
+-  ARIA labels on buttons
 
-## 🖱️ Interaction Patterns
+##  Interaction Patterns
 
 ### Click "Choose Files"
 1. Native file picker opens
@@ -328,7 +328,7 @@ appear           ↓
 4. Valid files added to preview
 5. Invalid files show error
 
-### Click Remove (❌)
+### Click Remove ()
 1. Confirmation prompt (optional)
 2. File removed from preview
 3. Smooth fade-out animation

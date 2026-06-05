@@ -40,7 +40,7 @@ async function initializeStages() {
 
         // Insert default stages
         await Stage.insertMany(defaultStages);
-        console.log('✓ Successfully initialized 10 pipeline stages');
+        console.log(' Successfully initialized 10 pipeline stages');
         
         // Display created stages
         const stages = await Stage.find().sort({ position: 1 });

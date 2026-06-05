@@ -3,9 +3,9 @@
 ## What It Does
 
 Orders in NO BID stages are **completely hidden** from:
-- ✅ Orders tab
-- ✅ Payments tab  
-- ✅ KPI calculations (revenue, order counts, etc.)
+-  Orders tab
+-  Payments tab  
+-  KPI calculations (revenue, order counts, etc.)
 
 Orders remain **visible only in Pipeline view** so you can track lost/declined opportunities.
 
@@ -57,17 +57,17 @@ node mark-stage-as-no-bid.js "Declined"
 ## Visual Indicators
 
 NO BID stages have:
-- 🚫 Red color scheme
+-  Red color scheme
 - Ban icon
 - Distinctive styling
 
 ## Important Notes
 
-- ✅ Orders in NO BID stages are **excluded from all calculations**
-- ✅ Payments for NO BID orders are **hidden from Payments tab**
-- ✅ NO BID orders **don't count in KPIs** (revenue, order counts, etc.)
-- ✅ You can **drag orders back** to normal stages anytime
-- ✅ **No data is lost** - orders are just hidden, not deleted
+-  Orders in NO BID stages are **excluded from all calculations**
+-  Payments for NO BID orders are **hidden from Payments tab**
+-  NO BID orders **don't count in KPIs** (revenue, order counts, etc.)
+-  You can **drag orders back** to normal stages anytime
+-  **No data is lost** - orders are just hidden, not deleted
 
 ## Troubleshooting
 

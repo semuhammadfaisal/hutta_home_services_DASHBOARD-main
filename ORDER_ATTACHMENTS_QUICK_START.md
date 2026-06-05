@@ -1,10 +1,10 @@
 # Order Attachments - Quick Start
 
-## ✅ Implementation Complete
+##  Implementation Complete
 
 File attachments have been added to orders. Here's how to use them:
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### 1. Restart Server
 
@@ -17,7 +17,7 @@ npm start
 
 Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac) to hard refresh
 
-## 📎 Using Order Attachments
+##  Using Order Attachments
 
 ### Add Files to New Order
 
@@ -47,8 +47,8 @@ Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac) to hard refresh
 1. Click on any order in **Orders** tab
 2. Scroll down to **"Documents"** section
 3. See all attached files with metadata
-4. Click **View** (👁️) to open in new tab
-5. Click **Download** (⬇️) to save to computer
+4. Click **View** () to open in new tab
+5. Click **Download** () to save to computer
 
 ### View from Pipeline
 
@@ -57,32 +57,32 @@ Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac) to hard refresh
 3. Scroll to **"Documents"** section
 4. View or download documents
 
-## 📋 File Specifications
+##  File Specifications
 
 - **Supported formats**: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG
 - **Max file size**: 10MB per file
 - **Max files**: 10 files at once
 - **Storage**: Files saved in `backend/uploads/`
 
-## 🎯 What Works Now
+##  What Works Now
 
-✅ Upload files when creating orders
-✅ Upload files when editing orders  
-✅ Remove existing files from orders
-✅ Multiple file upload support
-✅ File preview before saving
-✅ Files stored with order in database
-✅ **View documents in order details**
-✅ **Download documents from order details**
-✅ **Documents visible in Pipeline modal**
+ Upload files when creating orders
+ Upload files when editing orders  
+ Remove existing files from orders
+ Multiple file upload support
+ File preview before saving
+ Files stored with order in database
+ **View documents in order details**
+ **Download documents from order details**
+ **Documents visible in Pipeline modal**
 
-## 🔮 Coming Soon
+##  Coming Soon
 
 - Document preview (inline images, PDFs)
 - Bulk document download
 - Document categories/tags
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Files not uploading?
 
@@ -102,7 +102,7 @@ Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac) to hard refresh
 2. Click the X icon, then click "Save Order"
 3. Refresh page to see changes
 
-## 📝 Example Use Cases
+##  Example Use Cases
 
 1. **Invoices**: Attach vendor invoices to orders
 2. **Contracts**: Upload signed service agreements
@@ -111,7 +111,7 @@ Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac) to hard refresh
 5. **Permits**: Store building permits or licenses
 6. **Estimates**: Attach original estimates or quotes
 
-## 🔗 Related Features
+##  Related Features
 
 - Customer attachments (contracts, agreements)
 - Vendor attachments (licenses, insurance)

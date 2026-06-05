@@ -18,12 +18,12 @@ const Stage = require('./models/Stage');
 
 async function clearDatabase() {
   try {
-    console.log('🔌 Connecting to MongoDB...');
+    console.log(' Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB\n');
+    console.log(' Connected to MongoDB\n');
 
-    console.log('⚠️  WARNING: This will delete ALL data from the database!');
-    console.log('📊 Current data count:');
+    console.log('  WARNING: This will delete ALL data from the database!');
+    console.log(' Current data count:');
 
     // Show current counts
     const counts = {
@@ -45,53 +45,53 @@ async function clearDatabase() {
       console.log(`   ${collection}: ${count}`);
     });
 
-    console.log('\n🗑️  Clearing all collections...\n');
+    console.log('\n  Clearing all collections...\n');
 
     // Delete all documents from each collection
     await User.deleteMany({});
-    console.log('✅ Cleared Users');
+    console.log(' Cleared Users');
 
     await Order.deleteMany({});
-    console.log('✅ Cleared Orders');
+    console.log(' Cleared Orders');
 
     await Customer.deleteMany({});
-    console.log('✅ Cleared Customers');
+    console.log(' Cleared Customers');
 
     await Vendor.deleteMany({});
-    console.log('✅ Cleared Vendors');
+    console.log(' Cleared Vendors');
 
     await Employee.deleteMany({});
-    console.log('✅ Cleared Employees');
+    console.log(' Cleared Employees');
 
     await Payment.deleteMany({});
-    console.log('✅ Cleared Payments');
+    console.log(' Cleared Payments');
 
     await Project.deleteMany({});
-    console.log('✅ Cleared Projects');
+    console.log(' Cleared Projects');
 
     await Settings.deleteMany({});
-    console.log('✅ Cleared Settings');
+    console.log(' Cleared Settings');
 
     await Notification.deleteMany({});
-    console.log('✅ Cleared Notifications');
+    console.log(' Cleared Notifications');
 
     await PipelineRecord.deleteMany({});
-    console.log('✅ Cleared Pipeline Records');
+    console.log(' Cleared Pipeline Records');
 
     await PipelineMovement.deleteMany({});
-    console.log('✅ Cleared Pipeline Movements');
+    console.log(' Cleared Pipeline Movements');
 
     await Stage.deleteMany({});
-    console.log('✅ Cleared Stages');
+    console.log(' Cleared Stages');
 
-    console.log('\n✨ Database cleared successfully!');
-    console.log('💡 Note: You may want to run "node make-first-user-admin.js" to create an admin user');
+    console.log('\n Database cleared successfully!');
+    console.log(' Note: You may want to run "node make-first-user-admin.js" to create an admin user');
 
   } catch (error) {
-    console.error('❌ Error clearing database:', error);
+    console.error(' Error clearing database:', error);
   } finally {
     await mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
+    console.log('\n Database connection closed');
     process.exit(0);
   }
 }

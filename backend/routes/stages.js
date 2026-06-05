@@ -4,12 +4,14 @@ const Stage = require('../models/Stage');
 const memCache = require('../utils/memoryCache');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 
 const STAGES_CACHE_KEY = 'stages:list:v1';
 const STAGES_TTL_MS = parseInt(process.env.STAGES_CACHE_MS || '30000', 10);
 
 function invalidateStagesCache() {
     memCache.del(STAGES_CACHE_KEY);
+    invalidateDashboardStatsCache();
 }
 
 // Get all stages

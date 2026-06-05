@@ -1942,13 +1942,13 @@ function updateStatistics() {
 }
 
 async function clearPipelineData() {
-    const password = prompt('⚠️ WARNING: This will delete ALL pipeline data!\n\nEnter admin password to confirm:');
+    const password = prompt(' WARNING: This will delete ALL pipeline data!\n\nEnter admin password to confirm:');
     
     if (!password) return;
     
     // Simple password check (you can change this password)
     if (password !== 'admin123') {
-        alert('❌ Incorrect password. Access denied.');
+        alert(' Incorrect password. Access denied.');
         return;
     }
     
@@ -1972,7 +1972,7 @@ async function clearPipelineData() {
         
         if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
-        alert('✅ Pipeline data cleared successfully!');
+        alert(' Pipeline data cleared successfully!');
     } catch (error) {
         alert('Error clearing data: ' + error.message);
     }

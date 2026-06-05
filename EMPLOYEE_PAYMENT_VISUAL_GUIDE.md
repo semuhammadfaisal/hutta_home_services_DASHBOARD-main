@@ -23,7 +23,7 @@
 │                                                         │
 ├─────────────────────────────────────────────────────────┤
 │  ┌───────────────────────────────────────────────────┐ │
-│  │ 🟢 EMPLOYEE ASSIGNMENT              [Employee]   │ │
+│  │  EMPLOYEE ASSIGNMENT              [Employee]   │ │
 │  ├───────────────────────────────────────────────────┤ │
 │  │                                                   │ │
 │  │  Name: John Doe                                  │ │
@@ -31,14 +31,14 @@
 │  │  Phone: (555) 123-4567                           │ │
 │  │                                                   │ │
 │  ├───────────────────────────────────────────────────┤ │
-│  │  EMPLOYEE PAYMENT              [🟡 Pending]      │ │
+│  │  EMPLOYEE PAYMENT              [ Pending]      │ │
 │  ├───────────────────────────────────────────────────┤ │
 │  │                                                   │ │
 │  │  Amount: [____]    Status: [Pending ▼]          │ │
 │  │  Date: [____]      Method: [Select ▼]           │ │
 │  │  Notes: [_____________________________]          │ │
 │  │                                                   │ │
-│  │         [💾 Save Employee Payment]               │ │
+│  │         [ Save Employee Payment]               │ │
 │  │                                                   │ │
 │  └───────────────────────────────────────────────────┘ │
 │                                                         │
@@ -53,7 +53,7 @@
 
 ```
 ╔═══════════════════════════════════════════════════════╗
-║  🟢 EMPLOYEE ASSIGNMENT                  [Employee]  ║
+║   EMPLOYEE ASSIGNMENT                  [Employee]  ║
 ╠═══════════════════════════════════════════════════════╣
 ║  Create milestones for partial client payments       ║
 ╠═══════════════════════════════════════════════════════╣
@@ -65,7 +65,7 @@
 ║  └─────────────┴─────────────┴─────────────┘        ║
 ║                                                       ║
 ╠═══════════════════════════════════════════════════════╣
-║  EMPLOYEE PAYMENT                    [🟡 Pending]    ║
+║  EMPLOYEE PAYMENT                    [ Pending]    ║
 ╠═══════════════════════════════════════════════════════╣
 ║                                                       ║
 ║  ┌─────────────────────────────────────────────────┐ ║
@@ -80,7 +80,7 @@
 ║  │                                                 │ ║
 ║  └─────────────────────────────────────────────────┘ ║
 ║                                                       ║
-║  [💾 Save Employee Payment]                          ║
+║  [ Save Employee Payment]                          ║
 ║                                                       ║
 ╚═══════════════════════════════════════════════════════╝
 ```
@@ -90,21 +90,21 @@
 ### Pending Status
 ```
 ┌─────────────────────┐
-│ 🕐 Pending          │  ← Yellow background
+│  Pending          │  ← Yellow background
 └─────────────────────┘
 ```
 
 ### Paid Status
 ```
 ┌─────────────────────┐
-│ ✅ Paid             │  ← Green background
+│  Paid             │  ← Green background
 └─────────────────────┘
 ```
 
 ### Cancelled Status
 ```
 ┌─────────────────────┐
-│ 🚫 Cancelled        │  ← Red background
+│  Cancelled        │  ← Red background
 └─────────────────────┘
 ```
 
@@ -172,21 +172,21 @@
 ### Default
 ```
 ┌─────────────────────────────┐
-│ 💾 Save Employee Payment    │  ← Blue background
+│  Save Employee Payment    │  ← Blue background
 └─────────────────────────────┘
 ```
 
 ### Hover
 ```
 ┌─────────────────────────────┐
-│ 💾 Save Employee Payment    │  ← Darker blue + lift
+│  Save Employee Payment    │  ← Darker blue + lift
 └─────────────────────────────┘
 ```
 
 ### Loading
 ```
 ┌─────────────────────────────┐
-│ ⏳ Saving...                │  ← Disabled state
+│  Saving...                │  ← Disabled state
 └─────────────────────────────┘
 ```
 
@@ -214,11 +214,11 @@ Modal Refreshed
 
 ## Data Validation
 
-✅ Amount must be ≥ 0
-✅ Status must be: pending, paid, or cancelled
-✅ Date must be valid date format
-✅ Method must be: cash, bank-transfer, check, or online
-✅ Notes can be any text (optional)
+ Amount must be ≥ 0
+ Status must be: pending, paid, or cancelled
+ Date must be valid date format
+ Method must be: cash, bank-transfer, check, or online
+ Notes can be any text (optional)
 
 ## Empty States
 

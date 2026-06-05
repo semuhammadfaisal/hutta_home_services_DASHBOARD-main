@@ -5,7 +5,7 @@ require('dotenv').config();
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
-    console.log('✅ Connected to MongoDB\n');
+    console.log(' Connected to MongoDB\n');
     
     const stages = await Stage.find().lean();
     

@@ -1,6 +1,6 @@
 # Order Attachments - Before & After
 
-## 📊 What Changed
+##  What Changed
 
 ### BEFORE (Without Attachments)
 
@@ -28,9 +28,9 @@
 │  Amount: $500                               │
 │  Notes: Fix AC unit                         │
 │                                             │
-│  ❌ No way to attach documents              │
-│  ❌ No invoice storage                      │
-│  ❌ No photo documentation                  │
+│   No way to attach documents              │
+│   No invoice storage                      │
+│   No photo documentation                  │
 └─────────────────────────────────────────────┘
 ```
 
@@ -48,15 +48,15 @@
 │  Amount: $500                               │
 │  Notes: Fix AC unit                         │
 │                                             │
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌───────────────────────────────────────┐ │
 │  │ Choose Files                          │ │
 │  └───────────────────────────────────────┘ │
 │  Upload invoices, contracts, photos...     │
 │                                             │
-│  ✅ Can attach invoice                      │
-│  ✅ Can attach photos                       │
-│  ✅ Can attach contracts                    │
+│   Can attach invoice                      │
+│   Can attach photos                       │
+│   Can attach contracts                    │
 │                                             │
 │  [Cancel]  [Save Order]                     │
 └─────────────────────────────────────────────┘
@@ -72,40 +72,40 @@
 │  Amount: $500                               │
 │  Notes: Fix AC unit                         │
 │                                             │
-│  📎 Documents                               │
+│   Documents                               │
 │  ┌─────────────────────────────────────┐   │
-│  │ 📄 vendor-invoice.pdf               │   │
-│  │ 2.5 MB • Jan 15, 2024    👁️  ⬇️     │   │
+│  │  vendor-invoice.pdf               │   │
+│  │ 2.5 MB • Jan 15, 2024           │   │
 │  ├─────────────────────────────────────┤   │
-│  │ 📷 before-photo.jpg                 │   │
-│  │ 1.8 MB • Jan 15, 2024    👁️  ⬇️     │   │
+│  │  before-photo.jpg                 │   │
+│  │ 1.8 MB • Jan 15, 2024           │   │
 │  ├─────────────────────────────────────┤   │
-│  │ 📷 after-photo.jpg                  │   │
-│  │ 2.1 MB • Jan 15, 2024    👁️  ⬇️     │   │
+│  │  after-photo.jpg                  │   │
+│  │ 2.1 MB • Jan 15, 2024           │   │
 │  └─────────────────────────────────────┘   │
 │                                             │
-│  ✅ View invoice instantly                  │
-│  ✅ Download photos                         │
-│  ✅ Access all documents                    │
+│   View invoice instantly                  │
+│   Download photos                         │
+│   Access all documents                    │
 └─────────────────────────────────────────────┘
 ```
 
-## 🎯 Feature Comparison
+##  Feature Comparison
 
 | Feature | Before | After |
 |---------|--------|-------|
-| **Upload Files** | ❌ Not possible | ✅ Full support |
-| **Store Documents** | ❌ No storage | ✅ Secure storage |
-| **View Documents** | ❌ Can't view | ✅ View in browser |
-| **Download Files** | ❌ Can't download | ✅ Download anytime |
-| **File Types** | ❌ N/A | ✅ PDF, DOC, Images |
-| **Multiple Files** | ❌ N/A | ✅ Up to 10 files |
-| **File Metadata** | ❌ N/A | ✅ Size, date, type |
-| **Edit Files** | ❌ N/A | ✅ Add/remove files |
-| **Pipeline View** | ❌ N/A | ✅ Show in modal |
-| **Order Details** | ❌ N/A | ✅ Show in page |
+| **Upload Files** |  Not possible |  Full support |
+| **Store Documents** |  No storage |  Secure storage |
+| **View Documents** |  Can't view |  View in browser |
+| **Download Files** |  Can't download |  Download anytime |
+| **File Types** |  N/A |  PDF, DOC, Images |
+| **Multiple Files** |  N/A |  Up to 10 files |
+| **File Metadata** |  N/A |  Size, date, type |
+| **Edit Files** |  N/A |  Add/remove files |
+| **Pipeline View** |  N/A |  Show in modal |
+| **Order Details** |  N/A |  Show in page |
 
-## 📈 Workflow Improvements
+##  Workflow Improvements
 
 ### BEFORE: Manual Document Management
 
@@ -120,11 +120,11 @@
 ```
 
 **Problems:**
-- ❌ Files scattered everywhere
-- ❌ Hard to find documents
-- ❌ No central storage
-- ❌ Risk of data loss
-- ❌ Time-consuming searches
+-  Files scattered everywhere
+-  Hard to find documents
+-  No central storage
+-  Risk of data loss
+-  Time-consuming searches
 
 ---
 
@@ -141,13 +141,13 @@
 ```
 
 **Benefits:**
-- ✅ All files in one place
-- ✅ Instant access
-- ✅ Central storage
-- ✅ No data loss
-- ✅ Quick retrieval
+-  All files in one place
+-  Instant access
+-  Central storage
+-  No data loss
+-  Quick retrieval
 
-## 🎨 Visual Improvements
+##  Visual Improvements
 
 ### BEFORE: Plain Order View
 ```
@@ -169,16 +169,16 @@
 │  Amount: $500            │
 │  Status: Completed       │
 │                          │
-│  📎 3 Documents          │
-│  📄 Invoice              │
-│  📷 Before Photo         │
-│  📷 After Photo          │
+│   3 Documents          │
+│   Invoice              │
+│   Before Photo         │
+│   After Photo          │
 │                          │
 │  [Edit] [Delete] [View]  │
 └──────────────────────────┘
 ```
 
-## 💼 Real-World Use Cases
+##  Real-World Use Cases
 
 ### Use Case 1: HVAC Repair
 
@@ -194,12 +194,12 @@ Order: HVAC Repair - $500
 **AFTER:**
 ```
 Order: HVAC Repair - $500
-📎 Attachments:
+ Attachments:
   - vendor-invoice.pdf
   - before-photo.jpg
   - after-photo.jpg
   - parts-receipt.pdf
-✅ Everything in one place!
+ Everything in one place!
 ```
 
 ### Use Case 2: Plumbing Job
@@ -216,12 +216,12 @@ Order: Pipe Replacement - $800
 **AFTER:**
 ```
 Order: Pipe Replacement - $800
-📎 Attachments:
+ Attachments:
   - service-contract.pdf
   - before-damage.jpg
   - after-repair.jpg
   - city-permit.pdf
-✅ Complete documentation!
+ Complete documentation!
 ```
 
 ### Use Case 3: Electrical Work
@@ -238,16 +238,16 @@ Order: Panel Upgrade - $1200
 **AFTER:**
 ```
 Order: Panel Upgrade - $1200
-📎 Attachments:
+ Attachments:
   - original-estimate.pdf
   - old-panel.jpg
   - new-panel.jpg
   - final-invoice.pdf
   - inspection-cert.pdf
-✅ Professional records!
+ Professional records!
 ```
 
-## 📊 Impact Summary
+##  Impact Summary
 
 ### Time Savings
 - **Before**: 5-10 minutes to find documents
@@ -269,7 +269,7 @@ Order: Panel Upgrade - $1200
 - **After**: Complete order records
 - **Improvement**: Professional presentation
 
-## 🎯 Key Improvements
+##  Key Improvements
 
 ### 1. Centralization
 **Before**: Files everywhere
@@ -296,22 +296,22 @@ Order: Panel Upgrade - $1200
 **After**: Secure storage
 **Impact**: Data protected
 
-## ✨ Summary
+##  Summary
 
 ### What You Gain
 
-✅ **Centralized Storage** - All files in one place
-✅ **Instant Access** - View/download anytime
-✅ **Better Organization** - No more searching
-✅ **Professional Records** - Complete documentation
-✅ **Time Savings** - Quick file retrieval
-✅ **Data Security** - Secure backup
-✅ **Easy Sharing** - Share order with files
-✅ **Complete History** - Full order documentation
+ **Centralized Storage** - All files in one place
+ **Instant Access** - View/download anytime
+ **Better Organization** - No more searching
+ **Professional Records** - Complete documentation
+ **Time Savings** - Quick file retrieval
+ **Data Security** - Secure backup
+ **Easy Sharing** - Share order with files
+ **Complete History** - Full order documentation
 
 ### What You Lose
 
-❌ Nothing! Only improvements!
+ Nothing! Only improvements!
 
 ---
 

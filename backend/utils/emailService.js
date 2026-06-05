@@ -295,7 +295,7 @@ const sendWelcomeEmail = async (email, password, firstName) => {
           </div>
           
           <div class="content">
-            <div class="greeting">Hello ${firstName}! 👋</div>
+            <div class="greeting">Hello ${firstName}! </div>
             
             <p class="intro-text">
               Welcome to Hutta Home Services! Your account has been successfully created by our administrator. 
@@ -304,20 +304,20 @@ const sendWelcomeEmail = async (email, password, firstName) => {
             
             <div class="credentials-box">
               <div class="credentials-title">
-                🔐 Your Login Credentials
+                 Your Login Credentials
               </div>
               <div class="credential-item">
-                <div class="credential-label">📧 Email Address</div>
+                <div class="credential-label"> Email Address</div>
                 <div class="credential-value">${email}</div>
               </div>
               <div class="credential-item">
-                <div class="credential-label">🔑 Password</div>
+                <div class="credential-label"> Password</div>
                 <div class="credential-value">${password}</div>
               </div>
             </div>
             
             <div class="button-container">
-              <a href="${loginUrl}" class="button">🚀 Login to Dashboard</a>
+              <a href="${loginUrl}" class="button"> Login to Dashboard</a>
             </div>
             
             <div class="divider"></div>

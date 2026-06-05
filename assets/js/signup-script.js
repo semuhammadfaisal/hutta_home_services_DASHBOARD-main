@@ -127,10 +127,10 @@ class SignupManager {
                         <i class="fas fa-info-circle" style="color: #3b82f6;"></i> What's Next?
                     </h3>
                     <div style="color: #6b7280; line-height: 1.8;">
-                        <p style="margin-bottom: 12px;">✅ You requested: <strong style="color: #111827;">${roleNames[requestedRole]}</strong></p>
-                        <p style="margin-bottom: 12px;">⏳ Your request is pending admin approval</p>
-                        <p style="margin-bottom: 12px;">📧 You'll receive an email once approved</p>
-                        <p>🔐 After approval, you can login with full access</p>
+                        <p style="margin-bottom: 12px;"> You requested: <strong style="color: #111827;">${roleNames[requestedRole]}</strong></p>
+                        <p style="margin-bottom: 12px;"> Your request is pending admin approval</p>
+                        <p style="margin-bottom: 12px;"> You'll receive an email once approved</p>
+                        <p> After approval, you can login with full access</p>
                     </div>
                 </div>
                 

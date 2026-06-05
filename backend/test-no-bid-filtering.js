@@ -7,7 +7,7 @@ async function testNoBidFiltering() {
   try {
     require('dotenv').config();
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB\n');
+    console.log(' Connected to MongoDB\n');
     
     // Step 1: Find NO BID stages
     const noBidStages = await Stage.find({ isNoBid: true }).select('_id name').lean();
@@ -16,7 +16,7 @@ async function testNoBidFiltering() {
     noBidStages.forEach(s => console.log(`  - ${s.name} (${s._id})`));
     
     if (noBidStages.length === 0) {
-      console.log('\n❌ NO NO BID STAGES FOUND!');
+      console.log('\n NO NO BID STAGES FOUND!');
       console.log('Run: node mark-stage-as-no-bid.js "Lost"');
       process.exit(1);
     }
@@ -35,7 +35,7 @@ async function testNoBidFiltering() {
     console.log('  Order IDs:', noBidOrderIds.length);
     
     if (noBidOrderIds.length === 0) {
-      console.log('\n⚠️  No orders in NO BID stages');
+      console.log('\n  No orders in NO BID stages');
       console.log('This is normal if you haven\'t moved any orders to Lost stage yet');
       process.exit(0);
     }
@@ -67,15 +67,15 @@ async function testNoBidFiltering() {
     console.log(`  Total Revenue: $${totalVisibleAmount.toLocaleString()}`);
     console.log(`  Hidden Revenue: $${totalNoBidAmount.toLocaleString()}`);
     
-    console.log('\n✅ Test complete');
+    console.log('\n Test complete');
     console.log('\nIf dashboard shows different values:');
     console.log('  1. Restart your backend server');
     console.log('  2. Hard refresh browser (Ctrl+F5)');
-    console.log('  3. Check server console for "🚫 Excluding X NO BID orders"');
+    console.log('  3. Check server console for " Excluding X NO BID orders"');
     
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error(' Error:', error.message);
     process.exit(1);
   }
 }

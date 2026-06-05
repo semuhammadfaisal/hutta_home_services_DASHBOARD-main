@@ -3,6 +3,7 @@ const router = express.Router();
 const PipelineRecord = require('../models/PipelineRecord');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
+const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 
 // KPI: payments collected = sum of budgets for records in Paid/Close stages + received/completed payments not already counted
 // Exclude NO BID stages from calculations
@@ -105,6 +106,7 @@ router.post('/', async (req, res) => {
             console.log(`Set order ${req.body.orderId} initial pipelineStage to: ${stageName}`);
         }
         
+        invalidateDashboardStatsCache();
         res.status(201).json(newRecord);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -154,24 +156,25 @@ router.put('/:id', async (req, res) => {
                     order.amount = budgetAmount;
                     order.profit = budgetAmount - (order.vendorCost || 0) - (order.processingFee || 0);
                     await order.save();
-                    console.log(`✅ Updated order amount: ${order.orderId} from ${prevAmount} to ${budgetAmount}`);
+                    console.log(` Updated order amount: ${order.orderId} from ${prevAmount} to ${budgetAmount}`);
 
                     const payment = await Payment.findOne({ order: order._id });
                     if (payment) {
                         payment.amount = budgetAmount;
                         await payment.save();
-                        console.log(`✅ Updated payment amount: ${payment.paymentId} to ${budgetAmount}`);
+                        console.log(` Updated payment amount: ${payment.paymentId} to ${budgetAmount}`);
                     } else {
-                        console.log('⚠️ No payment found for order:', order._id);
+                        console.log(' No payment found for order:', order._id);
                     }
                 } else {
-                    console.log('⚠️ No linked order found for pipeline record:', record._id);
+                    console.log(' No linked order found for pipeline record:', record._id);
                 }
             } catch (syncError) {
-                console.error('❌ Error syncing budget to order/payment:', syncError.message);
+                console.error(' Error syncing budget to order/payment:', syncError.message);
             }
         }
         
+        invalidateDashboardStatsCache();
         res.json(updatedRecord);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -235,12 +238,12 @@ router.patch('/:id/stage', async (req, res) => {
                                 payment.status = 'received';
                                 payment.paymentDate = new Date();
                                 await payment.save();
-                                console.log(`✅ Auto-updated payment ${payment.paymentId} to 'received'`);
+                                console.log(` Auto-updated payment ${payment.paymentId} to 'received'`);
                             } else {
                                 console.log('Payment already marked as received/completed');
                             }
                         } else {
-                            console.log('⚠️ No payment found for order:', record.orderId);
+                            console.log(' No payment found for order:', record.orderId);
                         }
                     }
                     
@@ -250,9 +253,9 @@ router.patch('/:id/stage', async (req, res) => {
                     // Verify the update was persisted
                     const verifyOrder = await Order.findById(record.orderId);
                     if (verifyOrder && verifyOrder.pipelineStage === newStageName) {
-                        console.log('✅ Order update verified in database');
+                        console.log(' Order update verified in database');
                     } else {
-                        console.log('❌ Order update not yet persisted, current stage:', verifyOrder?.pipelineStage);
+                        console.log(' Order update not yet persisted, current stage:', verifyOrder?.pipelineStage);
                     }
                 } else {
                     console.log(`Order ${record.orderId} not found or not updated`);
@@ -274,9 +277,9 @@ router.patch('/:id/stage', async (req, res) => {
                         status: 'received',
                         paymentDate: new Date()
                     });
-                    console.log(`✅ Auto-updated unlinked payment ${payments[0].paymentId || payments[0]._id} to 'received'`);
+                    console.log(` Auto-updated unlinked payment ${payments[0].paymentId || payments[0]._id} to 'received'`);
                 } else {
-                    console.log(`⚠️ Found ${payments.length} matching payments by budget — skipping ambiguous update`);
+                    console.log(` Found ${payments.length} matching payments by budget — skipping ambiguous update`);
                 }
             } catch (e) {
                 console.warn('Could not auto-update unlinked payment:', e.message);
@@ -289,6 +292,7 @@ router.patch('/:id/stage', async (req, res) => {
         }
         
         console.log('=== PIPELINE STAGE UPDATE COMPLETE ===');
+        invalidateDashboardStatsCache();
         res.json(updatedRecord);
     } catch (error) {
         console.error('Pipeline stage update error:', error);
@@ -305,6 +309,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
         }
 
         await record.deleteOne();
+        invalidateDashboardStatsCache();
         res.json({ message: 'Record deleted' });
     } catch (error) {
         res.status(500).json({ message: error.message });

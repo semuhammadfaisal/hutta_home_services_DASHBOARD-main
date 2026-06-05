@@ -5,18 +5,18 @@ const User = require('./models/User');
 async function assignRoles() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB\n');
+    console.log(' Connected to MongoDB\n');
 
     // Get all users
     const users = await User.find();
     
     if (users.length === 0) {
-      console.log('❌ No users found in database');
+      console.log(' No users found in database');
       await mongoose.disconnect();
       return;
     }
 
-    console.log('📋 Current Users:\n');
+    console.log(' Current Users:\n');
     users.forEach((user, index) => {
       console.log(`${index + 1}. ${user.email} - Role: ${user.role || 'NO ROLE'}`);
     });
@@ -40,10 +40,10 @@ async function assignRoles() {
     // Method 3: Make first user admin
     await makeFirstUserAdmin();
 
-    console.log('\n✅ Role assignment complete!');
+    console.log('\n Role assignment complete!');
     await mongoose.disconnect();
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error(' Error:', error.message);
     process.exit(1);
   }
 }
@@ -54,9 +54,9 @@ async function assignRoleByEmail(email, role) {
   if (user) {
     user.role = role;
     await user.save();
-    console.log(`✅ Assigned ${role} to ${email}`);
+    console.log(` Assigned ${role} to ${email}`);
   } else {
-    console.log(`⚠️  User ${email} not found`);
+    console.log(`  User ${email} not found`);
   }
 }
 
@@ -69,7 +69,7 @@ async function assignDefaultRole(defaultRole) {
   for (const user of usersWithoutRole) {
     user.role = defaultRole;
     await user.save();
-    console.log(`✅ Assigned ${defaultRole} to ${user.email}`);
+    console.log(` Assigned ${defaultRole} to ${user.email}`);
   }
 }
 
@@ -79,7 +79,7 @@ async function makeFirstUserAdmin() {
   if (firstUser && firstUser.role !== 'admin') {
     firstUser.role = 'admin';
     await firstUser.save();
-    console.log(`✅ Made ${firstUser.email} an admin`);
+    console.log(` Made ${firstUser.email} an admin`);
   }
 }
 

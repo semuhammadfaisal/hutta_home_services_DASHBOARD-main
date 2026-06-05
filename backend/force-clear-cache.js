@@ -8,13 +8,13 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-console.log('\n🔧 CLEAR STATS CACHE\n');
+console.log('\n CLEAR STATS CACHE\n');
 console.log('This will force refresh the dashboard KPIs.');
 console.log('Make sure your server is running!\n');
 
 rl.question('Enter your auth token (from browser localStorage): ', async (token) => {
   if (!token) {
-    console.log('❌ Token required');
+    console.log(' Token required');
     process.exit(1);
   }
 
@@ -30,13 +30,13 @@ rl.question('Enter your auth token (from browser localStorage): ', async (token)
     });
 
     if (response.ok) {
-      console.log('\n✅ Stats cache cleared!');
+      console.log('\n Stats cache cleared!');
       console.log('Refresh your browser to see updated KPIs.');
     } else {
-      console.log('\n❌ Failed:', response.status, response.statusText);
+      console.log('\n Failed:', response.status, response.statusText);
     }
   } catch (error) {
-    console.error('\n❌ Error:', error.message);
+    console.error('\n Error:', error.message);
     console.log('\nMake sure your server is running on http://localhost:3000');
   }
   

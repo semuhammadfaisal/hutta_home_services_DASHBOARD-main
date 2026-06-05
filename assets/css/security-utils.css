@@ -31,7 +31,7 @@
 }
 
 .validation-error::before {
-    content: "⚠";
+    content: "";
     font-size: 14px;
 }
 
@@ -45,7 +45,7 @@
 }
 
 .validation-success::before {
-    content: "✓";
+    content: "";
     font-size: 14px;
     font-weight: bold;
 }

@@ -1,13 +1,13 @@
 # Order Attachments Display - Update
 
-## ✅ What's New
+##  What's New
 
 Order attachments are now visible in both order detail views:
 
 1. **Order Information Page** (full page view)
 2. **Pipeline Order Detail Modal** (popup view)
 
-## 📍 Where to See Documents
+##  Where to See Documents
 
 ### 1. From Orders Tab
 
@@ -22,7 +22,7 @@ Order attachments are now visible in both order detail views:
 3. Scroll down to see **"Documents"** section
 4. View, download, or open documents
 
-## 🎨 Document Display Features
+##  Document Display Features
 
 Each document shows:
 - **File icon** (PDF, Word, Image, etc.)
@@ -30,27 +30,27 @@ Each document shows:
 - **File size** (e.g., "2.5 MB")
 - **Upload date** (e.g., "Jan 15, 2024")
 - **Action buttons**:
-  - 👁️ **View** - Opens document in new tab
-  - ⬇️ **Download** - Downloads document to computer
+  -  **View** - Opens document in new tab
+  -  **Download** - Downloads document to computer
 
-## 📋 Document Section Layout
+##  Document Section Layout
 
 ```
 ┌─────────────────────────────────────────────┐
-│  📎 Documents                               │
+│   Documents                               │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
-│  │ 📄 invoice.pdf                      │   │
+│  │  invoice.pdf                      │   │
 │  │ 2.5 MB • Jan 15, 2024               │   │
-│  │                          👁️  ⬇️     │   │
+│  │                                 │   │
 │  ├─────────────────────────────────────┤   │
-│  │ 📷 before-photo.jpg                 │   │
+│  │  before-photo.jpg                 │   │
 │  │ 1.8 MB • Jan 15, 2024               │   │
-│  │                          👁️  ⬇️     │   │
+│  │                                 │   │
 │  ├─────────────────────────────────────┤   │
-│  │ 📝 contract.docx                    │   │
+│  │  contract.docx                    │   │
 │  │ 156 KB • Jan 15, 2024               │   │
-│  │                          👁️  ⬇️     │   │
+│  │                                 │   │
 │  └─────────────────────────────────────┘   │
 └─────────────────────────────────────────────┘
 ```
@@ -59,13 +59,13 @@ Each document shows:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  📎 Documents                               │
+│   Documents                               │
 │                                             │
 │  No documents uploaded                      │
 └─────────────────────────────────────────────┘
 ```
 
-## 🔄 Complete User Flow
+##  Complete User Flow
 
 ### Viewing Documents
 
@@ -96,7 +96,7 @@ Click View/Download
 Access Document
 ```
 
-## 🎯 Use Cases
+##  Use Cases
 
 ### 1. Invoice Management
 - Upload vendor invoice when creating order
@@ -118,19 +118,19 @@ Access Document
 - View receipts in order
 - Download for expense reports
 
-## 🖱️ Button Actions
+##  Button Actions
 
-### View Button (👁️)
+### View Button ()
 - Opens document in new browser tab
 - Works for PDFs, images, text files
 - Browser handles display
 
-### Download Button (⬇️)
+### Download Button ()
 - Downloads file to computer
 - Saves with original filename
 - Works for all file types
 
-## 📱 Responsive Design
+##  Responsive Design
 
 ### Desktop
 - Documents displayed in grid
@@ -147,13 +147,13 @@ Access Document
 - Large touch targets
 - Optimized for small screens
 
-## 🎨 Visual Indicators
+##  Visual Indicators
 
 ### File Type Icons
-- 📄 **PDF** - Red icon
-- 📝 **Word** - Blue icon
-- 📷 **Image** - Green icon
-- 📋 **Other** - Gray icon
+-  **PDF** - Red icon
+-  **Word** - Blue icon
+-  **Image** - Green icon
+-  **Other** - Gray icon
 
 ### File Size Display
 - Bytes: "245 B"
@@ -166,18 +166,18 @@ Access Document
 - "Feb 3, 2024"
 - "Dec 25, 2023"
 
-## ✨ Features
+##  Features
 
-✅ View documents in order details
-✅ Download documents to computer
-✅ Open documents in new tab
-✅ See file metadata (size, date)
-✅ Visual file type indicators
-✅ Works in both views (page & modal)
-✅ Responsive design
-✅ Touch-friendly on mobile
+ View documents in order details
+ Download documents to computer
+ Open documents in new tab
+ See file metadata (size, date)
+ Visual file type indicators
+ Works in both views (page & modal)
+ Responsive design
+ Touch-friendly on mobile
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### 1. Restart Server
 ```bash
@@ -194,7 +194,7 @@ Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac)
 3. Scroll to Documents section
 4. Try View and Download buttons
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Documents not showing?
 - Hard refresh browser (Ctrl+F5)
@@ -211,7 +211,7 @@ Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac)
 - Check if file exists on server
 - Try right-click "Save As"
 
-## 📊 What Changed
+##  What Changed
 
 ### HTML Changes
 - Added Documents section to Order Detail page
@@ -228,13 +228,13 @@ Press `Ctrl+F5` (Windows) or `Cmd+Shift+R` (Mac)
 - Uses existing download/view functions
 - No API changes needed
 
-## 🎉 Summary
+##  Summary
 
 Order attachments are now fully visible and accessible in:
-- ✅ Order Information page (full view)
-- ✅ Pipeline Order Detail modal (popup)
-- ✅ View and download functionality
-- ✅ File metadata display
-- ✅ Responsive design
+-  Order Information page (full view)
+-  Pipeline Order Detail modal (popup)
+-  View and download functionality
+-  File metadata display
+-  Responsive design
 
 **Just restart server and refresh browser to see the changes!**

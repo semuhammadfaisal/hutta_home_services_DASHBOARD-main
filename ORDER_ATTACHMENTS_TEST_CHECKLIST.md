@@ -1,13 +1,13 @@
 # Order Attachments - Test Checklist
 
-## ✅ Pre-Testing Setup
+##  Pre-Testing Setup
 
 - [ ] Server restarted (`cd backend && npm start`)
 - [ ] Browser hard refreshed (Ctrl+F5 or Cmd+Shift+R)
 - [ ] Logged into dashboard
 - [ ] Test files prepared (PDF, image, document)
 
-## 📝 Test Scenarios
+##  Test Scenarios
 
 ### 1. Create Order with Attachments
 
@@ -112,7 +112,7 @@
 
 **Expected Result:** Previous files cleared
 
-## 🐛 Common Issues to Check
+##  Common Issues to Check
 
 ### Files Not Uploading
 
@@ -135,41 +135,41 @@
 - [ ] Check for JavaScript errors in console
 - [ ] Verify removeExistingOrderDoc function exists
 
-## 📊 Test Results
+##  Test Results
 
 | Test | Status | Notes |
 |------|--------|-------|
-| Create with attachments | ⬜ | |
-| Create without attachments | ⬜ | |
-| Add attachments to existing | ⬜ | |
-| Remove attachments | ⬜ | |
-| Add and remove together | ⬜ | |
-| Cancel without saving | ⬜ | |
-| File type validation | ⬜ | |
-| File size validation | ⬜ | |
-| Multiple files | ⬜ | |
-| Modal cleanup | ⬜ | |
+| Create with attachments |  | |
+| Create without attachments |  | |
+| Add attachments to existing |  | |
+| Remove attachments |  | |
+| Add and remove together |  | |
+| Cancel without saving |  | |
+| File type validation |  | |
+| File size validation |  | |
+| Multiple files |  | |
+| Modal cleanup |  | |
 
-## ✨ Success Criteria
+##  Success Criteria
 
 All tests should pass with:
-- ✅ Files upload successfully
-- ✅ Files display in preview
-- ✅ Files save with order
-- ✅ Files can be removed
-- ✅ Modal clears properly
-- ✅ No console errors
-- ✅ No server errors
+-  Files upload successfully
+-  Files display in preview
+-  Files save with order
+-  Files can be removed
+-  Modal clears properly
+-  No console errors
+-  No server errors
 
-## 🎯 Next Steps After Testing
+##  Next Steps After Testing
 
 If all tests pass:
-1. ✅ Feature is ready to use
-2. 📝 Document any issues found
-3. 🚀 Deploy to production
+1.  Feature is ready to use
+2.  Document any issues found
+3.  Deploy to production
 
 If tests fail:
-1. 📋 Note which tests failed
-2. 🔍 Check browser console for errors
-3. 📝 Check server logs
-4. 🐛 Report issues with details
+1.  Note which tests failed
+2.  Check browser console for errors
+3.  Check server logs
+4.  Report issues with details

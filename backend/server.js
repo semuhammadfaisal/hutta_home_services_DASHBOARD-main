@@ -16,12 +16,12 @@ const SLOW_MS = parseInt(process.env.SLOW_REQUEST_MS || '1000', 10);
 
 // Global error handlers
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
+  console.error(' Uncaught Exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error(' Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // CORS configuration
@@ -81,14 +81,14 @@ app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
 
   const timeout = setTimeout(() => {
-    console.log(`⚠️ Request timeout: ${req.method} ${req.path}`);
+    console.log(` Request timeout: ${req.method} ${req.path}`);
   }, 5000);
 
   res.on('finish', () => {
     clearTimeout(timeout);
     const ms = Date.now() - started;
     if (ms >= SLOW_MS) {
-      console.warn(`⏱ Slow request ${ms}ms ${req.method} ${req.originalUrl}`);
+      console.warn(` Slow request ${ms}ms ${req.method} ${req.originalUrl}`);
     }
   });
   next();
@@ -111,6 +111,7 @@ app.get('/api/health', async (req, res) => {
 try {
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/users', require('./routes/users'));
+  app.use('/api/dashboard', require('./routes/dashboard'));
   app.use('/api/orders', require('./routes/orders'));
   app.use('/api/customers', require('./routes/customers'));
   app.use('/api/vendors', require('./routes/vendors'));
@@ -125,9 +126,9 @@ try {
   app.use('/api/pipeline-movements', require('./routes/pipelineMovements'));
   app.use('/api/upload', require('./routes/gridfs-upload'));
   app.use('/uploads', require('./routes/gridfs-upload'));
-  console.log('✅ All routes loaded');
+  console.log(' All routes loaded');
 } catch (error) {
-  console.error('❌ Error loading routes:', error);
+  console.error(' Error loading routes:', error);
   process.exit(1);
 }
 
@@ -160,7 +161,7 @@ app.get('*', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
+  console.error(' Error:', err);
   res.status(err.status || 500).json({
     message: err.message || 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err : {}
@@ -175,15 +176,15 @@ async function startServer() {
       maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10', 10),
       minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE || '0', 10)
     });
-    console.log('✅ MongoDB Connected');
+    console.log(' MongoDB Connected');
     
     app.listen(PORT, '0.0.0.0', () => {
-      console.log('✅ Server running on port', PORT);
-      console.log('✅ API Base: http://localhost:' + PORT + '/api');
-      console.log('✅ Health check: http://localhost:' + PORT + '/api/health');
+      console.log(' Server running on port', PORT);
+      console.log(' API Base: http://localhost:' + PORT + '/api');
+      console.log(' Health check: http://localhost:' + PORT + '/api/health');
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error(' Failed to start server:', error);
     process.exit(1);
   }
 }

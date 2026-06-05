@@ -5,7 +5,7 @@ const Order = require('./models/Order');
 
 mongoose.connect('mongodb://localhost:27017/hutta_home_services')
   .then(async () => {
-    console.log('✅ Connected to MongoDB\n');
+    console.log(' Connected to MongoDB\n');
     
     // Find NO BID stages
     const noBidStages = await Stage.find({ isNoBid: true }).lean();
@@ -49,7 +49,7 @@ mongoose.connect('mongodb://localhost:27017/hutta_home_services')
     console.log(`\nVisible Orders (excluding NO BID): ${visibleOrders.length}`);
     console.log(`Visible Amount (excluding NO BID): $${totalVisibleAmount.toFixed(2)}`);
     
-    console.log('\n✅ Stats cache will be cleared on next server restart');
+    console.log('\n Stats cache will be cleared on next server restart');
     console.log('Or wait 60 seconds for cache to expire');
     
     process.exit(0);

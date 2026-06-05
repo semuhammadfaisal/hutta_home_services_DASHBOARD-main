@@ -21,48 +21,48 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/hutta_
 
 async function migrateOrdersToPayments() {
   try {
-    console.log('🚀 Starting migration: Create payments for existing orders...\n');
+    console.log(' Starting migration: Create payments for existing orders...\n');
     
     // Connect to MongoDB
-    console.log('📡 Connecting to MongoDB...');
+    console.log(' Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB\n');
+    console.log(' Connected to MongoDB\n');
     
     // Get all orders
-    console.log('📋 Fetching all orders...');
+    console.log(' Fetching all orders...');
     const orders = await Order.find().lean();
-    console.log(`✅ Found ${orders.length} orders\n`);
+    console.log(` Found ${orders.length} orders\n`);
     
     if (orders.length === 0) {
-      console.log('ℹ️  No orders found. Nothing to migrate.');
+      console.log('  No orders found. Nothing to migrate.');
       await mongoose.connection.close();
       return;
     }
     
     // Get all existing payments
-    console.log('💳 Fetching existing payments...');
+    console.log(' Fetching existing payments...');
     const existingPayments = await Payment.find().lean();
     const orderIdsWithPayments = new Set(
       existingPayments.map(p => p.order?.toString()).filter(Boolean)
     );
-    console.log(`✅ Found ${existingPayments.length} existing payments\n`);
+    console.log(` Found ${existingPayments.length} existing payments\n`);
     
     // Filter orders that don't have payments
     const ordersWithoutPayments = orders.filter(order => 
       !orderIdsWithPayments.has(order._id.toString())
     );
     
-    console.log(`📊 Orders without payments: ${ordersWithoutPayments.length}`);
-    console.log(`📊 Orders with payments: ${orders.length - ordersWithoutPayments.length}\n`);
+    console.log(` Orders without payments: ${ordersWithoutPayments.length}`);
+    console.log(` Orders with payments: ${orders.length - ordersWithoutPayments.length}\n`);
     
     if (ordersWithoutPayments.length === 0) {
-      console.log('✅ All orders already have payments. Nothing to migrate.');
+      console.log(' All orders already have payments. Nothing to migrate.');
       await mongoose.connection.close();
       return;
     }
     
     // Create payments for orders without payments
-    console.log('🔄 Creating payment records...\n');
+    console.log(' Creating payment records...\n');
     
     let successCount = 0;
     let errorCount = 0;
@@ -102,12 +102,12 @@ async function migrateOrdersToPayments() {
             // Update order with customer ID
             await Order.findByIdAndUpdate(order._id, { customerId: newCustomer._id });
             
-            console.log(`   ℹ️  Created customer for order ${order.orderId}`);
+            console.log(`     Created customer for order ${order.orderId}`);
           }
         }
         
         if (!customerId) {
-          console.log(`   ⚠️  Skipping order ${order.orderId || order._id}: No customer information`);
+          console.log(`     Skipping order ${order.orderId || order._id}: No customer information`);
           errorCount++;
           errors.push({
             orderId: order.orderId || order._id,
@@ -142,7 +142,7 @@ async function migrateOrdersToPayments() {
         await payment.save();
         
         successCount++;
-        console.log(`   ✅ [${i + 1}/${ordersWithoutPayments.length}] Created payment ${paymentId} for order ${order.orderId || order._id} (${paymentStatus})`);
+        console.log(`    [${i + 1}/${ordersWithoutPayments.length}] Created payment ${paymentId} for order ${order.orderId || order._id} (${paymentStatus})`);
         
       } catch (error) {
         errorCount++;
@@ -150,36 +150,36 @@ async function migrateOrdersToPayments() {
           orderId: order.orderId || order._id,
           reason: error.message
         });
-        console.log(`   ❌ [${i + 1}/${ordersWithoutPayments.length}] Failed to create payment for order ${order.orderId || order._id}: ${error.message}`);
+        console.log(`    [${i + 1}/${ordersWithoutPayments.length}] Failed to create payment for order ${order.orderId || order._id}: ${error.message}`);
       }
     }
     
     // Summary
     console.log('\n' + '='.repeat(60));
-    console.log('📊 MIGRATION SUMMARY');
+    console.log(' MIGRATION SUMMARY');
     console.log('='.repeat(60));
     console.log(`Total orders: ${orders.length}`);
     console.log(`Orders already with payments: ${orders.length - ordersWithoutPayments.length}`);
     console.log(`Orders needing payments: ${ordersWithoutPayments.length}`);
-    console.log(`✅ Successfully created: ${successCount}`);
-    console.log(`❌ Failed: ${errorCount}`);
+    console.log(` Successfully created: ${successCount}`);
+    console.log(` Failed: ${errorCount}`);
     console.log('='.repeat(60));
     
     if (errors.length > 0) {
-      console.log('\n⚠️  ERRORS:');
+      console.log('\n  ERRORS:');
       errors.forEach(err => {
         console.log(`   - Order ${err.orderId}: ${err.reason}`);
       });
     }
     
-    console.log('\n✅ Migration completed!');
+    console.log('\n Migration completed!');
     
     // Close connection
     await mongoose.connection.close();
-    console.log('📡 Database connection closed');
+    console.log(' Database connection closed');
     
   } catch (error) {
-    console.error('\n❌ Migration failed:', error);
+    console.error('\n Migration failed:', error);
     console.error(error.stack);
     process.exit(1);
   }

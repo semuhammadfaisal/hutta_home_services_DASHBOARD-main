@@ -202,82 +202,34 @@ class DashboardManager {
         try {
             this.showLoadingState();
 
-            if (window.APIService && window.APIService.clearCache) {
-                window.APIService.clearCache();
-            }
-
-            const [statsApi, vendors, employees, kpi] = await Promise.all([
-                window.APIService.getOrderStats().catch(() => ({})),
-                window.APIService.getVendors().catch(() => []),
-                window.APIService.getEmployees().catch(() => []),
-                window.APIService.getPaymentsCollected().catch(() => ({ paymentsCollected: 0 }))
-            ]);
-
-            const stats = {
-                totalOrders: statsApi.totalOrders ?? 0,
-                totalRevenue: statsApi.totalRevenue ?? 0,
-                paymentsCollected: kpi.paymentsCollected || 0,
-                totalVendors: vendors.length,
-                totalCustomers: statsApi.totalCustomers ?? 0
-            };
+            const stats = await window.APIService.getDashboardStats();
 
             this.renderKPIs(stats);
-            this.renderVendorCategories(vendors);
-            this.hideLoadingState();
-
-            const runHeavy = async () => {
-                try {
-                    const [orders, payments, customers] = await Promise.all([
-                        window.APIService.getOrdersFresh().catch(err => { console.error('Orders error:', err); return []; }),
-                        window.APIService.getPayments().catch(() => []),
-                        window.APIService.getCustomers().catch(() => [])
-                    ]);
-
-                    window.AppLogger?.debug('Dashboard heavy data:', {
-                        orders: orders.length,
-                        vendors: vendors.length,
-                        employees: employees.length,
-                        customers: customers.length
-                    });
-
-                    if (!stats.totalCustomers && customers.length) {
-                        stats.totalCustomers = customers.length;
-                        this.renderKPIs(stats);
-                    }
-
-                    if (orders.length === 0 && vendors.length === 0 && employees.length === 0 && customers.length === 0) {
-                        console.warn('⚠️ All data arrays are empty - possible server connection issue');
-                        window.AppLogger?.debug('API Base URL:', window.APIService.baseURL);
-                        window.AppLogger?.debug('Token available:', !!window.APIService.getToken());
-                    }
-
-                    this.data.orders = orders;
-                    this.renderEmployeeLeaderboard(orders, employees);
-                    this.renderRevenueOverview(orders);
-                    this.renderFinancialOverview(orders, payments);
-                    this.renderWorkflowFromOrders(orders);
-                    this.renderOrdersTable(orders);
-                    this.renderRecentActivity(orders);
-                } catch (e) {
-                    console.error('Deferred dashboard load failed:', e);
-                }
-            };
-
-            if (typeof requestIdleCallback === 'function') {
-                requestIdleCallback(() => { runHeavy(); }, { timeout: 2000 });
-            } else {
-                setTimeout(runHeavy, 0);
+            this.renderVendorCategoriesFromStats(stats.vendorCategories, stats.totalVendors);
+            this.renderEmployeeLeaderboardFromStats(stats.employeeLeaderboard);
+            this.renderRevenueOverviewFromStats(stats.revenueTimeline);
+            this.renderFinancialOverviewSummary(stats.financialOverview);
+            this.renderWorkflowSummary(stats.workflow);
+            this.renderRecentActivity(stats.recentActivity || []);
+            if (typeof window.setTopCustomersData === 'function') {
+                window.setTopCustomersData(stats.topCustomers || []);
             }
+            this.hideLoadingState();
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
             this.hideLoadingState();
             this.renderKPIs();
-            this.renderWorkflowFromOrders([]);
-            this.renderOrdersTable([]);
+            this.renderVendorCategoriesFromStats();
+            this.renderEmployeeLeaderboardFromStats();
+            this.renderRevenueOverviewFromStats();
+            this.renderFinancialOverviewSummary();
+            this.renderWorkflowSummary();
             this.renderRecentActivity([]);
+            if (window.showToast) {
+                showToast('Failed to load dashboard summary. Please try refreshing.', 'error');
+            }
         }
     }
-
     getCachedData() {
         const cached = sessionStorage.getItem('dashboardCache');
         if (!cached) return null;
@@ -661,6 +613,106 @@ class DashboardManager {
         if (civilCount) civilCount.textContent = civil;
         if (carpentryCount) carpentryCount.textContent = carpentry;
         if (totalCount) totalCount.textContent = vendors.length;
+    }
+
+    renderVendorCategoriesFromStats(categories = {}, totalVendors = 0) {
+        const count = (key) => Number(categories?.[key] || 0);
+        const electricalCount = document.getElementById('electricalVendors');
+        const plumbingCount = document.getElementById('plumbingVendors');
+        const civilCount = document.getElementById('civilVendors');
+        const carpentryCount = document.getElementById('carpentryVendors');
+        const totalCount = document.getElementById('totalVendorCategoryCount');
+
+        if (electricalCount) electricalCount.textContent = count('electrical');
+        if (plumbingCount) plumbingCount.textContent = count('plumbing');
+        if (civilCount) civilCount.textContent = count('civil');
+        if (carpentryCount) carpentryCount.textContent = count('carpentry');
+        if (totalCount) totalCount.textContent = Number(totalVendors || 0);
+    }
+
+    renderEmployeeLeaderboardFromStats(topEmployees = []) {
+        const leaderboardContainer = document.getElementById('employeeLeaderboard');
+        if (!leaderboardContainer) return;
+
+        if (!Array.isArray(topEmployees) || topEmployees.length === 0) {
+            leaderboardContainer.innerHTML = `
+                <div class="leaderboard-empty" role="status">
+                    <i class="fas fa-chart-line" aria-hidden="true"></i>
+                    <p>No attributed revenue yet</p>
+                    <span class="leaderboard-empty-hint">Rankings appear when orders with amounts are linked to employees.</span>
+                </div>
+            `;
+            return;
+        }
+
+        leaderboardContainer.innerHTML = topEmployees.map((employee, index) => {
+            const rank = index + 1;
+            const rankClass = rank <= 3 ? `rank-${rank}` : '';
+            const nameSafe = escapePaymentHtml(employee.name || 'Employee');
+            const revenue = Number(employee.revenue) || 0;
+            const orderCount = Number(employee.orderCount) || 0;
+            const ordersSafe = escapePaymentHtml(`${orderCount} order${orderCount !== 1 ? 's' : ''}`);
+
+            return `
+                <div class="leaderboard-item ${rankClass}">
+                    <div class="rank" aria-hidden="true">${rank}</div>
+                    <div class="employee-info">
+                        <div class="employee-name">${nameSafe}</div>
+                        <div class="employee-meta">
+                            <span class="order-count">${ordersSafe}</span>
+                            ${rank === 1 ? '<span class="top-performer"><i class="fas fa-star" aria-hidden="true"></i> Top performer</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="leaderboard-revenue">
+                        <span class="revenue-label">Revenue</span>
+                        <span class="revenue-amount">${escapePaymentHtml(`$${revenue.toLocaleString()}`)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderWorkflowSummary(workflow = {}) {
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = Number(value || 0).toLocaleString();
+        };
+
+        setText('newRequests', workflow.newRequests);
+        setText('workOrders', workflow.workOrders);
+        setText('activeWork', workflow.activeWork);
+        setText('completedWork', workflow.completedWork);
+    }
+
+    renderRevenueOverviewFromStats(revenueTimeline = []) {
+        const syntheticOrders = Array.isArray(revenueTimeline)
+            ? revenueTimeline.map(point => ({
+                amount: Number(point.amount) || 0,
+                createdAt: `${point.date}T00:00:00.000Z`
+            }))
+            : [];
+
+        this.data.revenueTimeline = revenueTimeline || [];
+        this.renderRevenueOverview(syntheticOrders);
+    }
+
+    renderFinancialOverviewSummary(summary = null) {
+        const revenueEl = document.getElementById('financialRevenue');
+        const costEl = document.getElementById('financialCost');
+        const profitEl = document.getElementById('financialProfit');
+        const ytdRevenueEl = document.getElementById('financialYtdRevenue');
+        const monthRevenueEl = document.getElementById('financialMonthRevenue');
+        const monthSalesEl = document.getElementById('financialMonthSales');
+        const periodLabel = document.getElementById('financialPeriodLabel');
+        const data = summary || {};
+
+        if (revenueEl) revenueEl.textContent = `$${Number(data.totalRevenue || 0).toLocaleString()}`;
+        if (costEl) costEl.textContent = `$${Number(data.totalCost || 0).toLocaleString()}`;
+        if (profitEl) profitEl.textContent = `$${Number(data.totalProfit || 0).toLocaleString()}`;
+        if (ytdRevenueEl) ytdRevenueEl.textContent = `$${Number(data.ytdRevenue || 0).toLocaleString()}`;
+        if (monthRevenueEl) monthRevenueEl.textContent = `$${Number(data.monthRevenue || 0).toLocaleString()}`;
+        if (monthSalesEl) monthSalesEl.textContent = Number(data.monthSales || 0).toLocaleString();
+        if (periodLabel) periodLabel.textContent = 'All time | Monthly stats: Current month';
     }
 
     renderRevenueOverview(orders) {
@@ -3846,7 +3898,7 @@ function renderPaymentsTable(payments) {
     if (!payments || payments.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="payments-empty-state">
+                <td colspan="8" class="payments-empty-state">
                     <i class="fas fa-credit-card"></i>
                     <h3>No Payments Found</h3>
                     <p>Payments will be automatically created when orders are created</p>
@@ -3867,23 +3919,20 @@ function renderPaymentsTable(payments) {
                 </span>
             </td>
             <td><span class="payment-customer-name">${payment.customer?.name || 'N/A'}</span></td>
-            <td><strong class="payment-amount">$${payment.amount.toLocaleString()}</strong></td>
+            <td><strong class="payment-amount ${Number(payment.amount || 0) < 0 ? 'negative' : ''}">$${Number(payment.amount || 0).toLocaleString()}</strong></td>
             <td><span class="method-badge ${payment.paymentMethod || 'pending'}">${payment.paymentMethod ? payment.paymentMethod.replace('-', ' ') : 'Not Set'}</span></td>
             <td onclick="event.stopPropagation();">
                 <select class="payment-status-select status-${payment.status}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value)">
                     <option value="bidding" ${payment.status === 'bidding' ? 'selected' : ''}>Bidding</option>
-                    <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
-                    <option value="received" ${payment.status === 'received' ? 'selected' : ''}>✅ Received</option>
-                    <option value="completed" ${payment.status === 'completed' ? 'selected' : ''}>✔️ Completed</option>
-                    <option value="failed" ${payment.status === 'failed' ? 'selected' : ''}>❌ Failed</option>
-                    <option value="refunded" ${payment.status === 'refunded' ? 'selected' : ''}>↩️ Refunded</option>
-                    <option value="cancelled" ${payment.status === 'cancelled' ? 'selected' : ''}>🚫 Cancelled</option>
+                    <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>Pending</option>
+                    <option value="received" ${payment.status === 'received' ? 'selected' : ''}>Received</option>
+                    <option value="completed" ${payment.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    <option value="failed" ${payment.status === 'failed' ? 'selected' : ''}>Failed</option>
+                    <option value="refunded" ${payment.status === 'refunded' ? 'selected' : ''}>Refunded</option>
+                    <option value="cancelled" ${payment.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
                 </select>
             </td>
             <td>${payment.paymentDate ? formatDisplayDate(payment.paymentDate) : 'Not Paid'}</td>
-            <td>
-                ${payment.order ? `<span class="payment-reference">${payment.order.orderId || payment.order}</span>` : 'N/A'}
-            </td>
             <td onclick="event.stopPropagation();">
                 <button class="btn-action" onclick="showPaymentDetail('${payment._id}')" title="View">
                     <i class="fas fa-eye"></i>
@@ -3905,6 +3954,7 @@ function initializePaymentFilters() {
     const searchInput = document.getElementById('paymentSearchInput');
     const statusFilter = document.getElementById('paymentStatusFilter');
     const methodFilter = document.getElementById('paymentMethodFilter');
+    const dateFilter = document.getElementById('paymentDateFilter');
 
     if (searchInput) {
         searchInput.addEventListener('input', filterPayments);
@@ -3916,6 +3966,10 @@ function initializePaymentFilters() {
 
     if (methodFilter) {
         methodFilter.addEventListener('change', filterPayments);
+    }
+
+    if (dateFilter) {
+        dateFilter.addEventListener('change', filterPayments);
     }
 }
 
@@ -3944,6 +3998,7 @@ function filterPayments() {
     const searchTerm = normalizeSearchText(document.getElementById('paymentSearchInput')?.value);
     const statusFilter = normalizeFilterValue(document.getElementById('paymentStatusFilter')?.value || 'all');
     const methodFilter = normalizeFilterValue(document.getElementById('paymentMethodFilter')?.value || 'all');
+    const dateFilter = normalizeFilterValue(document.getElementById('paymentDateFilter')?.value || 'all');
 
     let filtered = allPayments;
 
@@ -3973,18 +4028,74 @@ function filterPayments() {
         filtered = filtered.filter(payment => normalizeFilterValue(payment.paymentMethod) === methodFilter);
     }
 
+    if (dateFilter !== 'all') {
+        filtered = filtered.filter(payment => isPaymentInDateFilter(payment, dateFilter));
+    }
+
     renderPaymentsTable(filtered);
 }
 
 function updatePaymentStats(payments) {
     const totalCount = document.getElementById('totalPaymentsCount');
     const completedCount = document.getElementById('completedPaymentsCount');
+    const pendingCount = document.getElementById('pendingPaymentsCount');
+    const failedCount = document.getElementById('failedPaymentsCount');
     
     if (totalCount) totalCount.textContent = payments.length;
     if (completedCount) {
         const completed = payments.filter(p => p.status === 'received' || p.status === 'completed').length;
         completedCount.textContent = completed;
     }
+    if (pendingCount) {
+        const pending = payments.filter(p => p.status === 'pending').length;
+        pendingCount.textContent = pending;
+    }
+    if (failedCount) {
+        const failed = payments.filter(p => p.status === 'failed').length;
+        failedCount.textContent = failed;
+    }
+}
+
+function isPaymentInDateFilter(payment, filter) {
+    const value = payment.paymentDate || payment.dueDate || payment.createdAt;
+    if (!value) return false;
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return false;
+
+    const now = nowInMDT();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    if (filter === 'today') {
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+        return date >= start && date < end;
+    }
+
+    if (filter === 'week') {
+        const day = start.getDay();
+        start.setDate(start.getDate() - day);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 7);
+        return date >= start && date < end;
+    }
+
+    if (filter === 'month') {
+        start.setDate(1);
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + 1);
+        return date >= start && date < end;
+    }
+
+    if (filter === 'year') {
+        start.setMonth(0, 1);
+        const end = new Date(start);
+        end.setFullYear(end.getFullYear() + 1);
+        return date >= start && date < end;
+    }
+
+    return true;
 }
 
 // Load payments when payments section is shown
@@ -5928,7 +6039,7 @@ function renderVendorsTable(vendors) {
     
     tbody.innerHTML = sortedVendors.map(vendor => {
         const vendorId = `#${vendor._id.substring(0, 8).toUpperCase()}`;
-        const stars = '★'.repeat(vendor.rating) + '☆'.repeat(5 - vendor.rating);
+        const ratingText = `${Number(vendor.rating || 0)}/5`;
         
         return `
         <tr onclick="showVendorDetail('${vendor._id}')">
@@ -5943,7 +6054,7 @@ function renderVendorsTable(vendors) {
             <td><a href="mailto:${vendor.email}" class="customer-email" onclick="event.stopPropagation()">${vendor.email}</a></td>
             <td><span class="customer-phone">${vendor.phone || 'N/A'}</span></td>
             <td><span class="vendor-category-badge ${vendor.category}">${vendor.category}</span></td>
-            <td><div class="vendor-rating">${stars.split('').map(s => `<span class="${s === '★' ? 'star-filled' : 'star-empty'}">${s}</span>`).join('')}</div></td>
+            <td><div class="vendor-rating">${ratingText}</div></td>
             <td><span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span></td>
             <td onclick="event.stopPropagation()">
                 <div class="vendor-actions">
@@ -7590,7 +7701,7 @@ async function showVendorDetail(vendorId) {
         }
         
         document.getElementById('detailVendorCategory').textContent = vendor.category || '-';
-        document.getElementById('detailVendorRating').innerHTML = '⭐'.repeat(vendor.rating || 0);
+        document.getElementById('detailVendorRating').textContent = `${Number(vendor.rating || 0)}/5`;
         document.getElementById('detailVendorAddress').textContent = vendor.address || '-';
         document.getElementById('detailVendorStatus').innerHTML = vendor.isActive 
             ? '<span style="color: #22c55e;">Active</span>' 
@@ -8092,10 +8203,7 @@ window.copyOrderId = copyOrderId;
 
 async function applyRevenueOverviewFilter() {
     if (!window.dashboard) return;
-    const cachedOrders = Array.isArray(window.dashboard.data?.orders) ? window.dashboard.data.orders : null;
-    const orders = cachedOrders || await window.APIService.getOrders().catch(() => []);
-    window.dashboard.data.orders = orders;
-    window.dashboard.renderRevenueOverview(orders);
+    window.dashboard.renderRevenueOverviewFromStats(window.dashboard.data?.revenueTimeline || []);
 }
 
 window.applyRevenueOverviewFilter = applyRevenueOverviewFilter;

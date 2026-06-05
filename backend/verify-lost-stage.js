@@ -10,7 +10,7 @@ mongoose.connect(process.env.MONGODB_URI)
     const lostStage = await Stage.findOne({ name: 'Lost' });
     
     if (!lostStage) {
-      console.log('❌ LOST stage not found in database');
+      console.log(' LOST stage not found in database');
       console.log('Available stages:');
       const allStages = await Stage.find();
       allStages.forEach(s => console.log(`  - ${s.name}`));
@@ -21,10 +21,10 @@ mongoose.connect(process.env.MONGODB_URI)
       console.log(`  ID: ${lostStage._id}`);
       
       if (!lostStage.isNoBid) {
-        console.log('\n⚠️  LOST stage is NOT marked as NO BID!');
+        console.log('\n  LOST stage is NOT marked as NO BID!');
         console.log('Run: node mark-stage-as-no-bid.js "Lost"');
       } else {
-        console.log('\n✅ LOST stage is correctly marked as NO BID');
+        console.log('\n LOST stage is correctly marked as NO BID');
       }
     }
     

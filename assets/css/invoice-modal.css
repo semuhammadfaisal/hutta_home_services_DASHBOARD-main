@@ -154,7 +154,7 @@
 }
 
 .invoice-help-text::before {
-    content: "ℹ️";
+    content: "";
     font-size: 14px;
 }
 

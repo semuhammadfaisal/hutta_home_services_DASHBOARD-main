@@ -72,8 +72,8 @@ File attachment functionality has been added to orders, matching the existing pa
 
 ### Document Actions
 
-- **View Button (👁️)**: Opens document in new browser tab
-- **Download Button (⬇️)**: Downloads file to your computer
+- **View Button ()**: Opens document in new browser tab
+- **Download Button ()**: Downloads file to your computer
 
 ### Supported File Types
 

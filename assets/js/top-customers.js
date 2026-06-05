@@ -4,67 +4,24 @@ let showAllTopCustomers = false;
 
 async function loadTopCustomers(startDate = null, endDate = null) {
     try {
-        // Use the global APIService instance
-        const customers = await window.APIService.getCustomers();
-        const orders = await window.APIService.getOrders();
-        
-        // Filter orders by date if provided
-        let filteredOrders = orders;
-        if (startDate || endDate) {
-            filteredOrders = orders.filter(order => {
-                if (window.TimezoneConfig) {
-                    const dateValue = order.startDate || order.createdAt;
-                    if (startDate && endDate) {
-                        return window.TimezoneConfig.isDateInRangeMDT(dateValue, startDate, endDate);
-                    }
-                    const orderTime = new Date(dateValue).getTime();
-                    const startTime = startDate ? window.TimezoneConfig.dateInputToMDT(startDate).getTime() : null;
-                    const endTime = endDate ? window.TimezoneConfig.endOfDayMDT(endDate).getTime() : null;
-                    return (!startTime || orderTime >= startTime) && (!endTime || orderTime <= endTime);
-                }
-                const orderDate = new Date(order.startDate || order.createdAt);
-                return (!startDate || orderDate >= new Date(startDate)) &&
-                    (!endDate || orderDate <= new Date(`${endDate}T23:59:59.999`));
-            });
-        }
-        
-        // Calculate customer statistics
-        const customerStats = customers.map(customer => {
-            const customerOrders = filteredOrders.filter(order => {
-                const orderCustomer = order.customer || {};
-                const orderCustomerId = order.customerId || orderCustomer._id || order.customer;
-                const orderCustomerEmail = orderCustomer.email;
-                const orderCustomerName = orderCustomer.name || (typeof order.customer === 'string' ? order.customer : '');
-
-                return String(orderCustomerId || '') === String(customer._id || '') ||
-                    (!!orderCustomerEmail && !!customer.email && String(orderCustomerEmail).toLowerCase() === String(customer.email).toLowerCase()) ||
-                    (!!orderCustomerName && !!customer.name && String(orderCustomerName).toLowerCase() === String(customer.name).toLowerCase());
-            });
-            const totalRevenue = customerOrders.reduce((sum, order) => sum + (parseFloat(order.amount) || 0), 0);
-            const totalOrders = customerOrders.length;
-            
-            return {
-                ...customer,
-                totalRevenue,
-                totalOrders
-            };
+        const stats = await window.APIService.getDashboardStats({
+            topStartDate: startDate,
+            topEndDate: endDate
         });
-        
-        // Sort by revenue and get top 10
-        const topCustomers = customerStats
-            .filter(c => c.totalRevenue > 0)
-            .sort((a, b) => b.totalRevenue - a.totalRevenue)
-            .slice(0, 10);
-        
-        topCustomersData = topCustomers;
-        showAllTopCustomers = false;
-        renderTopCustomers();
+
+        setTopCustomersData(stats.topCustomers || []);
     } catch (error) {
         console.error('Error loading top customers:', error);
         if (window.showToast) {
             showToast('Failed to load top customers', 'error');
         }
     }
+}
+
+function setTopCustomersData(customers = []) {
+    topCustomersData = Array.isArray(customers) ? customers : [];
+    showAllTopCustomers = false;
+    renderTopCustomers();
 }
 
 function renderTopCustomers(customers = topCustomersData) {
@@ -196,6 +153,7 @@ window.filterTopCustomers = filterTopCustomers;
 window.resetTopCustomersFilter = resetTopCustomersFilter;
 window.loadTopCustomers = loadTopCustomers;
 window.toggleTopCustomersList = toggleTopCustomersList;
+window.setTopCustomersData = setTopCustomersData;
 
 // Load top customers when dashboard overview is shown
 if (document.readyState === 'loading') {

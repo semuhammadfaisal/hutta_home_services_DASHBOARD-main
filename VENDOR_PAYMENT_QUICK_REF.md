@@ -23,9 +23,9 @@ Track and manage payments made to vendors for their services on orders. Similar 
 
 ## Status Badge Colors
 
-- 🟡 **Pending** - Yellow/amber badge (default)
-- 🟠 **Paid** - Orange badge
-- ⚫ **Cancelled** - Gray badge
+-  **Pending** - Yellow/amber badge (default)
+-  **Paid** - Orange badge
+-  **Cancelled** - Gray badge
 
 ## Visual Design
 
@@ -65,11 +65,11 @@ Track and manage payments made to vendors for their services on orders. Similar 
 
 ## Tips
 
-✅ Vendor section only shows if order has assigned vendor
-✅ All fields are optional - save what you need
-✅ Changes save immediately on button click
-✅ Vendor payment is separate from customer payment
-✅ Use Notes field for invoice references or PO numbers
+ Vendor section only shows if order has assigned vendor
+ All fields are optional - save what you need
+ Changes save immediately on button click
+ Vendor payment is separate from customer payment
+ Use Notes field for invoice references or PO numbers
 
 ## Integration
 
