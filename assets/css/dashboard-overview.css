@@ -2974,18 +2974,22 @@
     height: 264px;
 }
 
+#dashboard.dashboard-overview .revenue-chart-html-layer,
+#dashboard.dashboard-overview .revenue-chart-hover-layer {
+    position: absolute;
+    z-index: 2;
+    inset: 6px 8px 2px;
+    pointer-events: none;
+}
+
+#dashboard.dashboard-overview .revenue-chart-hover-layer {
+    z-index: 3;
+}
+
 #dashboard.dashboard-overview .revenue-grid-line {
     stroke: #dfe8f5;
     stroke-width: 1;
     stroke-dasharray: 3 6;
-}
-
-#dashboard.dashboard-overview .revenue-y-label,
-#dashboard.dashboard-overview .revenue-x-label {
-    fill: #7b8798;
-    font-size: 11px;
-    font-weight: 800;
-    font-family: inherit;
 }
 
 #dashboard.dashboard-overview .revenue-area-path {
@@ -3024,34 +3028,108 @@
     fill: rgba(0, 86, 184, 0.08);
 }
 
-#dashboard.dashboard-overview .revenue-point-tooltip {
+#dashboard.dashboard-overview .revenue-html-y-label,
+#dashboard.dashboard-overview .revenue-html-x-label {
+    position: absolute;
+    color: #7b8798;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#dashboard.dashboard-overview .revenue-html-y-label {
+    transform: translate(-100%, -50%);
+}
+
+#dashboard.dashboard-overview .revenue-html-x-label {
+    transform: translate(-50%, -50%);
+}
+
+#dashboard.dashboard-overview .revenue-html-point {
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    pointer-events: auto;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+}
+
+#dashboard.dashboard-overview .revenue-html-point::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: #ffffff;
     opacity: 0;
-    pointer-events: none;
-    transform-box: fill-box;
+    box-shadow: 0 0 0 3px #0056b8, 0 6px 8px rgba(29, 111, 212, 0.2);
     transition: opacity 0.15s ease;
 }
 
-#dashboard.dashboard-overview .revenue-point-group:hover .revenue-point-tooltip {
+#dashboard.dashboard-overview .revenue-html-point:hover::before {
     opacity: 1;
 }
 
-#dashboard.dashboard-overview .revenue-point-tooltip rect {
-    fill: #111827;
-    stroke: none;
-    filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.2));
+#dashboard.dashboard-overview .revenue-html-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    width: 124px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: #111827;
+    color: rgba(255, 255, 255, 0.76);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%);
+    transition: opacity 0.15s ease;
 }
 
-#dashboard.dashboard-overview .revenue-point-tooltip text {
-    fill: rgba(255, 255, 255, 0.76);
-    font-family: inherit;
+#dashboard.dashboard-overview .revenue-html-point:hover .revenue-html-tooltip {
+    opacity: 1;
+}
+
+#dashboard.dashboard-overview .revenue-html-point.is-below .revenue-html-tooltip {
+    top: calc(100% + 8px);
+    bottom: auto;
+}
+
+#dashboard.dashboard-overview .revenue-html-point.is-left-edge .revenue-html-tooltip {
+    left: 0;
+    transform: translateX(0);
+}
+
+#dashboard.dashboard-overview .revenue-html-point.is-right-edge .revenue-html-tooltip {
+    left: auto;
+    right: 0;
+    transform: translateX(0);
+}
+
+#dashboard.dashboard-overview .revenue-html-tooltip small,
+#dashboard.dashboard-overview .revenue-html-tooltip strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#dashboard.dashboard-overview .revenue-html-tooltip small {
+    margin-bottom: 5px;
+    color: rgba(255, 255, 255, 0.76);
     font-size: 9px;
     font-weight: 800;
+    line-height: 1.1;
 }
 
-#dashboard.dashboard-overview .revenue-point-tooltip .revenue-tooltip-value {
-    fill: #ffffff;
+#dashboard.dashboard-overview .revenue-html-tooltip strong {
+    color: #ffffff;
     font-size: 12px;
     font-weight: 900;
+    line-height: 1.1;
 }
 
 #dashboard.dashboard-overview .revenue-overview-empty {

@@ -1909,19 +1909,6 @@ class DashboardManager {
         const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${pad.top + plotHeight} L ${points[0].x.toFixed(2)} ${pad.top + plotHeight} Z`;
         const labelEvery = Math.max(1, Math.ceil(points.length / 6));
         const yTicks = [niceMax, niceMax * 0.75, niceMax * 0.5, niceMax * 0.25, 0];
-        const renderPointTooltip = (point) => {
-            const tooltipWidth = 124;
-            const tooltipHeight = 44;
-            const x = Math.min(Math.max(point.x - tooltipWidth / 2, pad.left + 6), width - tooltipWidth - pad.right);
-            const y = Math.max(8, point.y - tooltipHeight - 10);
-            return `
-                <g class="revenue-point-tooltip" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">
-                    <rect width="${tooltipWidth}" height="${tooltipHeight}" rx="8"></rect>
-                    <text x="12" y="18">${escapePaymentHtml(point.tooltipLabel)}</text>
-                    <text class="revenue-tooltip-value" x="12" y="36">${escapePaymentHtml(this.formatRevenueOverviewCurrency(point.value))}</text>
-                </g>
-            `;
-        };
 
         return `
             <svg class="revenue-overview-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
@@ -1938,20 +1925,43 @@ class DashboardManager {
                     const y = pad.top + plotHeight - ((tick / niceMax) * plotHeight);
                     return `
                         <line class="revenue-grid-line" x1="${pad.left}" y1="${y.toFixed(2)}" x2="${width - pad.right}" y2="${y.toFixed(2)}"></line>
-                        <text class="revenue-y-label" x="${pad.left - 14}" y="${(y + 4).toFixed(2)}" text-anchor="end">${this.formatRevenueAxisLabel(tick)}</text>
                     `;
                 }).join('')}
                 <path class="revenue-area-path" d="${areaPath}"></path>
                 <path class="revenue-line-path" d="${linePath}" filter="url(#revenueOverviewShadow)"></path>
-                ${points.map((point, index) => `
+                ${points.map(point => `
                     <g class="revenue-point-group">
                         <circle class="revenue-point-hit" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="13"></circle>
                         <circle class="revenue-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4.5"></circle>
-                        ${renderPointTooltip(point)}
                     </g>
-                    ${(index % labelEvery === 0 || index === points.length - 1) ? `<text class="revenue-x-label" x="${point.x.toFixed(2)}" y="${height - 12}" text-anchor="middle">${escapePaymentHtml(point.label)}</text>` : ''}
                 `).join('')}
             </svg>
+            <div class="revenue-chart-html-layer" aria-hidden="true">
+                ${yTicks.map(tick => {
+                    const y = pad.top + plotHeight - ((tick / niceMax) * plotHeight);
+                    return `<span class="revenue-html-y-label" style="top:${((y / height) * 100).toFixed(3)}%; left:${(((pad.left - 14) / width) * 100).toFixed(3)}%;">${this.formatRevenueAxisLabel(tick)}</span>`;
+                }).join('')}
+                ${points.map((point, index) => {
+                    if (!(index % labelEvery === 0 || index === points.length - 1)) return '';
+                    return `<span class="revenue-html-x-label" style="left:${((point.x / width) * 100).toFixed(3)}%; top:${(((height - 12) / height) * 100).toFixed(3)}%;">${escapePaymentHtml(point.label)}</span>`;
+                }).join('')}
+            </div>
+            <div class="revenue-chart-hover-layer" aria-hidden="true">
+                ${points.map(point => {
+                    const xPercent = (point.x / width) * 100;
+                    const yPercent = (point.y / height) * 100;
+                    const edgeClass = xPercent < 16 ? ' is-left-edge' : xPercent > 84 ? ' is-right-edge' : '';
+                    const verticalClass = point.y < 76 ? ' is-below' : '';
+                    return `
+                        <span class="revenue-html-point${edgeClass}${verticalClass}" style="left:${xPercent.toFixed(3)}%; top:${yPercent.toFixed(3)}%;">
+                            <span class="revenue-html-tooltip">
+                                <small>${escapePaymentHtml(point.tooltipLabel)}</small>
+                                <strong>${escapePaymentHtml(this.formatRevenueOverviewCurrency(point.value))}</strong>
+                            </span>
+                        </span>
+                    `;
+                }).join('')}
+            </div>
         `;
     }
 
