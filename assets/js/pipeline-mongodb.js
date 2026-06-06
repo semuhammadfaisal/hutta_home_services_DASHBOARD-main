@@ -532,7 +532,6 @@ function bindPipelineStagesContainerOnce(container) {
     container.dataset.pipelineUiBound = '1';
     container.addEventListener('click', pipelineStagesContainerClick);
     container.addEventListener('pointerdown', pipelinePointerDragStart, true);
-    // Removed event delegation for drag - using direct handlers instead
 }
 
 function shouldIgnorePipelinePointerDrag(target) {
@@ -662,6 +661,37 @@ function cleanupPipelinePointerDrag() {
     document.querySelectorAll('.drag-over').forEach((el) => el.classList.remove('drag-over'));
     stopPipelineAutoScroll();
     pipelinePointerDrag = null;
+}
+
+function refreshPipelineStageBody(stageId) {
+    const stageBody = document.querySelector(`.stage-body[data-stage-id="${stageId}"]`);
+    if (stageBody) {
+        stageBody.innerHTML = renderRecords(stageId);
+    }
+
+    const stageColumn = document.querySelector(`.stage-column[data-stage-id="${stageId}"]`);
+    const countBadge = stageColumn?.querySelector('.count-badge');
+    if (countBadge) {
+        countBadge.textContent = records.filter((record) => record.stageId === stageId).length;
+    }
+}
+
+function refreshPipelineStageBodies(stageIds) {
+    [...new Set(stageIds.filter(Boolean))].forEach(refreshPipelineStageBody);
+    requestAnimationFrame(() => updatePipelineDescriptionToggles());
+    updateStatistics();
+    syncPickedPipelineUI();
+}
+
+function updatePipelineDescriptionToggles(root = document) {
+    root.querySelectorAll('.record-description-block').forEach((block) => {
+        const desc = block.querySelector('.record-description');
+        const btn = block.querySelector('.record-description-toggle');
+        if (!desc || !btn || btn.hidden) return;
+        if (desc.scrollHeight <= desc.clientHeight + 2) {
+            btn.hidden = true;
+        }
+    });
 }
 
 function pipelinePointerDragStart(event) {
@@ -1066,89 +1096,7 @@ function loadStages() {
     createPipelineAutoScrollZones();
     bindPipelineStagesContainerOnce(container);
 
-    // Ensure all cards are draggable with proper event handlers
-    requestAnimationFrame(() => {
-        const allCards = container.querySelectorAll('.record-card, .new-order-card');
-        window.AppLogger?.debug('Setting up drag for', allCards.length, 'cards');
-        allCards.forEach(card => {
-            card.setAttribute('draggable', 'false');
-            card.draggable = false;
-            
-            // Add mousedown to verify events work
-            card.onmousedown = function(e) {
-                if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
-                    return; // Let buttons work normally
-                }
-                window.AppLogger?.debug('Mouse down on card - drag should start');
-                window.AppLogger?.debug('Card draggable attribute:', this.getAttribute('draggable'));
-                window.AppLogger?.debug('Card draggable property:', this.draggable);
-            };
-            
-            // Add direct ondragstart handler
-            card.ondragstart = function(e) {
-                window.AppLogger?.debug('=== DRAGSTART EVENT ===');
-                window.AppLogger?.debug('Target:', e.target);
-                window.AppLogger?.debug('CurrentTarget:', e.currentTarget);
-                window.AppLogger?.debug('Card ID:', this.dataset.recordId || this.dataset.orderId);
-                
-                if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
-                    window.AppLogger?.debug('Drag prevented - clicked on button/action');
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-                
-                // Don't create drag image - it might be causing issues
-                this.classList.add('dragging');
-                this.style.opacity = '0.5';
-                
-                if (this.classList.contains('new-order-card')) {
-                    draggedOrderId = this.dataset.orderId;
-                    draggedRecordId = null;
-                    draggedIsNewOrder = true;
-                    window.AppLogger?.debug('Set draggedOrderId:', draggedOrderId);
-                } else {
-                    draggedRecordId = this.dataset.recordId;
-                    draggedOrderId = null;
-                    draggedIsNewOrder = false;
-                    window.AppLogger?.debug('Set draggedRecordId:', draggedRecordId);
-                }
-
-                startPipelineAutoScroll(e.clientX);
-                
-                try {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', this.dataset.recordId || this.dataset.orderId);
-                    window.AppLogger?.debug('DataTransfer set successfully');
-                } catch (err) {
-                    console.error('Error setting dataTransfer:', err);
-                }
-            };
-            
-            // Add direct ondragend handler
-            card.ondragend = function(e) {
-                window.AppLogger?.debug('Drag ended');
-                this.classList.remove('dragging');
-                this.style.opacity = '';
-                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-                stopPipelineAutoScroll();
-            };
-
-            card.ondrag = function(e) {
-                handlePipelineAutoScrollDragEvent(e);
-            };
-        });
-        
-        // Check for read more buttons
-        container.querySelectorAll('.record-description-block').forEach((block) => {
-            const desc = block.querySelector('.record-description');
-            const btn = block.querySelector('.record-description-toggle');
-            if (!desc || !btn || btn.hidden) return;
-            if (desc.scrollHeight <= desc.clientHeight + 2) {
-                btn.hidden = true;
-            }
-        });
-    });
+    requestAnimationFrame(() => updatePipelineDescriptionToggles(container));
 
     updateStatistics();
     syncPickedPipelineUI();
@@ -1845,6 +1793,13 @@ async function drop(event) {
         const oldStageId = record.stageId;
         const oldStageName = stages.find(s => s._id === oldStageId)?.name || 'Unknown';
         const newStageName = stages.find(s => s._id === newStageId)?.name || 'Unknown';
+        const touchesPaidStage = /^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim()) ||
+            /^(paid|close|closed|complete|completed|won|done)$/i.test(oldStageName.trim());
+
+        record.stageId = newStageId;
+        const filteredRecord = filteredRecords.find(r => r._id === record._id);
+        if (filteredRecord) filteredRecord.stageId = newStageId;
+        refreshPipelineStageBodies([oldStageId, newStageId]);
         
         try {
             // Update the pipeline record stage
@@ -1858,70 +1813,76 @@ async function drop(event) {
                 const errorText = await stageUpdateResponse.text();
                 throw new Error('Failed to update pipeline record stage: ' + errorText);
             }
-            
-            // Auto-update linked payment record when moving to Paid/Close
+
+            logPipelineMovement(record, oldStageId, oldStageName, newStageId, newStageName);
+
+            // Auto-update linked payment record when moving to Paid/Close without blocking drag feedback.
             if (/^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim()) && record.orderId) {
-                try {
-                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-                    if (session) {
+                (async () => {
+                    try {
+                        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+                        if (!session) return;
                         const token = JSON.parse(session).token;
                         const paymentsRes = await fetch(`${API_BASE_URL}/payments`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        if (paymentsRes.ok) {
-                            const allPayments = await paymentsRes.json();
-                            const linked = allPayments.find(p =>
-                                (p.order?._id || p.order) === record.orderId &&
-                                p.status !== 'received' && p.status !== 'completed'
-                            );
-                            if (linked) {
-                                await fetch(`${API_BASE_URL}/payments/${linked._id}`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                    body: JSON.stringify({ ...linked, customer: linked.customer?._id || linked.customer, order: linked.order?._id || linked.order, status: 'received', paymentDate: linked.paymentDate || new Date().toISOString() })
-                                });
-                                if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
-                                if (typeof refreshPayments === 'function') refreshPayments();
-                            }
-                        }
+                        if (!paymentsRes.ok) return;
+                        const allPayments = await paymentsRes.json();
+                        const linked = allPayments.find(p =>
+                            (p.order?._id || p.order) === record.orderId &&
+                            p.status !== 'received' && p.status !== 'completed'
+                        );
+                        if (!linked) return;
+
+                        await fetch(`${API_BASE_URL}/payments/${linked._id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ ...linked, customer: linked.customer?._id || linked.customer, order: linked.order?._id || linked.order, status: 'received', paymentDate: linked.paymentDate || new Date().toISOString() })
+                        });
+                        if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
+                        if (typeof refreshPayments === 'function') refreshPayments();
+                    } catch (payErr) {
+                        console.warn('Failed to auto-update payment:', payErr);
                     }
-                } catch (payErr) {
-                    console.warn('Failed to auto-update payment:', payErr);
-                }
+                })();
             }
-            
-            try {
-                await fetch(`${API_BASE_URL}/pipeline-movements`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        recordId: record._id,
-                        customerName: record.customerName,
-                        fromStageId: oldStageId,
-                        fromStageName: oldStageName,
-                        toStageId: newStageId,
-                        toStageName: newStageName,
-                        movedBy: 'Admin'
-                    })
-                });
-            } catch (movementError) {
-                console.warn('Failed to log pipeline movement:', movementError);
-            }
-            
-            await loadDataFromDB();
-            
-            // Refresh dashboard KPIs if moved to/from a paid/close stage
-            if (/^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim()) || /^(paid|close|closed|complete|completed|won|done)$/i.test(oldStageName.trim())) {
+
+            if (touchesPaidStage) {
                 if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
                 if (window.dashboard && window.dashboard.renderDashboard) {
-                    await window.dashboard.renderDashboard();
+                    window.dashboard.renderDashboard().catch((dashboardError) => {
+                        console.warn('Failed to refresh dashboard after pipeline move:', dashboardError);
+                    });
                 }
                 if (typeof refreshPayments === 'function') refreshPayments();
             }
         } catch (error) {
+            record.stageId = oldStageId;
+            if (filteredRecord) filteredRecord.stageId = oldStageId;
+            refreshPipelineStageBodies([oldStageId, newStageId]);
             console.error('Error moving record:', error);
             alert('Error moving record: ' + error.message);
         }
+    }
+}
+
+async function logPipelineMovement(record, oldStageId, oldStageName, newStageId, newStageName) {
+    try {
+        await fetch(`${API_BASE_URL}/pipeline-movements`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                recordId: record._id,
+                customerName: record.customerName,
+                fromStageId: oldStageId,
+                fromStageName: oldStageName,
+                toStageId: newStageId,
+                toStageName: newStageName,
+                movedBy: 'Admin'
+            })
+        });
+    } catch (movementError) {
+        console.warn('Failed to log pipeline movement:', movementError);
     }
 }
 
@@ -2408,13 +2369,20 @@ async function createPipelineRecordFromOrder(order, stageId) {
             throw new Error(errorData.message || 'Failed to create pipeline record');
         }
         
+        const createdRecord = await response.json();
         window.AppLogger?.debug('Pipeline record created successfully');
         
         // Remove the order from new orders list
         newOrders = newOrders.filter(o => o._id !== order._id);
-        
-        // Reload pipeline data
-        await loadDataFromDB();
+
+        records.push(createdRecord);
+        if (!searchQuery) {
+            filteredRecords.push(createdRecord);
+            refreshPipelineStageBodies([stageId]);
+        } else {
+            filterPipelineRecords(searchQuery);
+        }
+        loadNewOrdersSuggestions();
         
         // Show success message
         if (window.showToast) {

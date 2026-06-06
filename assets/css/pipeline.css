@@ -1927,6 +1927,14 @@
     pointer-events: none;
 }
 
+#pipeline .record-card.dragging,
+#pipeline .new-order-card.dragging,
+.pipeline-pointer-drag-ghost {
+    will-change: transform;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+}
+
 @keyframes successPulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.05); }

@@ -1136,18 +1136,22 @@
     padding: clamp(18px, 2vw, 24px);
     border: 1px solid var(--do-border);
     border-radius: 8px;
-    background: #ffffff;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 14px 30px rgba(31, 41, 55, 0.05);
 }
 
 #dashboard.dashboard-overview .orders-overview-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 16px;
-    padding-bottom: 14px;
+    gap: 18px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
     border-bottom: 1px solid #edf2f7;
+}
+
+#dashboard.dashboard-overview .orders-overview-head > div {
+    min-width: 0;
 }
 
 #dashboard.dashboard-overview .orders-overview-head h2 {
@@ -1168,11 +1172,14 @@
 
 #dashboard.dashboard-overview .orders-overview-total {
     flex: 0 0 auto;
-    padding: 8px 11px;
-    border: 1px solid #dfe8f5;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 86, 184, 0.22);
     border-radius: 8px;
-    background: #f8fbff;
-    color: #34436b;
+    background: #eff6ff;
+    color: #0056b8;
     font-size: 12px;
     font-weight: 900;
     line-height: 1.2;
@@ -1181,42 +1188,79 @@
 
 #dashboard.dashboard-overview .orders-overview-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 16px;
 }
 
-#dashboard.dashboard-overview .orders-overview-card {
-    min-width: 0;
+#dashboard.dashboard-overview .orders-overview-metric-row {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr);
-    align-items: center;
-    gap: 10px;
-    min-height: 76px;
-    padding: 12px;
-    border: 1px solid #e5eaf2;
-    border-radius: 8px;
-    background: #fbfcfe;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
 }
 
-#dashboard.dashboard-overview .orders-overview-icon {
+#dashboard.dashboard-overview .orders-overview-metric-tile {
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+    min-height: 112px;
+    padding: 18px 112px 18px 16px;
+    border: 1px solid #e2eaf5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+#dashboard.dashboard-overview .orders-overview-metric-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: #0056b8;
+    opacity: 0.82;
+}
+
+#dashboard.dashboard-overview .orders-overview-metric-tile:hover,
+#dashboard.dashboard-overview .orders-overview-detail-card:hover {
+    border-color: rgba(0, 86, 184, 0.24);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+#dashboard.dashboard-overview .orders-overview-metric-tile:hover .orders-overview-metric-icon {
+    box-shadow: inset 0 0 0 1px rgba(0, 86, 184, 0.18), 0 6px 14px rgba(0, 86, 184, 0.12);
+}
+
+#dashboard.dashboard-overview .orders-overview-metric-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    color: #52617c;
-    background: #f1f5f9;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: #0056b8;
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px rgba(0, 86, 184, 0.12);
 }
 
-#dashboard.dashboard-overview .orders-overview-card small {
+#dashboard.dashboard-overview .orders-overview-metric-copy {
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+#dashboard.dashboard-overview .orders-overview-metric-copy small {
     display: block;
     min-width: 0;
-    margin-bottom: 4px;
-    color: #69758a;
+    margin-bottom: 7px;
+    color: #5e6b80;
     font-size: 10px;
     font-weight: 900;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     line-height: 1.15;
     text-transform: uppercase;
     overflow: hidden;
@@ -1224,38 +1268,573 @@
     white-space: nowrap;
 }
 
-#dashboard.dashboard-overview .orders-overview-card strong {
+#dashboard.dashboard-overview .orders-overview-metric-copy strong {
     display: block;
     color: #0f172a;
-    font-size: 22px;
+    font-size: 25px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+
+#dashboard.dashboard-overview .orders-overview-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #15803d;
+    font-size: 11px;
     font-weight: 900;
     line-height: 1;
 }
 
-#dashboard.dashboard-overview .orders-overview-card.new .orders-overview-icon {
+#dashboard.dashboard-overview .orders-overview-delta.down {
+    color: #ef4444;
+}
+
+#dashboard.dashboard-overview .orders-overview-sparkline {
+    position: absolute;
+    right: 12px;
+    bottom: 14px;
+    width: 96px;
+    height: 48px;
+    opacity: 0.92;
+}
+
+#dashboard.dashboard-overview .orders-overview-sparkline polyline {
+    fill: none;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#dashboard.dashboard-overview .orders-overview-metric-tile.total .orders-overview-metric-icon,
+#dashboard.dashboard-overview .orders-overview-metric-tile.active .orders-overview-metric-icon {
     color: #2563eb;
     background: #eff6ff;
 }
 
-#dashboard.dashboard-overview .orders-overview-card.progress .orders-overview-icon {
-    color: #0f766e;
-    background: #ecfdf5;
+#dashboard.dashboard-overview .orders-overview-metric-tile.total::before,
+#dashboard.dashboard-overview .orders-overview-metric-tile.active::before {
+    background: #2563eb;
 }
 
-#dashboard.dashboard-overview .orders-overview-card.completed .orders-overview-icon {
+#dashboard.dashboard-overview .orders-overview-metric-tile.completed .orders-overview-metric-icon {
     color: #15803d;
     background: #f0fdf4;
 }
 
-#dashboard.dashboard-overview .orders-overview-card.delayed .orders-overview-icon,
-#dashboard.dashboard-overview .orders-overview-card.priority .orders-overview-icon {
-    color: #b45309;
-    background: #fffbeb;
+#dashboard.dashboard-overview .orders-overview-metric-tile.completed::before {
+    background: #2fbf71;
 }
 
-#dashboard.dashboard-overview .orders-overview-card.cancelled .orders-overview-icon {
+#dashboard.dashboard-overview .orders-overview-metric-tile.priority .orders-overview-metric-icon {
+    color: #ff6b1a;
+    background: #fff4e8;
+}
+
+#dashboard.dashboard-overview .orders-overview-metric-tile.priority::before {
+    background: #ff6b1a;
+}
+
+#dashboard.dashboard-overview .orders-overview-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(360px, 1.18fr) minmax(300px, 0.78fr) minmax(360px, 1.18fr);
+    gap: 14px;
+    align-items: stretch;
+}
+
+#dashboard.dashboard-overview .orders-overview-detail-card {
+    min-width: 0;
+    min-height: 278px;
+    padding: 16px;
+    border: 1px solid #e2eaf5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+#dashboard.dashboard-overview .orders-priority-card,
+#dashboard.dashboard-overview .orders-weekly-card,
+#dashboard.dashboard-overview .orders-recent-priority-card {
+    min-height: 272px;
+}
+
+#dashboard.dashboard-overview .orders-trend-card {
+    min-height: 278px;
+}
+
+#dashboard.dashboard-overview .orders-trend-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+#dashboard.dashboard-overview .orders-trend-summary span {
+    min-width: 0;
+    padding: 7px 10px;
+    border: 1px solid #e4ebf5;
+    border-radius: 8px;
+    background: #f8fbff;
+}
+
+#dashboard.dashboard-overview .orders-trend-summary small {
+    display: block;
+    margin-bottom: 4px;
     color: #64748b;
-    background: #f1f5f9;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#dashboard.dashboard-overview .orders-trend-summary strong {
+    display: block;
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+#dashboard.dashboard-overview .orders-trend-plot {
+    position: relative;
+    flex: 0 0 auto;
+    min-height: 214px;
+    padding: 10px 12px;
+    border: 1px solid #e4ebf5;
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at top right, rgba(0, 86, 184, 0.05), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    overflow: hidden;
+}
+
+#dashboard.dashboard-overview .orders-trend-plot::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+#dashboard.dashboard-overview .orders-detail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+#dashboard.dashboard-overview .orders-detail-head h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+#dashboard.dashboard-overview .orders-detail-head h3 span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .orders-detail-head button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #0056b8;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+#dashboard.dashboard-overview .orders-detail-head button:hover {
+    color: #003b7a;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+#dashboard.dashboard-overview .orders-status-distribution-body {
+    display: grid;
+    grid-template-columns: 156px minmax(0, 1fr);
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+#dashboard.dashboard-overview .orders-status-donut {
+    width: 156px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    border-radius: 50%;
+    background: conic-gradient(var(--segments));
+    position: relative;
+}
+
+#dashboard.dashboard-overview .orders-status-donut::before {
+    content: '';
+    position: absolute;
+    inset: 24px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px #edf2f7;
+}
+
+#dashboard.dashboard-overview .orders-status-donut strong,
+#dashboard.dashboard-overview .orders-status-donut span {
+    position: relative;
+    z-index: 1;
+}
+
+#dashboard.dashboard-overview .orders-status-donut strong {
+    color: #0f172a;
+    font-size: 25px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+#dashboard.dashboard-overview .orders-status-donut span {
+    margin-top: 7px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .orders-status-legend {
+    display: grid;
+    gap: 10px;
+}
+
+#dashboard.dashboard-overview .orders-status-legend-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 34px 38px;
+    align-items: center;
+    gap: 10px;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .orders-status-legend-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+#dashboard.dashboard-overview .orders-status-legend-row i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+#dashboard.dashboard-overview .orders-status-legend-row strong,
+#dashboard.dashboard-overview .orders-status-legend-row small {
+    text-align: right;
+}
+
+#dashboard.dashboard-overview .orders-flow-list {
+    display: grid;
+    gap: 7px;
+}
+
+#dashboard.dashboard-overview .orders-flow-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid #e2eaf5;
+    border-radius: 8px;
+    background: #f8fbff;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+#dashboard.dashboard-overview .orders-flow-step:hover {
+    border-color: rgba(0, 86, 184, 0.22);
+    background: #eff6ff;
+}
+
+#dashboard.dashboard-overview .orders-flow-step span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .orders-flow-step i {
+    color: #0056b8;
+}
+
+#dashboard.dashboard-overview .orders-flow-step strong {
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .orders-flow-arrow {
+    justify-self: center;
+    color: #3478f6;
+    font-size: 11px;
+    line-height: 1;
+}
+
+#dashboard.dashboard-overview .orders-flow-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .orders-trend-card .orders-inline-trend-svg {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 190px;
+    overflow: visible;
+}
+
+#dashboard.dashboard-overview .orders-trend-axis-labels {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 0;
+    margin-top: 3px;
+    padding: 0 16px 0 34px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+#dashboard.dashboard-overview .orders-trend-axis-labels span {
+    min-width: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#dashboard.dashboard-overview .orders-inline-grid-line {
+    stroke: #dfe8f5;
+    stroke-width: 1;
+    stroke-dasharray: 2 7;
+}
+
+#dashboard.dashboard-overview .orders-inline-bar-hit {
+    fill: transparent;
+    cursor: pointer;
+}
+
+#dashboard.dashboard-overview .orders-inline-bar {
+    fill: url(#ordersInlineTrendBar);
+    filter: drop-shadow(0 4px 7px rgba(0, 86, 184, 0.12));
+    transition: opacity 0.16s ease, transform 0.16s ease;
+    transform-box: fill-box;
+    transform-origin: center bottom;
+}
+
+#dashboard.dashboard-overview .orders-inline-bar.is-empty {
+    fill: #dbe7f5;
+    filter: none;
+    opacity: 0.72;
+}
+
+#dashboard.dashboard-overview .orders-inline-bar-group:hover .orders-inline-bar {
+    opacity: 0.88;
+    transform: scaleY(1.06);
+}
+
+#dashboard.dashboard-overview .orders-inline-bar-group:hover .orders-inline-bar-hit {
+    fill: rgba(0, 86, 184, 0.08);
+}
+
+#dashboard.dashboard-overview .orders-inline-trend-empty {
+    min-height: 166px;
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 900;
+    text-align: center;
+}
+
+#dashboard.dashboard-overview .orders-inline-trend-empty i {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 22px;
+}
+
+#dashboard.dashboard-overview .orders-priority-list {
+    display: grid;
+    gap: 20px;
+    margin: auto 0;
+}
+
+#dashboard.dashboard-overview .orders-priority-row {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr) 78px;
+    align-items: center;
+    gap: 12px;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .orders-priority-track {
+    height: 7px;
+    border-radius: 999px;
+    background: #edf2f7;
+    overflow: hidden;
+}
+
+#dashboard.dashboard-overview .orders-priority-track i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.2s ease;
+}
+
+#dashboard.dashboard-overview .orders-priority-row:hover .orders-priority-track {
+    background: #dfe8f5;
+}
+
+#dashboard.dashboard-overview .orders-priority-row strong {
+    color: #475569;
+    font-size: 10px;
+    text-align: right;
+}
+
+#dashboard.dashboard-overview .orders-overview-muted {
+    display: block;
+    margin-top: auto;
+    padding-top: 14px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .orders-weekly-bars {
+    flex: 1;
+    min-height: 174px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: end;
+    gap: 12px;
+    padding: 16px 4px 0;
+}
+
+#dashboard.dashboard-overview .orders-weekly-bar {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    align-items: end;
+    gap: 9px;
+    text-align: center;
+}
+
+#dashboard.dashboard-overview .orders-weekly-bar span {
+    width: 100%;
+    max-width: 28px;
+    min-height: 8px;
+    display: block;
+    align-self: end;
+    justify-self: center;
+    border-radius: 5px 5px 2px 2px;
+    background: linear-gradient(180deg, #3478f6, #0056b8);
+    position: relative;
+    transition: filter 0.16s ease, transform 0.16s ease;
+}
+
+#dashboard.dashboard-overview .orders-weekly-bar:hover span {
+    filter: drop-shadow(0 6px 10px rgba(0, 86, 184, 0.18));
+    transform: translateY(-1px);
+}
+
+#dashboard.dashboard-overview .orders-weekly-bar strong {
+    position: absolute;
+    left: 50%;
+    top: -18px;
+    transform: translateX(-50%);
+    color: #475569;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .orders-weekly-bar small {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .orders-recent-list {
+    display: grid;
+    gap: 8px;
+    align-content: center;
+    flex: 1;
+}
+
+#dashboard.dashboard-overview .orders-recent-row {
+    display: grid;
+    grid-template-columns: 18px minmax(86px, 0.7fr) minmax(0, 1fr) 52px;
+    align-items: center;
+    gap: 9px;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+    min-height: 38px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    transition: background 0.16s ease;
+}
+
+#dashboard.dashboard-overview .orders-recent-row:hover {
+    background: #f8fbff;
+}
+
+#dashboard.dashboard-overview .orders-recent-alert {
+    color: #ff6b1a;
+}
+
+#dashboard.dashboard-overview .orders-recent-row strong {
+    color: #0f172a;
+}
+
+#dashboard.dashboard-overview .orders-recent-row span:not(.orders-recent-alert) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#dashboard.dashboard-overview .orders-recent-row small {
+    color: #64748b;
+    text-align: right;
+}
+
+#dashboard.dashboard-overview .orders-recent-empty {
+    display: grid;
+    place-items: center;
+    min-height: 140px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
 }
 
 #dashboard.dashboard-overview .service-category-panel {
@@ -2226,19 +2805,21 @@
     position: relative;
     overflow: hidden;
     margin: 0 0 28px 0;
-    padding: clamp(16px, 2vw, 22px);
+    padding: clamp(18px, 2vw, 24px);
     border: 1px solid var(--do-border);
-    border-radius: 14px;
-    background: #ffffff;
-    box-shadow: var(--do-shadow);
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 14px 30px rgba(31, 41, 55, 0.05);
 }
 
 #dashboard.dashboard-overview .revenue-overview-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 14px;
+    gap: 18px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #edf2f7;
 }
 
 #dashboard.dashboard-overview .revenue-overview-title-block {
@@ -2253,13 +2834,12 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    color: #2f63f6;
-    background: linear-gradient(145deg, #eef4ff, #e7efff);
-    border: 1px solid rgba(47, 99, 246, 0.12);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    color: #0056b8;
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px rgba(0, 86, 184, 0.12);
 }
 
 #dashboard.dashboard-overview .revenue-overview-icon i {
@@ -2278,18 +2858,18 @@
     padding: 0;
     border: 0;
     color: var(--do-text);
-    font-size: 1.05rem;
-    font-weight: 800;
+    font-size: 18px;
+    font-weight: 900;
     line-height: 1.2;
     letter-spacing: 0;
 }
 
 #dashboard.dashboard-overview .revenue-overview-title-copy p {
     margin: 0;
-    color: #66738f;
-    font-size: 0.78rem;
+    color: var(--do-muted);
+    font-size: 12px;
     font-weight: 600;
-    line-height: 1.35;
+    line-height: 1.45;
 }
 
 #dashboard.dashboard-overview .revenue-overview-filter {
@@ -2300,25 +2880,25 @@
 }
 
 #dashboard.dashboard-overview .revenue-overview-filter select {
-    min-width: 136px;
+    min-width: 150px;
     height: 38px;
     padding: 0 34px 0 14px;
     appearance: none;
-    border: 1px solid #dbe4f0;
+    border: 1px solid #dfe8f5;
     border-radius: 8px;
-    background: #ffffff;
+    background: #edf5ff;
     color: #172033;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: inset 0 1px 2px rgba(0, 86, 184, 0.06);
     font: inherit;
-    font-size: 0.8rem;
+    font-size: 12px;
     font-weight: 800;
     cursor: pointer;
 }
 
 #dashboard.dashboard-overview .revenue-overview-filter select:focus {
     outline: none;
-    border-color: #2f63f6;
-    box-shadow: 0 0 0 3px rgba(47, 99, 246, 0.14);
+    border-color: #0056b8;
+    box-shadow: 0 0 0 3px rgba(0, 86, 184, 0.14);
 }
 
 #dashboard.dashboard-overview .revenue-overview-filter i {
@@ -2333,20 +2913,20 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 #dashboard.dashboard-overview .revenue-overview-stat {
     padding: 10px 12px;
-    border: 1px solid #e8eef6;
+    border: 1px solid #e4ebf5;
     border-radius: 8px;
-    background: #fbfdff;
+    background: #f8fbff;
 }
 
 #dashboard.dashboard-overview .revenue-overview-stat-label {
     display: block;
     margin-bottom: 4px;
-    color: #66738f;
+    color: #5e6b80;
     font-size: 0.62rem;
     font-weight: 800;
     letter-spacing: 0.06em;
@@ -2357,36 +2937,54 @@
 #dashboard.dashboard-overview .revenue-overview-stat strong {
     display: block;
     color: #172033;
-    font-size: 0.98rem;
-    font-weight: 850;
+    font-size: 1rem;
+    font-weight: 900;
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
 }
 
 #dashboard.dashboard-overview .revenue-overview-chart {
     position: relative;
-    min-height: 220px;
-    border-radius: 10px;
+    min-height: 264px;
+    padding: 6px 8px 2px;
+    border: 1px solid #e4ebf5;
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at top right, rgba(0, 86, 184, 0.06), transparent 34%),
+        linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    overflow: hidden;
+}
+
+#dashboard.dashboard-overview .revenue-overview-chart::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
 }
 
 #dashboard.dashboard-overview .revenue-overview-svg {
+    position: relative;
+    z-index: 1;
     display: block;
     width: 100%;
-    height: auto;
-    min-height: 220px;
-    overflow: visible;
+    min-width: 100%;
+    height: 264px;
 }
 
 #dashboard.dashboard-overview .revenue-grid-line {
-    stroke: #edf2f8;
+    stroke: #dfe8f5;
     stroke-width: 1;
+    stroke-dasharray: 3 6;
 }
 
 #dashboard.dashboard-overview .revenue-y-label,
 #dashboard.dashboard-overview .revenue-x-label {
-    fill: #53627f;
-    font-size: 12px;
-    font-weight: 750;
+    fill: #7b8798;
+    font-size: 11px;
+    font-weight: 800;
     font-family: inherit;
 }
 
@@ -2396,10 +2994,11 @@
 
 #dashboard.dashboard-overview .revenue-line-path {
     fill: none;
-    stroke: #2f63f6;
-    stroke-width: 3.2;
+    stroke: #0056b8;
+    stroke-width: 3.5;
     stroke-linecap: round;
     stroke-linejoin: round;
+    filter: drop-shadow(0 5px 8px rgba(0, 86, 184, 0.16));
 }
 
 #dashboard.dashboard-overview .revenue-point-hit {
@@ -2409,21 +3008,27 @@
 
 #dashboard.dashboard-overview .revenue-point {
     fill: #ffffff;
-    stroke: #2f63f6;
-    stroke-width: 3.4;
-    transition: fill 0.16s ease, r 0.16s ease;
+    stroke: #0056b8;
+    stroke-width: 3;
+    transition: fill 0.16s ease, r 0.16s ease, stroke-width 0.16s ease;
 }
 
 #dashboard.dashboard-overview .revenue-point-group:hover .revenue-point {
-    fill: #2f63f6;
+    fill: #ffffff;
     r: 6px;
+    stroke-width: 3.5;
+    filter: drop-shadow(0 6px 8px rgba(29, 111, 212, 0.2));
+}
+
+#dashboard.dashboard-overview .revenue-point-group:hover .revenue-point-hit {
+    fill: rgba(0, 86, 184, 0.08);
 }
 
 #dashboard.dashboard-overview .revenue-point-tooltip {
     opacity: 0;
     pointer-events: none;
     transform-box: fill-box;
-    transition: opacity 0.16s ease;
+    transition: opacity 0.15s ease;
 }
 
 #dashboard.dashboard-overview .revenue-point-group:hover .revenue-point-tooltip {
@@ -2431,43 +3036,34 @@
 }
 
 #dashboard.dashboard-overview .revenue-point-tooltip rect {
-    fill: #ffffff;
-    stroke: #e6edf6;
-    filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.12));
+    fill: #111827;
+    stroke: none;
+    filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.2));
 }
 
 #dashboard.dashboard-overview .revenue-point-tooltip text {
-    fill: #30405f;
+    fill: rgba(255, 255, 255, 0.76);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 9px;
     font-weight: 800;
 }
 
 #dashboard.dashboard-overview .revenue-point-tooltip .revenue-tooltip-value {
-    fill: #172033;
-    font-size: 13px;
+    fill: #ffffff;
+    font-size: 12px;
     font-weight: 900;
 }
 
-#dashboard.dashboard-overview .revenue-overview-period-label {
-    position: absolute;
-    right: 10px;
-    bottom: 0;
-    color: #8a98b3;
-    font-size: 0.72rem;
-    font-weight: 800;
-}
-
 #dashboard.dashboard-overview .revenue-overview-empty {
-    min-height: 220px;
+    min-height: 264px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 10px;
     border: 1px dashed #cbd5e1;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.68);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
     color: #66738f;
     text-align: center;
 }
@@ -2499,14 +3095,20 @@
     }
 
     #dashboard.dashboard-overview .revenue-overview-chart {
-        overflow-x: auto;
-        min-height: 230px;
+        min-height: 232px;
+        height: 232px;
     }
 
     #dashboard.dashboard-overview .revenue-overview-svg {
-        width: 760px;
-        max-width: none;
-        min-height: 230px;
+        width: 100%;
+        max-width: 100%;
+        min-width: 100%;
+        min-height: 232px;
+        height: 232px;
+    }
+
+    #dashboard.dashboard-overview .revenue-overview-empty {
+        min-height: 232px;
     }
 }
 
@@ -4390,7 +4992,20 @@
     }
 
     #dashboard.dashboard-overview .orders-overview-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: 1fr;
+    }
+
+    #dashboard.dashboard-overview .orders-overview-metric-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #dashboard.dashboard-overview .orders-overview-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #dashboard.dashboard-overview .orders-status-distribution-body {
+        grid-template-columns: 180px minmax(0, 1fr);
+        justify-content: start;
     }
 
     #dashboard.dashboard-overview .top-performance-grid {
@@ -4399,6 +5014,26 @@
 
     #dashboard.dashboard-overview .financial-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1280px) and (min-width: 981px) {
+    #dashboard.dashboard-overview .orders-overview-detail-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    #dashboard.dashboard-overview .orders-status-distribution,
+    #dashboard.dashboard-overview .orders-trend-card,
+    #dashboard.dashboard-overview .orders-recent-priority-card {
+        grid-column: span 2;
+    }
+
+    #dashboard.dashboard-overview .orders-trend-card .orders-inline-trend-svg {
+        height: 190px;
+    }
+
+    #dashboard.dashboard-overview .orders-status-distribution-body {
+        grid-template-columns: 190px minmax(0, 1fr);
     }
 }
 
@@ -4436,8 +5071,54 @@
     }
 
     #dashboard.dashboard-overview .orders-overview-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
         gap: 10px;
+    }
+
+    #dashboard.dashboard-overview .orders-overview-metric-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    #dashboard.dashboard-overview .orders-overview-metric-tile {
+        min-height: 104px;
+        padding: 14px 108px 14px 14px;
+    }
+
+    #dashboard.dashboard-overview .orders-overview-detail-card {
+        min-height: 0;
+        padding: 14px;
+    }
+
+    #dashboard.dashboard-overview .orders-status-distribution-body {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+
+    #dashboard.dashboard-overview .orders-status-legend {
+        width: 100%;
+    }
+
+    #dashboard.dashboard-overview .orders-priority-row {
+        grid-template-columns: 100px minmax(0, 1fr);
+    }
+
+    #dashboard.dashboard-overview .orders-priority-row strong {
+        grid-column: 2;
+        text-align: left;
+    }
+
+    #dashboard.dashboard-overview .orders-weekly-bars {
+        gap: 8px;
+    }
+
+    #dashboard.dashboard-overview .orders-recent-row {
+        grid-template-columns: 18px 74px minmax(0, 1fr);
+    }
+
+    #dashboard.dashboard-overview .orders-recent-row small {
+        grid-column: 2 / -1;
+        text-align: left;
     }
 
     #dashboard.dashboard-overview .service-category-total {
@@ -4496,5 +5177,33 @@
 
     #dashboard.dashboard-overview .financial-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 420px) {
+    #dashboard.dashboard-overview .orders-overview-metric-tile {
+        grid-template-columns: 38px minmax(0, 1fr);
+        padding: 14px;
+    }
+
+    #dashboard.dashboard-overview .orders-overview-sparkline {
+        position: static;
+        grid-column: 1 / -1;
+        width: 100%;
+        height: 36px;
+        margin-top: -4px;
+    }
+
+    #dashboard.dashboard-overview .orders-status-donut {
+        width: 136px;
+    }
+
+    #dashboard.dashboard-overview .orders-priority-row {
+        grid-template-columns: 1fr;
+        gap: 7px;
+    }
+
+    #dashboard.dashboard-overview .orders-priority-row strong {
+        grid-column: auto;
     }
 }

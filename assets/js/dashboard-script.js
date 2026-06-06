@@ -213,9 +213,10 @@ class DashboardManager {
             this.renderEmployeeLeaderboardFromStats(stats.employeeLeaderboard);
             this.renderRevenueOverviewFromStats(stats.revenueTimeline);
             this.renderMiniCharts(stats);
-            const ordersOverview = await this.getSyncedOrdersOverview(stats);
-            this.renderOrdersOverview(stats, ordersOverview);
-            const serviceCategoryOverview = await this.getSyncedServiceCategoryOverview(stats);
+            const syncedOrders = await this.getDashboardOrdersForOverview();
+            const ordersOverview = await this.getSyncedOrdersOverview(stats, syncedOrders);
+            this.renderOrdersOverview(stats, ordersOverview, syncedOrders);
+            const serviceCategoryOverview = await this.getSyncedServiceCategoryOverview(stats, syncedOrders);
             this.renderServiceCategoryOverview(serviceCategoryOverview);
             this.renderTopPerformanceCards(stats.topPerformance, serviceCategoryOverview);
             this.renderFinancialOverviewSummary(stats.financialOverview);
@@ -351,21 +352,30 @@ class DashboardManager {
         return overview;
     }
 
-    async getSyncedOrdersOverview(stats = {}) {
+    async getDashboardOrdersForOverview() {
+        try {
+            return await window.APIService.getOrdersFresh();
+        } catch (error) {
+            console.warn('Unable to load orders for dashboard overview:', error);
+            return [];
+        }
+    }
+
+    async getSyncedOrdersOverview(stats = {}, orders = null) {
         if (stats.ordersOverview?.version === 'real-orders-v2') {
             return stats.ordersOverview;
         }
 
         try {
-            const orders = await window.APIService.getOrdersFresh();
-            return this.buildOrdersOverviewFromOrders(orders);
+            const sourceOrders = Array.isArray(orders) ? orders : await window.APIService.getOrdersFresh();
+            return this.buildOrdersOverviewFromOrders(sourceOrders);
         } catch (error) {
             console.warn('Unable to sync orders overview from orders:', error);
             return {};
         }
     }
 
-    renderOrdersOverview(stats = {}, syncedOverview = null) {
+    renderOrdersOverview(stats = {}, syncedOverview = null, orders = []) {
         const container = document.getElementById('ordersOverviewCards');
         const totalEl = document.getElementById('ordersOverviewTotal');
         if (!container) return;
@@ -384,15 +394,439 @@ class DashboardManager {
         const total = Number(stats.totalOrders ?? cards.slice(0, 5).reduce((sum, card) => sum + card.value, 0));
         if (totalEl) totalEl.textContent = `${total.toLocaleString()} order${total === 1 ? '' : 's'}`;
 
-        container.innerHTML = cards.map(card => `
-            <article class="orders-overview-card ${escapePaymentHtml(card.key)}" role="listitem">
-                <span class="orders-overview-icon" aria-hidden="true"><i class="fas fa-${escapePaymentHtml(card.icon)}"></i></span>
-                <div>
-                    <small>${escapePaymentHtml(card.label)}</small>
-                    <strong>${card.value.toLocaleString()}</strong>
+        const ordersData = Array.isArray(orders) ? orders : [];
+        const activeOrders = cards.find(card => card.key === 'progress')?.value || 0;
+        const completedOrders = cards.find(card => card.key === 'completed')?.value || 0;
+        const completedRate = total ? Math.round((completedOrders / total) * 100) : 0;
+        const priorityCounts = this.buildOrdersPriorityBreakdown(ordersData, overview);
+        const weeklySeries = this.buildOrdersWeeklyPerformanceSeries(ordersData);
+        const trendSeries = this.buildOrderVolumeDailySeriesForDays(ordersData, 30);
+        const recentHighPriority = this.getRecentHighPriorityOrders(ordersData);
+        const flowRows = [
+            { key: 'new', label: 'New Orders', value: cards.find(card => card.key === 'new')?.value || 0, icon: 'plus-circle' },
+            { key: 'progress', label: 'In Progress', value: activeOrders, icon: 'spinner' },
+            { key: 'completed', label: 'Completed', value: completedOrders, icon: 'check-circle' }
+        ];
+        const statusRows = [
+            { key: 'completed', label: 'Completed', value: completedOrders, color: '#2fbf71' },
+            { key: 'new', label: 'New Orders', value: cards.find(card => card.key === 'new')?.value || 0, color: '#3478f6' },
+            { key: 'progress', label: 'In Progress', value: activeOrders, color: '#7c4dff' },
+            { key: 'delayed', label: 'Delayed', value: cards.find(card => card.key === 'delayed')?.value || 0, color: '#ff8a2a' },
+            { key: 'cancelled', label: 'Cancelled', value: cards.find(card => card.key === 'cancelled')?.value || 0, color: '#ef4444' }
+        ];
+        const summaryTiles = [
+            {
+                key: 'total',
+                label: 'Total Orders',
+                value: total,
+                icon: 'shopping-bag',
+                delta: this.getOrdersDeltaLabel(ordersData, () => true, 30),
+                spark: trendSeries.slice(-10)
+            },
+            {
+                key: 'active',
+                label: 'Active Orders',
+                value: activeOrders,
+                icon: 'layer-group',
+                delta: this.getOrdersDeltaLabel(ordersData, order => this.getOrderOverviewStatus(order) === 'inProgress', 7),
+                spark: this.buildOrdersStatusSparkline(ordersData, 'inProgress')
+            },
+            {
+                key: 'completed',
+                label: 'Completed Rate',
+                value: `${completedRate}%`,
+                icon: 'check-circle',
+                delta: this.getOrdersDeltaLabel(ordersData, order => this.getOrderOverviewStatus(order) === 'completed', 30),
+                spark: this.buildOrdersStatusSparkline(ordersData, 'completed')
+            },
+            {
+                key: 'priority',
+                label: 'High Priority Orders',
+                value: priorityCounts.high,
+                icon: 'exclamation-circle',
+                delta: this.getOrdersDeltaLabel(ordersData, order => ['high', 'urgent'].includes(this.normalizeOrderOverviewText(order.priority)), 7),
+                spark: this.buildOrdersPrioritySparkline(ordersData)
+            }
+        ];
+
+        container.innerHTML = `
+            <div class="orders-overview-metric-row">
+                ${summaryTiles.map(tile => this.renderOrdersOverviewMetricTile(tile)).join('')}
+            </div>
+            <div class="orders-overview-detail-grid">
+                <article class="orders-overview-detail-card orders-status-distribution">
+                    <div class="orders-detail-head">
+                        <h3>Order Status Distribution</h3>
+                    </div>
+                    ${this.renderOrdersStatusDistribution(statusRows, total)}
+                </article>
+                <article class="orders-overview-detail-card orders-flow-card">
+                    <div class="orders-detail-head">
+                        <h3>Order Flow</h3>
+                    </div>
+                    ${this.renderOrdersFlow(flowRows, completedRate)}
+                </article>
+                <article class="orders-overview-detail-card orders-trend-card">
+                    <div class="orders-detail-head">
+                        <h3>Orders Trend <span>Last 30 Days</span></h3>
+                    </div>
+                    ${this.renderOrdersOverviewTrendCard(trendSeries)}
+                </article>
+                <article class="orders-overview-detail-card orders-priority-card">
+                    <div class="orders-detail-head">
+                        <h3>Priority Breakdown</h3>
+                    </div>
+                    ${this.renderOrdersPriorityBreakdown(priorityCounts)}
+                </article>
+                <article class="orders-overview-detail-card orders-weekly-card">
+                    <div class="orders-detail-head">
+                        <h3>Weekly Performance</h3>
+                    </div>
+                    ${this.renderOrdersWeeklyPerformance(weeklySeries)}
+                </article>
+                <article class="orders-overview-detail-card orders-recent-priority-card">
+                    <div class="orders-detail-head">
+                        <h3>Recent High Priority Orders</h3>
+                        <button type="button" onclick="openOrdersSection()">View all</button>
+                    </div>
+                    ${this.renderRecentHighPriorityOrders(recentHighPriority)}
+                </article>
+            </div>
+        `;
+    }
+
+    renderOrdersOverviewMetricTile(tile) {
+        return `
+            <article class="orders-overview-metric-tile ${escapePaymentHtml(tile.key)}">
+                <span class="orders-overview-metric-icon" aria-hidden="true"><i class="fas fa-${escapePaymentHtml(tile.icon)}"></i></span>
+                <div class="orders-overview-metric-copy">
+                    <small>${escapePaymentHtml(tile.label)}</small>
+                    <strong>${typeof tile.value === 'number' ? tile.value.toLocaleString() : escapePaymentHtml(tile.value)}</strong>
+                    <span class="orders-overview-delta ${tile.delta.direction}">
+                        <i class="fas fa-arrow-${tile.delta.direction === 'down' ? 'down' : 'up'}" aria-hidden="true"></i>
+                        ${escapePaymentHtml(tile.delta.label)}
+                    </span>
                 </div>
+                ${this.renderOrdersSparkline(tile.spark, tile.key === 'priority' ? '#ff6b1a' : tile.key === 'completed' ? '#2fbf71' : '#3478f6')}
             </article>
-        `).join('');
+        `;
+    }
+
+    getOrdersDeltaLabel(orders, predicate, days) {
+        const currentEnd = todayDateInput();
+        const currentStart = this.addRevenueDays(currentEnd, -(days - 1));
+        const previousEnd = this.addRevenueDays(currentStart, -1);
+        const previousStart = this.addRevenueDays(previousEnd, -(days - 1));
+        const countInRange = (start, end) => orders.filter(order => {
+            const dateInput = this.getRevenueOrderDateInput(order);
+            return dateInput && dateInput >= start && dateInput <= end && predicate(order);
+        }).length;
+        const current = countInRange(currentStart, currentEnd);
+        const previous = countInRange(previousStart, previousEnd);
+        const change = previous ? Math.round(((current - previous) / previous) * 100) : (current ? 100 : 0);
+        const direction = change < 0 ? 'down' : 'up';
+        return { direction, label: `${Math.abs(change)}% vs last ${days === 7 ? 'week' : 'month'}` };
+    }
+
+    buildOrdersStatusSparkline(orders, statusKey) {
+        return this.buildOrderVolumeDailySeriesForDays(orders.filter(order => this.getOrderOverviewStatus(order) === statusKey), 10);
+    }
+
+    buildOrdersPrioritySparkline(orders) {
+        return this.buildOrderVolumeDailySeriesForDays(orders.filter(order => ['high', 'urgent'].includes(this.normalizeOrderOverviewText(order.priority))), 10);
+    }
+
+    renderOrdersSparkline(series = [], color = '#3478f6') {
+        const values = series.map(item => item.value);
+        const max = Math.max(...values, 1);
+        const points = values.map((value, index) => {
+            const x = values.length <= 1 ? 96 : (index / (values.length - 1)) * 96;
+            const y = 44 - ((value / max) * 34) - 5;
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+        return `
+            <svg class="orders-overview-sparkline" viewBox="0 0 96 48" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <title>${values.reduce((sum, value) => sum + value, 0).toLocaleString()} orders in this period</title>
+                <polyline points="${points}" style="stroke:${color}"></polyline>
+            </svg>
+        `;
+    }
+
+    renderOrdersStatusDistribution(rows, total) {
+        const actualTotal = Math.max(total, rows.reduce((sum, row) => sum + row.value, 0));
+        const safeTotal = Math.max(actualTotal, 1);
+        let cursor = 0;
+        const segments = rows.map(row => {
+            const start = cursor;
+            cursor += (row.value / safeTotal) * 100;
+            return `${row.color} ${start}% ${cursor}%`;
+        }).join(', ');
+        return `
+            <div class="orders-status-distribution-body">
+                <div class="orders-status-donut" style="--segments:${segments}">
+                    <strong>${actualTotal.toLocaleString()}</strong>
+                    <span>Total Orders</span>
+                </div>
+                <div class="orders-status-legend">
+                    ${rows.map(row => {
+                        const percent = safeTotal ? Math.round((row.value / safeTotal) * 100) : 0;
+                        return `
+                            <div class="orders-status-legend-row">
+                                <span><i style="background:${row.color}"></i>${escapePaymentHtml(row.label)}</span>
+                                <strong>${row.value.toLocaleString()}</strong>
+                                <small>${percent}%</small>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderOrdersFlow(rows, completedRate) {
+        return `
+            <div class="orders-flow-list">
+                ${rows.map((row, index) => `
+                    <div class="orders-flow-step ${escapePaymentHtml(row.key)}">
+                        <span><i class="fas fa-${escapePaymentHtml(row.icon)}" aria-hidden="true"></i>${escapePaymentHtml(row.label)}</span>
+                        <strong>${row.value.toLocaleString()}</strong>
+                    </div>
+                    ${index < rows.length - 1 ? '<i class="fas fa-arrow-down orders-flow-arrow" aria-hidden="true"></i>' : ''}
+                `).join('')}
+            </div>
+            <div class="orders-flow-footer">
+                <span>Conversion Rate</span>
+                <strong>${completedRate}%</strong>
+            </div>
+        `;
+    }
+
+    buildOrdersPriorityBreakdown(orders, overview = {}) {
+        const counts = { high: Number(overview.highPriority || 0), medium: 0, low: 0 };
+        if (!orders.length) return counts;
+        counts.high = 0;
+        orders.forEach(order => {
+            const priority = this.normalizeOrderOverviewText(order.priority || 'medium');
+            if (priority === 'low') counts.low += 1;
+            else if (priority === 'high' || priority === 'urgent') counts.high += 1;
+            else counts.medium += 1;
+        });
+        return counts;
+    }
+
+    renderOrdersPriorityBreakdown(counts) {
+        const total = Math.max(counts.high + counts.medium + counts.low, 1);
+        const rows = [
+            { key: 'high', label: 'High Priority', value: counts.high, color: '#ff4d4f' },
+            { key: 'medium', label: 'Medium Priority', value: counts.medium, color: '#ff8a2a' },
+            { key: 'low', label: 'Low Priority', value: counts.low, color: '#2fbf71' }
+        ];
+        return `
+            <div class="orders-priority-list">
+                ${rows.map(row => {
+                    const percent = Math.round((row.value / total) * 100);
+                    return `
+                        <div class="orders-priority-row">
+                            <span>${escapePaymentHtml(row.label)}</span>
+                            <div class="orders-priority-track"><i style="width:${percent}%; background:${row.color}"></i></div>
+                            <strong>${row.value.toLocaleString()} (${percent}%)</strong>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            <small class="orders-overview-muted">Based on current orders</small>
+        `;
+    }
+
+    buildOrdersWeeklyPerformanceSeries(orders) {
+        const start = this.getOrderVolumeWeekStart(todayDateInput());
+        const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const series = labels.map((label, index) => ({ label, value: 0, date: this.addRevenueDays(start, index) }));
+        orders.forEach(order => {
+            const dateInput = this.getRevenueOrderDateInput(order);
+            const bucket = series.find(item => item.date === dateInput);
+            if (bucket) bucket.value += 1;
+        });
+        return series;
+    }
+
+    renderOrdersWeeklyPerformance(series) {
+        const max = Math.max(...series.map(item => item.value), 1);
+        return `
+            <div class="orders-weekly-bars">
+                ${series.map(item => `
+                    <div class="orders-weekly-bar">
+                        <span style="height:${Math.max(8, (item.value / max) * 92)}%"><strong>${item.value}</strong></span>
+                        <small>${escapePaymentHtml(item.label)}</small>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderOrdersOverviewTrendSvg(series) {
+        return this.renderOrdersInlineTrendChartSvg(series);
+    }
+
+    renderOrdersOverviewTrendCard(series = []) {
+        const total = series.reduce((sum, item) => sum + Number(item.value || 0), 0);
+        const peak = series.reduce((best, item) => Number(item.value || 0) > Number(best.value || 0) ? item : best, series[0] || { value: 0, tooltipLabel: '-' });
+        const activeDays = series.filter(item => Number(item.value || 0) > 0).length;
+
+        return `
+            <div class="orders-trend-summary">
+                <span><small>Total</small><strong>${total.toLocaleString()}</strong></span>
+                <span><small>Peak Day</small><strong>${Number(peak.value || 0).toLocaleString()}</strong></span>
+                <span><small>Active Days</small><strong>${activeDays.toLocaleString()}</strong></span>
+            </div>
+            <div class="orders-trend-plot">
+                ${this.renderOrdersOverviewTrendSvg(series)}
+                ${this.renderOrdersTrendAxisLabels(series)}
+            </div>
+        `;
+    }
+
+    renderOrdersTrendAxisLabels(series = []) {
+        if (!series.length) return '';
+        const labelEvery = Math.max(1, Math.ceil(series.length / 5));
+
+        return `
+            <div class="orders-trend-axis-labels" style="grid-template-columns: repeat(${series.length}, minmax(0, 1fr));" aria-hidden="true">
+                ${series.map((item, index) => {
+                    const visible = index % labelEvery === 0 || index === series.length - 1;
+                    return `<span>${visible ? escapePaymentHtml(item.label) : ''}</span>`;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    buildOrderVolumeDailySeriesForDays(orders = [], days = 14) {
+        const end = todayDateInput();
+        const config = tz();
+        const addDays = (dateInput, count) => config?.addDaysToDateString ? config.addDaysToDateString(dateInput, count) : this.addRevenueDays(dateInput, count);
+        const start = addDays(end, -(Math.max(days, 1) - 1));
+        const dates = this.getRevenueDateSeries(start, end);
+        const counts = this.countOrdersByDate(orders);
+
+        return dates.map(dateInput => ({
+            key: dateInput,
+            label: this.formatRevenueBucketLabel(dateInput),
+            tooltipLabel: formatDisplayDate(dateInput),
+            value: counts.get(dateInput) || 0
+        }));
+    }
+
+    getRecentHighPriorityOrders(orders) {
+        return [...orders]
+            .filter(order => ['high', 'urgent'].includes(this.normalizeOrderOverviewText(order.priority)))
+            .sort((a, b) => new Date(b.createdAt || b.scheduleDate || 0) - new Date(a.createdAt || a.scheduleDate || 0))
+            .slice(0, 4);
+    }
+
+    renderRecentHighPriorityOrders(orders) {
+        if (!orders.length) {
+            return '<div class="orders-recent-empty">No high priority orders</div>';
+        }
+        return `
+            <div class="orders-recent-list">
+                ${orders.map(order => `
+                    <div class="orders-recent-row">
+                        <span class="orders-recent-alert"><i class="fas fa-exclamation-circle" aria-hidden="true"></i></span>
+                        <strong>${escapePaymentHtml(this.getOrderOverviewDisplayId(order))}</strong>
+                        <span title="${escapePaymentHtml(this.getOrderOverviewCustomerName(order))}">${escapePaymentHtml(this.getOrderOverviewCustomerName(order))}</span>
+                        <small>${escapePaymentHtml(this.getTimeAgo(order.createdAt || order.scheduleDate || order.startDate))}</small>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    getOrderOverviewDisplayId(order = {}) {
+        return order.orderId || order.orderNumber || order.workOrderId || `#${String(order._id || '').slice(-6).toUpperCase() || 'ORDER'}`;
+    }
+
+    getOrderOverviewCustomerName(order = {}) {
+        const customer = order.customer;
+        if (customer && typeof customer === 'object') {
+            return customer.name || customer.fullName || customer.email || 'Unassigned';
+        }
+        return customer || order.customerName || order.name || 'Unassigned';
+    }
+
+    buildOrderVolumeDailySeries(orders = []) {
+        return this.buildOrderVolumeDailySeriesForDays(orders, 14);
+    }
+
+    countOrdersByDate(orders = []) {
+        const counts = new Map();
+        (Array.isArray(orders) ? orders : []).forEach(order => {
+            const dateInput = this.getRevenueOrderDateInput(order);
+            if (!dateInput) return;
+            counts.set(dateInput, (counts.get(dateInput) || 0) + 1);
+        });
+        return counts;
+    }
+
+    getOrderVolumeWeekStart(dateInput) {
+        const date = new Date(`${dateInput}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return dateInput;
+        const day = date.getDay();
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        date.setDate(date.getDate() + mondayOffset);
+        return this.toRevenueDateInput(date);
+    }
+
+    renderOrdersInlineTrendChartSvg(series = []) {
+        if (!series.length) {
+            return `
+                <div class="orders-inline-trend-empty" role="status">
+                    <i class="fas fa-chart-line" aria-hidden="true"></i>
+                    <span>No order volume data yet</span>
+                </div>
+            `;
+        }
+
+        const width = 760;
+        const height = 190;
+        const pad = { top: 18, right: 18, bottom: 30, left: 34 };
+        const plotWidth = width - pad.left - pad.right;
+        const plotHeight = height - pad.top - pad.bottom;
+        const maxValue = Math.max(...series.map(item => item.value), 1);
+        const niceMax = Math.max(6, Math.ceil((maxValue * 1.15) / 2) * 2);
+        const slotWidth = plotWidth / Math.max(series.length, 1);
+        const barWidth = Math.max(8, Math.min(18, slotWidth * 0.62));
+        const bars = series.map((item, index) => {
+            const value = Number(item.value || 0);
+            const barHeight = value ? Math.max(4, (value / niceMax) * plotHeight) : 2;
+            const x = pad.left + index * slotWidth + (slotWidth - barWidth) / 2;
+            const y = pad.top + plotHeight - barHeight;
+            return { ...item, value, x, y, width: barWidth, height: barHeight };
+        });
+        const yTicks = [niceMax, niceMax * 0.5, 0];
+
+        return `
+            <svg class="orders-inline-trend-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <defs>
+                    <linearGradient id="ordersInlineTrendBar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#3478f6"/>
+                        <stop offset="100%" stop-color="#0056b8"/>
+                    </linearGradient>
+                </defs>
+                ${yTicks.map(tick => {
+                    const y = pad.top + plotHeight - ((tick / niceMax) * plotHeight);
+                    return `
+                        <line class="orders-inline-grid-line" x1="${pad.left}" y1="${y.toFixed(2)}" x2="${width - pad.right}" y2="${y.toFixed(2)}"></line>
+                    `;
+                }).join('')}
+                ${bars.map(bar => `
+                    <g class="orders-inline-bar-group">
+                        <title>${escapePaymentHtml(bar.tooltipLabel)}: ${bar.value.toLocaleString()} order${bar.value === 1 ? '' : 's'}</title>
+                        <rect class="orders-inline-bar-hit" x="${(bar.x - 4).toFixed(2)}" y="${pad.top}" width="${(bar.width + 8).toFixed(2)}" height="${plotHeight}"></rect>
+                        <rect class="orders-inline-bar ${bar.value ? '' : 'is-empty'}" x="${bar.x.toFixed(2)}" y="${bar.y.toFixed(2)}" width="${bar.width.toFixed(2)}" height="${bar.height.toFixed(2)}" rx="3"></rect>
+                    </g>
+                `).join('')}
+            </svg>
+        `;
     }
 
     getCategoryOverviewPalette() {
@@ -441,14 +875,14 @@ class DashboardManager {
             });
     }
 
-    async getSyncedServiceCategoryOverview(stats = {}) {
+    async getSyncedServiceCategoryOverview(stats = {}, orders = null) {
         if (Array.isArray(stats.serviceCategoryOverview)) {
             return stats.serviceCategoryOverview;
         }
 
         try {
-            const orders = await window.APIService.getOrdersFresh();
-            return this.buildServiceCategoryOverviewFromOrders(orders);
+            const sourceOrders = Array.isArray(orders) ? orders : await window.APIService.getOrdersFresh();
+            return this.buildServiceCategoryOverviewFromOrders(sourceOrders);
         } catch (error) {
             console.warn('Unable to sync service category overview from orders:', error);
             return [];
@@ -1459,8 +1893,8 @@ class DashboardManager {
 
     renderRevenueOverviewChartSvg(buckets, range) {
         const width = 900;
-        const height = 238;
-        const pad = { top: 16, right: 24, bottom: 36, left: 50 };
+        const height = 264;
+        const pad = { top: 26, right: 30, bottom: 44, left: 48 };
         const plotWidth = width - pad.left - pad.right;
         const plotHeight = height - pad.top - pad.bottom;
         const maxValue = Math.max(...buckets.map(bucket => bucket.value), 1);
@@ -1476,26 +1910,28 @@ class DashboardManager {
         const labelEvery = Math.max(1, Math.ceil(points.length / 6));
         const yTicks = [niceMax, niceMax * 0.75, niceMax * 0.5, niceMax * 0.25, 0];
         const renderPointTooltip = (point) => {
-            const x = Math.min(Math.max(point.x - 62, pad.left + 6), width - 154);
-            const y = Math.max(8, point.y - 70);
+            const tooltipWidth = 124;
+            const tooltipHeight = 44;
+            const x = Math.min(Math.max(point.x - tooltipWidth / 2, pad.left + 6), width - tooltipWidth - pad.right);
+            const y = Math.max(8, point.y - tooltipHeight - 10);
             return `
                 <g class="revenue-point-tooltip" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">
-                    <rect width="142" height="56" rx="8"></rect>
-                    <text x="14" y="22">${escapePaymentHtml(point.tooltipLabel)}</text>
-                    <text class="revenue-tooltip-value" x="14" y="41">${escapePaymentHtml(this.formatRevenueOverviewCurrency(point.value))}</text>
+                    <rect width="${tooltipWidth}" height="${tooltipHeight}" rx="8"></rect>
+                    <text x="12" y="18">${escapePaymentHtml(point.tooltipLabel)}</text>
+                    <text class="revenue-tooltip-value" x="12" y="36">${escapePaymentHtml(this.formatRevenueOverviewCurrency(point.value))}</text>
                 </g>
             `;
         };
 
         return `
-            <svg class="revenue-overview-svg" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false">
+            <svg class="revenue-overview-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
                 <defs>
                     <linearGradient id="revenueOverviewArea" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#2f63f6" stop-opacity="0.24"/>
-                        <stop offset="100%" stop-color="#2f63f6" stop-opacity="0"/>
+                        <stop offset="0%" stop-color="#0056b8" stop-opacity="0.22"/>
+                        <stop offset="100%" stop-color="#0056b8" stop-opacity="0"/>
                     </linearGradient>
                     <filter id="revenueOverviewShadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#2f63f6" flood-opacity="0.16"/>
+                        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0056b8" flood-opacity="0.16"/>
                     </filter>
                 </defs>
                 ${yTicks.map(tick => {
@@ -1516,7 +1952,6 @@ class DashboardManager {
                     ${(index % labelEvery === 0 || index === points.length - 1) ? `<text class="revenue-x-label" x="${point.x.toFixed(2)}" y="${height - 12}" text-anchor="middle">${escapePaymentHtml(point.label)}</text>` : ''}
                 `).join('')}
             </svg>
-            <span class="revenue-overview-period-label">${escapePaymentHtml(range.label)}</span>
         `;
     }
 
@@ -8526,6 +8961,24 @@ window.showSection = function(sectionId) {
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.classList.add('active');
+    }
+};
+
+window.openOrdersSection = function() {
+    if (window.dashboard && typeof window.dashboard.showSection === 'function') {
+        window.dashboard.showSection('orders');
+    } else {
+        window.showSection('orders');
+    }
+
+    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+    const ordersLink = document.querySelector('[data-section="orders"]');
+    if (ordersLink?.parentElement) {
+        ordersLink.parentElement.classList.add('active');
+    }
+
+    if (typeof loadOrdersSection === 'function') {
+        loadOrdersSection();
     }
 };
 
