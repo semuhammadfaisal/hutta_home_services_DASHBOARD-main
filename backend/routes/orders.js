@@ -135,17 +135,40 @@ router.get('/', authenticateToken, async (req, res) => {
       noBidRecordsForOrders.map(r => r.orderId && r.orderId.toString()).filter(Boolean)
     );
 
+    const orderObjectIds = orders.map(o => o._id).filter(Boolean);
     const pipelineRecordIds = [...new Set(
-      orders.map(o => o.pipelineRecordId).filter(Boolean).map(id => id.toString())
+      orders
+        .map(o => o.pipelineRecordId)
+        .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+        .map(id => id.toString())
     )].map(id => new mongoose.Types.ObjectId(id));
 
-    const pipelineRecords = pipelineRecordIds.length
-      ? await PipelineRecord.find({ _id: { $in: pipelineRecordIds } })
+    const pipelineRecordQuery = [];
+    if (pipelineRecordIds.length) {
+      pipelineRecordQuery.push({ _id: { $in: pipelineRecordIds } });
+    }
+    if (orderObjectIds.length) {
+      pipelineRecordQuery.push({ orderId: { $in: orderObjectIds } });
+    }
+
+    const pipelineRecords = pipelineRecordQuery.length
+      ? await PipelineRecord.find({ $or: pipelineRecordQuery })
         .select('stageId orderId')
+        .sort({ updatedAt: -1 })
         .lean()
       : [];
 
-    const recordById = new Map(pipelineRecords.map(r => [r._id.toString(), r]));
+    const recordById = new Map();
+    const recordByOrderId = new Map();
+    pipelineRecords.forEach(record => {
+      recordById.set(record._id.toString(), record);
+      if (record.orderId) {
+        const orderId = record.orderId.toString();
+        if (!recordByOrderId.has(orderId)) {
+          recordByOrderId.set(orderId, record);
+        }
+      }
+    });
     const stageIds = [...new Set(
       pipelineRecords.map(r => r.stageId && r.stageId.toString()).filter(Boolean)
     )].map(id => new mongoose.Types.ObjectId(id));
@@ -161,14 +184,15 @@ router.get('/', authenticateToken, async (req, res) => {
       const oid = order._id.toString();
       if (excludedByPipelineOrderId.has(oid)) continue;
 
-      const rec = order.pipelineRecordId
+      const rec = recordByOrderId.get(oid) || (order.pipelineRecordId
         ? recordById.get(order.pipelineRecordId.toString())
-        : null;
+        : null);
       if (rec && rec.stageId) {
         const st = stageById.get(rec.stageId.toString());
         if (st && st.isNoBid) continue;
-        if (!order.pipelineStage && st) {
+        if (st) {
           order.pipelineStage = st.name;
+          order.pipelineRecordId = rec._id;
         }
       }
 
@@ -207,17 +231,30 @@ router.get('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    if (!order.pipelineStage && order.pipelineRecordId) {
+    if (order.pipelineRecordId || order._id) {
       const PipelineRecord = require('../models/PipelineRecord');
       const Stage = require('../models/Stage');
-      const pipelineRecord = await PipelineRecord.findById(order.pipelineRecordId)
+      const pipelineRecordQuery = [];
+
+      if (order.pipelineRecordId && mongoose.Types.ObjectId.isValid(order.pipelineRecordId)) {
+        pipelineRecordQuery.push({ _id: order.pipelineRecordId });
+      }
+      if (order._id) {
+        pipelineRecordQuery.push({ orderId: order._id });
+      }
+
+      const pipelineRecord = pipelineRecordQuery.length
+        ? await PipelineRecord.findOne({ $or: pipelineRecordQuery })
         .select('stageId')
-        .lean();
+        .sort({ updatedAt: -1 })
+        .lean()
+        : null;
 
       if (pipelineRecord?.stageId) {
         const stage = await Stage.findById(pipelineRecord.stageId).select('name').lean();
         if (stage?.name) {
           order.pipelineStage = stage.name;
+          order.pipelineRecordId = pipelineRecord._id;
         }
       }
     }

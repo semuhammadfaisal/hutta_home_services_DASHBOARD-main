@@ -8717,7 +8717,7 @@ function getOrderSearchText(order) {
     const customer = order.customer || {};
     const vendor = order.vendor || {};
     const employee = order.employee || {};
-    const visibleStatus = order.pipelineStage || order.status || '';
+    const visibleStatus = getOrderVisibleStatus(order);
 
     return [
         order.orderId,
@@ -8752,23 +8752,31 @@ function formatOrderFilterLabel(value) {
         .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function getOrderVisibleStatus(order) {
+    return order.pipelineStage || order.status || '';
+}
+
 function getOrderStatusFilterValues(order) {
-    const rawValues = [order.status, order.pipelineStage];
-    const normalizedValues = rawValues
+    const visibleStatus = getOrderVisibleStatus(order);
+    const normalizedValues = [visibleStatus]
         .map(normalizeOrderFilterValue)
         .filter(Boolean);
     const valueSet = new Set(normalizedValues);
 
     normalizedValues.forEach(value => {
+        if (value === 'work-order-received' || value === 'created') {
+            valueSet.add('new');
+        }
+
         if (value === 'complete' || value === 'done' || value === 'finished' || value === 'closed' || value === 'paid' || value.includes('completed')) {
             valueSet.add('completed');
         }
 
-        if (value.includes('progress') || value.includes('working') || value.includes('work-order') || value === 'scheduled') {
+        if (value.includes('progress') || value.includes('working') || value === 'scheduled') {
             valueSet.add('in-progress');
         }
 
-        if (value.includes('cancel') || value === 'lost') {
+        if (value.includes('cancel') || value === 'lost' || value === 'no-bid') {
             valueSet.add('cancelled');
         }
 
@@ -8795,11 +8803,10 @@ function updateOrderStatusFilterOptions(orders = []) {
     const statusMap = new Map(knownStatuses);
 
     orders.forEach(order => {
-        [order.status, order.pipelineStage].forEach(value => {
-            const normalized = normalizeOrderFilterValue(value);
-            if (!normalized || normalized === 'all' || statusMap.has(normalized)) return;
-            statusMap.set(normalized, formatOrderFilterLabel(value));
-        });
+        const value = getOrderVisibleStatus(order);
+        const normalized = normalizeOrderFilterValue(value);
+        if (!normalized || normalized === 'all' || statusMap.has(normalized)) return;
+        statusMap.set(normalized, formatOrderFilterLabel(value));
     });
 
     statusFilter.replaceChildren();
