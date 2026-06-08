@@ -839,7 +839,15 @@
     background: linear-gradient(90deg, #0056b8, #0078e8);
 }
 
-/* Pipeline Search Bar */
+/* Pipeline Filters */
+#pipeline .pipeline-filter-bar {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(240px, 320px);
+    gap: 12px;
+    align-items: stretch;
+    margin-bottom: 20px;
+}
+
 #pipeline .pipeline-search-bar {
     display: flex;
     align-items: center;
@@ -848,7 +856,7 @@
     background: var(--pipe-muted);
     border-radius: var(--pipe-radius);
     border: 1px solid var(--pipe-border);
-    margin-bottom: 20px;
+    margin-bottom: 0;
     position: relative;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -902,6 +910,51 @@
 
 #pipeline .btn-clear-search i {
     font-size: 12px;
+}
+
+#pipeline .pipeline-employee-filter {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    min-width: 0;
+    padding: 8px 12px;
+    background: var(--pipe-surface);
+    border: 1px solid var(--pipe-border);
+    border-radius: var(--pipe-radius);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#pipeline .pipeline-employee-filter:focus-within {
+    border-color: rgba(0, 86, 184, 0.35);
+    box-shadow: 0 0 0 3px var(--pipe-accent-ring);
+}
+
+#pipeline .pipeline-employee-filter span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--pipe-text-secondary);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+#pipeline .pipeline-employee-filter span i {
+    color: #0056b8;
+}
+
+#pipeline .pipeline-employee-filter select {
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--pipe-text);
+    font-size: 13px;
+    font-weight: 800;
 }
 
 #pipeline .pipeline-header-bar h1 {
@@ -1354,6 +1407,10 @@
 }
 
 @media (max-width: 768px) {
+    #pipeline .pipeline-filter-bar {
+        grid-template-columns: 1fr;
+    }
+
     #pipeline .pipeline-header-bar {
         flex-direction: column;
         align-items: stretch;

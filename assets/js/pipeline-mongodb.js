@@ -41,6 +41,8 @@ let draggedOrderId = null; // Store dragged order ID
 let draggedIsNewOrder = false; // Store if it's a new order
 let searchQuery = '';
 let newOrders = []; // Store new orders for suggestions
+let allNewOrders = [];
+let pipelineEmployeeFilter = 'all';
 let employeeCache = new Map(); // Cache employee data
 let orderCache = new Map(); // Cache order data
 let autoScrollInterval = null; // For auto-scroll during drag
@@ -454,14 +456,17 @@ async function loadDataFromDB() {
         const thirtyDaysAgo = window.TimezoneConfig
             ? new Date(window.TimezoneConfig.nowMDT().getTime() - 30 * 86400000)
             : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
-        newOrders = (ordersData || []).filter(order => {
+        allNewOrders = (ordersData || []).filter(order => {
             const isNotInPipeline = !ordersInPipeline.includes(order._id);
             const isRecent = new Date(order.createdAt) > thirtyDaysAgo;
             return isNotInPipeline && isRecent;
         }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        newOrders = [...allNewOrders];
         
         window.AppLogger?.debug('Pipeline loaded:', stages.length, 'stages,', records.length, 'records');
-        
+
+        populatePipelineEmployeeFilter();
+        applyPipelineFilters({ render: false });
         loadStages();
         loadNewOrdersSuggestions();
     } catch (error) {
@@ -1104,7 +1109,7 @@ function loadStages() {
 
 // Create stage column
 function createStageColumn(stage) {
-    const count = records.filter(r => r.stageId === stage._id).length;
+    const count = filteredRecords.filter(r => r.stageId === stage._id).length;
     const canPlacePickedItem = pickedPipelineItem && pickedPipelineItem.fromStageId !== stage._id;
     
     const column = document.createElement('div');
@@ -1186,7 +1191,7 @@ function renderRecords(stageId) {
     const stageRecords = filteredRecords.filter(r => r.stageId === stageId);
     if (stageRecords.length === 0) {
         const allRecordsInStage = records.filter(r => r.stageId === stageId).length;
-        if (searchQuery && allRecordsInStage > 0) {
+        if (hasActivePipelineFilters() && allRecordsInStage > 0) {
             return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No matching records</div>';
         }
         return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No records yet</div>';
@@ -1986,41 +1991,107 @@ window.searchCustomers = searchCustomers;
 window.selectCustomer = selectCustomer;
 
 // Pipeline Search Functions
+function getPipelineOrderEmployeeId(order) {
+    const employee = order?.employee;
+    if (!employee) return '';
+    if (typeof employee === 'object') return employee._id || employee.id || '';
+    return String(employee);
+}
+
+function getPipelineRecordOrder(record) {
+    return record?.orderId && orderCache.has(record.orderId) ? orderCache.get(record.orderId) : null;
+}
+
+function getPipelineRecordEmployeeId(record) {
+    const linkedOrderEmployeeId = getPipelineOrderEmployeeId(getPipelineRecordOrder(record));
+    if (linkedOrderEmployeeId) return linkedOrderEmployeeId;
+    const employee = record?.employee || record?.assignedEmployee || record?.employeeId;
+    if (!employee) return '';
+    if (typeof employee === 'object') return employee._id || employee.id || '';
+    return String(employee);
+}
+
+function pipelineRecordMatchesSearch(record) {
+    if (!searchQuery) return true;
+    const linkedOrder = getPipelineRecordOrder(record) || {};
+    const values = [
+        record.customerName,
+        record.email,
+        record.phone,
+        record.orderIdDisplay,
+        record.service,
+        record.status,
+        record.stageName,
+        record.address,
+        record.description,
+        linkedOrder.orderId,
+        linkedOrder.service,
+        linkedOrder.customer?.name
+    ];
+    return values.some(value => String(value || '').toLowerCase().includes(searchQuery));
+}
+
+function pipelineOrderMatchesSearch(order) {
+    if (!searchQuery) return true;
+    const values = [
+        order.orderId,
+        order.service,
+        order.status,
+        order.pipelineStage,
+        order.customer?.name,
+        order.customer?.email,
+        order.customer?.phone,
+        order.customer?.address
+    ];
+    return values.some(value => String(value || '').toLowerCase().includes(searchQuery));
+}
+
+function hasPipelineEmployeeFilter(employeeId = pipelineEmployeeFilter) {
+    return Boolean(employeeId && employeeId !== 'all');
+}
+
+function pipelineEmployeeMatches(actualEmployeeId, selectedEmployeeId) {
+    if (!hasPipelineEmployeeFilter(selectedEmployeeId)) return true;
+    if (selectedEmployeeId === 'unassigned') return !actualEmployeeId;
+    return actualEmployeeId === selectedEmployeeId;
+}
+
+function hasActivePipelineFilters() {
+    return Boolean(searchQuery || hasPipelineEmployeeFilter());
+}
+
+function applyPipelineFilters({ render = true } = {}) {
+    const selectedEmployee = pipelineEmployeeFilter || 'all';
+
+    filteredRecords = records.filter(record => {
+        if (!pipelineRecordMatchesSearch(record)) return false;
+        if (!pipelineEmployeeMatches(getPipelineRecordEmployeeId(record), selectedEmployee)) return false;
+        return true;
+    });
+
+    newOrders = allNewOrders.filter(order => {
+        if (!pipelineOrderMatchesSearch(order)) return false;
+        if (!pipelineEmployeeMatches(getPipelineOrderEmployeeId(order), selectedEmployee)) return false;
+        return true;
+    });
+
+    const clearBtn = document.querySelector('.btn-clear-search');
+    if (clearBtn) clearBtn.style.display = searchQuery ? 'block' : 'none';
+
+    if (render) {
+        loadStages();
+        updateSearchStats();
+    }
+}
+
 function filterPipelineRecords(query) {
     searchQuery = String(query || '').toLowerCase().trim();
-    
-    const searchInput = document.getElementById('pipelineSearchInput');
-    const clearBtn = document.querySelector('.btn-clear-search');
-    
-    if (searchQuery) {
-        filteredRecords = records.filter(record => {
-            const customerName = (record.customerName || '').toLowerCase();
-            const email = (record.email || '').toLowerCase();
-            const phone = (record.phone || '').toLowerCase();
-            const orderIdDisplay = (record.orderIdDisplay || '').toLowerCase();
-            const service = (record.service || '').toLowerCase();
-            const status = (record.status || record.stageName || '').toLowerCase();
-            const address = (record.address || '').toLowerCase();
-            const description = (record.description || '').toLowerCase();
-            
-            return customerName.includes(searchQuery) || 
-                   email.includes(searchQuery) || 
-                   phone.includes(searchQuery) ||
-                   orderIdDisplay.includes(searchQuery) ||
-                   service.includes(searchQuery) ||
-                   status.includes(searchQuery) ||
-                   address.includes(searchQuery) ||
-                   description.includes(searchQuery);
-        });
-        
-        if (clearBtn) clearBtn.style.display = 'block';
-    } else {
-        filteredRecords = [...records];
-        if (clearBtn) clearBtn.style.display = 'none';
-    }
-    
-    loadStages();
-    updateSearchStats();
+    applyPipelineFilters();
+}
+
+function filterPipelineByEmployee(employeeId) {
+    pipelineEmployeeFilter = employeeId || 'all';
+    applyPipelineFilters();
 }
 
 function clearPipelineSearch() {
@@ -2032,13 +2103,37 @@ function clearPipelineSearch() {
 function updateSearchStats() {
     const totalRecordsEl = document.getElementById('totalRecords');
     if (totalRecordsEl) {
-        if (searchQuery) {
+        if (hasActivePipelineFilters()) {
             totalRecordsEl.textContent = `${filteredRecords.length} / ${records.length}`;
             totalRecordsEl.style.color = '#3b82f6';
         } else {
             totalRecordsEl.textContent = records.length;
             totalRecordsEl.style.color = '';
         }
+    }
+}
+
+function populatePipelineEmployeeFilter() {
+    const select = document.getElementById('pipelineEmployeeFilter');
+    if (!select) return;
+
+    const currentValue = select.value || pipelineEmployeeFilter || 'all';
+    const employees = [...employeeCache.values()]
+        .filter(employee => employee?._id && employee?.name)
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+    select.innerHTML = `
+        <option value="all">All employees</option>
+        <option value="unassigned">Unassigned</option>
+        ${employees.map(employee => `<option value="${escapeHtml(employee._id)}">${escapeHtml(employee.name)}</option>`).join('')}
+    `;
+
+    if ([...select.options].some(option => option.value === currentValue)) {
+        select.value = currentValue;
+        pipelineEmployeeFilter = currentValue;
+    } else {
+        select.value = 'all';
+        pipelineEmployeeFilter = 'all';
     }
 }
 

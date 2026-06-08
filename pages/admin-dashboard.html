@@ -794,7 +794,15 @@
                     </div>
                     <div class="stat-item orders-revenue-stat">
                         <div class="stat-value" id="filteredOrdersRevenue">$0</div>
-                        <div class="stat-label">Total Revenue</div>
+                        <div class="stat-label">Revenue</div>
+                    </div>
+                    <div class="stat-item orders-cost-stat">
+                        <div class="stat-value" id="filteredOrdersCost">$0</div>
+                        <div class="stat-label">Cost</div>
+                    </div>
+                    <div class="stat-item orders-profit-stat">
+                        <div class="stat-value" id="filteredOrdersProfit">$0</div>
+                        <div class="stat-label">Profit</div>
                     </div>
                 </div>
             </div>
@@ -909,7 +917,7 @@
                             <span id="detailOrderScheduleDate">-</span>
                         </div>
                         <div class="info-item">
-                            <span class="display-label">End Date:</span>
+                            <span class="display-label">Due Date:</span>
                             <span id="detailOrderEndDate">-</span>
                         </div>
                     </div>
@@ -1069,6 +1077,10 @@
                         <div class="info-item">
                             <span class="display-label">Status:</span>
                             <span id="profileStatus">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <span class="display-label">Notes:</span>
+                            <span id="profileNotes">-</span>
                         </div>
                     </div>
                     <div class="info-grid" id="profileCustomFields" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
@@ -1483,12 +1495,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="pipeline-search-bar">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)" autocomplete="off">
-                    <button class="btn-clear-search" onclick="clearPipelineSearch()" style="display: none;">
-                        <i class="fas fa-times"></i>
-                    </button>
+                <div class="pipeline-filter-bar">
+                    <div class="pipeline-search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)" autocomplete="off">
+                        <button class="btn-clear-search" onclick="clearPipelineSearch()" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <label class="pipeline-employee-filter">
+                        <span><i class="fas fa-user-tie" aria-hidden="true"></i> Assigned employee</span>
+                        <select id="pipelineEmployeeFilter" onchange="filterPipelineByEmployee(this.value)" autocomplete="off">
+                            <option value="all">All employees</option>
+                        </select>
+                    </label>
                 </div>
                 <div class="stages-container" id="stagesContainer">
                     <!-- Stages will be dynamically loaded here -->
@@ -2526,7 +2546,7 @@
             
             <div class="modal-body">
                 <form id="orderForm">
-                    <div class="form-row">
+                    <div class="form-row order-form-row order-customer-select-row">
                         <div class="form-group">
                             <label for="customerSearchInput">Select Customer</label>
                             <div class="searchable-select">
@@ -2547,7 +2567,7 @@
                         </div>
                     </div>
                     
-                    <div id="newCustomerFields">
+                    <div id="newCustomerFields" class="order-form-panel order-customer-panel">
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="customerName">Customer Name *</label>
@@ -2571,10 +2591,13 @@
                         </div>
                     </div>
                     
-                    <div class="form-row">
+                    <div class="form-row order-form-row order-service-row">
                         <div class="form-group">
                             <label for="service">Service *</label>
-                            <input type="text" id="service" required autocomplete="off">
+                            <div class="service-suggestion-field">
+                                <input type="text" id="service" required autocomplete="off" aria-autocomplete="list" aria-controls="serviceSuggestions">
+                                <div class="service-suggestions" id="serviceSuggestions" role="listbox" aria-label="Previous services"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="amount">Revenue *</label>
@@ -2582,7 +2605,7 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
+                    <div class="form-row order-form-row order-finance-row">
                         <div class="form-group">
                             <label for="vendorCost">Cost</label>
                             <input type="number" id="vendorCost" step="0.01" oninput="calculateProfit()" autocomplete="off">
@@ -2593,7 +2616,7 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
+                    <div class="form-row order-form-row order-type-row">
                         <div class="form-group">
                             <label for="profit">Profit</label>
                             <input type="number" id="profit" step="0.01" readonly style="background-color: #f3f4f6; cursor: not-allowed;" autocomplete="off">
@@ -2607,25 +2630,22 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
+                    <div class="form-row order-form-row order-date-sequence">
                         <div class="form-group">
                             <label for="startDate">Created Date</label>
                             <input type="date" id="startDate" autocomplete="off">
+                        </div>
+                        <div class="form-group" id="endDateGroup">
+                            <label for="endDate">Due Date</label>
+                            <input type="date" id="endDate" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="scheduleDate">Schedule Date</label>
                             <input type="date" id="scheduleDate" autocomplete="off">
                         </div>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group" id="endDateGroup">
-                            <label for="endDate">End Date</label>
-                            <input type="date" id="endDate" autocomplete="off">
-                        </div>
-                    </div>
                     
-                    <div id="recurringFields" style="display: none;">
+                    <div id="recurringFields" class="order-form-panel order-recurring-panel" style="display: none;">
                         <div class="form-group">
                             <label for="recurringFrequency">Recurring Frequency *</label>
                             <select id="recurringFrequency" onchange="toggleCustomDaysField()" autocomplete="off">
@@ -2655,7 +2675,7 @@
                     </div>
                     
                     <!-- Customer Address Selection (for existing customers with multiple addresses) -->
-                    <div id="customerAddressSelection" style="display: none;">
+                    <div id="customerAddressSelection" class="order-form-panel order-address-panel" style="display: none;">
                         <div class="form-group">
                             <label for="customerAddressSelect">Select Address for Order</label>
                             <select id="customerAddressSelect" autocomplete="street-address">
@@ -2664,7 +2684,7 @@
                         </div>
                     </div>
                     
-                    <div class="form-row">
+                    <div class="form-row order-form-row order-assignment-row">
                         <div class="form-group">
                             <label for="vendor">Vendor</label>
                             <select id="vendor" autocomplete="off">
@@ -2679,7 +2699,7 @@
                         </div>
                     </div>
                     
-                    <div class="form-row">
+                    <div class="form-row order-form-row order-status-row">
                         <div class="form-group">
                             <label for="status">Status</label>
                             <select id="status" autocomplete="off">
@@ -2700,17 +2720,17 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group order-textarea-field">
                         <label for="description">Description</label>
                         <textarea id="description" rows="3" autocomplete="off"></textarea>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group order-textarea-field">
                         <label for="notes">Notes</label>
                         <textarea id="notes" rows="2" autocomplete="off"></textarea>
                     </div>
                     
-                    <div class="form-group" style="grid-column: 1 / -1;">
+                    <div class="form-group order-documents-field" style="grid-column: 1 / -1;">
                         <label for="orderDocs"><i class="fas fa-file-upload"></i> Documents</label>
                         <input type="file" id="orderDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
                         <small style="color: #6b7280; font-size: 12px;">Upload invoices, contracts, photos, or other documents</small>
@@ -3654,7 +3674,7 @@
                                 <span id="modalDetailOrderScheduleDate">-</span>
                             </div>
                             <div class="info-item">
-                                <span class="display-label">End Date:</span>
+                                <span class="display-label">Due Date:</span>
                                 <span id="modalDetailOrderEndDate">-</span>
                             </div>
                         </div>

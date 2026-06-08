@@ -3488,6 +3488,8 @@ function showAddOrderModal() {
     loadVendors();
     loadEmployees();
     loadOrderCustomers();
+    initializeServiceSuggestions();
+    closeServiceSuggestions();
     const orderModal = document.getElementById('orderModal');
     orderModal.style.display = '';
     orderModal.classList.add('show');
@@ -3576,6 +3578,8 @@ async function editOrder(orderId) {
         if (order.employee) {
             document.getElementById('employee').value = order.employee._id || order.employee;
         }
+        initializeServiceSuggestions();
+        closeServiceSuggestions();
         
         // Clear and populate documents
         if (window.uploadedFiles) {
@@ -7824,6 +7828,11 @@ async function showCustomerProfile(customerId) {
         
         document.getElementById('profileType').textContent = profileData.customer.customerType || '-';
         document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
+        const profileNotesEl = document.getElementById('profileNotes');
+        if (profileNotesEl) {
+            const notes = String(profileData.customer.notes || '').trim();
+            profileNotesEl.textContent = notes || 'No notes available';
+        }
         
         // Display custom fields
         window.AppLogger?.debug('Customer custom fields:', profileData.customer.customFields);
@@ -8212,20 +8221,149 @@ function updateOrderStats(orders) {
     const totalCount = document.getElementById('totalOrdersCount');
     const activeCount = document.getElementById('activeOrdersCount');
     const revenueTotal = document.getElementById('filteredOrdersRevenue');
+    const costTotal = document.getElementById('filteredOrdersCost');
+    const profitTotal = document.getElementById('filteredOrdersProfit');
+    const formatMoney = (value) => `$${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     
     if (totalCount) totalCount.textContent = orders.length;
     if (activeCount) {
         const activeOrders = orders.filter(o => ['new', 'in-progress'].includes(o.status)).length;
         activeCount.textContent = activeOrders;
     }
-    if (revenueTotal) {
-        const revenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
-        revenueTotal.textContent = `$${revenue.toLocaleString()}`;
-    }
+    const revenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+    const cost = orders.reduce((sum, order) => sum + Number(order.vendorCost || 0), 0);
+    const profit = revenue - cost;
+
+    if (revenueTotal) revenueTotal.textContent = formatMoney(revenue);
+    if (costTotal) costTotal.textContent = formatMoney(cost);
+    if (profitTotal) profitTotal.textContent = formatMoney(profit);
 }
 
 // Order search and filter functionality
 let allOrders = [];
+let serviceSuggestionActiveIndex = -1;
+let serviceSuggestionsInitialized = false;
+
+function getPreviousOrderServices() {
+    const sources = [
+        ...(Array.isArray(allOrders) ? allOrders : []),
+        ...(Array.isArray(window.dashboard?.data?.orders) ? window.dashboard.data.orders : [])
+    ];
+    const services = new Map();
+
+    sources.forEach(order => {
+        const label = String(order?.service || '').trim();
+        if (!label) return;
+        const key = label.toLowerCase();
+        const existing = services.get(key);
+        services.set(key, {
+            label: existing?.label || label,
+            count: (existing?.count || 0) + 1
+        });
+    });
+
+    return [...services.values()]
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+        .slice(0, 16);
+}
+
+function renderServiceSuggestions(query = '') {
+    const input = document.getElementById('service');
+    const panel = document.getElementById('serviceSuggestions');
+    if (!input || !panel) return;
+
+    const normalizedQuery = String(query || '').trim().toLowerCase();
+    const matches = getPreviousOrderServices()
+        .filter(item => !normalizedQuery || item.label.toLowerCase().includes(normalizedQuery))
+        .slice(0, 8);
+
+    serviceSuggestionActiveIndex = -1;
+    if (!matches.length) {
+        panel.classList.remove('show');
+        panel.innerHTML = '';
+        input.setAttribute('aria-expanded', 'false');
+        return;
+    }
+
+    panel.innerHTML = matches.map((item, index) => `
+        <button type="button" class="service-suggestion-option" role="option" data-index="${index}" data-service="${escapePaymentHtml(item.label)}">
+            <span>${escapePaymentHtml(item.label)}</span>
+            <small>${item.count.toLocaleString()} order${item.count === 1 ? '' : 's'}</small>
+        </button>
+    `).join('');
+    panel.classList.add('show');
+    input.setAttribute('aria-expanded', 'true');
+}
+
+function closeServiceSuggestions() {
+    const panel = document.getElementById('serviceSuggestions');
+    const input = document.getElementById('service');
+    if (panel) {
+        panel.classList.remove('show');
+        panel.innerHTML = '';
+    }
+    if (input) input.setAttribute('aria-expanded', 'false');
+    serviceSuggestionActiveIndex = -1;
+}
+
+function chooseServiceSuggestion(button) {
+    const input = document.getElementById('service');
+    if (!input || !button) return;
+    input.value = button.dataset.service || button.textContent.trim();
+    input.focus();
+    closeServiceSuggestions();
+}
+
+function setActiveServiceSuggestion(nextIndex) {
+    const options = [...document.querySelectorAll('#serviceSuggestions .service-suggestion-option')];
+    if (!options.length) return;
+    serviceSuggestionActiveIndex = (nextIndex + options.length) % options.length;
+    options.forEach((option, index) => option.classList.toggle('active', index === serviceSuggestionActiveIndex));
+    options[serviceSuggestionActiveIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function initializeServiceSuggestions() {
+    const input = document.getElementById('service');
+    const panel = document.getElementById('serviceSuggestions');
+    if (!input || !panel || serviceSuggestionsInitialized) return;
+    serviceSuggestionsInitialized = true;
+
+    input.addEventListener('focus', () => renderServiceSuggestions(input.value));
+    input.addEventListener('input', () => renderServiceSuggestions(input.value));
+    input.addEventListener('keydown', event => {
+        const panelOpen = panel.classList.contains('show');
+        if (!panelOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            renderServiceSuggestions(input.value);
+            event.preventDefault();
+            return;
+        }
+        if (!panelOpen) return;
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setActiveServiceSuggestion(serviceSuggestionActiveIndex + 1);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setActiveServiceSuggestion(serviceSuggestionActiveIndex - 1);
+        } else if (event.key === 'Enter' && serviceSuggestionActiveIndex >= 0) {
+            event.preventDefault();
+            chooseServiceSuggestion(panel.querySelectorAll('.service-suggestion-option')[serviceSuggestionActiveIndex]);
+        } else if (event.key === 'Escape') {
+            closeServiceSuggestions();
+        }
+    });
+
+    panel.addEventListener('mousedown', event => {
+        const button = event.target.closest('.service-suggestion-option');
+        if (!button) return;
+        event.preventDefault();
+        chooseServiceSuggestion(button);
+    });
+
+    document.addEventListener('mousedown', event => {
+        if (event.target.closest('.service-suggestion-field')) return;
+        closeServiceSuggestions();
+    });
+}
 
 async function loadOrdersSection() {
     try {
@@ -8803,7 +8941,7 @@ async function showVendorDetail(vendorId) {
         // Display notes if available
         const notesElement = document.getElementById('detailVendorNotes');
         if (notesElement) {
-            const notesText = vendor.notes && vendor.notes.trim() ? vendor.notes.trim() : 'No notes available';
+            const notesText = String(vendor.notes || '').trim() || 'No notes available';
             window.AppLogger?.debug('Setting notes text to:', notesText);
             notesElement.textContent = notesText;
         }
