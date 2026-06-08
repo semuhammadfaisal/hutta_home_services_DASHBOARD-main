@@ -661,6 +661,353 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 82 42' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 35 L10 31 L18 20 L27 23 L35 10 L44 17 L52 7 L62 13 L71 8 L80 12' fill='none' stroke='%233d74ff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
 }
 
+#dashboard.dashboard-overview .executive-command-panel,
+#dashboard.dashboard-overview .business-intelligence-panel {
+    margin: 0 0 28px;
+    padding: clamp(18px, 2vw, 24px);
+    border: 1px solid var(--do-border);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: var(--do-card-shadow);
+}
+
+#dashboard.dashboard-overview .executive-command-head,
+#dashboard.dashboard-overview .business-intelligence-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+#dashboard.dashboard-overview .executive-command-head h2,
+#dashboard.dashboard-overview .business-intelligence-head h2 {
+    margin: 0;
+    color: var(--do-text);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+#dashboard.dashboard-overview .business-intelligence-head p {
+    margin: 5px 0 0;
+    color: var(--do-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+#dashboard.dashboard-overview .executive-command-meta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+#dashboard.dashboard-overview .executive-command-meta.good {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+#dashboard.dashboard-overview .executive-command-meta.risk {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+#dashboard.dashboard-overview .executive-health-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+#dashboard.dashboard-overview .executive-health-card {
+    min-width: 0;
+    min-height: 134px;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 10px 12px;
+    padding: 14px;
+    border: 1px solid #e5edf7;
+    border-radius: 8px;
+    background: #fbfdff;
+}
+
+#dashboard.dashboard-overview .executive-health-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #eef5ff;
+    color: #1d6fd4;
+}
+
+#dashboard.dashboard-overview .executive-health-copy {
+    min-width: 0;
+}
+
+#dashboard.dashboard-overview .executive-health-copy small,
+#dashboard.dashboard-overview .metric-stack-row span,
+#dashboard.dashboard-overview .revenue-control-item span {
+    display: block;
+    color: var(--do-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#dashboard.dashboard-overview .executive-health-copy strong {
+    display: block;
+    margin: 4px 0;
+    color: var(--do-text);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+#dashboard.dashboard-overview .executive-health-copy span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+#dashboard.dashboard-overview .executive-health-card em {
+    grid-column: 1 / -1;
+    align-self: end;
+    justify-self: start;
+    font-style: normal;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+#dashboard.dashboard-overview .executive-command-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(310px, 0.65fr);
+    align-items: start;
+    gap: 16px;
+}
+
+#dashboard.dashboard-overview .revenue-control-card,
+#dashboard.dashboard-overview .exception-queue-card,
+#dashboard.dashboard-overview .business-intelligence-card {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid #dfe8f5;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+#dashboard.dashboard-overview .revenue-control-card,
+#dashboard.dashboard-overview .exception-queue-card {
+    display: flex;
+    flex-direction: column;
+}
+
+#dashboard.dashboard-overview .executive-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+#dashboard.dashboard-overview .executive-card-head h3 {
+    margin: 0;
+    color: var(--do-text);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .executive-card-head span {
+    color: var(--do-muted);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .revenue-control-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+#dashboard.dashboard-overview .revenue-control-item {
+    min-height: 92px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e5edf7;
+}
+
+#dashboard.dashboard-overview .revenue-control-item strong {
+    display: block;
+    margin-top: 10px;
+    color: var(--do-text);
+    font-size: clamp(18px, 1.25vw, 22px);
+    font-weight: 900;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+#dashboard.dashboard-overview .revenue-control-item.green {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+}
+
+#dashboard.dashboard-overview .revenue-control-item.amber {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+#dashboard.dashboard-overview .revenue-control-item.red {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+#dashboard.dashboard-overview .revenue-control-item.purple {
+    background: #f5f3ff;
+    border-color: #ddd6fe;
+}
+
+#dashboard.dashboard-overview .exception-queue-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+#dashboard.dashboard-overview .exception-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 6px;
+    padding: 9px 10px;
+    min-height: 0;
+    border: 1px solid #e5edf7;
+    border-radius: 8px;
+    background: #fbfdff;
+}
+
+#dashboard.dashboard-overview .exception-row small {
+    display: block;
+    color: var(--do-muted);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .exception-row strong {
+    display: block;
+    margin: 1px 0;
+    color: var(--do-text);
+    font-size: 15px;
+    font-weight: 900;
+}
+
+#dashboard.dashboard-overview .exception-row span {
+    display: block;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+#dashboard.dashboard-overview .exception-empty,
+#dashboard.dashboard-overview .service-performance-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 90px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#dashboard.dashboard-overview .business-intelligence-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+#dashboard.dashboard-overview .business-intelligence-card.wide {
+    grid-column: 1 / -1;
+}
+
+#dashboard.dashboard-overview .metric-stack {
+    display: grid;
+    gap: 9px;
+}
+
+#dashboard.dashboard-overview .metric-stack-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #edf2f7;
+}
+
+#dashboard.dashboard-overview .metric-stack-row:last-child {
+    border-bottom: 0;
+}
+
+#dashboard.dashboard-overview .metric-stack-row strong {
+    color: var(--do-text);
+    font-size: 13px;
+    font-weight: 900;
+    text-align: right;
+}
+
+#dashboard.dashboard-overview .service-performance-table {
+    display: grid;
+    gap: 0;
+    overflow-x: auto;
+}
+
+#dashboard.dashboard-overview .service-performance-head-row,
+#dashboard.dashboard-overview .service-performance-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(110px, 1fr));
+    gap: 12px;
+    min-width: 620px;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid #edf2f7;
+}
+
+#dashboard.dashboard-overview .service-performance-head-row {
+    color: var(--do-muted);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#dashboard.dashboard-overview .service-performance-row strong,
+#dashboard.dashboard-overview .service-performance-row span {
+    color: var(--do-text);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+#dashboard.dashboard-overview .service-performance-row span {
+    color: #475569;
+}
+
 #dashboard.dashboard-overview .mini-charts-panel {
     margin: 0 0 28px;
     padding: clamp(18px, 2vw, 24px);
@@ -1835,6 +2182,32 @@
     color: #64748b;
     font-size: 12px;
     font-weight: 900;
+}
+
+/* Cleaner Orders Overview: remove decorative lines and accent strokes. */
+#dashboard.dashboard-overview .orders-overview-metric-tile::before,
+#dashboard.dashboard-overview .orders-trend-plot::before {
+    display: none;
+    content: none;
+}
+
+#dashboard.dashboard-overview .orders-trend-summary span,
+#dashboard.dashboard-overview .orders-trend-plot,
+#dashboard.dashboard-overview .orders-flow-step {
+    border: 0;
+}
+
+#dashboard.dashboard-overview .orders-status-donut::before {
+    box-shadow: none;
+}
+
+#dashboard.dashboard-overview .orders-inline-grid-line {
+    display: none;
+}
+
+#dashboard.dashboard-overview .orders-priority-track,
+#dashboard.dashboard-overview .orders-priority-row:hover .orders-priority-track {
+    background: transparent;
 }
 
 #dashboard.dashboard-overview .service-category-panel {
@@ -5069,6 +5442,15 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    #dashboard.dashboard-overview .executive-health-grid,
+    #dashboard.dashboard-overview .business-intelligence-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #dashboard.dashboard-overview .executive-command-split {
+        grid-template-columns: 1fr;
+    }
+
     #dashboard.dashboard-overview .orders-overview-grid {
         grid-template-columns: 1fr;
     }
@@ -5117,10 +5499,41 @@
 
 @media (max-width: 640px) {
     #dashboard.dashboard-overview .mini-charts-panel,
+    #dashboard.dashboard-overview .executive-command-panel,
+    #dashboard.dashboard-overview .business-intelligence-panel,
     #dashboard.dashboard-overview .orders-overview-panel,
     #dashboard.dashboard-overview .service-category-panel,
     #dashboard.dashboard-overview .top-performance-panel {
         padding: 16px;
+    }
+
+    #dashboard.dashboard-overview .executive-command-head,
+    #dashboard.dashboard-overview .business-intelligence-head {
+        display: grid;
+        gap: 10px;
+    }
+
+    #dashboard.dashboard-overview .executive-command-meta {
+        justify-self: start;
+    }
+
+    #dashboard.dashboard-overview .executive-health-grid,
+    #dashboard.dashboard-overview .business-intelligence-grid,
+    #dashboard.dashboard-overview .revenue-control-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #dashboard.dashboard-overview .exception-queue-list {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+    }
+
+    #dashboard.dashboard-overview .exception-row {
+        grid-template-columns: 1fr;
+    }
+
+    #dashboard.dashboard-overview .exception-row button {
+        justify-self: start;
     }
 
     #dashboard.dashboard-overview .mini-charts-grid {

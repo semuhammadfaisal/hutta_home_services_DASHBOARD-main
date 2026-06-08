@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="../assets/css/invoice-modal.css">
     <link rel="stylesheet" href="../assets/css/payment-detail.css">
     <link rel="stylesheet" href="../assets/css/security-utils.css">
+    <link rel="stylesheet" href="../assets/css/premium-saas-overhaul.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -57,6 +58,9 @@
             <button type="button" class="notification-icon" aria-label="Notifications">
                 <i class="fas fa-bell" aria-hidden="true"></i>
                 <span class="notification-badge" aria-hidden="true">3</span>
+            </button>
+            <button type="button" class="mobile-search-toggle" id="mobileSearchToggle" aria-label="Open search">
+                <i class="fas fa-search" aria-hidden="true"></i>
             </button>
             <div class="admin-profile" id="adminProfile" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
                 <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter' font-size='20' fill='white'%3EA%3C/text%3E%3C/svg%3E" alt="Admin" id="adminAvatar">
@@ -87,6 +91,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar" aria-label="Main navigation">
         <ul class="sidebar-menu">
+            <li class="sidebar-section-label" aria-hidden="true">Command</li>
             <li class="menu-item active">
                 <a href="#dashboard" data-section="dashboard">
                     <i class="fas fa-tachometer-alt"></i>
@@ -105,6 +110,7 @@
                     <span>Recurring Calendar</span>
                 </a>
             </li>
+            <li class="sidebar-section-label" aria-hidden="true">Operations</li>
             <li class="menu-item">
                 <a href="#orders" data-section="orders">
                     <i class="fas fa-clipboard-list"></i>
@@ -129,6 +135,7 @@
                     <span>Vendors</span>
                 </a>
             </li>
+            <li class="sidebar-section-label" aria-hidden="true">Finance</li>
             <li class="menu-item">
                 <a href="#payments" data-section="payments">
                     <i class="fas fa-credit-card"></i>
@@ -147,6 +154,7 @@
                     <span>Reports</span>
                 </a>
             </li>
+            <li class="sidebar-section-label" aria-hidden="true">People & Admin</li>
             <li class="menu-item">
                 <a href="#employees" data-section="employees">
                     <i class="fas fa-user-tie"></i>
@@ -167,6 +175,21 @@
             </li>
         </ul>
     </aside>
+    <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Close menu" hidden></button>
+
+    <div class="command-palette" id="commandPalette" hidden>
+        <div class="command-palette-panel" role="dialog" aria-modal="true" aria-labelledby="commandPaletteTitle">
+            <div class="command-palette-search">
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input id="commandPaletteInput" type="search" autocomplete="off" placeholder="Search pages, orders, customers, vendors..." aria-label="Search dashboard">
+                <button type="button" id="commandPaletteClose" aria-label="Close search">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <h2 id="commandPaletteTitle" class="visually-hidden">Search dashboard</h2>
+            <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Search results"></div>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
@@ -207,9 +230,9 @@
                         <p class="kpi-label">Total orders</p>
                         <h3 class="kpi-value" id="totalOrders">0</h3>
                         <p class="kpi-desc">All orders in the system</p>
-                        <div class="kpi-trend-row">
-                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>12.5%</span>
-                            <span class="kpi-period">vs last month</span>
+                        <div class="kpi-trend-row" data-kpi-trend="totalOrders">
+                            <span class="kpi-trend-pill neutral"><i class="fas fa-minus" aria-hidden="true"></i>Live total</span>
+                            <span class="kpi-period">Current workspace</span>
                         </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="orders"></div>
@@ -223,9 +246,9 @@
                         <p class="kpi-label">Total revenue</p>
                         <h3 class="kpi-value" id="totalRevenue">$0</h3>
                         <p class="kpi-desc">Sum of order values</p>
-                        <div class="kpi-trend-row">
-                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>18.7%</span>
-                            <span class="kpi-period">vs last month</span>
+                        <div class="kpi-trend-row" data-kpi-trend="totalRevenue">
+                            <span class="kpi-trend-pill neutral"><i class="fas fa-minus" aria-hidden="true"></i>Live total</span>
+                            <span class="kpi-period">Current workspace</span>
                         </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="revenue"></div>
@@ -239,9 +262,9 @@
                         <p class="kpi-label">Payments collected</p>
                         <h3 class="kpi-value" id="paymentsCollected">$0</h3>
                         <p class="kpi-desc">From paid orders</p>
-                        <div class="kpi-trend-row">
-                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>8.3%</span>
-                            <span class="kpi-period">vs last month</span>
+                        <div class="kpi-trend-row" data-kpi-trend="paymentsCollected">
+                            <span class="kpi-trend-pill neutral"><i class="fas fa-minus" aria-hidden="true"></i>Live total</span>
+                            <span class="kpi-period">Current workspace</span>
                         </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="payments"></div>
@@ -255,9 +278,9 @@
                         <p class="kpi-label">Vendors</p>
                         <h3 class="kpi-value" id="totalVendors">0</h3>
                         <p class="kpi-desc">Active vendor records</p>
-                        <div class="kpi-trend-row">
-                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>5.0%</span>
-                            <span class="kpi-period">vs last month</span>
+                        <div class="kpi-trend-row" data-kpi-trend="totalVendors">
+                            <span class="kpi-trend-pill neutral"><i class="fas fa-minus" aria-hidden="true"></i>Live total</span>
+                            <span class="kpi-period">Current workspace</span>
                         </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="vendors"></div>
@@ -271,13 +294,40 @@
                         <p class="kpi-label">Customers</p>
                         <h3 class="kpi-value" id="totalCustomers">0</h3>
                         <p class="kpi-desc">Unique customer profiles</p>
-                        <div class="kpi-trend-row">
-                            <span class="kpi-trend-pill"><i class="fas fa-arrow-up" aria-hidden="true"></i>10.2%</span>
-                            <span class="kpi-period">vs last month</span>
+                        <div class="kpi-trend-row" data-kpi-trend="totalCustomers">
+                            <span class="kpi-trend-pill neutral"><i class="fas fa-minus" aria-hidden="true"></i>Live total</span>
+                            <span class="kpi-period">Current workspace</span>
                         </div>
                         <div class="kpi-stat-viz" aria-hidden="true">
                             <div class="mini-chart" data-chart="customers"></div>
                         </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="executive-command-panel" aria-labelledby="executiveCommandHeading">
+                <div class="executive-command-head">
+                    <div>
+                        <p class="overview-eyebrow">Executive command</p>
+                        <h2 id="executiveCommandHeading">Business health</h2>
+                    </div>
+                    <span class="executive-command-meta" id="businessExceptionCount">0 exceptions</span>
+                </div>
+                <div class="executive-health-grid" id="executiveHealthGrid" role="list" aria-label="Executive business health metrics"></div>
+                <div class="executive-command-split">
+                    <article class="revenue-control-card" aria-labelledby="revenueControlHeading">
+                        <div class="executive-card-head">
+                            <h3 id="revenueControlHeading">Revenue control</h3>
+                            <span id="revenueControlMargin">0% margin</span>
+                        </div>
+                        <div class="revenue-control-grid" id="revenueControlGrid"></div>
+                    </article>
+                    <article class="exception-queue-card" aria-labelledby="exceptionQueueHeading">
+                        <div class="executive-card-head">
+                            <h3 id="exceptionQueueHeading">Exception queue</h3>
+                            <span>Today</span>
+                        </div>
+                        <div class="exception-queue-list" id="exceptionQueueList"></div>
                     </article>
                 </div>
             </section>
@@ -407,6 +457,52 @@
                     </div>
                 </div>
                 <div class="top-performance-grid" id="topPerformanceCards" role="list" aria-label="Top performance cards"></div>
+            </section>
+
+            <section class="business-intelligence-panel" aria-labelledby="businessIntelligenceHeading">
+                <div class="business-intelligence-head">
+                    <div>
+                        <h2 id="businessIntelligenceHeading">Performance intelligence</h2>
+                        <p>Profitability, capacity, customer, vendor, and service-line signals.</p>
+                    </div>
+                </div>
+                <div class="business-intelligence-grid">
+                    <article class="business-intelligence-card">
+                        <div class="executive-card-head">
+                            <h3>Job analytics</h3>
+                            <span>Operations</span>
+                        </div>
+                        <div class="metric-stack" id="jobAnalyticsGrid"></div>
+                    </article>
+                    <article class="business-intelligence-card">
+                        <div class="executive-card-head">
+                            <h3>Customer analytics</h3>
+                            <span>Growth</span>
+                        </div>
+                        <div class="metric-stack" id="customerAnalyticsGrid"></div>
+                    </article>
+                    <article class="business-intelligence-card">
+                        <div class="executive-card-head">
+                            <h3>Employee performance</h3>
+                            <span>Workforce</span>
+                        </div>
+                        <div class="metric-stack" id="employeePerformanceGrid"></div>
+                    </article>
+                    <article class="business-intelligence-card">
+                        <div class="executive-card-head">
+                            <h3>Vendor performance</h3>
+                            <span>Supply</span>
+                        </div>
+                        <div class="metric-stack" id="vendorPerformanceGrid"></div>
+                    </article>
+                    <article class="business-intelligence-card wide">
+                        <div class="executive-card-head">
+                            <h3>Service performance</h3>
+                            <span>P&amp;L by category</span>
+                        </div>
+                        <div class="service-performance-table" id="servicePerformanceTable"></div>
+                    </article>
+                </div>
             </section>
 
             <div class="overview-section-head">
@@ -3743,6 +3839,7 @@
     <script src="../assets/js/recurring-custom-frequency.js"></script>
     <script src="../assets/js/dashboard-script.js"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
+    <script src="../assets/js/premium-dashboard-ux.js"></script>
     <script>
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});

@@ -209,6 +209,8 @@ class DashboardManager {
             this.forceFreshDashboardStats = false;
 
             this.renderKPIs(stats);
+            this.renderExecutiveCommand(stats);
+            this.renderPerformanceIntelligence(stats);
             this.renderVendorCategoriesFromStats(stats.vendorCategories, stats.totalVendors);
             this.renderEmployeeLeaderboardFromStats(stats.employeeLeaderboard);
             this.renderRevenueOverviewFromStats(stats.revenueTimeline);
@@ -230,6 +232,8 @@ class DashboardManager {
             console.error('Failed to load dashboard data:', error);
             this.hideLoadingState();
             this.renderKPIs();
+            this.renderExecutiveCommand();
+            this.renderPerformanceIntelligence();
             this.renderVendorCategoriesFromStats();
             this.renderEmployeeLeaderboardFromStats();
             this.renderRevenueOverviewFromStats();
@@ -304,6 +308,185 @@ class DashboardManager {
             if (totalVendorsEl) totalVendorsEl.textContent = '0';
             if (totalCustomersEl) totalCustomersEl.textContent = '0';
         }
+    }
+
+    renderExecutiveCommand(stats = {}) {
+        this.renderExecutiveHealth(stats.executiveHealth || {});
+        this.renderRevenueControl(stats.revenueControl || {});
+        this.renderExceptionQueue(stats.exceptionQueue || []);
+        const exceptionCountEl = document.getElementById('businessExceptionCount');
+        const exceptionCount = Number(stats.businessHealth?.exceptionCount || (stats.exceptionQueue || []).filter(item => item.priority !== 'low').length || 0);
+        if (exceptionCountEl) {
+            exceptionCountEl.textContent = `${exceptionCount.toLocaleString()} active exception${exceptionCount === 1 ? '' : 's'}`;
+            exceptionCountEl.className = `executive-command-meta ${exceptionCount ? 'risk' : 'good'}`;
+        }
+    }
+
+    renderExecutiveHealth(executiveHealth = {}) {
+        const container = document.getElementById('executiveHealthGrid');
+        if (!container) return;
+
+        const items = Array.isArray(executiveHealth.healthItems) && executiveHealth.healthItems.length
+            ? executiveHealth.healthItems
+            : [
+                { key: 'cash', label: 'Cash Health', value: '0%', status: 'watch', detail: 'No revenue data' },
+                { key: 'margin', label: 'Margin Health', value: '0%', status: 'watch', detail: 'No margin data' },
+                { key: 'operations', label: 'Operations Health', value: '0%', status: 'watch', detail: 'No job data' },
+                { key: 'capacity', label: 'Capacity Health', value: '0%', status: 'watch', detail: 'No capacity data' },
+                { key: 'customer', label: 'Customer Health', value: '0%', status: 'watch', detail: 'No customer data' }
+            ];
+
+        const icons = {
+            cash: 'wallet',
+            margin: 'chart-pie',
+            operations: 'clipboard-check',
+            capacity: 'users-cog',
+            customer: 'user-shield'
+        };
+
+        container.innerHTML = items.map(item => `
+            <article class="executive-health-card ${escapePaymentHtml(item.status || 'watch')}" role="listitem">
+                <span class="executive-health-icon" aria-hidden="true"><i class="fas fa-${escapePaymentHtml(icons[item.key] || 'gauge-high')}"></i></span>
+                <div class="executive-health-copy">
+                    <small>${escapePaymentHtml(item.label || 'Health')}</small>
+                    <strong>${escapePaymentHtml(item.value || '0')}</strong>
+                    <span>${escapePaymentHtml(item.detail || '')}</span>
+                </div>
+                <em>${escapePaymentHtml(item.status || 'watch')}</em>
+            </article>
+        `).join('');
+    }
+
+    renderRevenueControl(revenueControl = {}) {
+        const container = document.getElementById('revenueControlGrid');
+        const marginEl = document.getElementById('revenueControlMargin');
+        if (!container) return;
+
+        const margin = Number(revenueControl.grossMargin || 0);
+        if (marginEl) marginEl.textContent = `${margin}% gross margin`;
+        const items = [
+            { label: 'Booked revenue', value: this.formatRevenueOverviewCurrency(revenueControl.bookedRevenue || 0), tone: 'blue' },
+            { label: 'Collected revenue', value: this.formatRevenueOverviewCurrency(revenueControl.collectedRevenue || 0), tone: 'green' },
+            { label: 'Pending AR', value: this.formatRevenueOverviewCurrency(revenueControl.pendingReceivables || 0), tone: 'amber' },
+            { label: 'Overdue AR', value: this.formatRevenueOverviewCurrency(revenueControl.overdueReceivables || 0), tone: 'red' },
+            { label: 'Vendor payable', value: this.formatRevenueOverviewCurrency(revenueControl.vendorPayable || 0), tone: 'slate' },
+            { label: 'Recurring revenue', value: `${this.formatRevenueOverviewCurrency(revenueControl.recurringRevenue || 0)} · ${Number(revenueControl.recurringRevenuePercent || 0)}%`, tone: 'purple' }
+        ];
+
+        container.innerHTML = items.map(item => `
+            <div class="revenue-control-item ${item.tone}">
+                <span>${escapePaymentHtml(item.label)}</span>
+                <strong>${escapePaymentHtml(item.value)}</strong>
+            </div>
+        `).join('');
+    }
+
+    renderExceptionQueue(exceptionQueue = []) {
+        const container = document.getElementById('exceptionQueueList');
+        if (!container) return;
+
+        if (!Array.isArray(exceptionQueue) || !exceptionQueue.length) {
+            container.innerHTML = `
+                <div class="exception-empty" role="status">
+                    <i class="fas fa-check-circle" aria-hidden="true"></i>
+                    <span>No active exceptions</span>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = exceptionQueue.map(item => `
+            <div class="exception-row ${escapePaymentHtml(item.priority || 'low')}">
+                <div>
+                    <small>${escapePaymentHtml(item.title || 'Exception')}</small>
+                    <strong>${escapePaymentHtml(item.value || '0')}</strong>
+                    <span>${escapePaymentHtml(item.detail || '')}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderPerformanceIntelligence(stats = {}) {
+        this.renderMetricStack('jobAnalyticsGrid', [
+            ['Active jobs', stats.jobAnalytics?.activeJobs || 0],
+            ['Delayed jobs', stats.jobAnalytics?.delayedJobs || 0],
+            ['Avg cycle time', `${stats.jobAnalytics?.avgCycleDays || 0}d`],
+            ['Low-margin jobs', stats.jobAnalytics?.lowMarginJobs || 0],
+            ['Unassigned jobs', stats.jobAnalytics?.unassignedJobs || 0]
+        ]);
+        this.renderMetricStack('customerAnalyticsGrid', [
+            ['Retention rate', `${stats.customerAnalytics?.retentionRate || 0}%`],
+            ['Avg customer revenue', this.formatRevenueOverviewCurrency(stats.customerAnalytics?.averageCustomerRevenue || 0)],
+            ['Top 5 concentration', `${stats.customerAnalytics?.concentrationRisk || 0}%`],
+            ['Recurring customers', stats.customerAnalytics?.recurringCustomers || 0],
+            ['At-risk customers', stats.customerAnalytics?.atRiskCustomers || 0]
+        ]);
+        this.renderEmployeePerformance(stats.employeePerformance || {});
+        this.renderVendorPerformance(stats.vendorPerformance || {});
+        this.renderServicePerformance(stats.servicePerformance || []);
+    }
+
+    renderMetricStack(containerId, rows = []) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = rows.map(([label, value]) => `
+            <div class="metric-stack-row">
+                <span>${escapePaymentHtml(label)}</span>
+                <strong>${escapePaymentHtml(String(value))}</strong>
+            </div>
+        `).join('');
+    }
+
+    renderVendorPerformance(vendorPerformance = {}) {
+        const rows = Array.isArray(vendorPerformance.topVendors) ? vendorPerformance.topVendors : [];
+        const baseRows = [
+            ['Pending payables', this.formatRevenueOverviewCurrency(vendorPerformance.pendingPayables || 0)],
+            ['Paid payables', this.formatRevenueOverviewCurrency(vendorPerformance.paidPayables || 0)]
+        ];
+        const vendorRows = rows.slice(0, 3).map(vendor => [
+            vendor.name || 'Vendor',
+            `${this.formatRevenueOverviewCurrency(vendor.revenue || 0)} · ${Number(vendor.margin || 0)}% margin`
+        ]);
+        this.renderMetricStack('vendorPerformanceGrid', [...baseRows, ...vendorRows]);
+    }
+
+    renderEmployeePerformance(employeePerformance = {}) {
+        const rows = Array.isArray(employeePerformance.topEmployees) ? employeePerformance.topEmployees : [];
+        const baseRows = [
+            ['Total employees', employeePerformance.totalEmployees || 0],
+            ['Utilization rate', `${employeePerformance.utilizationRate || 0}%`]
+        ];
+        const employeeRows = rows.slice(0, 3).map(employee => [
+            employee.name || 'Employee',
+            `${this.formatRevenueOverviewCurrency(employee.revenue || 0)} · ${Number(employee.completionRate || 0)}% complete`
+        ]);
+        this.renderMetricStack('employeePerformanceGrid', [...baseRows, ...employeeRows]);
+    }
+
+    renderServicePerformance(servicePerformance = []) {
+        const container = document.getElementById('servicePerformanceTable');
+        if (!container) return;
+        const rows = Array.isArray(servicePerformance) ? servicePerformance.slice(0, 6) : [];
+        if (!rows.length) {
+            container.innerHTML = '<div class="service-performance-empty">No service performance data yet</div>';
+            return;
+        }
+        container.innerHTML = `
+            <div class="service-performance-head-row">
+                <span>Service</span>
+                <span>Revenue</span>
+                <span>Margin</span>
+                <span>SLA</span>
+            </div>
+            ${rows.map(service => `
+                <div class="service-performance-row">
+                    <strong>${escapePaymentHtml(service.label || service.key || 'Service')}</strong>
+                    <span>${this.formatRevenueOverviewCurrency(service.revenue || 0)}</span>
+                    <span>${Number(service.margin || 0)}%</span>
+                    <span>${Number(service.completionRate || 0)}% complete</span>
+                </div>
+            `).join('')}
+        `;
     }
 
     renderMiniCharts(stats = {}) {

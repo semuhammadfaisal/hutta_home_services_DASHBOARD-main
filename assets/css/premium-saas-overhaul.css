@@ -1,0 +1,778 @@
+/*
+   Premium SaaS dashboard finish
+   Loads last and intentionally normalizes the older dashboard layers.
+*/
+
+:root {
+    --saas-bg: #f6f8fb;
+    --saas-surface: #ffffff;
+    --saas-surface-soft: #f8fafc;
+    --saas-border: #e3e8ef;
+    --saas-border-strong: #cbd5e1;
+    --saas-text: #101828;
+    --saas-muted: #667085;
+    --saas-subtle: #98a2b3;
+    --saas-primary: #0056b8;
+    --saas-primary-hover: #004494;
+    --saas-primary-soft: #eef5ff;
+    --saas-success: #12805c;
+    --saas-success-bg: #e8f7ef;
+    --saas-warning: #b54708;
+    --saas-warning-bg: #fff4df;
+    --saas-danger: #b42318;
+    --saas-danger-bg: #feeceb;
+    --saas-info: #1d4ed8;
+    --saas-info-bg: #eaf1ff;
+    --saas-radius: 8px;
+    --saas-radius-lg: 10px;
+    --saas-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 24px rgba(16, 24, 40, 0.05);
+    --saas-shadow-float: 0 20px 56px rgba(16, 24, 40, 0.18);
+}
+
+html {
+    background: var(--saas-bg);
+}
+
+body,
+.main-content {
+    background: var(--saas-bg) !important;
+    color: var(--saas-text);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.admin-name,
+.customer-name,
+.vendor-name,
+.employee-name,
+.order-number,
+.project-name {
+    color: var(--saas-text) !important;
+    letter-spacing: 0 !important;
+}
+
+p,
+span,
+label,
+small,
+.admin-role,
+.customer-id,
+.vendor-id,
+.employee-id,
+.order-date,
+.project-id {
+    color: inherit !important;
+}
+
+a,
+.customer-email {
+    color: var(--saas-primary) !important;
+}
+
+.top-nav {
+    border-bottom-color: var(--saas-border);
+    box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04);
+}
+
+.mobile-search-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid transparent;
+    border-radius: var(--saas-radius);
+    background: transparent;
+    color: var(--saas-muted);
+    cursor: pointer;
+}
+
+.mobile-search-toggle:hover,
+.mobile-search-toggle:focus-visible {
+    background: var(--saas-surface-soft);
+    border-color: var(--saas-border);
+    color: var(--saas-primary);
+    outline: none;
+}
+
+.sidebar {
+    background: #fbfcfe !important;
+    border-right-color: var(--saas-border);
+}
+
+.sidebar-section-label {
+    margin: 16px 16px 8px;
+    color: #8a95a8;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.menu-item a {
+    border-radius: var(--saas-radius);
+    color: #475467 !important;
+}
+
+.menu-item a:hover {
+    background: var(--saas-surface-soft) !important;
+    color: var(--saas-text) !important;
+}
+
+.menu-item a:hover i,
+.menu-item a:hover span {
+    color: var(--saas-text) !important;
+}
+
+.menu-item.active a {
+    background: var(--saas-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(0, 86, 184, 0.18);
+}
+
+.menu-item.active a i,
+.menu-item.active a span {
+    color: #ffffff !important;
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: var(--topnav-height) 0 0 0;
+    z-index: 998;
+    border: 0;
+    background: rgba(15, 23, 42, 0.34);
+    backdrop-filter: blur(3px);
+}
+
+.sidebar-backdrop[hidden] {
+    display: none;
+}
+
+.page-header,
+#dashboard.dashboard-overview .overview-hero .header-content,
+#dashboard.dashboard-overview .executive-command-panel,
+#dashboard.dashboard-overview .business-intelligence-panel,
+#dashboard.dashboard-overview .mini-charts-panel,
+#dashboard.dashboard-overview .orders-overview-panel,
+#dashboard.dashboard-overview .service-category-panel,
+#dashboard.dashboard-overview .top-performance-panel,
+#dashboard.dashboard-overview .financial-summary.financial-overview-card,
+.reports-header,
+.reports-filter-bar,
+.analytics-card,
+.summary-card,
+.quick-actions-card,
+.recent-activity-card,
+.financial-summary,
+.users-table-container,
+.orders-table-container,
+.customers-table-container,
+.vendors-table-container,
+.employees-table-container,
+.payments-table-container {
+    border: 1px solid var(--saas-border) !important;
+    border-radius: var(--saas-radius) !important;
+    background: var(--saas-surface) !important;
+    box-shadow: var(--saas-shadow-card) !important;
+}
+
+#dashboard.dashboard-overview .overview-hero .header-content {
+    background:
+        linear-gradient(135deg, rgba(0, 86, 184, 0.05), rgba(20, 184, 166, 0.04)),
+        var(--saas-surface) !important;
+}
+
+#dashboard.dashboard-overview .overview-hero .header-content::before,
+#dashboard.dashboard-overview .overview-hero .header-content::after {
+    display: none !important;
+}
+
+#dashboard.dashboard-overview .header-text h1,
+.reports-header h1,
+.page-header h1 {
+    font-size: clamp(24px, 2.2vw, 32px) !important;
+    font-weight: 750 !important;
+    line-height: 1.16 !important;
+}
+
+#dashboard.dashboard-overview .overview-lead,
+.reports-header p,
+.header-text p {
+    color: var(--saas-muted) !important;
+}
+
+.btn-primary,
+.btn-refresh,
+.btn-filter,
+.report-filter-actions .btn-primary,
+#dashboard.dashboard-overview .btn-refresh {
+    border-radius: var(--saas-radius) !important;
+    background: var(--saas-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(0, 86, 184, 0.18) !important;
+    transform: none !important;
+}
+
+.btn-primary:hover,
+.btn-refresh:hover,
+.btn-filter:hover,
+.report-filter-actions .btn-primary:hover {
+    background: var(--saas-primary-hover) !important;
+    box-shadow: 0 10px 22px rgba(0, 86, 184, 0.22) !important;
+}
+
+.btn-secondary,
+.pipeline-btn-clear,
+.btn-reset {
+    border: 1px solid var(--saas-border-strong) !important;
+    border-radius: var(--saas-radius) !important;
+    background: #ffffff !important;
+    color: #344054 !important;
+    box-shadow: none !important;
+}
+
+.btn-secondary:hover,
+.pipeline-btn-clear:hover,
+.btn-reset:hover {
+    border-color: var(--saas-primary) !important;
+    background: var(--saas-primary-soft) !important;
+    color: var(--saas-primary) !important;
+}
+
+input,
+select,
+textarea,
+.search-box input,
+.orders-search input,
+.customers-search input,
+.vendors-search input,
+.employees-search input,
+.payments-search input,
+.projects-search input {
+    border-color: var(--saas-border-strong) !important;
+    border-radius: var(--saas-radius) !important;
+    background-color: #ffffff !important;
+    color: var(--saas-text) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--saas-primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 86, 184, 0.12) !important;
+}
+
+#dashboard.dashboard-overview .kpi-board {
+    margin-bottom: 24px;
+}
+
+#dashboard.dashboard-overview .kpi-board-metrics {
+    gap: 12px !important;
+}
+
+#dashboard.dashboard-overview .kpi-stat.kpi-card {
+    min-height: 188px !important;
+    border: 1px solid var(--saas-border) !important;
+    border-radius: var(--saas-radius) !important;
+    box-shadow: var(--saas-shadow-card) !important;
+}
+
+#dashboard.dashboard-overview .kpi-stat.kpi-card:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 14px 30px rgba(16, 24, 40, 0.08) !important;
+}
+
+#dashboard.dashboard-overview .kpi-trend-pill {
+    color: var(--saas-success) !important;
+}
+
+#dashboard.dashboard-overview .kpi-trend-pill.neutral {
+    color: var(--saas-muted) !important;
+}
+
+#dashboard.dashboard-overview .kpi-trend-pill.negative {
+    color: var(--saas-danger) !important;
+}
+
+#dashboard.dashboard-overview .kpi-trend-pill.neutral i {
+    background: #eef2f6 !important;
+    color: var(--saas-muted) !important;
+}
+
+#dashboard.dashboard-overview .kpi-trend-pill.negative i {
+    background: var(--saas-danger-bg) !important;
+    color: var(--saas-danger) !important;
+}
+
+.status-badge,
+.order-status-badge,
+.customer-status-badge,
+.vendor-status-badge,
+.employee-status-badge,
+.payment-status-badge,
+.priority-badge,
+.method-badge,
+.role-badge,
+.health-pill,
+.status-pill {
+    border-radius: 999px !important;
+    border: 1px solid transparent;
+    font-weight: 750 !important;
+    letter-spacing: 0 !important;
+}
+
+.status-badge.completed,
+.order-status-badge.completed,
+.payment-status-badge.completed,
+.payment-status-badge.received,
+.customer-status-badge.active,
+.vendor-status-badge.active,
+.employee-status-badge.available,
+.status-pill.good,
+.health-pill.good {
+    background: var(--saas-success-bg) !important;
+    border-color: rgba(18, 128, 92, 0.2) !important;
+    color: var(--saas-success) !important;
+}
+
+.status-badge.in-progress,
+.order-status-badge.in-progress,
+.status-badge.new,
+.order-status-badge.new,
+.role-badge.manager,
+.method-badge.card,
+.method-badge.bank-transfer {
+    background: var(--saas-info-bg) !important;
+    border-color: rgba(29, 78, 216, 0.18) !important;
+    color: var(--saas-info) !important;
+}
+
+.payment-status-badge.pending,
+.status-badge.pending,
+.priority-badge.medium,
+.status-pill.warn,
+.health-pill.warn {
+    background: var(--saas-warning-bg) !important;
+    border-color: rgba(181, 71, 8, 0.18) !important;
+    color: var(--saas-warning) !important;
+}
+
+.status-badge.delayed,
+.order-status-badge.delayed,
+.order-status-badge.cancelled,
+.payment-status-badge.failed,
+.payment-status-badge.cancelled,
+.priority-badge.high,
+.priority-badge.urgent,
+.action-btn.delete,
+.btn-action.delete,
+.status-pill.risk,
+.health-pill.risk {
+    background: var(--saas-danger-bg) !important;
+    border-color: rgba(180, 35, 24, 0.18) !important;
+    color: var(--saas-danger) !important;
+}
+
+.priority-badge.low {
+    background: var(--saas-success-bg) !important;
+    color: var(--saas-success) !important;
+}
+
+.orders-table,
+.customers-table,
+.vendors-table,
+.employees-table,
+.payments-table,
+.users-table,
+.report-table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    font-size: 13px !important;
+}
+
+.orders-table thead,
+.customers-table thead,
+.vendors-table thead,
+.employees-table thead,
+.payments-table thead,
+.users-table thead,
+.report-table th {
+    background: var(--saas-surface-soft) !important;
+}
+
+.orders-table th,
+.orders-table td,
+.customers-table th,
+.customers-table td,
+.vendors-table th,
+.vendors-table td,
+.employees-table th,
+.employees-table td,
+.payments-table th,
+.payments-table td,
+.users-table th,
+.users-table td,
+.report-table th,
+.report-table td {
+    border-bottom: 1px solid #edf1f6 !important;
+}
+
+.orders-table tbody tr:hover,
+.customers-table tbody tr:hover,
+.vendors-table tbody tr:hover,
+.employees-table tbody tr:hover,
+.payments-table tbody tr:hover,
+.users-table tbody tr:hover,
+.report-table tbody tr:hover {
+    background: #f8fbff !important;
+    box-shadow: inset 3px 0 0 var(--saas-primary) !important;
+}
+
+.action-btn,
+.btn-action,
+.orders-table .action-btn,
+.customers-table .action-btn,
+.vendors-table .action-btn,
+.employees-table .action-btn,
+.payments-table .btn-action {
+    border: 1px solid var(--saas-border) !important;
+    border-radius: var(--saas-radius) !important;
+    background: #ffffff !important;
+    color: var(--saas-muted) !important;
+    box-shadow: none !important;
+}
+
+.action-btn:hover,
+.btn-action:hover {
+    border-color: var(--saas-primary) !important;
+    background: var(--saas-primary-soft) !important;
+    color: var(--saas-primary) !important;
+    transform: none !important;
+}
+
+.action-btn.delete:hover,
+.btn-action.delete:hover {
+    border-color: rgba(180, 35, 24, 0.22) !important;
+    background: var(--saas-danger-bg) !important;
+    color: var(--saas-danger) !important;
+}
+
+.orders-empty-state,
+.customers-empty-state,
+.vendors-empty-state,
+.employees-empty-state,
+.payments-empty-state,
+.users-empty-state,
+.empty-state,
+.service-performance-empty,
+.activity-empty,
+.exception-empty {
+    color: var(--saas-muted) !important;
+    background: var(--saas-surface-soft) !important;
+    border-radius: var(--saas-radius) !important;
+}
+
+.mini-chart-svg,
+.line-chart svg,
+.area-chart svg {
+    overflow: visible;
+}
+
+.command-palette {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: grid;
+    place-items: start center;
+    padding: 92px 16px 24px;
+    background: rgba(15, 23, 42, 0.34);
+    backdrop-filter: blur(8px);
+}
+
+.command-palette[hidden] {
+    display: none;
+}
+
+.command-palette-panel {
+    width: min(720px, 100%);
+    overflow: hidden;
+    border: 1px solid var(--saas-border);
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: var(--saas-shadow-float);
+}
+
+.command-palette-search {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 36px;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--saas-border);
+}
+
+.command-palette-search i {
+    color: var(--saas-muted);
+}
+
+.command-palette-search input {
+    min-height: 40px;
+    border: 0 !important;
+    box-shadow: none !important;
+    font-size: 15px;
+}
+
+.command-palette-search button {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: var(--saas-radius);
+    background: var(--saas-surface-soft);
+    color: var(--saas-muted);
+    cursor: pointer;
+}
+
+.command-palette-results {
+    display: grid;
+    gap: 4px;
+    max-height: min(56vh, 440px);
+    overflow: auto;
+    padding: 8px;
+}
+
+.command-item {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--saas-radius);
+    background: transparent;
+    color: var(--saas-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.command-item:hover,
+.command-item:focus-visible,
+.command-item.active {
+    outline: none;
+    background: var(--saas-primary-soft);
+}
+
+.command-item-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--saas-radius);
+    background: #eef2f6;
+    color: var(--saas-primary);
+    place-items: center;
+}
+
+.command-item strong,
+.command-item span {
+    display: block;
+}
+
+.command-item small {
+    color: var(--saas-muted);
+}
+
+.command-empty {
+    padding: 28px;
+    color: var(--saas-muted);
+    text-align: center;
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid rgba(0, 86, 184, 0.22) !important;
+    outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+    #dashboard.dashboard-overview .kpi-board-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .mobile-search-toggle {
+        display: inline-flex;
+    }
+
+    .admin-profile .profile-info,
+    .admin-profile > i.fa-chevron-down {
+        display: none;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        box-shadow: 24px 0 60px rgba(15, 23, 42, 0.18);
+    }
+
+    .sidebar.show {
+        transform: translateX(0) !important;
+    }
+
+    .main-content {
+        padding: 20px !important;
+    }
+
+    #dashboard.dashboard-overview .overview-hero .header-content,
+    #dashboard.dashboard-overview .overview-hero .header-actions {
+        align-items: stretch !important;
+        flex-direction: column !important;
+    }
+
+    #dashboard.dashboard-overview .overview-hero .header-actions .date-range,
+    #dashboard.dashboard-overview .btn-refresh {
+        width: 100%;
+        min-width: 0 !important;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 640px) {
+    #dashboard.dashboard-overview .kpi-board-metrics {
+        grid-template-columns: 1fr !important;
+    }
+
+    .orders-table,
+    .customers-table,
+    .vendors-table,
+    .employees-table,
+    .payments-table,
+    .users-table {
+        min-width: 0 !important;
+    }
+
+    .orders-table thead,
+    .customers-table thead,
+    .vendors-table thead,
+    .employees-table thead,
+    .payments-table thead,
+    .users-table thead,
+    .orders-table colgroup,
+    .customers-table colgroup,
+    .vendors-table colgroup,
+    .employees-table colgroup,
+    .payments-table colgroup,
+    .users-table colgroup {
+        display: none !important;
+    }
+
+    .orders-table,
+    .orders-table tbody,
+    .orders-table tr,
+    .orders-table td,
+    .customers-table,
+    .customers-table tbody,
+    .customers-table tr,
+    .customers-table td,
+    .vendors-table,
+    .vendors-table tbody,
+    .vendors-table tr,
+    .vendors-table td,
+    .employees-table,
+    .employees-table tbody,
+    .employees-table tr,
+    .employees-table td,
+    .payments-table,
+    .payments-table tbody,
+    .payments-table tr,
+    .payments-table td,
+    .users-table,
+    .users-table tbody,
+    .users-table tr,
+    .users-table td {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .orders-table tr,
+    .customers-table tr,
+    .vendors-table tr,
+    .employees-table tr,
+    .payments-table tr,
+    .users-table tr {
+        margin-bottom: 12px;
+        overflow: hidden;
+        border: 1px solid var(--saas-border);
+        border-radius: var(--saas-radius);
+        background: #ffffff;
+        box-shadow: var(--saas-shadow-card);
+    }
+
+    .orders-table td,
+    .customers-table td,
+    .vendors-table td,
+    .employees-table td,
+    .payments-table td,
+    .users-table td {
+        display: grid !important;
+        grid-template-columns: minmax(92px, 34%) minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+        min-height: 42px;
+        padding: 10px 12px !important;
+        white-space: normal !important;
+    }
+
+    .orders-table.orders-table tbody tr td:nth-child(n),
+    .customers-table.customers-table tbody tr td:nth-child(n),
+    .vendors-table.vendors-table tbody tr td:nth-child(n),
+    .employees-table.employees-table tbody tr td:nth-child(n),
+    .payments-table.payments-table tbody tr td:nth-child(n),
+    .users-table.users-table tbody tr td:nth-child(n) {
+        display: grid !important;
+        width: 100% !important;
+    }
+
+    .orders-table td::before,
+    .customers-table td::before,
+    .vendors-table td::before,
+    .employees-table td::before,
+    .payments-table td::before,
+    .users-table td::before {
+        content: attr(data-label);
+        color: var(--saas-muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .orders-table td[colspan],
+    .customers-table td[colspan],
+    .vendors-table td[colspan],
+    .employees-table td[colspan],
+    .payments-table td[colspan],
+    .users-table td[colspan] {
+        display: block !important;
+    }
+
+    .orders-table td[colspan]::before,
+    .customers-table td[colspan]::before,
+    .vendors-table td[colspan]::before,
+    .employees-table td[colspan]::before,
+    .payments-table td[colspan]::before,
+    .users-table td[colspan]::before {
+        display: none;
+    }
+
+    .order-actions,
+    .user-actions {
+        justify-content: flex-start !important;
+    }
+}
