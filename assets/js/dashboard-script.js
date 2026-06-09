@@ -1616,8 +1616,8 @@ class DashboardManager {
             const orderDate = order.createdAt ? (tz() ? tz().formatDateMDT(order.createdAt, { month: 'short', day: 'numeric' }) : new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '';
             const customerName = order.customer?.name || order.customer;
             const customerEmail = order.customer?.email || '';
-            const statusDisplay = order.pipelineStage || order.status.replace('-', ' ');
-            const statusClass = order.pipelineStage ? 'pipeline' : order.status;
+            const statusDisplay = order.pipelineStage || (order.status || 'new').replace('-', ' ');
+            const statusClass = getOrderStatusBadgeClass(order);
 
             return `
             <tr onclick="viewOrder('${order._id || order.id}')">
@@ -4082,7 +4082,7 @@ function getOrderStageDisplay(order) {
     const stage = order?.pipelineStage || '';
     const status = order?.status || '';
     const displayValue = stage || status || '-';
-    const classValue = stage ? 'pipeline' : normalizeOrderFilterValue(status || 'new');
+    const classValue = getOrderStatusBadgeClass(order);
 
     return {
         label: formatOrderFilterLabel(displayValue),
@@ -8047,8 +8047,8 @@ async function showCustomerProfile(customerId) {
             ordersBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No orders found</td></tr>';
         } else {
             ordersBody.innerHTML = profileData.orders.map(order => {
-                const statusDisplay = order.pipelineStage || order.status.replace('-', ' ');
-                const statusClass = order.pipelineStage ? 'pipeline' : order.status;
+                const statusDisplay = order.pipelineStage || (order.status || 'new').replace('-', ' ');
+                const statusClass = getOrderStatusBadgeClass(order);
                 return `
                 <tr>
                     <td><strong>${order.workOrderNumber || '-'}</strong></td>
@@ -8705,6 +8705,25 @@ function normalizeOrderFilterValue(value) {
         .trim()
         .toLowerCase()
         .replace(/[_\s]+/g, '-');
+}
+
+function normalizeOrderBadgeClass(value) {
+    return normalizeOrderFilterValue(value)
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+}
+
+function getOrderStatusBadgeClass(order) {
+    const visibleStatus = getOrderVisibleStatus(order);
+    const normalizedStatus = normalizeOrderBadgeClass(visibleStatus || 'new');
+    const aliases = getOrderStatusFilterValues(order)
+        .map(normalizeOrderBadgeClass)
+        .filter(value => value && value !== normalizedStatus);
+
+    return [order?.pipelineStage ? 'pipeline' : '', normalizedStatus, ...aliases]
+        .filter(Boolean)
+        .join(' ');
 }
 
 function getOrderFilterDate(order) {

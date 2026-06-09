@@ -378,6 +378,93 @@ textarea:focus {
     color: var(--saas-danger) !important;
 }
 
+.order-status-badge.pipeline {
+    background: #f1f5f9 !important;
+    border-color: #d8e0ea !important;
+    color: #475569 !important;
+}
+
+.order-status-badge.pipeline::before {
+    content: '\f542';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+}
+
+.order-status-badge.pipeline.new,
+.order-status-badge.pipeline.in-progress {
+    background: var(--saas-info-bg) !important;
+    border-color: rgba(29, 78, 216, 0.18) !important;
+    color: var(--saas-info) !important;
+}
+
+.order-status-badge.pipeline.completed {
+    background: var(--saas-success-bg) !important;
+    border-color: rgba(18, 128, 92, 0.2) !important;
+    color: var(--saas-success) !important;
+}
+
+.order-status-badge.pipeline.cancelled,
+.order-status-badge.pipeline.delayed {
+    background: var(--saas-danger-bg) !important;
+    border-color: rgba(180, 35, 24, 0.18) !important;
+    color: var(--saas-danger) !important;
+}
+
+.order-status-badge.work-order-received,
+.order-status-badge.created {
+    background: #eaf2ff !important;
+    border-color: #bfd7ff !important;
+    color: #1554b3 !important;
+}
+
+.order-status-badge.bidding,
+.order-status-badge.bid-submitted-to-client {
+    background: #fff4d8 !important;
+    border-color: #f3c75f !important;
+    color: #8a5800 !important;
+}
+
+.order-status-badge.approved-ready-to-schedule,
+.order-status-badge.scheduled {
+    background: #e8f7f0 !important;
+    border-color: #a9dfc3 !important;
+    color: #0f6b45 !important;
+}
+
+.order-status-badge.awaiting-documentation {
+    background: #f2ecff !important;
+    border-color: #cdbbff !important;
+    color: #5b35a8 !important;
+}
+
+.order-status-badge.ready-to-invoice {
+    background: #e7f8fb !important;
+    border-color: #a6dfe8 !important;
+    color: #0f6674 !important;
+}
+
+.order-status-badge.invoice-sent {
+    background: #e9efff !important;
+    border-color: #b8c9ff !important;
+    color: #2846a3 !important;
+}
+
+.order-status-badge.paid,
+.order-status-badge.closed,
+.order-status-badge.paid-vendor-i,
+.order-status-badge.paid-vendor-invoice {
+    background: var(--saas-success-bg) !important;
+    border-color: rgba(18, 128, 92, 0.24) !important;
+    color: var(--saas-success) !important;
+}
+
+.order-status-badge.lost,
+.order-status-badge.no-bid {
+    background: var(--saas-danger-bg) !important;
+    border-color: rgba(180, 35, 24, 0.2) !important;
+    color: var(--saas-danger) !important;
+}
+
 .priority-badge.low {
     background: var(--saas-success-bg) !important;
     color: var(--saas-success) !important;
