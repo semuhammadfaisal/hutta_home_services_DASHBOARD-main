@@ -6,6 +6,7 @@ const Payment = require('../models/Payment');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
+const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const router = express.Router();
 
 // Get all customers (paginated)
@@ -149,7 +150,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new customer
 router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
-    const customer = new Customer(req.body);
+    const customerData = { ...req.body };
+    seedInitialNote(customerData, req.body.notes, req);
+    const customer = new Customer(customerData);
     await customer.save();
     invalidateDashboardStatsCache();
     res.status(201).json(customer);
@@ -163,7 +166,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
   try {
     const customer = await Customer.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
+      stripNotesFromUpdate(req.body), 
       { new: true }
     );
     

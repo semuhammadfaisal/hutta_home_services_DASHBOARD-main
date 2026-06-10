@@ -3667,6 +3667,7 @@ function showAddOrderModal() {
         document.getElementById('customDaysGroup').style.display = 'none';
     }
     toggleRecurringFields(); // Hide recurring fields by default
+    renderNotesManager('orders', '', {}, 'notes');
     
     loadVendors();
     loadEmployees();
@@ -3733,7 +3734,7 @@ async function editOrder(orderId) {
         document.getElementById('status').value = order.status || 'new';
         document.getElementById('priority').value = order.priority || 'medium';
         document.getElementById('description').value = order.description || '';
-        document.getElementById('notes').value = order.notes || '';
+        renderNotesManager('orders', order._id, order, 'notes');
         
         // Populate recurring order fields
         document.getElementById('orderType').value = order.orderType || 'one-time';
@@ -3876,6 +3877,14 @@ async function saveOrder() {
             });
             
             if (!response.ok) throw new Error('Failed to update pipeline record');
+            if (document.getElementById('notes')?.value.trim()) {
+                try {
+                    await window.APIService.addNote('pipeline-records', window.currentPipelineRecordId, document.getElementById('notes').value.trim());
+                } catch (noteError) {
+                    console.warn('Pipeline note save skipped:', noteError);
+                    showToast('Pipeline record saved, but the note history API is not available yet. Restart the backend and try adding the note again.', 'warning');
+                }
+            }
             
             showToast('Pipeline record updated successfully!', 'success');
             closeOrderModal();
@@ -3980,6 +3989,9 @@ async function saveOrder() {
         if (currentOrderId) {
             updateLoadingMessage('Updating order...');
             await window.APIService.updateOrder(currentOrderId, orderData);
+            if (document.getElementById('notes')?.value.trim()) {
+                await addNoteEntry('orders', currentOrderId, 'notes');
+            }
             showToast('Order updated successfully!', 'success');
             
             // If this order was edited from pipeline, store the pipeline record ID
@@ -4120,7 +4132,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             document.getElementById('modalDetailOrderCustomerPhone').textContent = order.customer?.phone || '-';
             document.getElementById('modalDetailOrderCustomerAddress').textContent = order.customer?.address || '-';
             document.getElementById('modalDetailOrderDescription').textContent = order.description || 'No description provided';
-            document.getElementById('modalDetailOrderNotes').textContent = order.notes || 'No notes';
+            renderNotesManager('orders', order._id, order, 'modalDetailOrderNoteComposer');
             
             // Display documents in modal
             const modalDocsList = document.getElementById('modalOrderDocumentsList');
@@ -4197,7 +4209,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         const detailOrderCustomerPhone = document.getElementById('detailOrderCustomerPhone');
         const detailOrderCustomerAddress = document.getElementById('detailOrderCustomerAddress');
         const detailOrderDescription = document.getElementById('detailOrderDescription');
-        const detailOrderNotes = document.getElementById('detailOrderNotes');
+        const detailOrderNoteComposer = document.getElementById('detailOrderNoteComposer');
         
         if (detailOrderId) detailOrderId.textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
         if (detailOrderStatus) detailOrderStatus.innerHTML = renderOrderStageBadge(order);
@@ -4217,7 +4229,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         if (detailOrderCustomerAddress) detailOrderCustomerAddress.textContent = order.customer?.address || '-';
         
         if (detailOrderDescription) detailOrderDescription.textContent = order.description || 'No description provided';
-        if (detailOrderNotes) detailOrderNotes.textContent = order.notes || 'No notes';
+        if (detailOrderNoteComposer) renderNotesManager('orders', order._id, order, 'detailOrderNoteComposer');
         
         // Display documents
         const docsList = document.getElementById('orderDocumentsList');
@@ -5038,6 +5050,7 @@ function showAddPaymentModal() {
     currentPaymentId = null;
     document.getElementById('paymentModalTitle').textContent = 'Record New Payment';
     document.getElementById('paymentForm').reset();
+    renderNotesManager('payments', '', {}, 'paymentNotes');
     
     // Set default payment date to today
     const today = todayDateInput();
@@ -5071,7 +5084,7 @@ async function editPayment(paymentId) {
         document.getElementById('paymentTransactionId').value = payment.transactionId || '';
         document.getElementById('paymentReceiptNumber').value = payment.receiptNumber || '';
         document.getElementById('paymentDescription').value = payment.description || '';
-        document.getElementById('paymentNotes').value = payment.notes || '';
+        renderNotesManager('payments', payment._id, payment, 'paymentNotes');
         
         document.getElementById('paymentModal').classList.add('show');
     } catch (error) {
@@ -5104,6 +5117,9 @@ async function savePayment() {
     try {
         if (currentPaymentId) {
             await window.APIService.updatePayment(currentPaymentId, paymentData);
+            if (document.getElementById('paymentNotes')?.value.trim()) {
+                await addNoteEntry('payments', currentPaymentId, 'paymentNotes');
+            }
             showToast('Payment updated successfully!', 'success');
         } else {
             await window.APIService.createPayment(paymentData);
@@ -5188,7 +5204,9 @@ function renderPaymentsTable(payments) {
         return;
     }
     
-    tbody.innerHTML = payments.map(payment => `
+    tbody.innerHTML = payments.map(payment => {
+        const paymentStatus = payment.status || 'pending';
+        return `
         <tr onclick="showPaymentDetail('${payment._id}')">
             <td>
                 ${payment.order ? `<strong class="payment-order-id">${payment.order.orderId || payment.order}</strong>` : '<span class="table-muted">-</span>'}
@@ -5202,7 +5220,7 @@ function renderPaymentsTable(payments) {
             <td><strong class="payment-amount ${Number(payment.amount || 0) < 0 ? 'negative' : ''}">$${Number(payment.amount || 0).toLocaleString()}</strong></td>
             <td><span class="method-badge ${payment.paymentMethod || 'pending'}">${payment.paymentMethod ? payment.paymentMethod.replace('-', ' ') : 'Not Set'}</span></td>
             <td onclick="event.stopPropagation();">
-                <select class="payment-status-select status-${payment.status}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value)">
+                <select class="payment-status-select status-${paymentStatus}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value, this)">
                     <option value="bidding" ${payment.status === 'bidding' ? 'selected' : ''}>Bidding</option>
                     <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>Pending</option>
                     <option value="received" ${payment.status === 'received' ? 'selected' : ''}>Received</option>
@@ -5222,7 +5240,8 @@ function renderPaymentsTable(payments) {
                 </button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 let allPayments = [];
@@ -5296,7 +5315,7 @@ function filterPayments() {
             payment.amount,
             payment.status,
             payment.paymentMethod,
-            payment.notes
+            getLatestNoteText(payment)
         ]).includes(searchTerm));
     }
 
@@ -5397,7 +5416,11 @@ window.closePaymentModal = closePaymentModal;
 window.savePayment = savePayment;
 
 // Quick update payment status from table
-async function quickUpdatePaymentStatus(paymentId, newStatus) {
+async function quickUpdatePaymentStatus(paymentId, newStatus, selectEl = null) {
+    if (selectEl) {
+        selectEl.className = `payment-status-select status-${newStatus}`;
+    }
+
     try {
         const payment = await window.APIService.getPayment(paymentId);
         
@@ -5535,7 +5558,7 @@ async function saveInvoiceNumber(paymentId) {
             transactionId: payment.transactionId || '',
             receiptNumber: payment.receiptNumber || '',
             description: payment.description || '',
-            notes: payment.notes || ''
+            notes: ''
         };
         
         window.AppLogger?.debug('Sending update data:', updateData);
@@ -5633,6 +5656,193 @@ function escapePaymentHtml(value) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
+
+const NOTE_ENTITY_LABELS = {
+    orders: 'order',
+    customers: 'customer',
+    vendors: 'vendor',
+    payments: 'payment',
+    'pipeline-records': 'pipeline record',
+    projects: 'project'
+};
+
+function getCurrentUserIdForNotes() {
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        const user = session ? JSON.parse(session).user : null;
+        return user?.id || user?._id || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function getCurrentUserEmailForNotes() {
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        const user = session ? JSON.parse(session).user : null;
+        return user?.email || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function formatArizonaNoteDate(value, includeAt = false) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Phoenix',
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZoneName: 'short'
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+    const dateText = `${parts.month}/${parts.day}/${parts.year}`;
+    const timeText = `${parts.hour}:${parts.minute} ${parts.timeZoneName || 'MST'}`;
+    return includeAt ? `${dateText} at ${timeText}` : `${dateText} ${timeText}`;
+}
+
+function normalizeNotesHistory(record = {}) {
+    const history = Array.isArray(record.notesHistory) ? record.notesHistory.slice() : [];
+    if (!history.length && String(record.notes || '').trim()) {
+        history.push({
+            _id: '',
+            text: record.notes,
+            createdByName: 'Legacy Note',
+            createdAt: record.updatedAt || record.createdAt || new Date().toISOString(),
+            edits: [],
+            legacy: true
+        });
+    }
+    return history.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+function getLatestNoteText(record = {}) {
+    const notes = normalizeNotesHistory(record);
+    return notes.length ? notes[0].text : '';
+}
+
+function renderNotesManager(entity, recordId, record, textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    textarea.value = '';
+    textarea.placeholder = recordId ? 'Write a new note...' : 'Write the first note...';
+
+    const wrapperId = `${textareaId}History`;
+    let wrapper = document.getElementById(wrapperId);
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.id = wrapperId;
+        wrapper.className = 'notes-history';
+        textarea.insertAdjacentElement('afterend', wrapper);
+    }
+
+    const notes = normalizeNotesHistory(record);
+    const currentUserId = getCurrentUserIdForNotes();
+    const currentUserEmail = getCurrentUserEmailForNotes();
+    const noteItems = notes.length ? notes.map(note => {
+        const noteId = note._id || '';
+        const canDelete = noteId && (
+            (note.createdBy && currentUserId && String(note.createdBy) === String(currentUserId)) ||
+            (note.createdByEmail && currentUserEmail && String(note.createdByEmail) === String(currentUserEmail))
+        );
+        const latestEdit = Array.isArray(note.edits) && note.edits.length ? note.edits[note.edits.length - 1] : null;
+        const audit = latestEdit
+            ? `<div class="note-audit">(${escapePaymentHtml(latestEdit.editedByName || 'Unknown User')}) edited this note on ${escapePaymentHtml(formatArizonaNoteDate(latestEdit.editedAt, true))}</div>`
+            : '';
+        return `
+            <article class="note-entry" data-note-id="${escapePaymentHtml(noteId)}">
+                <div class="note-entry-meta">
+                    <strong>${escapePaymentHtml(note.createdByName || 'Unknown User')}</strong>
+                    <span>${escapePaymentHtml(formatArizonaNoteDate(note.createdAt))}</span>
+                </div>
+                <p>${escapePaymentHtml(note.text || '')}</p>
+                ${audit}
+                ${noteId ? `
+                    <div class="note-entry-actions">
+                        <button type="button" class="note-action-btn" onclick="editNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
+                            <i class="fas fa-pen"></i> Edit
+                        </button>
+                        ${canDelete ? `
+                            <button type="button" class="note-action-btn danger" onclick="deleteNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        ` : ''}
+                    </div>
+                ` : ''}
+            </article>
+        `;
+    }).join('') : '<div class="notes-empty">No notes yet</div>';
+
+    wrapper.innerHTML = `
+        <div class="notes-compose-row">
+            <button type="button" class="btn-add-note" onclick="addNoteEntry('${entity}', '${recordId}', '${textareaId}')" ${recordId ? '' : 'disabled'}>
+                <i class="fas fa-plus"></i> Add Note
+            </button>
+        </div>
+        ${noteItems}
+    `;
+}
+
+async function addNoteEntry(entity, recordId, textareaId) {
+    const textarea = document.getElementById(textareaId);
+    const text = textarea?.value.trim();
+    if (!recordId || !text) {
+        showToast('Enter a note before saving it.', 'warning');
+        return null;
+    }
+
+    try {
+        const result = await window.APIService.addNote(entity, recordId, text);
+        textarea.value = '';
+        renderNotesManager(entity, recordId, result, textareaId);
+        showToast('Note added successfully.', 'success');
+        return result;
+    } catch (error) {
+        console.warn('Note save failed:', error);
+        const message = /Cannot POST|Not Found|404/i.test(error.message || '')
+            ? 'Saved the record, but the note history API is not available yet. Restart the backend and try adding the note again.'
+            : `Saved the record, but the note could not be added: ${error.message}`;
+        showToast(message, 'warning');
+        return null;
+    }
+}
+
+async function editNoteEntry(entity, recordId, noteId, textareaId) {
+    const entry = document.querySelector(`#${textareaId}History .note-entry[data-note-id="${CSS.escape(noteId)}"] p`);
+    const currentText = entry ? entry.textContent : '';
+    const text = prompt('Edit note', currentText);
+    if (text === null) return;
+    const trimmed = text.trim();
+    if (!trimmed) {
+        showToast('Note text cannot be empty.', 'warning');
+        return;
+    }
+    const result = await window.APIService.updateNote(entity, recordId, noteId, trimmed);
+    renderNotesManager(entity, recordId, result, textareaId);
+    showToast('Note updated successfully.', 'success');
+}
+
+async function deleteNoteEntry(entity, recordId, noteId, textareaId) {
+    if (!confirm('Delete this note?')) return;
+    try {
+        const result = await window.APIService.deleteNote(entity, recordId, noteId);
+        renderNotesManager(entity, recordId, result, textareaId);
+        showToast('Note deleted successfully.', 'success');
+    } catch (error) {
+        showToast(error.message || 'You can only delete your own notes.', 'error');
+    }
+}
+
+window.renderNotesManager = renderNotesManager;
+window.getLatestNoteText = getLatestNoteText;
 
 function closePaymentDetailOnEscape(event) {
     if (event.key === 'Escape') {
@@ -6034,13 +6244,13 @@ async function showPaymentDetail(paymentId) {
                             </section>
                         ` : ''}
 
-                        ${payment.notes ? `
+                        ${getLatestNoteText(payment) ? `
                             <section class="payment-rich-card payment-rich-card-wide payment-notes-section">
                                 <div class="payment-card-header">
                                     <h3>Notes</h3>
                                     <span class="payment-card-chip">Internal</span>
                                 </div>
-                                <p class="payment-rich-text">${escapePaymentHtml(payment.notes)}</p>
+                                <p class="payment-rich-text">${escapePaymentHtml(getLatestNoteText(payment))}</p>
                             </section>
                         ` : ''}
 
@@ -6925,6 +7135,7 @@ function showAddVendorModal() {
     vendorPhoneCounter = 1;
     document.getElementById('vendorModalTitle').textContent = 'Add New Vendor';
     document.getElementById('vendorForm').reset();
+    renderNotesManager('vendors', '', {}, 'vendorNotes');
     
     // Clear the containers
     const emailContainer = document.getElementById('vendorEmailsContainer');
@@ -6963,7 +7174,7 @@ async function editVendor(vendorId) {
         document.getElementById('vendorCategory').value = vendor.category || '';
         document.getElementById('vendorRating').value = vendor.rating || 5;
         document.getElementById('vendorStatus').value = vendor.isActive.toString();
-        document.getElementById('vendorNotes').value = vendor.notes || '';
+        renderNotesManager('vendors', vendor._id, vendor, 'vendorNotes');
         
         // Show/hide "Add New Category" option based on user role
         updateVendorCategoryOptions();
@@ -7203,6 +7414,9 @@ async function saveVendor() {
         if (currentVendorId) {
             updateLoadingMessage('Updating vendor...');
             await window.APIService.updateVendor(currentVendorId, vendorData);
+            if (document.getElementById('vendorNotes')?.value.trim()) {
+                await addNoteEntry('vendors', currentVendorId, 'vendorNotes');
+            }
             showToast('Vendor updated successfully!', 'success');
         } else {
             updateLoadingMessage('Creating vendor...');
@@ -7439,7 +7653,7 @@ function filterVendors() {
             vendor.category,
             vendor.status,
             vendor.address,
-            vendor.notes
+            getLatestNoteText(vendor)
         ]).includes(searchTerm));
     }
     
@@ -7609,6 +7823,7 @@ function showAddCustomerModal() {
     phoneCounter = 1;
     document.getElementById('customerModalTitle').textContent = 'Add New Customer';
     document.getElementById('customerForm').reset();
+    renderNotesManager('customers', '', {}, 'customerNotes');
     
     // Clear the containers
     const addressContainer = document.getElementById('addressesContainer');
@@ -7637,7 +7852,7 @@ async function editCustomer(customerId) {
         document.getElementById('customerNameField').value = customer.name || '';
         document.getElementById('customerType').value = customer.customerType || 'one-time';
         document.getElementById('customerStatus').value = customer.status || 'active';
-        document.getElementById('customerNotes').value = customer.notes || '';
+        renderNotesManager('customers', customer._id, customer, 'customerNotes');
         
         // Reset counters
         addressCounter = 1;
@@ -7925,6 +8140,9 @@ async function saveCustomer() {
         if (currentCustomerId) {
             updateLoadingMessage('Updating customer...');
             await window.APIService.updateCustomer(currentCustomerId, customerData);
+            if (document.getElementById('customerNotes')?.value.trim()) {
+                await addNoteEntry('customers', currentCustomerId, 'customerNotes');
+            }
             showToast('Customer updated successfully!', 'success');
         } else {
             updateLoadingMessage('Creating customer...');
@@ -8013,7 +8231,7 @@ async function showCustomerProfile(customerId) {
         document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
         const profileNotesEl = document.getElementById('profileNotes');
         if (profileNotesEl) {
-            const notes = String(profileData.customer.notes || '').trim();
+            const notes = String(getLatestNoteText(profileData.customer) || '').trim();
             profileNotesEl.textContent = notes || 'No notes available';
         }
         
@@ -8305,7 +8523,7 @@ function filterCustomers() {
             customer.addresses,
             customer.customerType,
             customer.status,
-            customer.notes
+            getLatestNoteText(customer)
         ]).includes(searchTerm));
     }
     
@@ -8756,7 +8974,7 @@ function getOrderSearchText(order) {
         order.pipelineStage,
         visibleStatus,
         order.description,
-        order.notes
+        getLatestNoteText(order)
     ]
         .filter(value => value !== undefined && value !== null)
         .join(' ')
@@ -9150,7 +9368,7 @@ async function showVendorDetail(vendorId) {
         // Display notes if available
         const notesElement = document.getElementById('detailVendorNotes');
         if (notesElement) {
-            const notesText = String(vendor.notes || '').trim() || 'No notes available';
+            const notesText = String(getLatestNoteText(vendor) || '').trim() || 'No notes available';
             window.AppLogger?.debug('Setting notes text to:', notesText);
             notesElement.textContent = notesText;
         }

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const noteSchema = require('./noteSchema');
 
 // Define document subdocument schema explicitly
 const documentSchema = new mongoose.Schema({
@@ -61,6 +62,7 @@ const customerSchema = new mongoose.Schema({
     default: 'active' 
   },
   notes: String,
+  notesHistory: { type: [noteSchema], default: [] },
   totalOrders: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
   documents: { type: [documentSchema], default: [] },

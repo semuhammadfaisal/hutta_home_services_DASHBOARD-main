@@ -118,6 +118,7 @@ try {
   app.use('/api/employees', require('./routes/employees'));
   app.use('/api/projects', require('./routes/projects'));
   app.use('/api/payments', require('./routes/payments'));
+  app.use('/api/notes', require('./routes/notes'));
   app.use('/api/reports', require('./routes/reports'));
   app.use('/api/settings', require('./routes/settings'));
   app.use('/api/notifications', require('./routes/notifications'));

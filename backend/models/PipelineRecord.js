@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const noteSchema = require('./noteSchema');
 
 const pipelineRecordSchema = new mongoose.Schema({
     stageId: {
@@ -33,6 +34,8 @@ const pipelineRecordSchema = new mongoose.Schema({
         trim: true
     },
     notes: String
+    ,
+    notesHistory: { type: [noteSchema], default: [] }
 }, {
     timestamps: true
 });

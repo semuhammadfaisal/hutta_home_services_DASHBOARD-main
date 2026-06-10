@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const noteSchema = require('./noteSchema');
 
 const milestoneSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
@@ -34,6 +35,7 @@ const paymentSchema = new mongoose.Schema({
   dueDate: Date,
   description: String,
   notes: String,
+  notesHistory: { type: [noteSchema], default: [] },
   receiptNumber: String,
   processedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   milestones: { type: [milestoneSchema], default: [] },

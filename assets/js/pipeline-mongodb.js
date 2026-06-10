@@ -1552,7 +1552,11 @@ async function editRecord(recordId) {
     document.getElementById('status').value = 'new';
     document.getElementById('priority').value = record.priority || 'medium';
     document.getElementById('description').value = record.description || '';
-    document.getElementById('notes').value = record.notes || '';
+    if (typeof window.renderNotesManager === 'function') {
+        window.renderNotesManager('pipeline-records', record._id, record, 'notes');
+    } else {
+        document.getElementById('notes').value = '';
+    }
     document.getElementById('orderType').value = 'one-time';
     
     if (typeof window.toggleRecurringFields === 'function') window.toggleRecurringFields();
@@ -1603,6 +1607,16 @@ async function saveRecord(event) {
                 headers: getPipelineAuthHeaders(),
                 body: JSON.stringify({ customerName, email, phone, priority, budget, startDate, address, description, notes, orderId: editingRecord?.orderId })
             });
+            if (notes.trim() && window.APIService?.addNote) {
+                try {
+                    await window.APIService.addNote('pipeline-records', id, notes.trim());
+                } catch (noteError) {
+                    console.warn('Pipeline note save skipped:', noteError);
+                    if (typeof showToast === 'function') {
+                        showToast('Pipeline record saved, but the note history API is not available yet. Restart the backend and try adding the note again.', 'warning');
+                    }
+                }
+            }
             
             // If this pipeline record has a linked order, update the order too
             if (editingRecord?.orderId) {
@@ -1635,7 +1649,7 @@ async function saveRecord(event) {
                                 scheduleDate: startDate || currentOrder.scheduleDate || currentOrder.startDate,
                                 endDate: startDate || currentOrder.endDate,
                                 description: description || currentOrder.description,
-                                notes: notes || currentOrder.notes,
+                                notes: '',
                                 priority: priority || currentOrder.priority
                             };
                             
@@ -2268,10 +2282,10 @@ async function expandStage(stageId) {
                                     </div>
                                 ` : ''}
                                 
-                                ${record.notes ? `
+                                ${(typeof window.getLatestNoteText === 'function' ? window.getLatestNoteText(record) : record.notes) ? `
                                     <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
                                         <div style="font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 5px;">Notes:</div>
-                                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${record.notes}</div>
+                                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${escapeHtml(typeof window.getLatestNoteText === 'function' ? window.getLatestNoteText(record) : record.notes)}</div>
                                     </div>
                                 ` : ''}
                             </div>

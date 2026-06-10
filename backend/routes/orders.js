@@ -8,6 +8,7 @@ const checkRole = require('../middleware/rbac');
 const memCache = require('../utils/memoryCache');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { startOfMonthMDT, dateInputToMDT } = require('../utils/timezone');
+const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const router = express.Router();
 
 const STATS_CACHE_KEY = 'orders:stats:v2';
@@ -357,6 +358,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       // Recurring order fields
       orderType: req.body.orderType || 'one-time'
     };
+    seedInitialNote(orderData, req.body.notes, req);
     
     // Add recurring fields only if orderType is 'recurring'
     if (orderData.orderType === 'recurring') {
@@ -471,9 +473,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     const changes = {};
     
     // Prepare update data
-    const updateData = {
-      ...req.body
-    };
+    const updateData = stripNotesFromUpdate(req.body);
     
     // Convert dates if provided
     if (req.body.startDate !== undefined) {

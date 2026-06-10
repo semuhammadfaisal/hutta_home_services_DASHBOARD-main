@@ -16,7 +16,7 @@ router.post('/login', async (req, res) => {
     if (userCount === 0) {
       // No users in DB, create demo response
       const token = jwt.sign(
-        { userId: 'demo-user', email: email, role: 'admin' },
+        { userId: 'demo-user', email: email, role: 'admin', firstName: 'Admin', lastName: 'User' },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -48,7 +48,7 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );

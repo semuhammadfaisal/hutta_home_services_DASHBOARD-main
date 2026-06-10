@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const noteSchema = require('./noteSchema');
 
 const documentSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -32,6 +33,7 @@ const orderSchema = new mongoose.Schema({
   priority: { type: String, default: 'medium' },
   description: String,
   notes: String,
+  notesHistory: { type: [noteSchema], default: [] },
   pipelineRecordId: { type: mongoose.Schema.Types.ObjectId, ref: 'PipelineRecord' },
   pipelineStage: { type: String }, // Store pipeline stage name directly for efficient KPI calculations
   // Recurring order fields

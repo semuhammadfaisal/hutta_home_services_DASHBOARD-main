@@ -549,6 +549,74 @@ textarea:focus {
     color: var(--saas-danger) !important;
 }
 
+#payments .payments-table .payment-status-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    width: 128px !important;
+    min-width: 128px !important;
+    height: 34px !important;
+    padding: 0 30px 0 14px !important;
+    border-radius: 999px !important;
+    border: 1px solid transparent !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    line-height: 32px !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%) !important;
+    background-position:
+        calc(100% - 16px) 50%,
+        calc(100% - 11px) 50% !important;
+    background-size: 5px 5px, 5px 5px !important;
+    background-repeat: no-repeat !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.64), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    cursor: pointer !important;
+}
+
+#payments .payments-table th:nth-child(6),
+#payments .payments-table td:nth-child(6) {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+}
+
+#payments .payments-table .payment-status-select.status-bidding {
+    background-color: #eaf2ff !important;
+    border-color: #bfdbfe !important;
+    color: #0b5cff !important;
+}
+
+#payments .payments-table .payment-status-select.status-pending {
+    background-color: #fff4df !important;
+    border-color: #fde68a !important;
+    color: #b45309 !important;
+}
+
+#payments .payments-table .payment-status-select.status-received,
+#payments .payments-table .payment-status-select.status-completed {
+    background-color: #e9f9ef !important;
+    border-color: #bbf7d0 !important;
+    color: #15803d !important;
+}
+
+#payments .payments-table .payment-status-select.status-failed {
+    background-color: #fee2e2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+
+#payments .payments-table .payment-status-select.status-refunded {
+    background-color: #f3e8ff !important;
+    border-color: #ddd6fe !important;
+    color: #7c3aed !important;
+}
+
+#payments .payments-table .payment-status-select.status-cancelled {
+    background-color: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #475569 !important;
+}
+
 .orders-empty-state,
 .customers-empty-state,
 .vendors-empty-state,

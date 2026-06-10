@@ -3,6 +3,7 @@ const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
+const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const router = express.Router();
 
 // Get all vendors
@@ -41,7 +42,9 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
     console.log('req.body.documents is array:', Array.isArray(req.body.documents));
     console.log('req.body.documents:', JSON.stringify(req.body.documents));
     
-    const vendor = new Vendor(req.body);
+    const vendorData = { ...req.body };
+    seedInitialNote(vendorData, req.body.notes, req);
+    const vendor = new Vendor(vendorData);
     console.log('Vendor before save:', vendor);
     console.log('Vendor notes before save:', vendor.notes);
     await vendor.save();
@@ -62,7 +65,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
     console.log('Updating vendor with data:', req.body);
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
+      stripNotesFromUpdate(req.body), 
       { new: true, runValidators: true }
     );
     

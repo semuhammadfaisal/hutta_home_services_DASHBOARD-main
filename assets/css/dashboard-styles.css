@@ -5666,6 +5666,13 @@ h3 {
 .payments-col-date { width: 9%; }
 .payments-col-actions { width: 8%; }
 
+.payments-table th:nth-child(6),
+.payments-table td:nth-child(6) {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
 .customer-identity,
 .vendor-identity,
 .employee-identity {
@@ -6888,44 +6895,57 @@ h3 {
 }
 
 #payments .payment-status-select {
-    width: 118px;
-    height: 30px;
-    padding: 0 28px 0 11px;
-    border-radius: 7px;
-    border: 0;
-    font-size: 12px;
-    font-weight: 700;
+    width: 128px;
+    height: 34px;
+    padding: 0 30px 0 14px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 750;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+#payments .payment-status-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
 #payments .payment-status-select.status-bidding {
     background: #eaf2ff;
     color: #0b5cff;
+    border-color: #bfdbfe;
 }
 
 #payments .payment-status-select.status-pending {
     background: #fff4df;
     color: #f59e0b;
+    border-color: #fde68a;
 }
 
 #payments .payment-status-select.status-received,
 #payments .payment-status-select.status-completed {
     background: #e9f9ef;
     color: #16a34a;
+    border-color: #bbf7d0;
 }
 
 #payments .payment-status-select.status-failed {
-    background: #f4eaff;
-    color: #8b2cff;
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fecaca;
 }
 
 #payments .payment-status-select.status-refunded {
-    background: #eef2ff;
-    color: #4f46e5;
+    background: #f3e8ff;
+    color: #7c3aed;
+    border-color: #ddd6fe;
 }
 
 #payments .payment-status-select.status-cancelled {
     background: #f1f5f9;
     color: #475569;
+    border-color: #cbd5e1;
 }
 
 #payments .payments-table td:last-child {
@@ -7992,4 +8012,91 @@ h3 {
     .modal-footer {
         padding: 14px 16px;
     }
+}
+/* Note history */
+.notes-history {
+    margin-top: 10px;
+    display: grid;
+    gap: 10px;
+}
+
+.notes-compose-row {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-add-note,
+.note-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #374151;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-add-note {
+    background: #111827;
+    border-color: #111827;
+    color: #ffffff;
+}
+
+.btn-add-note:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.note-entry {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 10px;
+    background: #f9fafb;
+}
+
+.note-entry-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.note-entry-meta strong {
+    color: #111827;
+}
+
+.note-entry p {
+    margin: 8px 0 0;
+    color: #1f2937;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.note-audit {
+    margin-top: 8px;
+    color: #6b7280;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.note-entry-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.note-action-btn.danger {
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.notes-empty {
+    color: #6b7280;
+    font-size: 13px;
+    padding: 8px 0;
 }

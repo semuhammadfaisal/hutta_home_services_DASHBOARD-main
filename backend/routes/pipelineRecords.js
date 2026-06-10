@@ -4,6 +4,7 @@ const PipelineRecord = require('../models/PipelineRecord');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
+const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 
 // KPI: payments collected = sum of budgets for records in Paid/Close stages + received/completed payments not already counted
 // Exclude NO BID stages from calculations
@@ -74,7 +75,7 @@ router.get('/stage/:stageId', async (req, res) => {
 
 // Create new record
 router.post('/', async (req, res) => {
-    const record = new PipelineRecord({
+    const recordData = {
         stageId: req.body.stageId,
         orderId: req.body.orderId,
         orderIdDisplay: req.body.orderIdDisplay,
@@ -87,7 +88,9 @@ router.post('/', async (req, res) => {
         address: req.body.address,
         description: req.body.description,
         notes: req.body.notes
-    });
+    };
+    seedInitialNote(recordData, req.body.notes, req);
+    const record = new PipelineRecord(recordData);
 
     try {
         const newRecord = await record.save();
@@ -133,7 +136,8 @@ router.put('/:id', async (req, res) => {
         if (req.body.startDate !== undefined) record.startDate = req.body.startDate;
         if (req.body.address !== undefined) record.address = req.body.address;
         if (req.body.description !== undefined) record.description = req.body.description;
-        if (req.body.notes !== undefined) record.notes = req.body.notes;
+        const updateBody = stripNotesFromUpdate(req.body);
+        if (updateBody.notes !== undefined) record.notes = updateBody.notes;
         if (req.body.orderId && !record.orderId) record.orderId = req.body.orderId;
 
         const updatedRecord = await record.save();

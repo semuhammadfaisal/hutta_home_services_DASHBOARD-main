@@ -494,13 +494,14 @@
 #order-detail .order-notes-card .info-item {
     min-height: 0;
     margin: 0;
-    padding: 14px 18px;
+    padding: 18px;
     background: transparent;
     border: none;
     border-bottom: 1px solid #edf2f7;
     border-radius: 0;
-    grid-template-columns: minmax(130px, 0.34fr) minmax(0, 1fr);
+    grid-template-columns: 1fr;
     align-items: start;
+    gap: 10px;
 }
 
 #order-detail .order-notes-card .info-item + .info-item {
@@ -509,11 +510,102 @@
 
 #order-detail .order-notes-card p {
     margin: 0;
-    color: #334155;
+    color: #1e293b;
     font-size: 14px;
-    line-height: 1.55;
-    text-align: right;
+    line-height: 1.65;
+    text-align: left;
     white-space: pre-wrap;
+}
+
+#order-detail .order-notes-card .display-label,
+#orderDetailModal .modal-order-notes-card .display-label {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#order-detail .order-notes-card .description-section p,
+#orderDetailModal .modal-order-notes-card .description-section p {
+    width: 100%;
+    min-height: 50px;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+#order-detail .order-notes-card .notes-section,
+#orderDetailModal .modal-order-notes-card .notes-section {
+    background: #ffffff;
+}
+
+#detailOrderNoteComposer,
+#modalDetailOrderNoteComposer {
+    width: 100%;
+    min-height: 94px;
+    resize: vertical;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: #111827;
+    background: #f8fbff;
+    font: inherit;
+    line-height: 1.5;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+#detailOrderNoteComposer:focus,
+#modalDetailOrderNoteComposer:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+#detailOrderNoteComposer + .notes-history,
+#modalDetailOrderNoteComposer + .notes-history {
+    width: 100%;
+    margin-top: 12px;
+}
+
+#order-detail .order-notes-card .notes-compose-row,
+#orderDetailModal .modal-order-notes-card .notes-compose-row {
+    justify-content: flex-end;
+    padding-bottom: 2px;
+}
+
+#order-detail .order-notes-card .note-entry p,
+#orderDetailModal .modal-order-notes-card .note-entry p {
+    text-align: left;
+}
+
+#order-detail .order-notes-card .note-entry,
+#orderDetailModal .modal-order-notes-card .note-entry {
+    border-color: #dbeafe;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+#order-detail .order-notes-card .note-entry-meta,
+#orderDetailModal .modal-order-notes-card .note-entry-meta {
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eff6ff;
+}
+
+#order-detail .order-notes-card .note-entry-actions,
+#orderDetailModal .modal-order-notes-card .note-entry-actions {
+    justify-content: flex-start;
+}
+
+#order-detail .order-notes-card .btn-add-note,
+#orderDetailModal .modal-order-notes-card .btn-add-note {
+    min-height: 38px;
+    padding: 8px 14px;
 }
 
 #order-detail .documents-list {
@@ -710,17 +802,18 @@
 }
 
 #orderDetailModal .modal-order-notes-card .info-item {
-    padding: 14px 16px;
-    grid-template-columns: minmax(130px, 0.34fr) minmax(0, 1fr);
+    padding: 18px 16px;
+    grid-template-columns: 1fr;
     align-items: start;
+    gap: 10px;
 }
 
 #orderDetailModal .modal-order-notes-card p {
     margin: 0;
-    color: #334155;
+    color: #1e293b;
     font-size: 14px;
-    line-height: 1.55;
-    text-align: right;
+    line-height: 1.65;
+    text-align: left;
     white-space: pre-wrap;
 }
 

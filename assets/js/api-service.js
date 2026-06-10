@@ -633,6 +633,26 @@ class APIService {
         });
     }
 
+    async addNote(entity, id, text) {
+        return this.request(`/notes/${entity}/${id}`, {
+            method: 'POST',
+            body: JSON.stringify({ text })
+        });
+    }
+
+    async updateNote(entity, id, noteId, text) {
+        return this.request(`/notes/${entity}/${id}/${noteId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ text })
+        });
+    }
+
+    async deleteNote(entity, id, noteId) {
+        return this.request(`/notes/${entity}/${id}/${noteId}`, {
+            method: 'DELETE'
+        });
+    }
+
     // Reports
     async getAnalyticsReport(filters = {}) {
         const params = new URLSearchParams();

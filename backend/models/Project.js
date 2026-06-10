@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const noteSchema = require('./noteSchema');
 
 const projectSchema = new mongoose.Schema({
   projectId: { type: String, required: true, unique: true },
@@ -26,6 +27,7 @@ const projectSchema = new mongoose.Schema({
   progress: { type: Number, min: 0, max: 100, default: 0 },
   location: String,
   notes: String,
+  notesHistory: { type: [noteSchema], default: [] },
   attachments: [String]
 }, { timestamps: true });
 

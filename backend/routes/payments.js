@@ -3,6 +3,7 @@ const Payment = require('../models/Payment');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
+const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const router = express.Router();
 
 function normalizeMilestones(milestones = [], paymentAmount = 0) {
@@ -37,7 +38,7 @@ function normalizeMilestones(milestones = [], paymentAmount = 0) {
 }
 
 function buildPaymentPayload(body, existingPayment = null) {
-  const payload = { ...body };
+  const payload = stripNotesFromUpdate(body);
   const paymentAmount = Number(body.amount ?? existingPayment?.amount ?? 0);
 
   if (body.amount !== undefined) {
@@ -161,6 +162,7 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
     const paymentId = `PAY-${String(paymentCount + 1).padStart(4, '0')}`;
 
     const paymentPayload = buildPaymentPayload(req.body);
+    seedInitialNote(paymentPayload, req.body.notes, req);
     const payment = new Payment({
       ...paymentPayload,
       paymentId,
