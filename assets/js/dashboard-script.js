@@ -5686,6 +5686,25 @@ function getCurrentUserEmailForNotes() {
     }
 }
 
+function getCurrentUserDisplayNameForNotes() {
+    try {
+        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
+        const user = session ? JSON.parse(session).user : null;
+        const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+        return fullName || user?.email || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function getNoteAuthorDisplayName(note, currentUserId, currentUserEmail) {
+    const isCurrentUser = (
+        (note.createdBy && currentUserId && String(note.createdBy) === String(currentUserId)) ||
+        (note.createdByEmail && currentUserEmail && String(note.createdByEmail) === String(currentUserEmail))
+    );
+    return isCurrentUser ? (getCurrentUserDisplayNameForNotes() || note.createdByName || 'Unknown User') : (note.createdByName || 'Unknown User');
+}
+
 function formatArizonaNoteDate(value, includeAt = false) {
     if (!value) return '';
     const date = new Date(value);
@@ -5760,7 +5779,7 @@ function renderNotesManager(entity, recordId, record, textareaId) {
         return `
             <article class="note-entry" data-note-id="${escapePaymentHtml(noteId)}">
                 <div class="note-entry-meta">
-                    <strong>${escapePaymentHtml(note.createdByName || 'Unknown User')}</strong>
+                    <strong>${escapePaymentHtml(getNoteAuthorDisplayName(note, currentUserId, currentUserEmail))}</strong>
                     <span>${escapePaymentHtml(formatArizonaNoteDate(note.createdAt))}</span>
                 </div>
                 <p>${escapePaymentHtml(note.text || '')}</p>
@@ -9161,6 +9180,11 @@ function saveProfile() {
         avatar
     }).then(response => {
         // Update session data with new user info
+        if (response.token) {
+            sessionData.token = response.token;
+            window.APIService.token = response.token;
+        }
+
         sessionData.user = {
             ...sessionData.user,
             email: response.user.email,

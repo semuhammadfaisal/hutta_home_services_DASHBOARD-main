@@ -6,6 +6,73 @@ const authenticateToken = require('../middleware/auth');
 const { sendPasswordResetEmail } = require('../utils/emailService');
 const router = express.Router();
 
+const noteOwnerModels = [
+  require('../models/Order'),
+  require('../models/Customer'),
+  require('../models/Vendor'),
+  require('../models/Payment'),
+  require('../models/PipelineRecord'),
+  require('../models/Project')
+];
+
+function getUserPayload(user) {
+  return {
+    id: user._id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    phone: user.phone,
+    department: user.department,
+    avatar: user.avatar
+  };
+}
+
+function signUserToken(user) {
+  return jwt.sign(
+    { userId: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
+async function syncNoteAuthorNames(user, previousEmail) {
+  const userId = user._id;
+  const currentEmail = user.email;
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || currentEmail || 'Unknown User';
+  const emailMatches = [...new Set([previousEmail, currentEmail].filter(Boolean))];
+  const updates = [];
+
+  noteOwnerModels.forEach(Model => {
+    updates.push(Model.updateMany(
+      { 'notesHistory.createdBy': userId },
+      { $set: { 'notesHistory.$[note].createdByName': displayName } },
+      { arrayFilters: [{ 'note.createdBy': userId }] }
+    ));
+
+    if (emailMatches.length) {
+      updates.push(Model.updateMany(
+        { 'notesHistory.createdByEmail': { $in: emailMatches } },
+        {
+          $set: {
+            'notesHistory.$[note].createdByName': displayName,
+            'notesHistory.$[note].createdByEmail': currentEmail
+          }
+        },
+        { arrayFilters: [{ 'note.createdByEmail': { $in: emailMatches } }] }
+      ));
+    }
+
+    updates.push(Model.updateMany(
+      { 'notesHistory.edits.editedBy': userId },
+      { $set: { 'notesHistory.$[].edits.$[edit].editedByName': displayName } },
+      { arrayFilters: [{ 'edit.editedBy': userId }] }
+    ));
+  });
+
+  await Promise.all(updates);
+}
+
 // Login
 router.post('/login', async (req, res) => {
   try {
@@ -47,21 +114,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = signUserToken(user);
 
     res.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
-      }
+      user: getUserPayload(user)
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -144,15 +201,30 @@ router.post('/signup', async (req, res) => {
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
     const { email, firstName, lastName, phone, department, avatar } = req.body;
-    
-    const user = await User.findByIdAndUpdate(
-      req.user.userId,
-      { email, firstName, lastName, phone, department, avatar },
-      { new: true }
-    ).select('-password');
-    
-    res.json({ message: 'Profile updated successfully', user });
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const previousEmail = user.email;
+    user.email = String(email || '').trim();
+    user.firstName = String(firstName || '').trim();
+    user.lastName = String(lastName || '').trim();
+    user.phone = phone;
+    user.department = department;
+    user.avatar = avatar;
+    await user.save();
+
+    await syncNoteAuthorNames(user, previousEmail);
+
+    const token = signUserToken(user);
+    res.json({ message: 'Profile updated successfully', token, user: getUserPayload(user) });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+    console.error('Profile update error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
