@@ -72,6 +72,9 @@ router.put('/:entity/:id/:noteId', authenticateToken, async (req, res) => {
 
     const note = doc.notesHistory.id(req.params.noteId);
     if (!note) return res.status(404).json({ message: 'Note not found' });
+    if (!userOwnsNote(note, req)) {
+      return res.status(403).json({ message: 'You can only edit your own notes' });
+    }
 
     note.text = text;
     note.updatedAt = new Date();

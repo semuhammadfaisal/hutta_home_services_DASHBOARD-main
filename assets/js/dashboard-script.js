@@ -5768,7 +5768,7 @@ function renderNotesManager(entity, recordId, record, textareaId) {
     const currentUserEmail = getCurrentUserEmailForNotes();
     const noteItems = notes.length ? notes.map(note => {
         const noteId = note._id || '';
-        const canDelete = noteId && (
+        const canManage = noteId && (
             (note.createdBy && currentUserId && String(note.createdBy) === String(currentUserId)) ||
             (note.createdByEmail && currentUserEmail && String(note.createdByEmail) === String(currentUserEmail))
         );
@@ -5784,16 +5784,14 @@ function renderNotesManager(entity, recordId, record, textareaId) {
                 </div>
                 <p>${escapePaymentHtml(note.text || '')}</p>
                 ${audit}
-                ${noteId ? `
+                ${canManage ? `
                     <div class="note-entry-actions">
                         <button type="button" class="note-action-btn" onclick="editNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
                             <i class="fas fa-pen"></i> Edit
                         </button>
-                        ${canDelete ? `
-                            <button type="button" class="note-action-btn danger" onclick="deleteNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        ` : ''}
+                        <button type="button" class="note-action-btn danger" onclick="deleteNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
                     </div>
                 ` : ''}
             </article>
