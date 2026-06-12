@@ -487,11 +487,15 @@
 }
 
 #order-detail .order-notes-card,
+#customer-profile .order-notes-card,
+#vendor-detail .order-notes-card,
 #order-detail .order-documents-card {
     min-height: 100%;
 }
 
-#order-detail .order-notes-card .info-item {
+#order-detail .order-notes-card .info-item,
+#customer-profile .order-notes-card .info-item,
+#vendor-detail .order-notes-card .info-item {
     min-height: 0;
     margin: 0;
     padding: 18px;
@@ -504,11 +508,15 @@
     gap: 10px;
 }
 
-#order-detail .order-notes-card .info-item + .info-item {
+#order-detail .order-notes-card .info-item + .info-item,
+#customer-profile .order-notes-card .info-item + .info-item,
+#vendor-detail .order-notes-card .info-item + .info-item {
     border-bottom-color: transparent;
 }
 
-#order-detail .order-notes-card p {
+#order-detail .order-notes-card p,
+#customer-profile .order-notes-card p,
+#vendor-detail .order-notes-card p {
     margin: 0;
     color: #1e293b;
     font-size: 14px;
@@ -518,6 +526,8 @@
 }
 
 #order-detail .order-notes-card .display-label,
+#customer-profile .order-notes-card .display-label,
+#vendor-detail .order-notes-card .display-label,
 #orderDetailModal .modal-order-notes-card .display-label {
     display: inline-flex;
     align-items: center;
@@ -530,6 +540,8 @@
 }
 
 #order-detail .order-notes-card .description-section p,
+#customer-profile .order-notes-card .description-section p,
+#vendor-detail .order-notes-card .description-section p,
 #orderDetailModal .modal-order-notes-card .description-section p {
     width: 100%;
     min-height: 50px;
@@ -540,12 +552,16 @@
 }
 
 #order-detail .order-notes-card .notes-section,
+#customer-profile .order-notes-card .notes-section,
+#vendor-detail .order-notes-card .notes-section,
 #orderDetailModal .modal-order-notes-card .notes-section {
     background: #ffffff;
 }
 
 #detailOrderNoteComposer,
-#modalDetailOrderNoteComposer {
+#modalDetailOrderNoteComposer,
+#profileCustomerNoteComposer,
+#vendorDetailNoteComposer {
     width: 100%;
     min-height: 94px;
     resize: vertical;
@@ -560,7 +576,9 @@
 }
 
 #detailOrderNoteComposer:focus,
-#modalDetailOrderNoteComposer:focus {
+#modalDetailOrderNoteComposer:focus,
+#profileCustomerNoteComposer:focus,
+#vendorDetailNoteComposer:focus {
     outline: none;
     border-color: #2563eb;
     background: #ffffff;
@@ -568,23 +586,31 @@
 }
 
 #detailOrderNoteComposer + .notes-history,
-#modalDetailOrderNoteComposer + .notes-history {
+#modalDetailOrderNoteComposer + .notes-history,
+#profileCustomerNoteComposer + .notes-history,
+#vendorDetailNoteComposer + .notes-history {
     width: 100%;
     margin-top: 12px;
 }
 
 #order-detail .order-notes-card .notes-compose-row,
+#customer-profile .order-notes-card .notes-compose-row,
+#vendor-detail .order-notes-card .notes-compose-row,
 #orderDetailModal .modal-order-notes-card .notes-compose-row {
     justify-content: flex-end;
     padding-bottom: 2px;
 }
 
 #order-detail .order-notes-card .note-entry p,
+#customer-profile .order-notes-card .note-entry p,
+#vendor-detail .order-notes-card .note-entry p,
 #orderDetailModal .modal-order-notes-card .note-entry p {
     text-align: left;
 }
 
 #order-detail .order-notes-card .note-entry,
+#customer-profile .order-notes-card .note-entry,
+#vendor-detail .order-notes-card .note-entry,
 #orderDetailModal .modal-order-notes-card .note-entry {
     border-color: #dbeafe;
     background: #ffffff;
@@ -592,17 +618,23 @@
 }
 
 #order-detail .order-notes-card .note-entry-meta,
+#customer-profile .order-notes-card .note-entry-meta,
+#vendor-detail .order-notes-card .note-entry-meta,
 #orderDetailModal .modal-order-notes-card .note-entry-meta {
     padding-bottom: 8px;
     border-bottom: 1px solid #eff6ff;
 }
 
 #order-detail .order-notes-card .note-entry-actions,
+#customer-profile .order-notes-card .note-entry-actions,
+#vendor-detail .order-notes-card .note-entry-actions,
 #orderDetailModal .modal-order-notes-card .note-entry-actions {
     justify-content: flex-start;
 }
 
 #order-detail .order-notes-card .btn-add-note,
+#customer-profile .order-notes-card .btn-add-note,
+#vendor-detail .order-notes-card .btn-add-note,
 #orderDetailModal .modal-order-notes-card .btn-add-note {
     min-height: 38px;
     padding: 8px 14px;
@@ -920,6 +952,7 @@
 
 #customer-profile .profile-info-card,
 #customer-profile .profile-orders-card,
+#customer-profile .profile-notes-card,
 #customer-profile .profile-documents-card,
 #vendor-detail .detail-info-card,
 #vendor-detail .detail-documents-card,
@@ -935,6 +968,7 @@
 
 #customer-profile .profile-info-card h3,
 #customer-profile .profile-orders-card h3,
+#customer-profile .profile-notes-card h3,
 #customer-profile .profile-documents-card h3,
 #vendor-detail .detail-info-card h3,
 #vendor-detail .detail-documents-card h3,
@@ -956,6 +990,7 @@
 
 #customer-profile .profile-info-card h3 i,
 #customer-profile .profile-orders-card h3 i,
+#customer-profile .profile-notes-card h3 i,
 #customer-profile .profile-documents-card h3 i,
 #vendor-detail .detail-info-card h3 i,
 #vendor-detail .detail-documents-card h3 i,
@@ -1016,6 +1051,27 @@
     font-weight: 650;
     line-height: 1.35;
     text-align: right;
+}
+
+#profileCustomerNoteComposer {
+    width: 100%;
+    min-height: 94px;
+    resize: vertical;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: #111827;
+    background: #f8fbff;
+    font: inherit;
+    line-height: 1.5;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+#profileCustomerNoteComposer:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 #customer-profile .profile-stats-grid {

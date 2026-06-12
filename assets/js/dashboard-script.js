@@ -8229,11 +8229,7 @@ async function showCustomerProfile(customerId) {
         
         document.getElementById('profileType').textContent = profileData.customer.customerType || '-';
         document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
-        const profileNotesEl = document.getElementById('profileNotes');
-        if (profileNotesEl) {
-            const notes = String(getLatestNoteText(profileData.customer) || '').trim();
-            profileNotesEl.textContent = notes || 'No notes available';
-        }
+        renderNotesManager('customers', profileData.customer._id, profileData.customer, 'profileCustomerNoteComposer');
         
         // Display custom fields
         window.AppLogger?.debug('Customer custom fields:', profileData.customer.customFields);
@@ -9365,13 +9361,7 @@ async function showVendorDetail(vendorId) {
             ? '<span style="color: #22c55e;">Active</span>' 
             : '<span style="color: #ef4444;">Inactive</span>';
         
-        // Display notes if available
-        const notesElement = document.getElementById('detailVendorNotes');
-        if (notesElement) {
-            const notesText = String(getLatestNoteText(vendor) || '').trim() || 'No notes available';
-            window.AppLogger?.debug('Setting notes text to:', notesText);
-            notesElement.textContent = notesText;
-        }
+        renderNotesManager('vendors', vendor._id, vendor, 'vendorDetailNoteComposer');
         
         // Display custom fields
         window.AppLogger?.debug('Vendor custom fields:', vendor.customFields);
