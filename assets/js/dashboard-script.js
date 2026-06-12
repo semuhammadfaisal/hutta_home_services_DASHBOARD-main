@@ -5832,19 +5832,118 @@ async function addNoteEntry(entity, recordId, textareaId) {
     }
 }
 
+function closeNoteEditModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('show');
+    setTimeout(() => modal.remove(), 120);
+}
+
+function openNoteEditModal(currentText) {
+    return new Promise((resolve) => {
+        const existing = document.querySelector('.note-edit-modal-overlay');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'note-edit-modal-overlay show';
+        modal.innerHTML = `
+            <div class="note-edit-modal" role="dialog" aria-modal="true" aria-labelledby="noteEditTitle">
+                <div class="note-edit-header">
+                    <div>
+                        <h3 id="noteEditTitle">Edit Note</h3>
+                    </div>
+                    <button type="button" class="note-edit-close" aria-label="Close note editor">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="note-edit-body">
+                    <textarea id="noteEditText" rows="6" autocomplete="off"></textarea>
+                    <div class="note-edit-error" role="alert"></div>
+                </div>
+                <div class="note-edit-footer">
+                    <button type="button" class="note-edit-cancel">Cancel</button>
+                    <button type="button" class="note-edit-save">
+                        <i class="fas fa-save" aria-hidden="true"></i>
+                        Save Note
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const textarea = modal.querySelector('#noteEditText');
+        const error = modal.querySelector('.note-edit-error');
+        const saveBtn = modal.querySelector('.note-edit-save');
+        const cancelBtn = modal.querySelector('.note-edit-cancel');
+        const closeBtn = modal.querySelector('.note-edit-close');
+        let resolved = false;
+
+        const finish = (value) => {
+            if (resolved) return;
+            resolved = true;
+            document.removeEventListener('keydown', handleKeydown);
+            closeNoteEditModal(modal);
+            resolve(value);
+        };
+
+        const save = () => {
+            const trimmed = textarea.value.trim();
+            if (!trimmed) {
+                error.textContent = 'Note text cannot be empty.';
+                textarea.focus();
+                return;
+            }
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Saving...';
+            finish(trimmed);
+        };
+
+        const handleKeydown = (event) => {
+            if (event.key === 'Escape') {
+                finish(null);
+            }
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                event.preventDefault();
+                save();
+            }
+        };
+
+        textarea.value = currentText || '';
+        textarea.addEventListener('input', () => {
+            error.textContent = '';
+        });
+        saveBtn.addEventListener('click', save);
+        cancelBtn.addEventListener('click', () => finish(null));
+        closeBtn.addEventListener('click', () => finish(null));
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) finish(null);
+        });
+        document.addEventListener('keydown', handleKeydown);
+
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        }, 0);
+    });
+}
+
 async function editNoteEntry(entity, recordId, noteId, textareaId) {
     const entry = document.querySelector(`#${textareaId}History .note-entry[data-note-id="${CSS.escape(noteId)}"] p`);
     const currentText = entry ? entry.textContent : '';
-    const text = prompt('Edit note', currentText);
+    const text = await openNoteEditModal(currentText);
     if (text === null) return;
     const trimmed = text.trim();
     if (!trimmed) {
         showToast('Note text cannot be empty.', 'warning');
         return;
     }
-    const result = await window.APIService.updateNote(entity, recordId, noteId, trimmed);
-    renderNotesManager(entity, recordId, result, textareaId);
-    showToast('Note updated successfully.', 'success');
+    try {
+        const result = await window.APIService.updateNote(entity, recordId, noteId, trimmed);
+        renderNotesManager(entity, recordId, result, textareaId);
+        showToast('Note updated successfully.', 'success');
+    } catch (error) {
+        showToast(error.message || 'Failed to update note.', 'error');
+    }
 }
 
 async function deleteNoteEntry(entity, recordId, noteId, textareaId) {
