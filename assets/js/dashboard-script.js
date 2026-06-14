@@ -7139,6 +7139,75 @@ let currentVendorId = null;
 let vendorEmailCounter = 1;
 let vendorPhoneCounter = 1;
 
+const VENDOR_COMPLIANCE_FIELDS = [
+    { key: 'legalBusinessName', id: 'vendorLegalBusinessName', label: 'Full Legal Business Name', type: 'text' },
+    { key: 'businessEntityType', id: 'vendorBusinessEntityType', label: 'Business Entity Type', type: 'text' },
+    { key: 'primaryOwnerName', id: 'vendorPrimaryOwnerName', label: 'Primary Owner / Operator', type: 'text' },
+    { key: 'businessAddress', id: 'vendorBusinessAddress', label: 'Business Address', type: 'text' },
+    { key: 'einTaxId', id: 'vendorEinTaxId', label: 'EIN / Tax ID Number', type: 'text' },
+    { key: 'huttasContractSigned', id: 'vendorHuttasContractSigned', label: 'Huttas Contract Signed and Dated', type: 'checkbox' },
+    { key: 'huttasContractSignedDate', id: 'vendorHuttasContractSignedDate', label: 'Contract Signed Date', type: 'date' },
+    { key: 'w9OnFile', id: 'vendorW9OnFile', label: 'W-9 on File and Dated', type: 'checkbox' },
+    { key: 'w9Date', id: 'vendorW9Date', label: 'W-9 Date', type: 'date' },
+    { key: 'rocLicenseNumber', id: 'vendorRocLicenseNumber', label: 'ROC License Number', type: 'text' },
+    { key: 'rocLicenseTypeClassification', id: 'vendorRocLicenseTypeClassification', label: 'ROC License Type / Classification', type: 'text' },
+    { key: 'rocLicenseExpirationDate', id: 'vendorRocLicenseExpirationDate', label: 'ROC License Expiration Date', type: 'date' },
+    { key: 'certificateOfInsuranceOnFile', id: 'vendorCertificateOfInsuranceOnFile', label: 'Certificate of Insurance on File', type: 'checkbox' },
+    { key: 'workersCompInsuranceOnFile', id: 'vendorWorkersCompInsuranceOnFile', label: 'Workers Comp Insurance on File', type: 'checkbox' },
+    { key: 'huttasAdditionalInsured', id: 'vendorHuttasAdditionalInsured', label: 'Huttas Listed as Additional Insured on GL Policy', type: 'checkbox' }
+];
+
+function setVendorComplianceFields(vendor = {}) {
+    VENDOR_COMPLIANCE_FIELDS.forEach((field) => {
+        const el = document.getElementById(field.id);
+        if (!el) return;
+        if (field.type === 'checkbox') {
+            el.checked = Boolean(vendor[field.key]);
+        } else if (field.type === 'date') {
+            el.value = formatDisplayDateInput(vendor[field.key]);
+        } else {
+            el.value = vendor[field.key] || '';
+        }
+    });
+}
+
+function getVendorComplianceData() {
+    return VENDOR_COMPLIANCE_FIELDS.reduce((data, field) => {
+        const el = document.getElementById(field.id);
+        if (!el) return data;
+        if (field.type === 'checkbox') {
+            data[field.key] = el.checked;
+        } else if (field.type === 'date') {
+            data[field.key] = el.value || null;
+        } else {
+            data[field.key] = el.value.trim();
+        }
+        return data;
+    }, {});
+}
+
+function formatVendorComplianceValue(field, value) {
+    if (field.type === 'checkbox') {
+        return value ? '<span class="vendor-compliance-status complete">Yes</span>' : '<span class="vendor-compliance-status missing">No</span>';
+    }
+    if (field.type === 'date') {
+        return escapePaymentHtml(formatDisplayDate(value));
+    }
+    return escapePaymentHtml(value || '-');
+}
+
+function renderVendorComplianceDetails(vendor = {}) {
+    const container = document.getElementById('detailVendorComplianceFields');
+    if (!container) return;
+
+    container.innerHTML = VENDOR_COMPLIANCE_FIELDS.map((field) => `
+        <div class="info-item ${field.key === 'businessAddress' ? 'full-width' : ''}">
+            <span class="display-label">${escapePaymentHtml(field.label)}:</span>
+            <span>${formatVendorComplianceValue(field, vendor[field.key])}</span>
+        </div>
+    `).join('');
+}
+
 function addVendorEmail() {
     const container = document.getElementById('vendorEmailsContainer');
     const newEmailGroup = document.createElement('div');
@@ -7251,6 +7320,7 @@ function showAddVendorModal() {
     vendorPhoneCounter = 1;
     document.getElementById('vendorModalTitle').textContent = 'Add New Vendor';
     document.getElementById('vendorForm').reset();
+    setVendorComplianceFields({});
     renderNotesManager('vendors', '', {}, 'vendorNotes');
     
     // Clear the containers
@@ -7290,6 +7360,7 @@ async function editVendor(vendorId) {
         document.getElementById('vendorCategory').value = vendor.category || '';
         document.getElementById('vendorRating').value = vendor.rating || 5;
         document.getElementById('vendorStatus').value = vendor.isActive.toString();
+        setVendorComplianceFields(vendor);
         renderNotesManager('vendors', vendor._id, vendor, 'vendorNotes');
         
         // Show/hide "Add New Category" option based on user role
@@ -7490,7 +7561,8 @@ async function saveVendor() {
         notes: document.getElementById('vendorNotes').value,
         emails: emails,
         phones: phones,
-        customFields: getVendorCustomFields()
+        customFields: getVendorCustomFields(),
+        ...getVendorComplianceData()
     };
     
     window.AppLogger?.debug('=== SAVING VENDOR ===');
@@ -9481,6 +9553,7 @@ async function showVendorDetail(vendorId) {
         document.getElementById('detailVendorStatus').innerHTML = vendor.isActive 
             ? '<span style="color: #22c55e;">Active</span>' 
             : '<span style="color: #ef4444;">Inactive</span>';
+        renderVendorComplianceDetails(vendor);
         
         renderNotesManager('vendors', vendor._id, vendor, 'vendorDetailNoteComposer');
         
