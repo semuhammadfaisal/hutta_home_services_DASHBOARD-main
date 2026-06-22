@@ -1,19 +1,6 @@
 const mongoose = require('mongoose');
 const noteSchema = require('./noteSchema');
-
-// Define document subdocument schema explicitly
-const documentSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  url: { type: String, required: true },
-  type: { type: String, required: true },
-  size: { type: Number, required: true },
-  storageProvider: String,
-  publicId: String,
-  fileId: mongoose.Schema.Types.Mixed,
-  complianceDocumentType: String,
-  complianceDocumentLabel: String,
-  uploadedAt: { type: Date, default: Date.now }
-}, { _id: false });
+const attachmentSchema = require('./attachmentSchema');
 
 // Define email subdocument schema
 const emailSchema = new mongoose.Schema({
@@ -63,7 +50,7 @@ const vendorSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   notes: String,
   notesHistory: { type: [noteSchema], default: [] },
-  documents: { type: [documentSchema], default: [] },
+  documents: { type: [attachmentSchema], default: [] },
   emails: { type: [emailSchema], default: [] },
   phones: { type: [phoneSchema], default: [] },
   customFields: { type: [customFieldSchema], default: [] }

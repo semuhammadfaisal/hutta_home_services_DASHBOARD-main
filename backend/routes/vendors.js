@@ -6,6 +6,8 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
+const { prepareDocumentUpdate } = require('../utils/documents');
+const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const router = express.Router();
 
 // Get all vendors
@@ -45,6 +47,8 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
     console.log('req.body.documents:', JSON.stringify(req.body.documents));
     
     const vendorData = { ...req.body };
+    delete vendorData.documents;
+    delete vendorData.documentsMode;
     seedInitialNote(vendorData, req.body.notes, req);
     const vendor = new Vendor(vendorData);
     console.log('Vendor before save:', vendor);
@@ -65,9 +69,14 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     console.log('Updating vendor with data:', req.body);
+    const existingVendor = await Vendor.findById(req.params.id).select('documents');
+    if (!existingVendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+    const updateData = prepareDocumentUpdate(existingVendor.documents, stripNotesFromUpdate(req.body));
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id, 
-      stripNotesFromUpdate(req.body), 
+      updateData,
       { new: true, runValidators: true }
     );
     
@@ -96,6 +105,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
       return res.status(404).json({ message: 'Vendor not found' });
     }
 
+    await retainEntityAttachments('vendor', vendor, req);
     await vendor.deleteOne();
 
     try {

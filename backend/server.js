@@ -125,8 +125,10 @@ try {
   app.use('/api/stages', require('./routes/stages'));
   app.use('/api/pipeline-records', require('./routes/pipelineRecords'));
   app.use('/api/pipeline-movements', require('./routes/pipelineMovements'));
-  app.use('/api/upload', require('./routes/gridfs-upload'));
-  app.use('/uploads', require('./routes/gridfs-upload'));
+  app.use('/api/attachments', require('./routes/attachments'));
+  const authenticateToken = require('./middleware/auth');
+  app.use('/api/upload', authenticateToken, require('./routes/gridfs-upload'));
+  app.use('/uploads', authenticateToken, require('./routes/gridfs-upload'));
   console.log(' All routes loaded');
 } catch (error) {
   console.error(' Error loading routes:', error);

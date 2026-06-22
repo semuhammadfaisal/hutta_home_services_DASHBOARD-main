@@ -9,6 +9,8 @@ const memCache = require('../utils/memoryCache');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { startOfMonthMDT, dateInputToMDT } = require('../utils/timezone');
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
+const { prepareDocumentUpdate } = require('../utils/documents');
+const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const router = express.Router();
 
 const STATS_CACHE_KEY = 'orders:stats:v2';
@@ -473,7 +475,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     const changes = {};
     
     // Prepare update data
-    const updateData = stripNotesFromUpdate(req.body);
+    const updateData = prepareDocumentUpdate(existingOrder.documents, stripNotesFromUpdate(req.body));
     
     // Convert dates if provided
     if (req.body.startDate !== undefined) {
@@ -635,10 +637,12 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
 // Delete order
 router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
-    const order = await Order.findByIdAndDelete(req.params.id);
+    const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
+    await retainEntityAttachments('order', order, req);
+    await order.deleteOne();
     
     console.log('Order deleted:', order._id, 'orderId:', order.orderId);
     

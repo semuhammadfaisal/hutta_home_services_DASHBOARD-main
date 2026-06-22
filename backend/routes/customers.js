@@ -7,6 +7,8 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
+const { prepareDocumentUpdate } = require('../utils/documents');
+const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const router = express.Router();
 
 // Get all customers (paginated)
@@ -151,6 +153,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
     const customerData = { ...req.body };
+    delete customerData.documents;
+    delete customerData.documentsMode;
     seedInitialNote(customerData, req.body.notes, req);
     const customer = new Customer(customerData);
     await customer.save();
@@ -164,9 +168,14 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
 // Update customer
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
+    const existingCustomer = await Customer.findById(req.params.id).select('documents');
+    if (!existingCustomer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+    const updateData = prepareDocumentUpdate(existingCustomer.documents, stripNotesFromUpdate(req.body));
     const customer = await Customer.findByIdAndUpdate(
       req.params.id, 
-      stripNotesFromUpdate(req.body), 
+      updateData,
       { new: true }
     );
     
@@ -184,10 +193,12 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
 // Delete customer
 router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
-    const customer = await Customer.findByIdAndDelete(req.params.id);
+    const customer = await Customer.findById(req.params.id);
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
+    await retainEntityAttachments('customer', customer, req);
+    await customer.deleteOne();
     invalidateDashboardStatsCache();
     res.json({ message: 'Customer deleted successfully' });
   } catch (error) {

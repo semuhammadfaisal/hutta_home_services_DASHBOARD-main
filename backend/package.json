@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "audit:gridfs": "node audit-gridfs-files.js"
+    "audit:gridfs": "node audit-gridfs-files.js",
+    "audit:gridfs:apply": "node audit-gridfs-files.js --apply",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

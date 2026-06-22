@@ -1,16 +1,6 @@
 const mongoose = require('mongoose');
 const noteSchema = require('./noteSchema');
-
-const documentSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  url: { type: String, required: true },
-  type: { type: String, required: true },
-  size: { type: Number, required: true },
-  storageProvider: String,
-  publicId: String,
-  fileId: mongoose.Schema.Types.Mixed,
-  uploadedAt: { type: Date, default: Date.now }
-}, { _id: false });
+const attachmentSchema = require('./attachmentSchema');
 
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
@@ -45,7 +35,7 @@ const orderSchema = new mongoose.Schema({
   recurringCustomDays: { type: Number },
   recurringEndDate: { type: Date },
   recurringNotes: String,
-  documents: { type: [documentSchema], default: [] }
+  documents: { type: [attachmentSchema], default: [] }
 }, { timestamps: true });
 
 orderSchema.index({ customerId: 1 });

@@ -1,17 +1,6 @@
 const mongoose = require('mongoose');
 const noteSchema = require('./noteSchema');
-
-// Define document subdocument schema explicitly
-const documentSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  url: { type: String, required: true },
-  type: { type: String, required: true },
-  size: { type: Number, required: true },
-  storageProvider: String,
-  publicId: String,
-  fileId: mongoose.Schema.Types.Mixed,
-  uploadedAt: { type: Date, default: Date.now }
-}, { _id: false });
+const attachmentSchema = require('./attachmentSchema');
 
 // Define address subdocument schema for multiple locations
 const addressSchema = new mongoose.Schema({
@@ -68,7 +57,7 @@ const customerSchema = new mongoose.Schema({
   notesHistory: { type: [noteSchema], default: [] },
   totalOrders: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
-  documents: { type: [documentSchema], default: [] },
+  documents: { type: [attachmentSchema], default: [] },
   customFields: { type: [customFieldSchema], default: [] }
 }, { timestamps: true });
 

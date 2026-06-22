@@ -4,6 +4,8 @@ const Employee = require('../models/Employee');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
+const { prepareDocumentUpdate } = require('../utils/documents');
+const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const router = express.Router();
 
 // Get all employees
@@ -83,7 +85,10 @@ router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
 // Create new employee
 router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    const employee = new Employee(req.body);
+    const employeeData = { ...req.body };
+    delete employeeData.documents;
+    delete employeeData.documentsMode;
+    const employee = new Employee(employeeData);
     await employee.save();
     invalidateDashboardStatsCache();
     res.status(201).json(employee);
@@ -102,9 +107,14 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
 // Update employee
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
+    const existingEmployee = await Employee.findById(req.params.id).select('documents');
+    if (!existingEmployee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    const updateData = prepareDocumentUpdate(existingEmployee.documents, req.body);
     const employee = await Employee.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
+      updateData,
       { new: true }
     );
     
@@ -122,10 +132,12 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
 // Delete employee
 router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
-    const employee = await Employee.findByIdAndDelete(req.params.id);
+    const employee = await Employee.findById(req.params.id);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
+    await retainEntityAttachments('employee', employee, req);
+    await employee.deleteOne();
     invalidateDashboardStatsCache();
     res.json({ message: 'Employee deleted successfully' });
   } catch (error) {

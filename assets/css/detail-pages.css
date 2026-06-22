@@ -316,6 +316,55 @@
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
 }
 
+.archived-documents {
+    margin-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 10px;
+}
+
+.archived-documents > summary {
+    cursor: pointer;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 2px;
+}
+
+.archived-documents-list {
+    display: grid;
+    gap: 8px;
+    padding-top: 6px;
+}
+
+.document-item.document-archived {
+    background: #f8fafc;
+    border-style: dashed;
+    opacity: 0.82;
+}
+
+.document-item.document-archived .document-name::after {
+    content: 'Archived';
+    margin-left: 8px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.vendor-compliance-document-link {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: #0056b8;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 #order-detail .order-detail-header-main {
     display: flex;
     align-items: center;

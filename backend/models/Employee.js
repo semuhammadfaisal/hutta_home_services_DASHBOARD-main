@@ -1,16 +1,5 @@
 const mongoose = require('mongoose');
-
-// Define document subdocument schema explicitly
-const documentSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  url: { type: String, required: true },
-  type: { type: String, required: true },
-  size: { type: Number, required: true },
-  storageProvider: String,
-  publicId: String,
-  fileId: mongoose.Schema.Types.Mixed,
-  uploadedAt: { type: Date, default: Date.now }
-}, { _id: false });
+const attachmentSchema = require('./attachmentSchema');
 
 const employeeSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -33,7 +22,7 @@ const employeeSchema = new mongoose.Schema({
   skills: [String],
   avatar: String,
   isActive: { type: Boolean, default: true },
-  documents: { type: [documentSchema], default: [] }
+  documents: { type: [attachmentSchema], default: [] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Employee', employeeSchema);

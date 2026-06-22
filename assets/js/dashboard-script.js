@@ -3613,6 +3613,8 @@ window.handleCustomerSelect = handleCustomerSelect;
 function showAddOrderModal() {
     try {
     currentOrderId = null;
+    window.existingOrderDocs = [];
+    if (window.uploadedFiles) window.uploadedFiles.order = [];
     document.getElementById('orderModalTitle').textContent = 'Add New Order';
     document.getElementById('orderForm').reset();
     
@@ -3770,19 +3772,9 @@ async function editOrder(orderId) {
             window.uploadedFiles.order = [];
         }
         const preview = document.getElementById('orderDocsPreview');
-        if (preview && order.documents && order.documents.length > 0) {
-            preview.innerHTML = order.documents.map((doc, index) => `
-                <div class="doc-item">
-                    <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
-                    <a href="${doc.url}" target="_blank">${doc.name}</a>
-                    <i class="fas fa-times remove-doc" onclick="removeExistingOrderDoc(${index})"></i>
-                </div>
-            `).join('');
-            window.existingOrderDocs = order.documents;
-        } else {
-            if (preview) preview.innerHTML = '';
-            window.existingOrderDocs = [];
-        }
+        if (preview) preview.replaceChildren();
+        window.existingOrderDocs = Array.isArray(order.documents) ? order.documents : [];
+        window.updateDocumentPreview?.('order', 'orderDocsPreview');
         
         document.getElementById('orderModal').classList.add('show');
     } catch (error) {
@@ -3967,28 +3959,14 @@ async function saveOrder() {
     }
     
     try {
-        // Upload documents if any
-        if (window.uploadedFiles && window.uploadedFiles.order && window.uploadedFiles.order.length > 0) {
-            window.AppLogger?.debug('Uploading order documents:', window.uploadedFiles.order.length, 'files');
-            updateLoadingMessage('Uploading documents...');
-            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.order);
-            window.AppLogger?.debug('Upload response:', uploadedDocs);
-            if (uploadedDocs && uploadedDocs.length > 0) {
-                const existingDocs = window.existingOrderDocs || [];
-                orderData.documents = [...existingDocs, ...uploadedDocs];
-                window.AppLogger?.debug('Documents added to orderData:', orderData.documents);
-            } else {
-                // Upload failed, keep existing documents
-                orderData.documents = window.existingOrderDocs || [];
-            }
-        } else {
-            // No new uploads, preserve existing documents
-            orderData.documents = window.existingOrderDocs || [];
-        }
-        
+        const pendingFiles = [...(window.uploadedFiles?.order || [])];
         if (currentOrderId) {
             updateLoadingMessage('Updating order...');
             await window.APIService.updateOrder(currentOrderId, orderData);
+            if (pendingFiles.length) {
+                updateLoadingMessage('Attaching order documents...');
+                await window.uploadEntityAttachments('order', currentOrderId, pendingFiles);
+            }
             if (document.getElementById('notes')?.value.trim()) {
                 await addNoteEntry('orders', currentOrderId, 'notes');
             }
@@ -4013,7 +3991,11 @@ async function saveOrder() {
             }
         } else {
             updateLoadingMessage('Creating order...');
-            await window.APIService.createOrder(orderData);
+            const savedOrder = await window.APIService.createOrder(orderData);
+            if (pendingFiles.length) {
+                updateLoadingMessage('Attaching order documents...');
+                await window.uploadEntityAttachments('order', savedOrder?._id, pendingFiles);
+            }
             showToast('Order created successfully! Payment record auto-created.', 'success');
             
             // If this was a new customer, refresh the customers list
@@ -4136,7 +4118,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             
             // Display documents in modal
             const modalDocsList = document.getElementById('modalOrderDocumentsList');
-            if (order.documents && order.documents.length > 0) {
+            if (false && order.documents && order.documents.length > 0) {
                 modalDocsList.innerHTML = order.documents.map(doc => `
                     <div class="document-item">
                         <div class="document-info">
@@ -4161,6 +4143,10 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             } else {
                 modalDocsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
             }
+            window.renderAttachmentList(modalDocsList, order.documents, {
+                entityType: 'order', entityId: order._id,
+                onChanged: () => showOrderDetail(order._id, true, false)
+            });
             
             // Show modal
             document.getElementById('orderDetailModal').classList.add('show');
@@ -4234,7 +4220,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         // Display documents
         const docsList = document.getElementById('orderDocumentsList');
         if (docsList) {
-            if (order.documents && order.documents.length > 0) {
+            if (false && order.documents && order.documents.length > 0) {
                 docsList.innerHTML = order.documents.map(doc => `
                     <div class="document-item">
                         <div class="document-info">
@@ -4259,6 +4245,10 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             } else {
                 docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
             }
+            window.renderAttachmentList(docsList, order.documents, {
+                entityType: 'order', entityId: order._id,
+                onChanged: () => showOrderDetail(order._id, false, fromRecentActivity)
+            });
         }
         
         showSection('order-detail');
@@ -6698,6 +6688,8 @@ let currentEmployeeId = null;
 
 function showAddEmployeeModal() {
     currentEmployeeId = null;
+    window.currentEmployeeDocuments = [];
+    if (window.uploadedFiles) window.uploadedFiles.employee = [];
     document.getElementById('employeeModalTitle').textContent = 'Add New Employee';
     document.getElementById('employeeForm').reset();
     
@@ -6731,24 +6723,11 @@ async function editEmployee(employeeId) {
         
         // Display existing documents with remove option
         const docsPreview = document.getElementById('employeeDocsPreview');
-        if (employee.documents && employee.documents.length > 0) {
-            docsPreview.innerHTML = employee.documents.map((doc, index) => `
-                <div class="existing-doc-item" data-doc-index="${index}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                        <span style="font-size: 14px;">${doc.name}</span>
-                    </div>
-                    <button type="button" class="btn-remove-doc" onclick="removeExistingEmployeeDoc(${index})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `).join('');
-        } else {
-            docsPreview.innerHTML = '';
-        }
+        docsPreview.replaceChildren();
         
         // Store original documents for comparison
         window.currentEmployeeDocuments = employee.documents || [];
+        window.updateDocumentPreview?.('employee', 'employeeDocsPreview');
         
         document.getElementById('employeeModal').classList.add('show');
     } catch (error) {
@@ -6780,28 +6759,19 @@ async function saveEmployee() {
     };
     
     try {
-        // Upload documents if any
-        if (window.uploadedFiles && window.uploadedFiles.employee && window.uploadedFiles.employee.length > 0) {
-            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.employee);
-            if (uploadedDocs && uploadedDocs.length > 0) {
-                // Combine existing documents with newly uploaded ones
-                const existingDocs = window.currentEmployeeDocuments || [];
-                employeeData.documents = [...existingDocs, ...uploadedDocs];
-            } else {
-                // Upload failed, keep existing documents
-                employeeData.documents = window.currentEmployeeDocuments || [];
-            }
-        } else {
-            // No new uploads, preserve existing documents
-            employeeData.documents = window.currentEmployeeDocuments || [];
-        }
-        
+        const pendingFiles = [...(window.uploadedFiles?.employee || [])];
+        let savedEmployee;
         if (currentEmployeeId) {
-            await window.APIService.updateEmployee(currentEmployeeId, employeeData);
+            savedEmployee = await window.APIService.updateEmployee(currentEmployeeId, employeeData);
             showToast('Employee updated successfully!', 'success');
         } else {
-            await window.APIService.createEmployee(employeeData);
+            savedEmployee = await window.APIService.createEmployee(employeeData);
             showToast('Employee created successfully!', 'success');
+        }
+        const employeeId = currentEmployeeId || savedEmployee?._id;
+        if (pendingFiles.length) {
+            await window.uploadEntityAttachments('employee', employeeId, pendingFiles);
+            showToast(`${pendingFiles.length} employee document${pendingFiles.length === 1 ? '' : 's'} attached.`, 'success');
         }
         
         // Clear uploaded files and stored documents
@@ -6875,7 +6845,7 @@ async function showEmployeeDetail(employeeId) {
         }
         
         const docsList = document.getElementById('employeeDocumentsList');
-        if (employee.documents && employee.documents.length > 0) {
+        if (false && employee.documents && employee.documents.length > 0) {
             docsList.innerHTML = employee.documents.map(doc => `
                 <div class="document-item">
                     <div class="document-info">
@@ -6900,6 +6870,10 @@ async function showEmployeeDetail(employeeId) {
         } else {
             docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
         }
+        window.renderAttachmentList(docsList, employee.documents, {
+            entityType: 'employee', entityId: employee._id,
+            onChanged: () => showEmployeeDetail(employee._id)
+        });
         
         window.AppLogger?.debug('Showing employee-detail section');
         showSection('employee-detail');
@@ -7103,34 +7077,29 @@ window.saveEmployee = saveEmployee;
 window.showEmployeeDetail = showEmployeeDetail;
 window.backToEmployees = backToEmployees;
 
+async function archiveExistingAttachment(entityType, entityId, attachment, previewType, previewId) {
+    if (!attachment?.documentId) {
+        showToast('This legacy document must be migrated before it can be archived.', 'warning');
+        return false;
+    }
+    try {
+        await window.archiveEntityAttachment(entityType, entityId, attachment.documentId);
+        attachment.status = 'archived';
+        window.APIService?.clearCache?.();
+        window.updateDocumentPreview?.(previewType, previewId);
+        showToast('Document archived. The stored file was retained and can be restored from details.', 'success');
+        return true;
+    } catch (error) {
+        showToast('Failed to archive document: ' + error.message, 'error');
+        return false;
+    }
+}
+
 // Function to remove existing employee document
-window.removeExistingEmployeeDoc = function(index) {
+window.removeExistingEmployeeDoc = async function(index) {
     if (confirm('Are you sure you want to remove this document?')) {
-        const docItem = document.querySelector(`[data-doc-index="${index}"]`);
-        if (docItem) {
-            docItem.remove();
-        }
-        // Remove from stored documents array
-        if (window.currentEmployeeDocuments) {
-            window.currentEmployeeDocuments.splice(index, 1);
-            // Re-render to update indices
-            const docsPreview = document.getElementById('employeeDocsPreview');
-            if (window.currentEmployeeDocuments.length > 0) {
-                docsPreview.innerHTML = window.currentEmployeeDocuments.map((doc, idx) => `
-                    <div class="existing-doc-item" data-doc-index="${idx}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                            <span style="font-size: 14px;">${doc.name}</span>
-                        </div>
-                        <button type="button" class="btn-remove-doc" onclick="removeExistingEmployeeDoc(${idx})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `).join('');
-            } else {
-                docsPreview.innerHTML = '';
-            }
-        }
+        const attachment = window.currentEmployeeDocuments?.[index];
+        await archiveExistingAttachment('employee', currentEmployeeId, attachment, 'employee', 'employeeDocsPreview');
     }
 };
 
@@ -7194,7 +7163,9 @@ function getVendorComplianceData() {
 
 function getVendorComplianceDocuments(documents = []) {
     return VENDOR_COMPLIANCE_DOCUMENT_FIELDS.reduce((map, field) => {
-        map[field.key] = (documents || []).find(doc => doc.complianceDocumentType === field.key) || null;
+        map[field.key] = (documents || [])
+            .filter(doc => doc.complianceDocumentType === field.key && doc.status !== 'archived')
+            .at(-1) || null;
         return map;
     }, {});
 }
@@ -7294,43 +7265,21 @@ function clearVendorComplianceFile(key) {
     updateVendorCompliancePreview(field, existingDocs[key]);
 }
 
-function clearExistingVendorComplianceDocument(key) {
-    window.currentVendorDocuments = (window.currentVendorDocuments || []).filter(doc => doc.complianceDocumentType !== key);
+async function clearExistingVendorComplianceDocument(key) {
+    const existing = (window.currentVendorDocuments || []).find(doc => doc.complianceDocumentType === key && doc.status !== 'archived');
+    if (existing?.documentId && currentVendorId) {
+        try {
+            await window.archiveEntityAttachment('vendor', currentVendorId, existing.documentId, 'Archived from vendor compliance editor');
+            existing.status = 'archived';
+            window.APIService?.clearCache?.();
+            showToast('Compliance document archived; the stored file was retained.', 'success');
+        } catch (error) {
+            showToast('Failed to archive compliance document: ' + error.message, 'error');
+            return;
+        }
+    }
     const field = VENDOR_COMPLIANCE_DOCUMENT_FIELDS.find(item => item.key === key);
     if (field) updateVendorCompliancePreview(field, null);
-}
-
-async function uploadVendorComplianceDocuments(existingDocs = [], filesByKey = vendorComplianceFiles, onProgress = null) {
-    let documents = [...(existingDocs || [])];
-    const filesToUpload = VENDOR_COMPLIANCE_DOCUMENT_FIELDS
-        .map(field => ({
-            field,
-            file: filesByKey?.[field.key]
-        }))
-        .filter(item => item.file);
-
-    if (!filesToUpload.length) {
-        return documents;
-    }
-
-    const uploadCount = filesToUpload.length;
-    const uploadedDocs = await window.uploadFiles(filesToUpload.map(item => item.file), (percent) => {
-        updateLoadingMessage(`Uploading ${uploadCount} compliance document${uploadCount === 1 ? '' : 's'}... ${percent}%`);
-        if (typeof onProgress === 'function') onProgress(percent);
-    });
-    filesToUpload.forEach((item, index) => {
-        const uploadedDoc = uploadedDocs[index];
-        if (uploadedDoc) {
-            documents = documents.filter(doc => doc.complianceDocumentType !== item.field.key);
-            documents.push({
-                ...uploadedDoc,
-                complianceDocumentType: item.field.key,
-                complianceDocumentLabel: item.field.label
-            });
-        }
-    });
-
-    return documents;
 }
 
 function formatVendorComplianceValue(field, value) {
@@ -7360,12 +7309,23 @@ function renderVendorComplianceDetails(vendor = {}) {
         return `
             <div class="info-item">
                 <span class="display-label">${escapePaymentHtml(field.label)}:</span>
-                <span>${doc ? `<a href="${escapePaymentHtml(doc.url)}" target="_blank" rel="noopener">${escapePaymentHtml(doc.name)}</a>` : '<span class="vendor-compliance-status missing">Missing</span>'}</span>
+                <span>${doc ? `<button type="button" class="vendor-compliance-document-link" data-compliance-key="${field.key}">${escapePaymentHtml(doc.name)}</button>` : '<span class="vendor-compliance-status missing">Missing</span>'}</span>
             </div>
         `;
     }).join('');
 
     container.innerHTML = fieldItems + documentItems;
+    container.querySelectorAll('[data-compliance-key]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const doc = complianceDocs[button.dataset.complianceKey];
+            if (!doc) return;
+            try {
+                await window.openEntityAttachment('vendor', vendor._id, doc, false);
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+    });
 }
 
 function getVendorCategorySelection() {
@@ -7701,55 +7661,48 @@ function failOptimisticVendorSave(clientId, error) {
 async function runOptimisticVendorSave(snapshot) {
     const clientId = snapshot.clientId;
     const vendorData = { ...snapshot.vendorData };
-    let vendorDocuments = [...(snapshot.existingDocuments || [])];
     const generalFiles = [...(snapshot.generalFiles || [])];
     const complianceFiles = { ...(snapshot.complianceFiles || {}) };
     const generalUploadCount = generalFiles.length;
     const complianceUploadCount = Object.values(complianceFiles).filter(Boolean).length;
     const totalUploadCount = generalUploadCount + complianceUploadCount;
-    const uploadShare = totalUploadCount ? 70 / totalUploadCount : 0;
-    let completedUploadUnits = 0;
-
-    const setUploadProgress = (batchPercent, batchUnits, status) => {
-        const progress = (completedUploadUnits * uploadShare) + ((batchPercent / 100) * uploadShare * batchUnits);
-        setOptimisticVendorProgress(clientId, progress, status);
-    };
-
-    setOptimisticVendorProgress(clientId, totalUploadCount ? 0 : 70, totalUploadCount ? 'Uploading' : 'Saving');
-
-    if (generalUploadCount) {
-        const uploadedDocs = await window.uploadFiles(generalFiles, (percent) => {
-            setUploadProgress(percent, generalUploadCount, `Uploading ${percent}%`);
-        });
-        if (uploadedDocs && uploadedDocs.length > 0) {
-            vendorDocuments = [...vendorDocuments, ...uploadedDocs];
-        }
-        completedUploadUnits += generalUploadCount;
-        setOptimisticVendorProgress(clientId, Math.min(70, completedUploadUnits * uploadShare), 'Uploading');
-    }
-
-    if (complianceUploadCount) {
-        vendorDocuments = await uploadVendorComplianceDocuments(vendorDocuments, complianceFiles, (percent) => {
-            setUploadProgress(percent, complianceUploadCount, `Uploading ${percent}%`);
-        });
-        completedUploadUnits += complianceUploadCount;
-        setOptimisticVendorProgress(clientId, 70, 'Saving');
-    }
-
-    const complianceDocs = getVendorComplianceDocuments(vendorDocuments);
-    vendorData.documents = vendorDocuments;
-    vendorData.huttasContractSigned = Boolean(complianceDocs.huttasContract);
-    vendorData.huttasContractSignedDate = null;
-    vendorData.w9OnFile = Boolean(complianceDocs.w9);
-    vendorData.w9Date = null;
-    vendorData.certificateOfInsuranceOnFile = Boolean(complianceDocs.certificateOfInsurance);
-    vendorData.workersCompInsuranceOnFile = Boolean(complianceDocs.workersCompInsurance);
-    vendorData.huttasAdditionalInsured = Boolean(complianceDocs.huttasAdditionalInsured);
-
-    setOptimisticVendorProgress(clientId, 80, snapshot.isEdit ? 'Updating' : 'Creating');
-    const savedVendor = snapshot.isEdit
+    setOptimisticVendorProgress(clientId, 20, snapshot.isEdit ? 'Updating' : 'Creating');
+    let savedVendor = snapshot.isEdit
         ? await window.APIService.updateVendor(snapshot.vendorId, vendorData)
         : await window.APIService.createVendor(vendorData);
+    const vendorId = snapshot.vendorId || savedVendor?._id;
+
+    if (generalUploadCount) {
+        await window.uploadEntityAttachments('vendor', vendorId, generalFiles, {}, (percent) => {
+            setOptimisticVendorProgress(clientId, 20 + Math.round(percent * 0.35), `Uploading ${percent}%`);
+        });
+    }
+
+    let completedCompliance = 0;
+    for (const field of VENDOR_COMPLIANCE_DOCUMENT_FIELDS) {
+        const file = complianceFiles[field.key];
+        if (!file) continue;
+        await window.uploadEntityAttachments('vendor', vendorId, [file], {
+            complianceDocumentType: field.key,
+            complianceDocumentLabel: field.label
+        });
+        completedCompliance++;
+        setOptimisticVendorProgress(clientId, 55 + Math.round((completedCompliance / Math.max(1, complianceUploadCount)) * 30), 'Saving compliance');
+    }
+
+    if (totalUploadCount) {
+        savedVendor = await window.APIService.getVendor(vendorId);
+        const complianceDocs = getVendorComplianceDocuments(savedVendor.documents || []);
+        savedVendor = await window.APIService.updateVendor(vendorId, {
+            huttasContractSigned: Boolean(complianceDocs.huttasContract),
+            huttasContractSignedDate: null,
+            w9OnFile: Boolean(complianceDocs.w9),
+            w9Date: null,
+            certificateOfInsuranceOnFile: Boolean(complianceDocs.certificateOfInsurance),
+            workersCompInsuranceOnFile: Boolean(complianceDocs.workersCompInsurance),
+            huttasAdditionalInsured: Boolean(complianceDocs.huttasAdditionalInsured)
+        });
+    }
 
     setOptimisticVendorProgress(clientId, 92, 'Saving notes');
     if (snapshot.isEdit && vendorData.notes?.trim()) {
@@ -7980,28 +7933,11 @@ async function editVendor(vendorId) {
         
         // Display existing documents with remove option
         const docsPreview = document.getElementById('vendorDocsPreview');
-        const generalDocuments = (vendor.documents || []).filter(doc => !doc.complianceDocumentType);
-        if (generalDocuments.length > 0) {
-            docsPreview.innerHTML = generalDocuments.map((doc) => {
-                const docIndex = (vendor.documents || []).indexOf(doc);
-                return `
-                <div class="existing-doc-item" data-doc-index="${docIndex}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                        <span style="font-size: 14px;">${doc.name}</span>
-                    </div>
-                    <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${docIndex})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            }).join('');
-        } else {
-            docsPreview.innerHTML = '';
-        }
+        docsPreview.replaceChildren();
         
         // Store original documents for comparison
         window.currentVendorDocuments = vendor.documents || [];
+        window.updateDocumentPreview?.('vendor', 'vendorDocsPreview');
         initializeVendorComplianceUploads();
         setVendorComplianceDocumentPreviews(vendor);
         
@@ -8319,33 +8255,10 @@ window.clearVendorComplianceFile = clearVendorComplianceFile;
 window.clearExistingVendorComplianceDocument = clearExistingVendorComplianceDocument;
 
 // Function to remove existing vendor document
-window.removeExistingVendorDoc = function(index) {
+window.removeExistingVendorDoc = async function(index) {
     if (confirm('Are you sure you want to remove this document?')) {
-        const docItem = document.querySelector(`[data-doc-index="${index}"]`);
-        if (docItem) {
-            docItem.remove();
-        }
-        // Remove from stored documents array
-        if (window.currentVendorDocuments) {
-            window.currentVendorDocuments.splice(index, 1);
-            // Re-render to update indices
-            const docsPreview = document.getElementById('vendorDocsPreview');
-            if (window.currentVendorDocuments.length > 0) {
-                docsPreview.innerHTML = window.currentVendorDocuments.map((doc, idx) => `
-                    <div class="existing-doc-item" data-doc-index="${idx}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                            <span style="font-size: 14px;">${doc.name}</span>
-                        </div>
-                        <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${idx})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `).join('');
-            } else {
-                docsPreview.innerHTML = '';
-            }
-        }
+        const attachment = window.currentVendorDocuments?.[index];
+        await archiveExistingAttachment('vendor', currentVendorId, attachment, 'vendor', 'vendorDocsPreview');
     }
 };
 
@@ -8453,6 +8366,8 @@ function removePhysicalAddress(index) {
 
 function showAddCustomerModal() {
     currentCustomerId = null;
+    window.existingCustomerDocs = [];
+    if (window.uploadedFiles) window.uploadedFiles.customer = [];
     addressCounter = 1;
     emailCounter = 1;
     phoneCounter = 1;
@@ -8607,19 +8522,9 @@ async function editCustomer(customerId) {
             window.uploadedFiles.customer = [];
         }
         const preview = document.getElementById('customerDocsPreview');
-        if (preview && customer.documents && customer.documents.length > 0) {
-            preview.innerHTML = customer.documents.map((doc, index) => `
-                <div class="doc-item">
-                    <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
-                    <a href="${doc.url}" target="_blank">${doc.name}</a>
-                    <i class="fas fa-times remove-doc" onclick="removeExistingCustomerDoc(${index})"></i>
-                </div>
-            `).join('');
-            window.existingCustomerDocs = customer.documents;
-        } else {
-            if (preview) preview.innerHTML = '';
-            window.existingCustomerDocs = [];
-        }
+        if (preview) preview.replaceChildren();
+        window.existingCustomerDocs = Array.isArray(customer.documents) ? customer.documents : [];
+        window.updateDocumentPreview?.('customer', 'customerDocsPreview');
         
         document.getElementById('customerModal').classList.add('show');
     } catch (error) {
@@ -8753,36 +8658,25 @@ async function saveCustomer() {
     }
     
     try {
-        // Upload documents if any
-        if (window.uploadedFiles && window.uploadedFiles.customer && window.uploadedFiles.customer.length > 0) {
-            window.AppLogger?.debug('Uploading customer documents:', window.uploadedFiles.customer.length, 'files');
-            updateLoadingMessage('Uploading documents...');
-            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.customer);
-            window.AppLogger?.debug('Upload response:', uploadedDocs);
-            if (uploadedDocs && uploadedDocs.length > 0) {
-                const existingDocs = window.existingCustomerDocs || [];
-                customerData.documents = [...existingDocs, ...uploadedDocs];
-                window.AppLogger?.debug('Documents added to customerData:', customerData.documents);
-            } else {
-                // Upload failed, keep existing documents
-                customerData.documents = window.existingCustomerDocs || [];
-            }
-        } else {
-            // No new uploads, preserve existing documents
-            customerData.documents = window.existingCustomerDocs || [];
-        }
-        
+        const pendingFiles = [...(window.uploadedFiles?.customer || [])];
+        let savedCustomer;
         if (currentCustomerId) {
             updateLoadingMessage('Updating customer...');
-            await window.APIService.updateCustomer(currentCustomerId, customerData);
+            savedCustomer = await window.APIService.updateCustomer(currentCustomerId, customerData);
             if (document.getElementById('customerNotes')?.value.trim()) {
                 await addNoteEntry('customers', currentCustomerId, 'customerNotes');
             }
             showToast('Customer updated successfully!', 'success');
         } else {
             updateLoadingMessage('Creating customer...');
-            await window.APIService.createCustomer(customerData);
+            savedCustomer = await window.APIService.createCustomer(customerData);
             showToast('Customer created successfully!', 'success');
+        }
+        const customerId = currentCustomerId || savedCustomer?._id;
+        if (pendingFiles.length) {
+            updateLoadingMessage('Attaching customer documents...');
+            await window.uploadEntityAttachments('customer', customerId, pendingFiles);
+            showToast(`${pendingFiles.length} customer document${pendingFiles.length === 1 ? '' : 's'} attached.`, 'success');
         }
         
         // Clear uploaded files
@@ -8913,7 +8807,7 @@ async function showCustomerProfile(customerId) {
         
         // Populate documents
         const docsList = document.getElementById('customerDocumentsList');
-        if (profileData.customer.documents && profileData.customer.documents.length > 0) {
+        if (false && profileData.customer.documents && profileData.customer.documents.length > 0) {
             docsList.innerHTML = profileData.customer.documents.map(doc => `
                 <div class="document-item">
                     <div class="document-info">
@@ -8938,6 +8832,10 @@ async function showCustomerProfile(customerId) {
         } else {
             docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
         }
+        window.renderAttachmentList(docsList, profileData.customer.documents, {
+            entityType: 'customer', entityId: profileData.customer._id,
+            onChanged: () => showCustomerProfile(profileData.customer._id)
+        });
     } catch (error) {
         console.error('Failed to load customer profile:', error);
         showToast('Failed to load customer profile: ' + error.message, 'error');
@@ -9194,43 +9092,17 @@ window.showAddOrderModal = showAddOrderModal;
 window.closeOrderModal = closeOrderModal;
 window.saveOrder = saveOrder;
 
-window.removeExistingOrderDoc = function(index) {
+window.removeExistingOrderDoc = async function(index) {
     if (confirm('Are you sure you want to remove this document?')) {
-        if (window.existingOrderDocs) {
-            window.existingOrderDocs.splice(index, 1);
-            const preview = document.getElementById('orderDocsPreview');
-            if (window.existingOrderDocs.length > 0) {
-                preview.innerHTML = window.existingOrderDocs.map((doc, idx) => `
-                    <div class="doc-item">
-                        <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
-                        <a href="${doc.url}" target="_blank">${doc.name}</a>
-                        <i class="fas fa-times remove-doc" onclick="removeExistingOrderDoc(${idx})"></i>
-                    </div>
-                `).join('');
-            } else {
-                preview.innerHTML = '';
-            }
-        }
+        const attachment = window.existingOrderDocs?.[index];
+        await archiveExistingAttachment('order', currentOrderId, attachment, 'order', 'orderDocsPreview');
     }
 };
 
-window.removeExistingCustomerDoc = function(index) {
+window.removeExistingCustomerDoc = async function(index) {
     if (confirm('Are you sure you want to remove this document?')) {
-        if (window.existingCustomerDocs) {
-            window.existingCustomerDocs.splice(index, 1);
-            const preview = document.getElementById('customerDocsPreview');
-            if (window.existingCustomerDocs.length > 0) {
-                preview.innerHTML = window.existingCustomerDocs.map((doc, idx) => `
-                    <div class="doc-item">
-                        <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
-                        <a href="${doc.url}" target="_blank">${doc.name}</a>
-                        <i class="fas fa-times remove-doc" onclick="removeExistingCustomerDoc(${idx})"></i>
-                    </div>
-                `).join('');
-            } else {
-                preview.innerHTML = '';
-            }
-        }
+        const attachment = window.existingCustomerDocs?.[index];
+        await archiveExistingAttachment('customer', currentCustomerId, attachment, 'customer', 'customerDocsPreview');
     }
 };
 
@@ -10025,7 +9897,7 @@ async function showVendorDetail(vendorId) {
         
         const docsList = document.getElementById('vendorDocumentsList');
         const generalVendorDocuments = (vendor.documents || []).filter(doc => !doc.complianceDocumentType);
-        if (generalVendorDocuments.length > 0) {
+        if (false && generalVendorDocuments.length > 0) {
             docsList.innerHTML = generalVendorDocuments.map(doc => `
                 <div class="document-item">
                     <div class="document-info">
@@ -10050,6 +9922,10 @@ async function showVendorDetail(vendorId) {
         } else {
             docsList.innerHTML = '<p class="no-documents">No documents uploaded</p>';
         }
+        window.renderAttachmentList(docsList, vendor.documents, {
+            entityType: 'vendor', entityId: vendor._id,
+            onChanged: () => showVendorDetail(vendor._id)
+        });
         
         const orders = await window.APIService.getOrders();
         const vendorOrders = orders.filter(order => order.vendor && (order.vendor._id === vendorId || order.vendor === vendorId));
