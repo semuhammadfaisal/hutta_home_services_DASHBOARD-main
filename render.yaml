@@ -17,18 +17,8 @@ services:
         sync: false
       - key: EMAIL_PASSWORD
         sync: false
-      - key: EMAIL_FROM
-        sync: false
-      - key: EMAIL_REPLY_TO
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: TAX_ID_ENCRYPTION_KEY
-        sync: false
       - key: FRONTEND_URL
-        value: https://hutta-home-services-dashboard-main.onrender.com
-      - key: PUBLIC_APP_URL
-        value: https://hutta-home-services-dashboard-main.onrender.com
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

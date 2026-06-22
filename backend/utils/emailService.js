@@ -1,49 +1,16 @@
 const nodemailer = require('nodemailer');
-const { buildPublicUrl, getPublicAppUrl } = require('./publicAppUrl');
 
+// Use Resend for email delivery (works on Render)
 const Resend = require('resend').Resend;
-const FREE_OR_TEST_DOMAINS = new Set([
-  'gmail.com', 'googlemail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
-  'live.com', 'icloud.com', 'aol.com', 'resend.dev'
-]);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-function extractEmailAddress(value) {
-  const match = String(value || '').match(/<([^>]+)>/);
-  return String(match ? match[1] : value || '').trim().toLowerCase();
+if (resend) {
+  console.log('Using Resend for email delivery');
+} else {
+  console.log('Using Gmail SMTP for email delivery');
 }
 
-function hasBusinessSender() {
-  const address = extractEmailAddress(process.env.EMAIL_FROM);
-  const domain = address.split('@')[1];
-  return Boolean(address && domain && !FREE_OR_TEST_DOMAINS.has(domain));
-}
-
-function getEmailDeliveryStatus() {
-  const resendConfigured = Boolean(process.env.RESEND_API_KEY);
-  const verifiedSenderConfigured = hasBusinessSender();
-  const gmailConfigured = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
-  const provider = resendConfigured && verifiedSenderConfigured ? 'resend' : gmailConfigured ? 'gmail' : 'unconfigured';
-  const warning = provider === 'gmail'
-    ? 'Temporary Gmail delivery is active. Vendor messages may be placed in Spam until a business domain is verified with Resend.'
-    : provider === 'unconfigured'
-      ? 'Email delivery is not configured. Invitations are retained and their secure links can still be copied.'
-      : null;
-  return {
-    provider,
-    warning,
-    publicAppUrl: getPublicAppUrl(),
-    resendConfigured,
-    verifiedSenderConfigured,
-    gmailConfigured
-  };
-}
-
-const emailStatus = getEmailDeliveryStatus();
-const resend = emailStatus.provider === 'resend' ? new Resend(process.env.RESEND_API_KEY) : null;
-console.log(`Using ${emailStatus.provider === 'gmail' ? 'Gmail SMTP' : emailStatus.provider} for email delivery`);
-if (emailStatus.warning) console.warn(`Email delivery warning: ${emailStatus.warning}`);
-
-const transporter = emailStatus.provider === 'gmail' ? nodemailer.createTransport({
+const transporter = !resend ? nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
@@ -56,46 +23,8 @@ const transporter = emailStatus.provider === 'gmail' ? nodemailer.createTranspor
   socketTimeout: 10000
 }) : null;
 
-const emailFrom = emailStatus.provider === 'resend'
-  ? process.env.EMAIL_FROM
-  : `Hutta Home Services <${process.env.EMAIL_USER || 'unconfigured@localhost'}>`;
-const replyTo = process.env.EMAIL_REPLY_TO || process.env.EMAIL_USER || extractEmailAddress(process.env.EMAIL_FROM) || undefined;
-
-const htmlToText = (html) => String(html || '')
-  .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-  .replace(/<br\s*\/?>/gi, '\n')
-  .replace(/<\/p>|<\/div>|<\/h\d>/gi, '\n')
-  .replace(/<[^>]+>/g, ' ')
-  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-  .replace(/&#039;/g, "'").replace(/&quot;/g, '"')
-  .replace(/[ \t]+/g, ' ').replace(/\n\s+/g, '\n').trim();
-
-const deliverEmail = async ({ to, subject, html, text, attachments }) => {
-  const plainText = text || htmlToText(html);
-  if (resend) {
-    const result = await resend.emails.send({ from: emailFrom, to, subject, html, text: plainText, replyTo });
-    if (result?.error) throw new Error(result.error.message || 'Email delivery failed');
-    return { provider: 'resend', messageId: result?.data?.id || result?.id || null };
-  }
-  if (!transporter) {
-    throw new Error('Email credentials are not configured');
-  }
-  const result = await transporter.sendMail({ from: emailFrom, replyTo, to, subject, html, text: plainText, attachments });
-  return { provider: 'gmail', messageId: result?.messageId || null };
-};
-
-const escapeHtml = (value) => String(value || '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-
-const emailShell = (title, content) => `
-  <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body{margin:0;padding:24px;background:#f4f7fb;color:#1f2937;font-family:Arial,sans-serif}.wrap{max-width:620px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #dbe4f0}.head{padding:28px;background:#0056b8;color:#fff}.head h1{margin:0;font-size:24px}.body{padding:30px;line-height:1.65}.btn{display:inline-block;margin:18px 0;padding:13px 22px;border-radius:8px;background:#0056b8;color:#fff!important;text-decoration:none;font-weight:700}.muted{color:#64748b;font-size:13px}.foot{padding:18px 30px;background:#f8fafc;color:#64748b;font-size:12px}
-  </style></head><body><div class="wrap"><div class="head"><h1>${escapeHtml(title)}</h1></div><div class="body">${content}</div><div class="foot">Hutta Home Services &middot; Secure Vendor Onboarding</div></div></body></html>`;
-
 const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetUrl = buildPublicUrl(`/pages/reset-password.html?token=${encodeURIComponent(resetToken)}`);
+  const resetUrl = `${process.env.FRONTEND_URL || 'https://hutta-home-services-dashboard.onrender.com'}/pages/reset-password.html?token=${resetToken}`;
   
   const mailOptions = {
     from: `"Hutta Home Services" <${process.env.EMAIL_USER}>`,
@@ -138,7 +67,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     `
   };
 
-  await deliverEmail(mailOptions);
+  await transporter.sendMail(mailOptions);
 };
 
 const sendWelcomeEmail = async (email, password, firstName) => {
@@ -147,11 +76,11 @@ const sendWelcomeEmail = async (email, password, firstName) => {
     console.log('EMAIL_USER configured:', process.env.EMAIL_USER ? 'Yes' : 'No');
     console.log('EMAIL_PASSWORD configured:', process.env.EMAIL_PASSWORD ? 'Yes' : 'No');
     
-    if (!resend && (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD)) {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       throw new Error('Email credentials not configured');
     }
     
-    const loginUrl = getPublicAppUrl();
+    const loginUrl = 'https://hutta-home-services-dashboard-main.onrender.com';
     const path = require('path');
     const fs = require('fs');
     
@@ -164,7 +93,6 @@ const sendWelcomeEmail = async (email, password, firstName) => {
     from: `"Hutta Home Services" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Welcome to Hutta Home Services - Your Account Details',
-    text: `Hello ${firstName},\n\nWelcome to Hutta Home Services.\n\nEmail: ${email}\nPassword: ${password}\n\nLogin: ${loginUrl}\n\nPlease change your password after your first login.`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -422,9 +350,22 @@ const sendWelcomeEmail = async (email, password, firstName) => {
 
   console.log('Sending email to:', email);
   
-  const result = await deliverEmail(mailOptions);
-  console.log('Welcome email delivered');
-  return result;
+  if (resend) {
+    // Resend API (works on Render)
+    const result = await resend.emails.send({
+      from: `Hutta Home Services <onboarding@resend.dev>`,
+      to: email,
+      subject: mailOptions.subject,
+      html: mailOptions.html
+    });
+    console.log('Email sent via Resend:', result.id);
+    return result;
+  } else {
+    // Gmail SMTP fallback
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email sent via Gmail:', result.messageId);
+    return result;
+  }
   } catch (error) {
     console.error('Email sending error:', error.message);
     console.error('Error details:', error);
@@ -432,75 +373,4 @@ const sendWelcomeEmail = async (email, password, firstName) => {
   }
 };
 
-const sendVendorInvitationEmail = async ({ email, companyName, categoryLabel, token, expiresAt, personalMessage, purpose = 'initial' }) => {
-  const formUrl = buildPublicUrl('/pages/vendor-onboarding.html', `token=${encodeURIComponent(token)}`);
-  const greeting = companyName ? `Hello ${escapeHtml(companyName)},` : 'Hello,';
-  const changeCopy = purpose === 'changes_requested'
-    ? '<p>We reviewed your submission and need a few updates. Use the secure link below to revise your information.</p>'
-    : '<p>Hutta Home Services has invited you to complete our secure vendor onboarding form.</p>';
-  const subject = purpose === 'changes_requested' ? 'Updates requested for your vendor application' : 'Complete your Hutta vendor onboarding';
-  return deliverEmail({
-    to: email,
-    subject,
-    text: `${companyName ? `Hello ${companyName},` : 'Hello,'}\n\n${purpose === 'changes_requested' ? 'We reviewed your submission and need a few updates.' : 'Hutta Home Services has invited you to complete our secure vendor onboarding form.'}\n\nAssigned service category: ${categoryLabel}\n${personalMessage ? `\nMessage from our team: ${personalMessage}\n` : ''}\nOpen the secure form: ${formUrl}\n\nThis one-time link expires ${new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })} Arizona time. Do not forward it.`,
-    html: emailShell(purpose === 'changes_requested' ? 'Vendor Application Updates' : 'Vendor Onboarding Invitation', `
-      <p>${greeting}</p>${changeCopy}
-      <p><strong>Assigned service category:</strong> ${escapeHtml(categoryLabel)}</p>
-      ${personalMessage ? `<p><strong>Message from our team:</strong><br>${escapeHtml(personalMessage)}</p>` : ''}
-      <p><a class="btn" href="${formUrl}">${purpose === 'changes_requested' ? 'Update Application' : 'Open Secure Vendor Form'}</a></p>
-      <p class="muted">This one-time link expires ${escapeHtml(new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }))} Arizona time. Do not forward it.</p>
-    `)
-  });
-};
-
-const sendVendorSubmissionReceivedEmail = ({ email, companyName }) => deliverEmail({
-  to: email,
-  subject: 'Vendor application received',
-  html: emailShell('Application Received', `
-    <p>Hello ${escapeHtml(companyName || 'Vendor')},</p>
-    <p>We received your vendor application and documents. Our team will review the submission and contact you if anything else is needed.</p>
-    <p>No action is required right now.</p>
-  `)
-});
-
-const sendVendorDecisionEmail = ({ email, companyName, action, message, token, expiresAt, categoryLabel }) => {
-  if (action === 'changes_requested') {
-    return sendVendorInvitationEmail({ email, companyName, categoryLabel, token, expiresAt, personalMessage: message, purpose: 'changes_requested' });
-  }
-  const approved = action === 'approved';
-  return deliverEmail({
-    to: email,
-    subject: approved ? 'Your vendor application is approved' : 'Update on your vendor application',
-    html: emailShell(approved ? 'Vendor Application Approved' : 'Vendor Application Update', `
-      <p>Hello ${escapeHtml(companyName || 'Vendor')},</p>
-      <p>${approved ? 'Your vendor application has been approved. Welcome to the Hutta Home Services vendor network.' : 'Our team has completed its review of your vendor application.'}</p>
-      ${message ? `<p><strong>Message from our team:</strong><br>${escapeHtml(message)}</p>` : ''}
-    `)
-  });
-};
-
-const sendStaffVendorSubmissionEmail = ({ emails, companyName, vendorId }) => {
-  if (!emails?.length) return Promise.resolve();
-  const reviewUrl = buildPublicUrl('/pages/admin-dashboard.html', 'vendors');
-  return deliverEmail({
-    to: emails,
-    subject: `Vendor application submitted: ${companyName}`,
-    text: `${companyName} submitted a vendor application.\n\nReview vendor: ${reviewUrl}\nVendor reference: ${vendorId}`,
-    html: emailShell('Vendor Submission Ready for Review', `
-      <p><strong>${escapeHtml(companyName)}</strong> submitted a vendor application.</p>
-      <p><a class="btn" href="${reviewUrl}">Review Vendor</a></p>
-      <p class="muted">Vendor reference: ${escapeHtml(vendorId)}</p>
-    `)
-  });
-};
-
-module.exports = {
-  deliverEmail,
-  getEmailDeliveryStatus,
-  sendPasswordResetEmail,
-  sendWelcomeEmail,
-  sendVendorInvitationEmail,
-  sendVendorSubmissionReceivedEmail,
-  sendVendorDecisionEmail,
-  sendStaffVendorSubmissionEmail
-};
+module.exports = { sendPasswordResetEmail, sendWelcomeEmail };

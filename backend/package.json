@@ -8,8 +8,6 @@
     "dev": "nodemon server.js",
     "audit:gridfs": "node audit-gridfs-files.js",
     "audit:gridfs:apply": "node audit-gridfs-files.js --apply",
-    "migrate:vendor-onboarding": "node migrate-vendor-onboarding.js",
-    "migrate:vendor-onboarding:apply": "node migrate-vendor-onboarding.js --apply",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {

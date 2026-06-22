@@ -30,8 +30,6 @@
     <link rel="stylesheet" href="../assets/css/payment-detail.css">
     <link rel="stylesheet" href="../assets/css/security-utils.css">
     <link rel="stylesheet" href="../assets/css/premium-saas-overhaul.css">
-    <link rel="stylesheet" href="../assets/css/vendor-onboarding-admin.css">
-    <link rel="stylesheet" href="../assets/css/vendor-email-delivery.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -188,7 +186,6 @@
                     <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
-
             <h2 id="commandPaletteTitle" class="visually-hidden">Search dashboard</h2>
             <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Search results"></div>
         </div>
@@ -1254,20 +1251,6 @@
                     </button>
                 </div>
             </div>
-
-            <div class="vendor-onboarding-panel" id="vendorInvitationsPanel">
-                <div class="vendor-onboarding-panel-head">
-                    <div><span class="vendor-onboarding-eyebrow">Automated Onboarding</span><h2>Vendor Invitations</h2><p>Track secure vendor form links and submitted applications.</p></div>
-                    <button type="button" class="btn-secondary" onclick="refreshVendorInvitations(); refreshVendorEmailStatus()"><i class="fas fa-sync-alt"></i> Refresh</button>
-                </div>
-                <div id="vendorEmailDeliveryWarning" class="vendor-email-delivery-warning" role="status" hidden></div>
-                <div class="vendor-invitations-table-wrap">
-                    <table class="vendor-invitations-table">
-                        <thead><tr><th>Vendor</th><th>Email</th><th>Category</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
-                        <tbody id="vendorInvitationsTableBody"><tr><td colspan="6" class="table-muted">Loading invitations…</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
             
             <!-- Vendors Toolbar -->
             <div class="vendors-toolbar">
@@ -1291,9 +1274,6 @@
                             <option value="all">All Status</option>
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
-                            <option value="pending_review">Pending Review</option>
-                            <option value="changes_requested">Changes Requested</option>
-                            <option value="rejected">Rejected</option>
                         </select>
                     </div>
                 </div>
@@ -1360,8 +1340,6 @@
                     </button>
                 </div>
             </div>
-
-            <div id="vendorOnboardingReviewBanner" class="vendor-review-banner" hidden></div>
             
             <div class="detail-container">
                 <div class="detail-info-card">
@@ -3108,20 +3086,6 @@
             </div>
             
             <div class="modal-body">
-                <div id="vendorEntryModeSwitch" class="vendor-entry-mode-switch">
-                    <button type="button" class="active" data-vendor-mode="manual" onclick="setVendorEntryMode('manual')"><i class="fas fa-keyboard"></i><span><strong>Enter Manually</strong><small>Add vendor information yourself</small></span></button>
-                    <button type="button" data-vendor-mode="invite" onclick="setVendorEntryMode('invite')"><i class="fas fa-envelope"></i><span><strong>Email Vendor Form</strong><small>Vendor completes a secure link</small></span></button>
-                </div>
-                <form id="vendorInviteForm" class="vendor-invite-form" hidden>
-                    <div class="vendor-invite-intro"><i class="fas fa-shield-alt"></i><div><h3>Send Secure Vendor Invitation</h3><p>The vendor receives a one-time link valid for seven days.</p></div></div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="vendorInviteEmail">Vendor Email *</label><input type="email" id="vendorInviteEmail" required autocomplete="email"></div>
-                        <div class="form-group"><label for="vendorInviteCompanyName">Company Name</label><input type="text" id="vendorInviteCompanyName" maxlength="160" autocomplete="organization"></div>
-                    </div>
-                    <div class="form-group"><label for="vendorInviteCategory">Assigned Category *</label><select id="vendorInviteCategory" required><option value="">Select Category</option><option value="electrical">Electrical</option><option value="plumbing">Plumbing</option><option value="civil">Civil</option><option value="carpentry">Carpentry</option><option value="hvac">HVAC</option><option value="painting">Painting</option><option value="cleaning">Cleaning</option></select></div>
-                    <div class="form-group"><label for="vendorInviteMessage">Optional Message</label><textarea id="vendorInviteMessage" maxlength="1000" rows="4" placeholder="Add instructions or a short welcome message"></textarea></div>
-                    <div id="vendorInviteResult" class="vendor-invite-result" hidden></div>
-                </form>
                 <form id="vendorForm">
                     <div class="form-section vendor-core-section">
                         <h3><i class="fas fa-address-card"></i> Vendor Information</h3>
@@ -3345,8 +3309,7 @@
             
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="closeVendorModal()">Cancel</button>
-                <button type="button" class="btn-primary" id="vendorManualSaveButton" onclick="saveVendor()">Save Vendor</button>
-                <button type="button" class="btn-primary" id="vendorInviteSendButton" onclick="sendVendorInvitation()" hidden><i class="fas fa-paper-plane"></i> Send Secure Form</button>
+                <button type="button" class="btn-primary" onclick="saveVendor()">Save Vendor</button>
             </div>
         </div>
     </div>
@@ -4033,7 +3996,6 @@
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
     <script src="../assets/js/dashboard-script.js"></script>
-    <script src="../assets/js/vendor-onboarding-admin.js"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>
     <script>
