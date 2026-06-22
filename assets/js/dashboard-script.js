@@ -7142,6 +7142,10 @@ function setVendorComplianceFields(vendor = {}) {
             el.value = formatDisplayDateInput(vendor[field.key]);
         } else {
             el.value = vendor[field.key] || '';
+            if (field.key === 'einTaxId') {
+                el.value = '';
+                el.placeholder = vendor.einTaxIdMasked || 'Enter EIN or Tax ID';
+            }
         }
     });
 }
@@ -7300,7 +7304,9 @@ function renderVendorComplianceDetails(vendor = {}) {
     const fieldItems = VENDOR_COMPLIANCE_FIELDS.map((field) => `
         <div class="info-item ${field.key === 'businessAddress' ? 'full-width' : ''}">
             <span class="display-label">${escapePaymentHtml(field.label)}:</span>
-            <span>${formatVendorComplianceValue(field, vendor[field.key])}</span>
+            <span>${field.key === 'einTaxId'
+                ? `<span class="tax-id-row"><span>${escapePaymentHtml(vendor.einTaxIdMasked || '-')}</span>${vendor.einTaxIdMasked ? `<button type="button" class="reveal-tax-id" onclick="revealVendorTaxId('${vendor._id}')">Reveal</button>` : ''}</span>`
+                : formatVendorComplianceValue(field, vendor[field.key])}</span>
         </div>
     `).join('');
 
@@ -7490,8 +7496,12 @@ function vendorMatchesCurrentFilters(vendor) {
     }
 
     if (statusFilter !== 'all') {
-        const isActive = statusFilter === 'true';
-        if (getVendorActiveState(vendor) !== isActive) return false;
+        if (statusFilter === 'true' || statusFilter === 'false') {
+            const isActive = statusFilter === 'true';
+            if (getVendorActiveState(vendor) !== isActive) return false;
+        } else if ((vendor.onboardingStatus || 'approved') !== statusFilter) {
+            return false;
+        }
     }
 
     return true;
@@ -7535,6 +7545,7 @@ function restoreVendorModalFromSnapshot(snapshot) {
     initializeVendorComplianceUploads();
     document.getElementById('vendorModalTitle').textContent = snapshot.isEdit ? 'Edit Vendor' : 'Add New Vendor';
     document.getElementById('vendorForm').reset();
+    document.getElementById('vendorInviteForm')?.reset();
 
     const data = snapshot.vendorData || {};
     document.getElementById('vendorName').value = data.name || '';
@@ -7824,6 +7835,8 @@ function showAddVendorModal() {
     initializeVendorComplianceUploads();
     document.getElementById('vendorModalTitle').textContent = 'Add New Vendor';
     document.getElementById('vendorForm').reset();
+    document.getElementById('vendorEntryModeSwitch').hidden = false;
+    window.setVendorEntryMode?.('manual', true);
     setVendorComplianceFields({});
     setVendorComplianceDocumentPreviews({ documents: [] });
     renderNotesManager('vendors', '', {}, 'vendorNotes');
@@ -7855,6 +7868,7 @@ async function editVendor(vendorId) {
     try {
         currentVendorId = vendorId;
         const vendor = await window.APIService.getVendor(vendorId);
+        window.prepareVendorEditMode?.();
         
         document.getElementById('vendorModalTitle').textContent = 'Edit Vendor';
         
@@ -8094,12 +8108,15 @@ function renderVendorsTable(vendors) {
         const ratingText = `${Number(vendor.rating || 0)}/5`;
         const categoryClass = normalizeFilterValue(vendor.category || 'uncategorized');
         const progress = Math.max(0, Math.min(100, Number(vendor.__optimisticProgress || 0)));
+        const onboardingStatus = vendor.onboardingStatus || 'approved';
         const statusCell = isPending
             ? `<div class="vendor-saving-status">
                     <span>${escapePaymentHtml(vendor.__optimisticStatus || 'Saving')} ${progress}%</span>
                     <div class="vendor-save-progress" aria-hidden="true"><span style="width: ${progress}%"></span></div>
                </div>`
-            : `<span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span>`;
+            : onboardingStatus !== 'approved'
+                ? `<span class="onboarding-status-badge ${escapePaymentHtml(onboardingStatus)}">${escapePaymentHtml(onboardingStatus.replace(/_/g, ' '))}</span>`
+                : `<span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span>`;
         const actionsCell = isPending
             ? `<div class="vendor-actions vendor-actions-disabled"><span class="vendor-saving-action">Saving...</span></div>`
             : `<div class="vendor-actions">
@@ -8157,6 +8174,7 @@ async function loadVendorsSection() {
         initializeVendorFilters();
         updateVendorFilterOptions(allVendors);
         filterVendors();
+        window.refreshVendorInvitations?.();
     } catch (error) {
         console.error('Failed to load vendors:', error);
         renderVendorsTable([]);
@@ -8233,8 +8251,12 @@ function filterVendors() {
     
     // Apply status filter
     if (statusFilter !== 'all') {
-        const isActive = statusFilter === 'true';
-        filtered = filtered.filter(vendor => getVendorActiveState(vendor) === isActive);
+        if (statusFilter === 'true' || statusFilter === 'false') {
+            const isActive = statusFilter === 'true';
+            filtered = filtered.filter(vendor => getVendorActiveState(vendor) === isActive);
+        } else {
+            filtered = filtered.filter(vendor => (vendor.onboardingStatus || 'approved') === statusFilter);
+        }
     }
     
     renderVendorsTable(filtered);
@@ -9810,6 +9832,7 @@ async function showVendorDetail(vendorId) {
     try {
         currentDetailVendorId = vendorId;
         const vendor = await window.APIService.getVendor(vendorId);
+        window.renderVendorOnboardingReview?.(vendor);
         window.AppLogger?.debug('Vendor data received:', vendor);
         window.AppLogger?.debug('Vendor notes:', vendor.notes);
         window.AppLogger?.debug('Vendor notes type:', typeof vendor.notes);

@@ -13,11 +13,11 @@
         }
     </style>
     <script>
-        // Redirect to login page
-        window.location.href = './pages/login.html';
+        // Root-relative so this remains safe even if a host serves index.html as a fallback.
+        window.location.replace('/pages/login.html');
     </script>
 </head>
 <body>
-    <p>Redirecting to login...</p>
+    <p>Redirecting to <a href="/pages/login.html">login</a>...</p>
 </body>
 </html>

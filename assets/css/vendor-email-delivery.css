@@ -1,0 +1,16 @@
+.vendor-email-delivery-warning {
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.vendor-email-delivery-warning strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #78350f;
+}

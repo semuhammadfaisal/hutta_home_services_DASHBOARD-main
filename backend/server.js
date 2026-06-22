@@ -5,6 +5,8 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+const { CANONICAL_PUBLIC_APP_URL, validatePublicAppUrl } = require('./utils/publicAppUrl');
+const PUBLIC_APP_URL = validatePublicAppUrl();
 
 // Set default timezone to Arizona Time (MST / GMT-7, no DST)
 process.env.TZ = 'America/Phoenix';
@@ -30,8 +32,8 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
-    'https://hutta-home-services-dashboard.onrender.com',
-    'https://hutta-home-services-dashboard-main.onrender.com'
+    CANONICAL_PUBLIC_APP_URL,
+    PUBLIC_APP_URL
   ],
   credentials: true
 }));
@@ -62,18 +64,6 @@ app.use('/api/', apiLimiter);
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
-// Debug middleware to log request body
-app.use('/api/vendors', (req, res, next) => {
-  if (req.method === 'POST' || req.method === 'PUT') {
-    console.log('=== VENDOR REQUEST DEBUG ===');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    console.log('Documents:', req.body.documents);
-    console.log('Documents type:', typeof req.body.documents);
-    console.log('Is array:', Array.isArray(req.body.documents));
-  }
-  next();
-});
 
 // Request logging + slow request warning
 app.use((req, res, next) => {
@@ -115,6 +105,7 @@ try {
   app.use('/api/orders', require('./routes/orders'));
   app.use('/api/customers', require('./routes/customers'));
   app.use('/api/vendors', require('./routes/vendors'));
+  app.use('/api/vendor-onboarding', require('./routes/vendorOnboarding'));
   app.use('/api/employees', require('./routes/employees'));
   app.use('/api/projects', require('./routes/projects'));
   app.use('/api/payments', require('./routes/payments'));
@@ -156,6 +147,11 @@ app.get('/', (req, res) => {
 // Catch-all route for SPA
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
+    // Never serve index.html for a missing file. Doing so can execute the root
+    // redirect from a nested URL and previously caused /pages/pages/... loops.
+    if (path.extname(req.path)) {
+      return res.status(404).type('text/plain').send('File not found');
+    }
     res.sendFile(path.join(__dirname, '../index.html'));
   } else {
     res.status(404).json({ message: 'Not found' });
