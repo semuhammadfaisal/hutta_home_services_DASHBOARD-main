@@ -7,6 +7,11 @@ const documentSchema = new mongoose.Schema({
   url: { type: String, required: true },
   type: { type: String, required: true },
   size: { type: Number, required: true },
+  storageProvider: String,
+  publicId: String,
+  fileId: mongoose.Schema.Types.Mixed,
+  complianceDocumentType: String,
+  complianceDocumentLabel: String,
   uploadedAt: { type: Date, default: Date.now }
 }, { _id: false });
 

@@ -1,5 +1,7 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Vendor = require('../models/Vendor');
+const Order = require('../models/Order');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
@@ -84,14 +86,29 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
 // Delete vendor
 router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
-    const vendor = await Vendor.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid vendor id' });
+    }
+
+    const vendor = await Vendor.findById(id);
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
+
+    await vendor.deleteOne();
+
+    try {
+      await Order.updateMany({ vendor: id }, { $unset: { vendor: '' } });
+    } catch (cleanupError) {
+      console.error('Vendor order cleanup error:', cleanupError);
+    }
+
     invalidateDashboardStatsCache();
     res.json({ message: 'Vendor deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Vendor delete error:', error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 

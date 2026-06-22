@@ -7136,8 +7136,11 @@ window.removeExistingEmployeeDoc = function(index) {
 
 // Vendor Management Functions
 let currentVendorId = null;
+let currentDetailVendorId = null;
 let vendorEmailCounter = 1;
 let vendorPhoneCounter = 1;
+let optimisticVendorSaveCounter = 0;
+const optimisticVendorSaves = new Map();
 
 const VENDOR_COMPLIANCE_FIELDS = [
     { key: 'legalBusinessName', id: 'vendorLegalBusinessName', label: 'Full Legal Business Name', type: 'text' },
@@ -7145,17 +7148,20 @@ const VENDOR_COMPLIANCE_FIELDS = [
     { key: 'primaryOwnerName', id: 'vendorPrimaryOwnerName', label: 'Primary Owner / Operator', type: 'text' },
     { key: 'businessAddress', id: 'vendorBusinessAddress', label: 'Business Address', type: 'text' },
     { key: 'einTaxId', id: 'vendorEinTaxId', label: 'EIN / Tax ID Number', type: 'text' },
-    { key: 'huttasContractSigned', id: 'vendorHuttasContractSigned', label: 'Huttas Contract Signed and Dated', type: 'checkbox' },
-    { key: 'huttasContractSignedDate', id: 'vendorHuttasContractSignedDate', label: 'Contract Signed Date', type: 'date' },
-    { key: 'w9OnFile', id: 'vendorW9OnFile', label: 'W-9 on File and Dated', type: 'checkbox' },
-    { key: 'w9Date', id: 'vendorW9Date', label: 'W-9 Date', type: 'date' },
     { key: 'rocLicenseNumber', id: 'vendorRocLicenseNumber', label: 'ROC License Number', type: 'text' },
     { key: 'rocLicenseTypeClassification', id: 'vendorRocLicenseTypeClassification', label: 'ROC License Type / Classification', type: 'text' },
-    { key: 'rocLicenseExpirationDate', id: 'vendorRocLicenseExpirationDate', label: 'ROC License Expiration Date', type: 'date' },
-    { key: 'certificateOfInsuranceOnFile', id: 'vendorCertificateOfInsuranceOnFile', label: 'Certificate of Insurance on File', type: 'checkbox' },
-    { key: 'workersCompInsuranceOnFile', id: 'vendorWorkersCompInsuranceOnFile', label: 'Workers Comp Insurance on File', type: 'checkbox' },
-    { key: 'huttasAdditionalInsured', id: 'vendorHuttasAdditionalInsured', label: 'Huttas Listed as Additional Insured on GL Policy', type: 'checkbox' }
+    { key: 'rocLicenseExpirationDate', id: 'vendorRocLicenseExpirationDate', label: 'ROC License Expiration Date', type: 'date' }
 ];
+
+const VENDOR_COMPLIANCE_DOCUMENT_FIELDS = [
+    { key: 'huttasContract', inputId: 'vendorHuttasContractFile', previewId: 'vendorHuttasContractPreview', label: 'Huttas Contract with Sub (Signed and Dated)' },
+    { key: 'w9', inputId: 'vendorW9File', previewId: 'vendorW9Preview', label: 'W-9 on File (Signed and Dated)' },
+    { key: 'certificateOfInsurance', inputId: 'vendorCertificateOfInsuranceFile', previewId: 'vendorCertificateOfInsurancePreview', label: 'Certificate of Insurance on File' },
+    { key: 'workersCompInsurance', inputId: 'vendorWorkersCompInsuranceFile', previewId: 'vendorWorkersCompInsurancePreview', label: 'Workers Comp Insurance on File' },
+    { key: 'huttasAdditionalInsured', inputId: 'vendorHuttasAdditionalInsuredFile', previewId: 'vendorHuttasAdditionalInsuredPreview', label: 'Huttas Listed as Additional Insured on GL Policy' }
+];
+
+let vendorComplianceFiles = {};
 
 function setVendorComplianceFields(vendor = {}) {
     VENDOR_COMPLIANCE_FIELDS.forEach((field) => {
@@ -7186,6 +7192,147 @@ function getVendorComplianceData() {
     }, {});
 }
 
+function getVendorComplianceDocuments(documents = []) {
+    return VENDOR_COMPLIANCE_DOCUMENT_FIELDS.reduce((map, field) => {
+        map[field.key] = (documents || []).find(doc => doc.complianceDocumentType === field.key) || null;
+        return map;
+    }, {});
+}
+
+function updateVendorCompliancePreview(field, existingDocument = null) {
+    const preview = document.getElementById(field.previewId);
+    if (!preview) return;
+
+    const file = vendorComplianceFiles[field.key];
+    if (file) {
+        preview.innerHTML = `
+            <span><i class="fas fa-file-${getFileIcon(file.name)}"></i> ${escapePaymentHtml(file.name)}</span>
+            <button type="button" onclick="clearVendorComplianceFile('${field.key}')">Remove</button>
+        `;
+        preview.classList.add('has-file');
+        return;
+    }
+
+    if (existingDocument) {
+        preview.innerHTML = `
+            <span><i class="fas fa-file-${getDocIcon(existingDocument.name)}"></i> ${escapePaymentHtml(existingDocument.name)}</span>
+            <button type="button" onclick="clearExistingVendorComplianceDocument('${field.key}')">Remove</button>
+        `;
+        preview.classList.add('has-file');
+        return;
+    }
+
+    preview.textContent = 'No file attached';
+    preview.classList.remove('has-file');
+}
+
+function setVendorComplianceDocumentPreviews(vendor = {}) {
+    vendorComplianceFiles = {};
+    window.currentVendorDocuments = Array.isArray(vendor.documents) ? vendor.documents : [];
+    const complianceDocs = getVendorComplianceDocuments(window.currentVendorDocuments);
+
+    VENDOR_COMPLIANCE_DOCUMENT_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        if (input) input.value = '';
+        updateVendorCompliancePreview(field, complianceDocs[field.key]);
+    });
+}
+
+function initializeVendorComplianceUploads() {
+    VENDOR_COMPLIANCE_DOCUMENT_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        if (!input || input.dataset.boundComplianceUpload === 'true') return;
+        const dropZone = input.closest('.vendor-compliance-upload');
+        input.dataset.boundComplianceUpload = 'true';
+        input.addEventListener('change', () => {
+            const file = input.files?.[0] || null;
+            if (file) {
+                if (window.MAX_UPLOAD_BYTES && file.size > window.MAX_UPLOAD_BYTES) {
+                    showToast(`${file.name} is too large. Maximum file size is ${window.MAX_UPLOAD_LABEL || '50MB'}.`, 'error');
+                    input.value = '';
+                    return;
+                }
+                vendorComplianceFiles[field.key] = file;
+            }
+            input.value = '';
+            const existingDocs = getVendorComplianceDocuments(window.currentVendorDocuments || []);
+            updateVendorCompliancePreview(field, existingDocs[field.key]);
+        });
+        if (dropZone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    dropZone.classList.add('is-dragging');
+                });
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    dropZone.classList.remove('is-dragging');
+                });
+            });
+            dropZone.addEventListener('drop', (event) => {
+                const file = event.dataTransfer?.files?.[0] || null;
+                if (!file) return;
+                if (window.MAX_UPLOAD_BYTES && file.size > window.MAX_UPLOAD_BYTES) {
+                    showToast(`${file.name} is too large. Maximum file size is ${window.MAX_UPLOAD_LABEL || '50MB'}.`, 'error');
+                    return;
+                }
+                vendorComplianceFiles[field.key] = file;
+                const existingDocs = getVendorComplianceDocuments(window.currentVendorDocuments || []);
+                updateVendorCompliancePreview(field, existingDocs[field.key]);
+            });
+        }
+    });
+}
+
+function clearVendorComplianceFile(key) {
+    delete vendorComplianceFiles[key];
+    const field = VENDOR_COMPLIANCE_DOCUMENT_FIELDS.find(item => item.key === key);
+    if (!field) return;
+    const existingDocs = getVendorComplianceDocuments(window.currentVendorDocuments || []);
+    updateVendorCompliancePreview(field, existingDocs[key]);
+}
+
+function clearExistingVendorComplianceDocument(key) {
+    window.currentVendorDocuments = (window.currentVendorDocuments || []).filter(doc => doc.complianceDocumentType !== key);
+    const field = VENDOR_COMPLIANCE_DOCUMENT_FIELDS.find(item => item.key === key);
+    if (field) updateVendorCompliancePreview(field, null);
+}
+
+async function uploadVendorComplianceDocuments(existingDocs = [], filesByKey = vendorComplianceFiles, onProgress = null) {
+    let documents = [...(existingDocs || [])];
+    const filesToUpload = VENDOR_COMPLIANCE_DOCUMENT_FIELDS
+        .map(field => ({
+            field,
+            file: filesByKey?.[field.key]
+        }))
+        .filter(item => item.file);
+
+    if (!filesToUpload.length) {
+        return documents;
+    }
+
+    const uploadCount = filesToUpload.length;
+    const uploadedDocs = await window.uploadFiles(filesToUpload.map(item => item.file), (percent) => {
+        updateLoadingMessage(`Uploading ${uploadCount} compliance document${uploadCount === 1 ? '' : 's'}... ${percent}%`);
+        if (typeof onProgress === 'function') onProgress(percent);
+    });
+    filesToUpload.forEach((item, index) => {
+        const uploadedDoc = uploadedDocs[index];
+        if (uploadedDoc) {
+            documents = documents.filter(doc => doc.complianceDocumentType !== item.field.key);
+            documents.push({
+                ...uploadedDoc,
+                complianceDocumentType: item.field.key,
+                complianceDocumentLabel: item.field.label
+            });
+        }
+    });
+
+    return documents;
+}
+
 function formatVendorComplianceValue(field, value) {
     if (field.type === 'checkbox') {
         return value ? '<span class="vendor-compliance-status complete">Yes</span>' : '<span class="vendor-compliance-status missing">No</span>';
@@ -7199,33 +7346,440 @@ function formatVendorComplianceValue(field, value) {
 function renderVendorComplianceDetails(vendor = {}) {
     const container = document.getElementById('detailVendorComplianceFields');
     if (!container) return;
+    const complianceDocs = getVendorComplianceDocuments(vendor.documents || []);
 
-    container.innerHTML = VENDOR_COMPLIANCE_FIELDS.map((field) => `
+    const fieldItems = VENDOR_COMPLIANCE_FIELDS.map((field) => `
         <div class="info-item ${field.key === 'businessAddress' ? 'full-width' : ''}">
             <span class="display-label">${escapePaymentHtml(field.label)}:</span>
             <span>${formatVendorComplianceValue(field, vendor[field.key])}</span>
         </div>
     `).join('');
+
+    const documentItems = VENDOR_COMPLIANCE_DOCUMENT_FIELDS.map((field) => {
+        const doc = complianceDocs[field.key];
+        return `
+            <div class="info-item">
+                <span class="display-label">${escapePaymentHtml(field.label)}:</span>
+                <span>${doc ? `<a href="${escapePaymentHtml(doc.url)}" target="_blank" rel="noopener">${escapePaymentHtml(doc.name)}</a>` : '<span class="vendor-compliance-status missing">Missing</span>'}</span>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = fieldItems + documentItems;
+}
+
+function getVendorCategorySelection() {
+    const categorySelect = document.getElementById('vendorCategory');
+    const customCategoryInput = document.getElementById('vendorCategoryCustom');
+    let category = categorySelect?.value || '';
+    let categoryLabel = categorySelect?.selectedOptions?.[0]?.textContent || category;
+    const customCategory = customCategoryInput?.value.trim() || '';
+
+    if (category === '__add_new__') {
+        if (!customCategory) {
+            return { error: 'Please enter a category name', input: customCategoryInput };
+        }
+        category = customCategory.toLowerCase().replace(/\s+/g, '-');
+        categoryLabel = customCategory;
+        if (!categorySelect.querySelector(`[value="${escapeCssSelectorValue(category)}"]`)) {
+            const newOption = document.createElement('option');
+            newOption.value = category;
+            newOption.textContent = customCategory;
+            categorySelect.insertBefore(newOption, categorySelect.querySelector('[value="__add_new__"]'));
+        }
+    }
+
+    return { category, categoryLabel };
+}
+
+function escapeCssSelectorValue(value) {
+    if (window.CSS?.escape) return CSS.escape(value);
+    return String(value || '').replace(/["\\]/g, '\\$&');
+}
+
+function collectVendorContactFields() {
+    const emails = [];
+    const primaryEmail = document.getElementById('vendorEmail')?.value.trim();
+    if (primaryEmail) {
+        emails.push({ label: 'Primary', address: primaryEmail, isPrimary: true });
+    }
+
+    document.querySelectorAll('#vendorEmailsContainer .email-group').forEach((group) => {
+        const emailIndex = group.getAttribute('data-vendor-email-index');
+        const emailAddress = document.getElementById(`vendorEmail_${emailIndex}`)?.value.trim();
+        if (emailAddress) {
+            emails.push({
+                label: `Email ${emails.length + 1}`,
+                address: emailAddress,
+                isPrimary: false
+            });
+        }
+    });
+
+    const phones = [];
+    const primaryPhone = document.getElementById('vendorPhone')?.value.trim();
+    if (primaryPhone) {
+        phones.push({ label: 'Primary', number: primaryPhone, isPrimary: true });
+    }
+
+    document.querySelectorAll('#vendorPhonesContainer .phone-group').forEach((group) => {
+        const phoneIndex = group.getAttribute('data-vendor-phone-index');
+        const phoneNumber = document.getElementById(`vendorPhone_${phoneIndex}`)?.value.trim();
+        if (phoneNumber) {
+            phones.push({
+                label: `Phone ${phones.length + 1}`,
+                number: phoneNumber,
+                isPrimary: false
+            });
+        }
+    });
+
+    return { emails, phones };
+}
+
+function buildVendorDraftFromForm() {
+    const categoryResult = getVendorCategorySelection();
+    if (categoryResult.error) return categoryResult;
+    const { emails, phones } = collectVendorContactFields();
+    const vendorData = {
+        name: document.getElementById('vendorName').value.trim(),
+        email: document.getElementById('vendorEmail').value.trim(),
+        phone: document.getElementById('vendorPhone').value.trim(),
+        address: document.getElementById('vendorAddress').value,
+        category: categoryResult.category,
+        rating: parseInt(document.getElementById('vendorRating').value, 10),
+        isActive: document.getElementById('vendorStatus').value === 'true',
+        notes: document.getElementById('vendorNotes').value,
+        emails,
+        phones,
+        customFields: getVendorCustomFields(),
+        ...getVendorComplianceData()
+    };
+
+    return {
+        vendorId: currentVendorId,
+        clientId: currentVendorId || `vendor-save-${Date.now()}-${++optimisticVendorSaveCounter}`,
+        isEdit: Boolean(currentVendorId),
+        vendorData,
+        categoryLabel: categoryResult.categoryLabel,
+        generalFiles: [...(window.uploadedFiles?.vendor || [])],
+        complianceFiles: { ...vendorComplianceFiles },
+        existingDocuments: [...(window.currentVendorDocuments || [])],
+        customCategory: document.getElementById('vendorCategoryCustom')?.value || '',
+        existingVendor: currentVendorId ? (allVendors || window.vendorsData || []).find(v => v._id === currentVendorId) || null : null
+    };
+}
+
+function getOptimisticVendorDisplayVendor(snapshot) {
+    return {
+        ...(snapshot.existingVendor || {}),
+        ...snapshot.vendorData,
+        _id: snapshot.vendorId || snapshot.clientId,
+        __optimisticClientId: snapshot.clientId,
+        __optimisticVendorSave: true,
+        __optimisticProgress: 0,
+        __optimisticStatus: 'Saving',
+        category: snapshot.vendorData.category || snapshot.categoryLabel || 'pending',
+        createdAt: snapshot.existingVendor?.createdAt || new Date().toISOString()
+    };
+}
+
+function getOptimisticVendorList(baseVendors = []) {
+    const vendorMap = new Map((baseVendors || []).map(vendor => [vendor._id, vendor]));
+    const createRows = [];
+
+    optimisticVendorSaves.forEach((pending) => {
+        const optimisticVendor = {
+            ...getOptimisticVendorDisplayVendor(pending.snapshot),
+            __optimisticProgress: pending.progress,
+            __optimisticStatus: pending.status || 'Saving'
+        };
+
+        if (pending.snapshot.isEdit && pending.snapshot.vendorId) {
+            const existing = vendorMap.get(pending.snapshot.vendorId);
+            vendorMap.set(pending.snapshot.vendorId, { ...(existing || {}), ...optimisticVendor });
+        } else {
+            createRows.push(optimisticVendor);
+        }
+    });
+
+    return [...createRows, ...vendorMap.values()];
+}
+
+function vendorMatchesCurrentFilters(vendor) {
+    const searchTerm = normalizeSearchText(document.getElementById('vendorSearchInput')?.value);
+    const categoryFilter = normalizeFilterValue(document.getElementById('vendorCategoryFilter')?.value || 'all');
+    const statusFilter = document.getElementById('vendorStatusFilter')?.value || 'all';
+
+    if (searchTerm && !buildSearchText([
+        vendor.name,
+        vendor.email,
+        vendor.emails,
+        vendor.phone,
+        vendor.phones,
+        vendor.category,
+        vendor.status,
+        vendor.address,
+        getLatestNoteText(vendor)
+    ]).includes(searchTerm)) {
+        return false;
+    }
+
+    if (categoryFilter !== 'all' && normalizeFilterValue(vendor.category) !== categoryFilter) {
+        return false;
+    }
+
+    if (statusFilter !== 'all') {
+        const isActive = statusFilter === 'true';
+        if (getVendorActiveState(vendor) !== isActive) return false;
+    }
+
+    return true;
+}
+
+function renderVendorsWithCurrentFilters() {
+    const sourceVendors = Array.isArray(allVendors) && allVendors.length ? allVendors : (window.vendorsData || []);
+    const filtered = sourceVendors.filter(vendorMatchesCurrentFilters);
+    renderVendorsTable(filtered);
+}
+
+function setOptimisticVendorProgress(clientId, progress, status = 'Saving') {
+    const pending = optimisticVendorSaves.get(clientId);
+    if (!pending) return;
+    pending.progress = Math.max(0, Math.min(100, Math.round(progress)));
+    pending.status = status;
+    renderVendorsWithCurrentFilters();
+}
+
+function upsertVendorInLocalLists(vendor) {
+    if (!vendor || !vendor._id) return;
+    const upsert = (vendors = []) => {
+        const index = vendors.findIndex(item => item._id === vendor._id);
+        if (index >= 0) {
+            vendors[index] = vendor;
+            return vendors;
+        }
+        return [vendor, ...vendors];
+    };
+
+    allVendors = upsert([...(allVendors || [])]);
+    window.vendorsData = upsert([...(window.vendorsData || [])]);
+}
+
+function restoreVendorModalFromSnapshot(snapshot) {
+    if (!snapshot) return;
+    currentVendorId = snapshot.vendorId || null;
+    vendorEmailCounter = 1;
+    vendorPhoneCounter = 1;
+
+    initializeVendorComplianceUploads();
+    document.getElementById('vendorModalTitle').textContent = snapshot.isEdit ? 'Edit Vendor' : 'Add New Vendor';
+    document.getElementById('vendorForm').reset();
+
+    const data = snapshot.vendorData || {};
+    document.getElementById('vendorName').value = data.name || '';
+    document.getElementById('vendorEmail').value = data.email || '';
+    document.getElementById('vendorPhone').value = data.phone || '';
+    document.getElementById('vendorAddress').value = data.address || '';
+    document.getElementById('vendorRating').value = data.rating || 5;
+    document.getElementById('vendorStatus').value = String(data.isActive !== false);
+    document.getElementById('vendorNotes').value = data.notes || '';
+
+    const categorySelect = document.getElementById('vendorCategory');
+    const customInput = document.getElementById('vendorCategoryCustom');
+    updateVendorCategoryOptions();
+    if (data.category && !categorySelect.querySelector(`[value="${escapeCssSelectorValue(data.category)}"]`)) {
+        const addNewOption = categorySelect.querySelector('[value="__add_new__"]');
+        const option = document.createElement('option');
+        option.value = data.category;
+        option.textContent = snapshot.categoryLabel || data.category;
+        categorySelect.insertBefore(option, addNewOption);
+    }
+    categorySelect.value = data.category || '';
+    if (customInput) {
+        customInput.style.display = 'none';
+        customInput.required = false;
+        customInput.value = snapshot.customCategory || '';
+    }
+
+    setVendorComplianceFields(data);
+
+    const emailContainer = document.getElementById('vendorEmailsContainer');
+    const phoneContainer = document.getElementById('vendorPhonesContainer');
+    emailContainer.innerHTML = '';
+    phoneContainer.innerHTML = '';
+
+    (data.emails || []).slice(1).forEach((email, offset) => {
+        const index = offset + 1;
+        const emailGroup = document.createElement('div');
+        emailGroup.className = 'email-group vendor-extra-field-row';
+        emailGroup.setAttribute('data-vendor-email-index', index);
+        emailGroup.innerHTML = `
+            <div class="form-group">
+                <label for="vendorEmail_${index}">Email ${index + 1}</label>
+                <input type="email" id="vendorEmail_${index}" class="vendor-email-field" value="${escapePaymentHtml(email.address || '')}">
+            </div>
+            <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${index})" title="Remove email">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        emailContainer.appendChild(emailGroup);
+        vendorEmailCounter = index + 1;
+    });
+
+    (data.phones || []).slice(1).forEach((phone, offset) => {
+        const index = offset + 1;
+        const phoneGroup = document.createElement('div');
+        phoneGroup.className = 'phone-group vendor-extra-field-row';
+        phoneGroup.setAttribute('data-vendor-phone-index', index);
+        phoneGroup.innerHTML = `
+            <div class="form-group">
+                <label for="vendorPhone_${index}">Phone ${index + 1}</label>
+                <input type="tel" id="vendorPhone_${index}" class="vendor-phone-field" value="${escapePaymentHtml(phone.number || '')}">
+            </div>
+            <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${index})" title="Remove phone">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        phoneContainer.appendChild(phoneGroup);
+        vendorPhoneCounter = index + 1;
+    });
+
+    loadVendorCustomFields(data.customFields || []);
+    if (window.uploadedFiles) window.uploadedFiles.vendor = [...(snapshot.generalFiles || [])];
+    updatePreview('vendor', 'vendorDocsPreview');
+    const docsPreview = document.getElementById('vendorDocsPreview');
+    const existingGeneralDocuments = (snapshot.existingDocuments || []).filter(doc => !doc.complianceDocumentType);
+    if (docsPreview && existingGeneralDocuments.length > 0) {
+        docsPreview.insertAdjacentHTML('afterbegin', existingGeneralDocuments.map((doc) => {
+            const docIndex = (snapshot.existingDocuments || []).indexOf(doc);
+            return `
+                <div class="existing-doc-item" data-doc-index="${docIndex}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                        <span style="font-size: 14px;">${escapePaymentHtml(doc.name || 'Document')}</span>
+                    </div>
+                    <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${docIndex})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        }).join(''));
+    }
+    window.currentVendorDocuments = [...(snapshot.existingDocuments || [])];
+    vendorComplianceFiles = { ...(snapshot.complianceFiles || {}) };
+    setVendorComplianceDocumentPreviews({ documents: window.currentVendorDocuments });
+    vendorComplianceFiles = { ...(snapshot.complianceFiles || {}) };
+    VENDOR_COMPLIANCE_DOCUMENT_FIELDS.forEach((field) => {
+        const existingDocs = getVendorComplianceDocuments(window.currentVendorDocuments || []);
+        updateVendorCompliancePreview(field, existingDocs[field.key]);
+    });
+
+    document.body.classList.add('vendor-modal-open');
+    document.getElementById('vendorModal').style.display = '';
+    document.getElementById('vendorModal').classList.add('show');
+}
+
+function finishOptimisticVendorSave(clientId, savedVendor) {
+    const pending = optimisticVendorSaves.get(clientId);
+    if (!pending) return;
+    setOptimisticVendorProgress(clientId, 100, 'Saved');
+    optimisticVendorSaves.delete(clientId);
+    upsertVendorInLocalLists(savedVendor);
+    renderVendorsWithCurrentFilters();
+}
+
+function failOptimisticVendorSave(clientId, error) {
+    const pending = optimisticVendorSaves.get(clientId);
+    if (!pending) return;
+    optimisticVendorSaves.delete(clientId);
+    renderVendorsWithCurrentFilters();
+    restoreVendorModalFromSnapshot(pending.snapshot);
+    showToast('Failed to save vendor: ' + (error?.message || 'Unknown error'), 'error');
+}
+
+async function runOptimisticVendorSave(snapshot) {
+    const clientId = snapshot.clientId;
+    const vendorData = { ...snapshot.vendorData };
+    let vendorDocuments = [...(snapshot.existingDocuments || [])];
+    const generalFiles = [...(snapshot.generalFiles || [])];
+    const complianceFiles = { ...(snapshot.complianceFiles || {}) };
+    const generalUploadCount = generalFiles.length;
+    const complianceUploadCount = Object.values(complianceFiles).filter(Boolean).length;
+    const totalUploadCount = generalUploadCount + complianceUploadCount;
+    const uploadShare = totalUploadCount ? 70 / totalUploadCount : 0;
+    let completedUploadUnits = 0;
+
+    const setUploadProgress = (batchPercent, batchUnits, status) => {
+        const progress = (completedUploadUnits * uploadShare) + ((batchPercent / 100) * uploadShare * batchUnits);
+        setOptimisticVendorProgress(clientId, progress, status);
+    };
+
+    setOptimisticVendorProgress(clientId, totalUploadCount ? 0 : 70, totalUploadCount ? 'Uploading' : 'Saving');
+
+    if (generalUploadCount) {
+        const uploadedDocs = await window.uploadFiles(generalFiles, (percent) => {
+            setUploadProgress(percent, generalUploadCount, `Uploading ${percent}%`);
+        });
+        if (uploadedDocs && uploadedDocs.length > 0) {
+            vendorDocuments = [...vendorDocuments, ...uploadedDocs];
+        }
+        completedUploadUnits += generalUploadCount;
+        setOptimisticVendorProgress(clientId, Math.min(70, completedUploadUnits * uploadShare), 'Uploading');
+    }
+
+    if (complianceUploadCount) {
+        vendorDocuments = await uploadVendorComplianceDocuments(vendorDocuments, complianceFiles, (percent) => {
+            setUploadProgress(percent, complianceUploadCount, `Uploading ${percent}%`);
+        });
+        completedUploadUnits += complianceUploadCount;
+        setOptimisticVendorProgress(clientId, 70, 'Saving');
+    }
+
+    const complianceDocs = getVendorComplianceDocuments(vendorDocuments);
+    vendorData.documents = vendorDocuments;
+    vendorData.huttasContractSigned = Boolean(complianceDocs.huttasContract);
+    vendorData.huttasContractSignedDate = null;
+    vendorData.w9OnFile = Boolean(complianceDocs.w9);
+    vendorData.w9Date = null;
+    vendorData.certificateOfInsuranceOnFile = Boolean(complianceDocs.certificateOfInsurance);
+    vendorData.workersCompInsuranceOnFile = Boolean(complianceDocs.workersCompInsurance);
+    vendorData.huttasAdditionalInsured = Boolean(complianceDocs.huttasAdditionalInsured);
+
+    setOptimisticVendorProgress(clientId, 80, snapshot.isEdit ? 'Updating' : 'Creating');
+    const savedVendor = snapshot.isEdit
+        ? await window.APIService.updateVendor(snapshot.vendorId, vendorData)
+        : await window.APIService.createVendor(vendorData);
+
+    setOptimisticVendorProgress(clientId, 92, 'Saving notes');
+    if (snapshot.isEdit && vendorData.notes?.trim()) {
+        try {
+            await window.APIService.addNote('vendors', snapshot.vendorId, vendorData.notes.trim());
+        } catch (noteError) {
+            console.warn('Vendor saved, but note save failed:', noteError);
+            showToast('Vendor saved, but the note could not be added: ' + noteError.message, 'warning');
+        }
+    }
+
+    setOptimisticVendorProgress(clientId, 98, 'Finalizing');
+    finishOptimisticVendorSave(clientId, savedVendor);
+    showToast(snapshot.isEdit ? 'Vendor updated successfully!' : 'Vendor created successfully!', 'success');
 }
 
 function addVendorEmail() {
     const container = document.getElementById('vendorEmailsContainer');
     const newEmailGroup = document.createElement('div');
-    newEmailGroup.className = 'email-group';
+    newEmailGroup.className = 'email-group vendor-extra-field-row';
     newEmailGroup.setAttribute('data-vendor-email-index', vendorEmailCounter);
-    newEmailGroup.style.marginTop = '20px';
-    newEmailGroup.style.paddingTop = '20px';
-    newEmailGroup.style.borderTop = '1px solid #e5e7eb';
-    newEmailGroup.style.position = 'relative';
     
     newEmailGroup.innerHTML = `
-        <button type="button" class="btn-remove-email" onclick="removeVendorEmail(${vendorEmailCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-            <i class="fas fa-times"></i> Remove
-        </button>
         <div class="form-group">
             <label for="vendorEmail_${vendorEmailCounter}">Email ${vendorEmailCounter + 1}</label>
             <input type="email" id="vendorEmail_${vendorEmailCounter}" class="vendor-email-field">
         </div>
+        <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${vendorEmailCounter})" title="Remove email">
+            <i class="fas fa-times"></i>
+        </button>
     `;
     
     container.appendChild(newEmailGroup);
@@ -7242,21 +7796,17 @@ function removeVendorEmail(index) {
 function addVendorPhone() {
     const container = document.getElementById('vendorPhonesContainer');
     const newPhoneGroup = document.createElement('div');
-    newPhoneGroup.className = 'phone-group';
+    newPhoneGroup.className = 'phone-group vendor-extra-field-row';
     newPhoneGroup.setAttribute('data-vendor-phone-index', vendorPhoneCounter);
-    newPhoneGroup.style.marginTop = '20px';
-    newPhoneGroup.style.paddingTop = '20px';
-    newPhoneGroup.style.borderTop = '1px solid #e5e7eb';
-    newPhoneGroup.style.position = 'relative';
     
     newPhoneGroup.innerHTML = `
-        <button type="button" class="btn-remove-phone" onclick="removeVendorPhone(${vendorPhoneCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-            <i class="fas fa-times"></i> Remove
-        </button>
         <div class="form-group">
             <label for="vendorPhone_${vendorPhoneCounter}">Phone ${vendorPhoneCounter + 1}</label>
             <input type="tel" id="vendorPhone_${vendorPhoneCounter}" class="vendor-phone-field">
         </div>
+        <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${vendorPhoneCounter})" title="Remove phone">
+            <i class="fas fa-times"></i>
+        </button>
     `;
     
     container.appendChild(newPhoneGroup);
@@ -7318,9 +7868,11 @@ function showAddVendorModal() {
     currentVendorId = null;
     vendorEmailCounter = 1;
     vendorPhoneCounter = 1;
+    initializeVendorComplianceUploads();
     document.getElementById('vendorModalTitle').textContent = 'Add New Vendor';
     document.getElementById('vendorForm').reset();
     setVendorComplianceFields({});
+    setVendorComplianceDocumentPreviews({ documents: [] });
     renderNotesManager('vendors', '', {}, 'vendorNotes');
     
     // Clear the containers
@@ -7342,6 +7894,7 @@ function showAddVendorModal() {
     
     const vendorModal = document.getElementById('vendorModal');
     vendorModal.style.display = '';
+    document.body.classList.add('vendor-modal-open');
     vendorModal.classList.add('show');
 }
 
@@ -7379,21 +7932,17 @@ async function editVendor(vendorId) {
             vendor.emails.forEach((email, index) => {
                 if (index > 0) { // Skip first email as it's in the main field
                     const emailGroup = document.createElement('div');
-                    emailGroup.className = 'email-group';
+                    emailGroup.className = 'email-group vendor-extra-field-row';
                     emailGroup.setAttribute('data-vendor-email-index', index);
-                    emailGroup.style.marginTop = '20px';
-                    emailGroup.style.paddingTop = '20px';
-                    emailGroup.style.borderTop = '1px solid #e5e7eb';
-                    emailGroup.style.position = 'relative';
                     
                     emailGroup.innerHTML = `
-                        <button type="button" class="btn-remove-email" onclick="removeVendorEmail(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-                            <i class="fas fa-times"></i> Remove
-                        </button>
                         <div class="form-group">
                             <label for="vendorEmail_${index}">Email ${index + 1}</label>
                             <input type="email" id="vendorEmail_${index}" class="vendor-email-field" value="${email.address || ''}">
                         </div>
+                        <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${index})" title="Remove email">
+                            <i class="fas fa-times"></i>
+                        </button>
                     `;
                     
                     emailContainer.appendChild(emailGroup);
@@ -7407,21 +7956,17 @@ async function editVendor(vendorId) {
             vendor.phones.forEach((phone, index) => {
                 if (index > 0) { // Skip first phone as it's in the main field
                     const phoneGroup = document.createElement('div');
-                    phoneGroup.className = 'phone-group';
+                    phoneGroup.className = 'phone-group vendor-extra-field-row';
                     phoneGroup.setAttribute('data-vendor-phone-index', index);
-                    phoneGroup.style.marginTop = '20px';
-                    phoneGroup.style.paddingTop = '20px';
-                    phoneGroup.style.borderTop = '1px solid #e5e7eb';
-                    phoneGroup.style.position = 'relative';
                     
                     phoneGroup.innerHTML = `
-                        <button type="button" class="btn-remove-phone" onclick="removeVendorPhone(${index})" style="position: absolute; top: 10px; right: 0; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-                            <i class="fas fa-times"></i> Remove
-                        </button>
                         <div class="form-group">
                             <label for="vendorPhone_${index}">Phone ${index + 1}</label>
                             <input type="tel" id="vendorPhone_${index}" class="vendor-phone-field" value="${phone.number || ''}">
                         </div>
+                        <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${index})" title="Remove phone">
+                            <i class="fas fa-times"></i>
+                        </button>
                     `;
                     
                     phoneContainer.appendChild(phoneGroup);
@@ -7435,25 +7980,32 @@ async function editVendor(vendorId) {
         
         // Display existing documents with remove option
         const docsPreview = document.getElementById('vendorDocsPreview');
-        if (vendor.documents && vendor.documents.length > 0) {
-            docsPreview.innerHTML = vendor.documents.map((doc, index) => `
-                <div class="existing-doc-item" data-doc-index="${index}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
+        const generalDocuments = (vendor.documents || []).filter(doc => !doc.complianceDocumentType);
+        if (generalDocuments.length > 0) {
+            docsPreview.innerHTML = generalDocuments.map((doc) => {
+                const docIndex = (vendor.documents || []).indexOf(doc);
+                return `
+                <div class="existing-doc-item" data-doc-index="${docIndex}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f3f4f6; border-radius: 6px; margin-top: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
                         <span style="font-size: 14px;">${doc.name}</span>
                     </div>
-                    <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${index})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${docIndex})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         } else {
             docsPreview.innerHTML = '';
         }
         
         // Store original documents for comparison
         window.currentVendorDocuments = vendor.documents || [];
+        initializeVendorComplianceUploads();
+        setVendorComplianceDocumentPreviews(vendor);
         
+        document.body.classList.add('vendor-modal-open');
         document.getElementById('vendorModal').classList.add('show');
     } catch (error) {
         alert('Failed to load vendor: ' + error.message);
@@ -7468,165 +8020,32 @@ async function saveVendor() {
     }
     
     const saveBtn = document.querySelector('#vendorModal .btn-primary');
+    const snapshot = buildVendorDraftFromForm();
+    if (snapshot.error) {
+        showToast(snapshot.error, 'error');
+        snapshot.input?.focus();
+        return;
+    }
+
     setButtonLoading(saveBtn, true);
-    showLoading(currentVendorId ? 'Updating vendor...' : 'Creating vendor...');
-    
-    // Collect all emails
-    const emails = [];
-    
-    // Primary email
-    const primaryEmail = document.getElementById('vendorEmail')?.value;
-    if (primaryEmail) {
-        emails.push({
-            label: 'Primary',
-            address: primaryEmail,
-            isPrimary: true
-        });
-    }
-    
-    // Additional emails
-    const emailGroups = document.querySelectorAll('#vendorEmailsContainer .email-group');
-    emailGroups.forEach((group) => {
-        const emailIndex = group.getAttribute('data-vendor-email-index');
-        const emailAddress = document.getElementById(`vendorEmail_${emailIndex}`)?.value;
-        
-        if (emailAddress) {
-            emails.push({
-                label: `Email ${emails.length + 1}`,
-                address: emailAddress,
-                isPrimary: false
-            });
-        }
+    closeVendorModal();
+    setButtonLoading(saveBtn, false);
+
+    optimisticVendorSaves.set(snapshot.clientId, {
+        snapshot,
+        progress: 0,
+        status: snapshot.isEdit ? 'Updating' : 'Creating'
     });
-    
-    // Collect all phones
-    const phones = [];
-    
-    // Primary phone
-    const primaryPhone = document.getElementById('vendorPhone')?.value;
-    if (primaryPhone) {
-        phones.push({
-            label: 'Primary',
-            number: primaryPhone,
-            isPrimary: true
-        });
+    renderVendorsWithCurrentFilters();
+
+    if (!vendorMatchesCurrentFilters(getOptimisticVendorDisplayVendor(snapshot))) {
+        showToast('Vendor is saving in the background and may be hidden by the current filters.', 'info');
     }
-    
-    // Additional phones
-    const phoneGroups = document.querySelectorAll('#vendorPhonesContainer .phone-group');
-    phoneGroups.forEach((group) => {
-        const phoneIndex = group.getAttribute('data-vendor-phone-index');
-        const phoneNumber = document.getElementById(`vendorPhone_${phoneIndex}`)?.value;
-        
-        if (phoneNumber) {
-            phones.push({
-                label: `Phone ${phones.length + 1}`,
-                number: phoneNumber,
-                isPrimary: false
-            });
-        }
-    });
-    
-    // Get category - check if custom category was entered
-    const categorySelect = document.getElementById('vendorCategory');
-    const customCategoryInput = document.getElementById('vendorCategoryCustom');
-    let category = categorySelect.value;
-    
-    if (category === '__add_new__') {
-        const customCategory = customCategoryInput.value.trim();
-        if (!customCategory) {
-            showToast('Please enter a category name', 'error');
-            customCategoryInput.focus();
-            setButtonLoading(saveBtn, false);
-            hideLoading();
-            return;
-        }
-        category = customCategory.toLowerCase().replace(/\s+/g, '-');
-        
-        // Add the new category to the dropdown for future use
-        const newOption = document.createElement('option');
-        newOption.value = category;
-        newOption.textContent = customCategory;
-        categorySelect.insertBefore(newOption, categorySelect.querySelector('[value="__add_new__"]'));
-    }
-    
-    const vendorData = {
-        name: document.getElementById('vendorName').value,
-        email: document.getElementById('vendorEmail').value,
-        phone: document.getElementById('vendorPhone').value,
-        address: document.getElementById('vendorAddress').value,
-        category: category,
-        rating: parseInt(document.getElementById('vendorRating').value),
-        isActive: document.getElementById('vendorStatus').value === 'true',
-        notes: document.getElementById('vendorNotes').value,
-        emails: emails,
-        phones: phones,
-        customFields: getVendorCustomFields(),
-        ...getVendorComplianceData()
-    };
-    
-    window.AppLogger?.debug('=== SAVING VENDOR ===');
-    window.AppLogger?.debug('Custom fields being saved:', vendorData.customFields);
-    
-    window.AppLogger?.debug('=== SAVING VENDOR ===');
-    window.AppLogger?.debug('Emails being saved:', emails);
-    window.AppLogger?.debug('Phones being saved:', phones);
-    window.AppLogger?.debug('Category being saved:', category);
-    window.AppLogger?.debug('Full vendor data:', vendorData);
-    
-    try {
-        // Upload documents if any
-        if (window.uploadedFiles && window.uploadedFiles.vendor && window.uploadedFiles.vendor.length > 0) {
-            window.AppLogger?.debug('Uploading vendor documents:', window.uploadedFiles.vendor.length, 'files');
-            updateLoadingMessage('Uploading documents...');
-            const uploadedDocs = await window.uploadFiles(window.uploadedFiles.vendor);
-            window.AppLogger?.debug('Upload response:', uploadedDocs);
-            if (uploadedDocs && uploadedDocs.length > 0) {
-                // Combine existing documents with newly uploaded ones
-                const existingDocs = window.currentVendorDocuments || [];
-                vendorData.documents = [...existingDocs, ...uploadedDocs];
-                window.AppLogger?.debug('Documents added to vendorData:', vendorData.documents);
-            } else {
-                // Upload failed, keep existing documents
-                vendorData.documents = window.currentVendorDocuments || [];
-            }
-        } else {
-            // No new uploads, preserve existing documents
-            vendorData.documents = window.currentVendorDocuments || [];
-        }
-        
-        window.AppLogger?.debug('Final vendor data:', vendorData);
-        window.AppLogger?.debug('Documents type:', typeof vendorData.documents);
-        window.AppLogger?.debug('Documents is array:', Array.isArray(vendorData.documents));
-        
-        if (currentVendorId) {
-            updateLoadingMessage('Updating vendor...');
-            await window.APIService.updateVendor(currentVendorId, vendorData);
-            if (document.getElementById('vendorNotes')?.value.trim()) {
-                await addNoteEntry('vendors', currentVendorId, 'vendorNotes');
-            }
-            showToast('Vendor updated successfully!', 'success');
-        } else {
-            updateLoadingMessage('Creating vendor...');
-            await window.APIService.createVendor(vendorData);
-            showToast('Vendor created successfully!', 'success');
-        }
-        
-        // Clear uploaded files and stored documents
-        if (window.uploadedFiles) {
-            window.uploadedFiles.vendor = [];
-        }
-        window.currentVendorDocuments = null;
-        
-        closeVendorModal();
-        await refreshVendors();
-    } catch (error) {
+
+    runOptimisticVendorSave(snapshot).catch((error) => {
         console.error('Save vendor error:', error);
-        showToast('Failed to save vendor: ' + error.message, 'error');
-    } finally {
-        setButtonLoading(saveBtn, false);
-        hideLoading();
-    }
+        failOptimisticVendorSave(snapshot.clientId, error);
+    });
 }
 
 async function deleteVendor(vendorId) {
@@ -7655,6 +8074,7 @@ function viewVendor(vendorId) {
 
 function closeVendorModal() {
     document.getElementById('vendorModal').classList.remove('show');
+    document.body.classList.remove('vendor-modal-open');
     
     // Re-enable form inputs
     const inputs = document.querySelectorAll('#vendorForm input, #vendorForm select, #vendorForm textarea');
@@ -7668,6 +8088,12 @@ function closeVendorModal() {
     if (fileInput) fileInput.value = '';
     if (filePreview) filePreview.innerHTML = '';
     if (window.uploadedFiles) window.uploadedFiles.vendor = [];
+    vendorComplianceFiles = {};
+    VENDOR_COMPLIANCE_DOCUMENT_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        if (input) input.value = '';
+        updateVendorCompliancePreview(field, null);
+    });
     
     // Reset custom category input
     const customInput = document.getElementById('vendorCategoryCustom');
@@ -7684,7 +8110,8 @@ function closeVendorModal() {
 async function refreshVendors() {
     try {
         const vendors = await window.APIService.getVendors();
-        renderVendorsTable(vendors);
+        allVendors = vendors;
+        renderVendorsWithCurrentFilters();
     } catch (error) {
         console.error('Failed to refresh vendors:', error);
     }
@@ -7692,14 +8119,16 @@ async function refreshVendors() {
 
 function renderVendorsTable(vendors) {
     const tbody = document.getElementById('vendorsTableBody');
+    const visibleVendors = getOptimisticVendorList(vendors || [])
+        .filter(vendor => !vendor.__optimisticVendorSave || vendorMatchesCurrentFilters(vendor));
     
     // Store vendors globally for detail view
-    window.vendorsData = vendors;
+    window.vendorsData = vendors || [];
     
     // Update stats
-    updateVendorStats(vendors);
+    updateVendorStats((allVendors && allVendors.length ? allVendors : vendors) || []);
     
-    if (!vendors || vendors.length === 0) {
+    if (!visibleVendors || visibleVendors.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="vendors-empty-state">
@@ -7713,40 +8142,56 @@ function renderVendorsTable(vendors) {
     }
     
     // Sort vendors by creation date (newest first)
-    const sortedVendors = [...vendors].sort((a, b) => {
+    const sortedVendors = [...visibleVendors].sort((a, b) => {
+        if (a.__optimisticVendorSave && !b.__optimisticVendorSave) return -1;
+        if (!a.__optimisticVendorSave && b.__optimisticVendorSave) return 1;
         const dateA = new Date(a.createdAt || 0);
         const dateB = new Date(b.createdAt || 0);
         return dateB - dateA; // Newest first
     });
     
     tbody.innerHTML = sortedVendors.map(vendor => {
-        const vendorId = `#${vendor._id.substring(0, 8).toUpperCase()}`;
+        const isPending = Boolean(vendor.__optimisticVendorSave);
+        const vendorId = isPending && !vendor.__optimisticClientId?.startsWith(vendor._id || '')
+            ? 'Pending'
+            : `#${String(vendor._id || '').substring(0, 8).toUpperCase()}`;
         const ratingText = `${Number(vendor.rating || 0)}/5`;
-        
-        return `
-        <tr onclick="showVendorDetail('${vendor._id}')">
-            <td>
-                <div class="vendor-identity">
-                    <div class="vendor-info">
-                        <div class="vendor-name">${vendor.name}</div>
-                        <div class="vendor-id">${vendorId}</div>
-                    </div>
-                </div>
-            </td>
-            <td><a href="mailto:${vendor.email}" class="customer-email" onclick="event.stopPropagation()">${vendor.email}</a></td>
-            <td><span class="customer-phone">${vendor.phone || 'N/A'}</span></td>
-            <td><span class="vendor-category-badge ${vendor.category}">${vendor.category}</span></td>
-            <td><div class="vendor-rating">${ratingText}</div></td>
-            <td><span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span></td>
-            <td onclick="event.stopPropagation()">
-                <div class="vendor-actions">
+        const categoryClass = normalizeFilterValue(vendor.category || 'uncategorized');
+        const progress = Math.max(0, Math.min(100, Number(vendor.__optimisticProgress || 0)));
+        const statusCell = isPending
+            ? `<div class="vendor-saving-status">
+                    <span>${escapePaymentHtml(vendor.__optimisticStatus || 'Saving')} ${progress}%</span>
+                    <div class="vendor-save-progress" aria-hidden="true"><span style="width: ${progress}%"></span></div>
+               </div>`
+            : `<span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span>`;
+        const actionsCell = isPending
+            ? `<div class="vendor-actions vendor-actions-disabled"><span class="vendor-saving-action">Saving...</span></div>`
+            : `<div class="vendor-actions">
                     <button class="action-btn edit" onclick="editVendor('${vendor._id}')" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="action-btn delete" onclick="deleteVendor('${vendor._id}')" title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>
+                </div>`;
+        
+        return `
+        <tr class="${isPending ? 'vendor-row-saving' : ''}" ${isPending ? '' : `onclick="showVendorDetail('${vendor._id}')"`}>
+            <td>
+                <div class="vendor-identity">
+                    <div class="vendor-info">
+                        <div class="vendor-name">${escapePaymentHtml(vendor.name || 'Unnamed Vendor')}</div>
+                        <div class="vendor-id">${escapePaymentHtml(vendorId)}</div>
+                    </div>
                 </div>
+            </td>
+            <td>${vendor.email ? `<a href="mailto:${escapePaymentHtml(vendor.email)}" class="customer-email" onclick="event.stopPropagation()">${escapePaymentHtml(vendor.email)}</a>` : '<span class="table-muted">N/A</span>'}</td>
+            <td><span class="customer-phone">${escapePaymentHtml(vendor.phone || 'N/A')}</span></td>
+            <td><span class="vendor-category-badge ${categoryClass}">${escapePaymentHtml(vendor.category || 'Uncategorized')}</span></td>
+            <td><div class="vendor-rating">${ratingText}</div></td>
+            <td>${statusCell}</td>
+            <td onclick="event.stopPropagation()">
+                ${actionsCell}
             </td>
         </tr>
     `;
@@ -7870,6 +8315,8 @@ window.addVendorEmail = addVendorEmail;
 window.removeVendorEmail = removeVendorEmail;
 window.addVendorPhone = addVendorPhone;
 window.removeVendorPhone = removeVendorPhone;
+window.clearVendorComplianceFile = clearVendorComplianceFile;
+window.clearExistingVendorComplianceDocument = clearExistingVendorComplianceDocument;
 
 // Function to remove existing vendor document
 window.removeExistingVendorDoc = function(index) {
@@ -9489,6 +9936,7 @@ window.loadAccountingSection = loadAccountingSection;
 // Vendor Detail Functions
 async function showVendorDetail(vendorId) {
     try {
+        currentDetailVendorId = vendorId;
         const vendor = await window.APIService.getVendor(vendorId);
         window.AppLogger?.debug('Vendor data received:', vendor);
         window.AppLogger?.debug('Vendor notes:', vendor.notes);
@@ -9576,8 +10024,9 @@ async function showVendorDetail(vendorId) {
         }
         
         const docsList = document.getElementById('vendorDocumentsList');
-        if (vendor.documents && vendor.documents.length > 0) {
-            docsList.innerHTML = vendor.documents.map(doc => `
+        const generalVendorDocuments = (vendor.documents || []).filter(doc => !doc.complianceDocumentType);
+        if (generalVendorDocuments.length > 0) {
+            docsList.innerHTML = generalVendorDocuments.map(doc => `
                 <div class="document-item">
                     <div class="document-info">
                         <div class="document-icon">
@@ -9647,6 +10096,7 @@ async function showVendorDetail(vendorId) {
 }
 
 function backToVendors() {
+    currentDetailVendorId = null;
     showSection('vendors');
 }
 
@@ -9666,19 +10116,31 @@ function formatFileSize(bytes) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-function downloadDocument(url) {
+function resolveDocumentUrl(url) {
+    if (!url) return '#';
+    if (/^https?:\/\//i.test(url)) {
+        return url;
+    }
+
     const baseURL = window.location.hostname === 'localhost' 
         ? 'http://localhost:10000'
         : window.location.origin;
-    
-    // Extract just the filename from the URL
-    let filename = url;
-    if (url.includes('/uploads/')) {
-        filename = url.split('/uploads/')[1];
+
+    if (url.startsWith('/uploads/')) {
+        return `${baseURL}${url}`;
     }
-    
-    // Use direct uploads path
-    const downloadUrl = `${baseURL}/uploads/${filename}`;
+
+    if (url.includes('/uploads/')) {
+        const filename = url.split('/uploads/')[1];
+        return `${baseURL}/uploads/${filename}`;
+    }
+
+    return `${baseURL}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+function downloadDocument(url) {
+    const downloadUrl = resolveDocumentUrl(url);
+    const filename = decodeURIComponent(downloadUrl.split('/').pop() || 'document');
     
     // Create a temporary link and click it to trigger download
     const link = document.createElement('a');
@@ -9691,23 +10153,21 @@ function downloadDocument(url) {
 }
 
 function viewDocument(url) {
-    const baseURL = window.location.hostname === 'localhost' 
-        ? 'http://localhost:10000'
-        : window.location.origin;
-    
-    // Extract just the filename from the URL
-    let filename = url;
-    if (url.includes('/uploads/')) {
-        filename = url.split('/uploads/')[1];
-    }
-    
-    // Use direct uploads path
-    const viewUrl = `${baseURL}/uploads/${filename}`;
-    window.open(viewUrl, '_blank');
+    window.open(resolveDocumentUrl(url), '_blank');
 }
 
 window.showVendorDetail = showVendorDetail;
 window.backToVendors = backToVendors;
+window.editCurrentDetailVendor = function() {
+    if (currentDetailVendorId) {
+        editVendor(currentDetailVendorId);
+    }
+};
+window.deleteCurrentDetailVendor = function() {
+    if (currentDetailVendorId) {
+        deleteVendor(currentDetailVendorId);
+    }
+};
 window.downloadDocument = downloadDocument;
 window.viewDocument = viewDocument;
 

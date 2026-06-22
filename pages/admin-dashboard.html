@@ -1321,11 +1321,24 @@
 
         <!-- Vendor Detail Section -->
         <section id="vendor-detail" class="content-section">
-            <div class="page-header">
-                <button class="btn-secondary" onclick="backToVendors()">
-                    <i class="fas fa-arrow-left"></i> Back to Vendors
-                </button>
-                <h1 id="vendorDetailName">Vendor Details</h1>
+            <div class="page-header vendor-detail-header">
+                <div class="vendor-detail-header-main">
+                    <button class="btn-secondary vendor-detail-back-btn" onclick="backToVendors()">
+                        <i class="fas fa-arrow-left"></i> Back to Vendors
+                    </button>
+                    <div>
+                        <span class="vendor-detail-eyebrow">Vendor Details</span>
+                        <h1 id="vendorDetailName">Vendor Details</h1>
+                    </div>
+                </div>
+                <div class="vendor-detail-actions">
+                    <button type="button" class="btn-secondary vendor-detail-edit-btn" onclick="editCurrentDetailVendor()">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button type="button" class="btn-danger vendor-detail-delete-btn" onclick="deleteCurrentDetailVendor()">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
             </div>
             
             <div class="detail-container">
@@ -3074,36 +3087,45 @@
             
             <div class="modal-body">
                 <form id="vendorForm">
-                    <div class="form-group">
-                        <label for="vendorName">Vendor Name *</label>
-                        <input type="text" id="vendorName" required autocomplete="name">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="vendorEmail">Email</label>
-                        <input type="email" id="vendorEmail" autocomplete="email">
-                        <button type="button" class="btn-add-field" onclick="addVendorEmail()">
-                            <i class="fas fa-plus"></i> Add Email
-                        </button>
-                    </div>
-                    
-                    <!-- Additional emails will be inserted here -->
-                    <div id="vendorEmailsContainer"></div>
-                    
-                    <div class="form-group">
-                        <label for="vendorPhone">Phone</label>
-                        <input type="tel" id="vendorPhone" autocomplete="tel">
-                        <button type="button" class="btn-add-field" onclick="addVendorPhone()">
-                            <i class="fas fa-plus"></i> Add Phone
-                        </button>
-                    </div>
-                    
-                    <!-- Additional phones will be inserted here -->
-                    <div id="vendorPhonesContainer"></div>
-                    
-                    <div class="form-group">
-                        <label for="vendorAddress">Address</label>
-                        <textarea id="vendorAddress" rows="2" autocomplete="street-address"></textarea>
+                    <div class="form-section vendor-core-section">
+                        <h3><i class="fas fa-address-card"></i> Vendor Information</h3>
+                        <div class="form-group full-width">
+                            <label for="vendorName">Vendor Name *</label>
+                            <input type="text" id="vendorName" required autocomplete="name">
+                        </div>
+                        
+                        <div class="vendor-contact-row">
+                            <div class="form-group">
+                                <label for="vendorEmail">Primary Email</label>
+                                <div class="vendor-field-action">
+                                    <input type="email" id="vendorEmail" autocomplete="email">
+                                    <button type="button" class="btn-add-field" onclick="addVendorEmail()">
+                                        <i class="fas fa-plus"></i> Add Email
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="vendorPhone">Primary Phone</label>
+                                <div class="vendor-field-action">
+                                    <input type="tel" id="vendorPhone" autocomplete="tel">
+                                    <button type="button" class="btn-add-field" onclick="addVendorPhone()">
+                                        <i class="fas fa-plus"></i> Add Phone
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional emails will be inserted here -->
+                        <div id="vendorEmailsContainer" class="vendor-extra-fields"></div>
+                        
+                        <!-- Additional phones will be inserted here -->
+                        <div id="vendorPhonesContainer" class="vendor-extra-fields"></div>
+                        
+                        <div class="form-group full-width">
+                            <label for="vendorAddress">Address</label>
+                            <textarea id="vendorAddress" rows="2" autocomplete="street-address"></textarea>
+                        </div>
                     </div>
 
                     <div class="form-section vendor-compliance-section">
@@ -3143,30 +3165,24 @@
 
                     <div class="form-section vendor-compliance-section">
                         <h3><i class="fas fa-file-signature"></i> Contracts &amp; Tax Documents</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="vendorHuttasContractSigned">
-                                    <span class="checkmark"></span>
-                                    <span>Huttas Contract with Sub Signed and Dated</span>
+                        <div class="vendor-compliance-upload-grid">
+                            <div class="vendor-compliance-upload" data-compliance-doc="huttasContract">
+                                <input type="file" id="vendorHuttasContractFile" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                                <label for="vendorHuttasContractFile">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <strong>Huttas Contract with Sub</strong>
+                                    <span>Signed and dated PDF, image, or document</span>
                                 </label>
+                                <div class="vendor-compliance-file-preview" id="vendorHuttasContractPreview">No file attached</div>
                             </div>
-                            <div class="form-group">
-                                <label for="vendorHuttasContractSignedDate">Contract Signed Date</label>
-                                <input type="date" id="vendorHuttasContractSignedDate">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="vendorW9OnFile">
-                                    <span class="checkmark"></span>
-                                    <span>W-9 on File and Dated</span>
+                            <div class="vendor-compliance-upload" data-compliance-doc="w9">
+                                <input type="file" id="vendorW9File" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                                <label for="vendorW9File">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <strong>W-9 on File</strong>
+                                    <span>Signed and dated PDF, image, or document</span>
                                 </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="vendorW9Date">W-9 Date</label>
-                                <input type="date" id="vendorW9Date">
+                                <div class="vendor-compliance-file-preview" id="vendorW9Preview">No file attached</div>
                             </div>
                         </div>
                     </div>
@@ -3191,86 +3207,103 @@
 
                     <div class="form-section vendor-compliance-section">
                         <h3><i class="fas fa-shield-alt"></i> Insurance</h3>
-                        <div class="form-row vendor-checklist-row">
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="vendorCertificateOfInsuranceOnFile">
-                                    <span class="checkmark"></span>
-                                    <span>Certificate of Insurance on File</span>
+                        <div class="vendor-compliance-upload-grid vendor-compliance-upload-grid-three">
+                            <div class="vendor-compliance-upload" data-compliance-doc="certificateOfInsurance">
+                                <input type="file" id="vendorCertificateOfInsuranceFile" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                                <label for="vendorCertificateOfInsuranceFile">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <strong>Certificate of Insurance</strong>
+                                    <span>Attach certificate file</span>
                                 </label>
+                                <div class="vendor-compliance-file-preview" id="vendorCertificateOfInsurancePreview">No file attached</div>
                             </div>
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="vendorWorkersCompInsuranceOnFile">
-                                    <span class="checkmark"></span>
-                                    <span>Workers Comp Insurance on File</span>
+                            <div class="vendor-compliance-upload" data-compliance-doc="workersCompInsurance">
+                                <input type="file" id="vendorWorkersCompInsuranceFile" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                                <label for="vendorWorkersCompInsuranceFile">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <strong>Workers Comp Insurance</strong>
+                                    <span>Attach policy or certificate</span>
                                 </label>
+                                <div class="vendor-compliance-file-preview" id="vendorWorkersCompInsurancePreview">No file attached</div>
                             </div>
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="vendorHuttasAdditionalInsured">
-                                    <span class="checkmark"></span>
-                                    <span>Huttas Listed as Additional Insured on GL Policy</span>
+                            <div class="vendor-compliance-upload" data-compliance-doc="huttasAdditionalInsured">
+                                <input type="file" id="vendorHuttasAdditionalInsuredFile" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                                <label for="vendorHuttasAdditionalInsuredFile">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <strong>Additional Insured GL Policy</strong>
+                                    <span>Huttas listed as additional insured</span>
                                 </label>
+                                <div class="vendor-compliance-file-preview" id="vendorHuttasAdditionalInsuredPreview">No file attached</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="vendorCategory">Category *</label>
-                        <select id="vendorCategory" required onchange="handleVendorCategoryChange()" autocomplete="off">
-                            <option value="">Select Category</option>
-                            <option value="electrical">Electrical</option>
-                            <option value="plumbing">Plumbing</option>
-                            <option value="civil">Civil</option>
-                            <option value="carpentry">Carpentry</option>
-                            <option value="hvac">HVAC</option>
-                            <option value="painting">Painting</option>
-                            <option value="cleaning">Cleaning</option>
-                            <option value="__add_new__">+ Add New Category</option>
-                        </select>
-                        <input type="text" id="vendorCategoryCustom" placeholder="Enter new category name" style="display: none; margin-top: 10px;" autocomplete="name">
-                    </div>
-                    
-                    <div class="form-row">
+                    <div class="form-section vendor-profile-section">
+                        <h3><i class="fas fa-sliders-h"></i> Category &amp; Status</h3>
                         <div class="form-group">
-                            <label for="vendorRating">Rating</label>
-                            <select id="vendorRating" autocomplete="off">
-                                <option value="5">5 Stars</option>
-                                <option value="4">4 Stars</option>
-                                <option value="3">3 Stars</option>
-                                <option value="2">2 Stars</option>
-                                <option value="1">1 Star</option>
+                            <label for="vendorCategory">Category *</label>
+                            <select id="vendorCategory" required onchange="handleVendorCategoryChange()" autocomplete="off">
+                                <option value="">Select Category</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="plumbing">Plumbing</option>
+                                <option value="civil">Civil</option>
+                                <option value="carpentry">Carpentry</option>
+                                <option value="hvac">HVAC</option>
+                                <option value="painting">Painting</option>
+                                <option value="cleaning">Cleaning</option>
+                                <option value="__add_new__">+ Add New Category</option>
                             </select>
+                            <input type="text" id="vendorCategoryCustom" placeholder="Enter new category name" style="display: none; margin-top: 10px;" autocomplete="name">
                         </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="vendorRating">Rating</label>
+                                <select id="vendorRating" autocomplete="off">
+                                    <option value="5">5 Stars</option>
+                                    <option value="4">4 Stars</option>
+                                    <option value="3">3 Stars</option>
+                                    <option value="2">2 Stars</option>
+                                    <option value="1">1 Star</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="vendorStatus">Status</label>
+                                <select id="vendorStatus" autocomplete="off">
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section vendor-documents-section">
+                        <h3><i class="fas fa-folder-open"></i> General Documents</h3>
                         <div class="form-group">
-                            <label for="vendorStatus">Status</label>
-                            <select id="vendorStatus" autocomplete="off">
-                                <option value="true">Active</option>
-                                <option value="false">Inactive</option>
-                            </select>
+                            <label for="vendorDocs">Documents (PDF, Word, etc.)</label>
+                            <input type="file" id="vendorDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                            <small>Upload agreements, contracts, or other documents</small>
+                            <div id="vendorDocsPreview" class="docs-preview"></div>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="vendorDocs"><i class="fas fa-file-upload"></i> Documents (PDF, Word, etc.)</label>
-                        <input type="file" id="vendorDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
-                        <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
-                        <div id="vendorDocsPreview" class="docs-preview"></div>
+                    <div class="form-section vendor-notes-section">
+                        <h3><i class="fas fa-sticky-note"></i> Notes</h3>
+                        <div class="form-group">
+                            <label for="vendorNotes">Internal Notes</label>
+                            <textarea id="vendorNotes" rows="3" placeholder="Additional notes about the vendor..." autocomplete="off"></textarea>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="vendorNotes">Notes</label>
-                        <textarea id="vendorNotes" rows="3" placeholder="Additional notes about the vendor..." autocomplete="off"></textarea>
+                    <div class="form-section vendor-custom-section">
+                        <div class="vendor-section-header-row">
+                            <h3><i class="fas fa-list"></i> Custom Fields</h3>
+                            <button type="button" class="btn-add-field" onclick="addVendorCustomField()">
+                                <i class="fas fa-plus"></i> Add Field
+                            </button>
+                        </div>
+                        <div id="vendorCustomFieldsContainer"></div>
                     </div>
-                    
-                    <div class="form-group">
-                        <span class="display-label">Custom Fields</span>
-                        <button type="button" class="btn-add-field" onclick="addVendorCustomField()">
-                            <i class="fas fa-plus"></i> Add Field
-                        </button>
-                    </div>
-                    <div id="vendorCustomFieldsContainer"></div>
                 </form>
             </div>
             

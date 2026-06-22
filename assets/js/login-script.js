@@ -129,7 +129,7 @@ class LoginManager {
         setTimeout(() => this.hideError(), 5000);
     }
 
-    hideError() {
+    hideError() { 
         const errorDiv = document.getElementById('errorMessage');
         if (errorDiv) errorDiv.style.display = 'none';
     }

@@ -12,12 +12,12 @@ function addVendorCustomField(name = '', value = '') {
     fieldDiv.className = 'custom-field-group';
     fieldDiv.id = fieldId;
     fieldDiv.innerHTML = `
-        <div class="form-row" style="align-items: flex-end; gap: 10px;">
-            <div class="form-group" style="flex: 1;">
+        <div class="form-row custom-field-row">
+            <div class="form-group">
                 <label>Field Name</label>
                 <input type="text" class="custom-field-name" placeholder="e.g., License Number" value="${name}">
             </div>
-            <div class="form-group" style="flex: 1;">
+            <div class="form-group">
                 <label>Field Value</label>
                 <input type="text" class="custom-field-value" placeholder="Enter value" value="${value}">
             </div>
@@ -39,12 +39,12 @@ function addCustomerCustomField(name = '', value = '') {
     fieldDiv.className = 'custom-field-group';
     fieldDiv.id = fieldId;
     fieldDiv.innerHTML = `
-        <div class="form-row" style="align-items: flex-end; gap: 10px;">
-            <div class="form-group" style="flex: 1;">
+        <div class="form-row custom-field-row">
+            <div class="form-group">
                 <label>Field Name</label>
                 <input type="text" class="custom-field-name" placeholder="e.g., Account Number" value="${name}">
             </div>
-            <div class="form-group" style="flex: 1;">
+            <div class="form-group">
                 <label>Field Value</label>
                 <input type="text" class="custom-field-value" placeholder="Enter value" value="${value}">
             </div>
