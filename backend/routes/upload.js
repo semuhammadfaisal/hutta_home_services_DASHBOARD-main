@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 
 const uploadDir = path.join(__dirname, '../uploads');
+const MAX_UPLOAD_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || `${50 * 1024 * 1024}`, 10);
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -21,7 +22,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 },
+    limits: { fileSize: MAX_UPLOAD_BYTES },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /pdf|doc|docx|txt|jpg|jpeg|png/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());

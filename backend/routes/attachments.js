@@ -10,9 +10,10 @@ const Employee = require('../models/Employee');
 const Order = require('../models/Order');
 
 const router = express.Router();
-const MAX_UPLOAD_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || `${10 * 1024 * 1024}`, 10);
+const MAX_UPLOAD_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || `${50 * 1024 * 1024}`, 10);
 const MAX_FILES = parseInt(process.env.MAX_ATTACHMENT_BATCH || '10', 10);
-const MAX_BATCH_BYTES = parseInt(process.env.MAX_ATTACHMENT_BATCH_BYTES || `${30 * 1024 * 1024}`, 10);
+const MAX_BATCH_BYTES = parseInt(process.env.MAX_ATTACHMENT_BATCH_BYTES || `${MAX_UPLOAD_BYTES * MAX_FILES}`, 10);
+const MAX_UPLOAD_LABEL = `${Math.round((MAX_UPLOAD_BYTES / 1024 / 1024) * 100) / 100} MB`;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png']);
 const ALLOWED_MIME_BY_EXTENSION = {
   pdf: ['application/pdf', 'application/octet-stream'],
@@ -70,7 +71,7 @@ async function loadEntity(req, res, next) {
 function handleUpload(req, res, next) {
   upload(req, res, (error) => {
     if (!error) return next();
-    if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: 'File exceeds the maximum allowed size' });
+    if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: `File exceeds the ${MAX_UPLOAD_LABEL} size limit` });
     if (error.code === 'LIMIT_FILE_COUNT') return res.status(400).json({ message: `Maximum ${MAX_FILES} files per upload` });
     return res.status(400).json({ message: error.message || 'Upload failed' });
   });

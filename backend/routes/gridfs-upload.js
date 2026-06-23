@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
-const MAX_UPLOAD_BYTES = parseInt(process.env.CLOUDINARY_MAX_UPLOAD_BYTES || `${10 * 1024 * 1024}`, 10);
+const MAX_UPLOAD_BYTES = parseInt(process.env.CLOUDINARY_MAX_UPLOAD_BYTES || `${50 * 1024 * 1024}`, 10);
 const MAX_UPLOAD_LABEL = `${Math.round((MAX_UPLOAD_BYTES / 1024 / 1024) * 100) / 100}MB`;
 
 function uploadBufferToGridFs(file) {

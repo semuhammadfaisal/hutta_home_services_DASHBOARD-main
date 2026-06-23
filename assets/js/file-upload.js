@@ -5,8 +5,8 @@ const uploadedFiles = {
     employee: [],
     order: []
 };
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const MAX_UPLOAD_LABEL = '10MB';
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const MAX_UPLOAD_LABEL = '50MB';
 const MAX_UPLOAD_REASON = 'secure attachment limit';
 
 // Handle file selection and preview
