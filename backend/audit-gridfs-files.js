@@ -50,12 +50,12 @@ async function main() {
       let recordChanged = false;
       for (const document of record.documents || []) {
         if (!document.documentId || document.$isDefault?.('documentId')) {
-          if (!document.documentId) document.documentId = crypto.randomUUID();
+          document.documentId = crypto.randomUUID();
           recordChanged = true;
           repairs.push({ action: 'backfill-document-id', entityType, entityId: String(record._id), documentName: document.name });
         }
         if (!document.status || document.$isDefault?.('status')) {
-          if (!document.status) document.status = 'active';
+          document.status = 'active';
           recordChanged = true;
           repairs.push({ action: 'backfill-status', entityType, entityId: String(record._id), documentId: document.documentId });
         }
@@ -105,7 +105,10 @@ async function main() {
           malformedDocuments.push({ entityType, entityId: String(record._id), documentId, name: document.name || '', issue: 'Missing required metadata' });
         }
       }
-      if (APPLY && recordChanged) await record.save();
+      if (APPLY && recordChanged) {
+        record.markModified('documents');
+        await record.save();
+      }
     }
   }
 

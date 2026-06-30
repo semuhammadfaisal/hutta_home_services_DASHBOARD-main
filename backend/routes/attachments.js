@@ -8,6 +8,7 @@ const Customer = require('../models/Customer');
 const Vendor = require('../models/Vendor');
 const Employee = require('../models/Employee');
 const Order = require('../models/Order');
+const { ensurePersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 
 const router = express.Router();
 const MAX_UPLOAD_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || `${50 * 1024 * 1024}`, 10);
@@ -77,21 +78,6 @@ function handleUpload(req, res, next) {
   });
 }
 
-function ensureAttachmentIds(entity) {
-  let changed = false;
-  (entity.documents || []).forEach((document) => {
-    if (!document.documentId || document.$isDefault?.('documentId')) {
-      if (!document.documentId) document.documentId = crypto.randomUUID();
-      changed = true;
-    }
-    if (!document.status || document.$isDefault?.('status')) {
-      if (!document.status) document.status = 'active';
-      changed = true;
-    }
-  });
-  return changed;
-}
-
 function findAttachment(entity, documentId) {
   return (entity.documents || []).find((document) => document.documentId === documentId);
 }
@@ -115,6 +101,16 @@ function gridFsFilename(document) {
 
 function safeDownloadName(value = 'document') {
   return String(value).replace(/[\r\n"\\]/g, '_').slice(0, 180) || 'document';
+}
+
+function logAttachmentNotFound(req, reason, extra = {}) {
+  console.warn('Attachment stream 404', {
+    reason,
+    entityType: req.params.entityType,
+    entityId: req.params.entityId,
+    documentId: req.params.documentId,
+    ...extra
+  });
 }
 
 function hasValidSignature(file) {
@@ -188,7 +184,7 @@ router.use('/:entityType/:entityId', validateEntity, loadEntity);
 
 router.get('/:entityType/:entityId', async (req, res, next) => {
   try {
-    if (ensureAttachmentIds(req.attachmentEntity)) await req.attachmentEntity.save();
+    if (ensurePersistentAttachmentMetadata(req.attachmentEntity)) await req.attachmentEntity.save();
     const documents = req.attachmentEntity.documents || [];
     res.json({
       active: documents.filter((document) => document.status !== 'archived'),
@@ -289,9 +285,12 @@ router.post('/:entityType/:entityId', handleUpload, async (req, res, next) => {
 
 async function streamAttachment(req, res, next, disposition) {
   try {
-    if (ensureAttachmentIds(req.attachmentEntity)) await req.attachmentEntity.save();
+    if (ensurePersistentAttachmentMetadata(req.attachmentEntity)) await req.attachmentEntity.save();
     const document = findAttachment(req.attachmentEntity, req.params.documentId);
-    if (!document) return res.status(404).json({ message: 'Attachment not found' });
+    if (!document) {
+      logAttachmentNotFound(req, 'metadata-missing');
+      return res.status(404).json({ message: 'Attachment not found' });
+    }
 
     if (document.storageProvider && document.storageProvider !== 'gridfs' && /^https?:\/\//i.test(document.url || '')) {
       return res.redirect(document.url);
@@ -307,7 +306,14 @@ async function streamAttachment(req, res, next, disposition) {
       const filename = gridFsFilename(document);
       if (filename) file = await mongoose.connection.db.collection('uploads.files').findOne({ filename });
     }
-    if (!file) return res.status(404).json({ message: 'Stored file is unavailable; metadata has been retained for recovery' });
+    if (!file) {
+      logAttachmentNotFound(req, 'gridfs-file-missing', {
+        fileId: String(document.fileId || ''),
+        url: document.url || '',
+        filename: gridFsFilename(document) || ''
+      });
+      return res.status(404).json({ message: 'Stored file is unavailable; metadata has been retained for recovery' });
+    }
 
     const filename = safeDownloadName(document.name || file.metadata?.originalName);
     res.set({
@@ -328,7 +334,7 @@ router.get('/:entityType/:entityId/:documentId', (req, res, next) => streamAttac
 
 router.patch('/:entityType/:entityId/:documentId/archive', async (req, res, next) => {
   try {
-    if (ensureAttachmentIds(req.attachmentEntity)) await req.attachmentEntity.save();
+    if (ensurePersistentAttachmentMetadata(req.attachmentEntity)) await req.attachmentEntity.save();
     const document = findAttachment(req.attachmentEntity, req.params.documentId);
     if (!document) return res.status(404).json({ message: 'Attachment not found' });
     document.status = 'archived';
@@ -346,7 +352,7 @@ router.patch('/:entityType/:entityId/:documentId/archive', async (req, res, next
 
 router.patch('/:entityType/:entityId/:documentId/restore', async (req, res, next) => {
   try {
-    if (ensureAttachmentIds(req.attachmentEntity)) await req.attachmentEntity.save();
+    if (ensurePersistentAttachmentMetadata(req.attachmentEntity)) await req.attachmentEntity.save();
     const document = findAttachment(req.attachmentEntity, req.params.documentId);
     if (!document) return res.status(404).json({ message: 'Attachment not found' });
     if (req.params.entityType === 'vendor' && document.complianceDocumentType) {

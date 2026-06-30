@@ -8,6 +8,7 @@ const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache'
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
+const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 const router = express.Router();
 
 // Get all vendors
@@ -29,6 +30,7 @@ router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
+    await saveWithPersistentAttachmentMetadata(vendor);
     res.json(vendor);
   } catch (error) {
     console.error('Error fetching vendor:', error);

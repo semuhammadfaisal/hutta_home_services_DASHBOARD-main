@@ -354,6 +354,28 @@
     text-transform: uppercase;
 }
 
+.document-item.document-unavailable {
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+
+.document-item.document-unavailable .document-icon {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.document-item.document-unavailable .document-name::after {
+    content: 'Unavailable';
+    margin-left: 8px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #fed7aa;
+    color: #9a3412;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
 .vendor-compliance-document-link {
     border: 0;
     padding: 0;

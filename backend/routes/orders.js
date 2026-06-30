@@ -11,6 +11,7 @@ const { startOfMonthMDT, dateInputToMDT } = require('../utils/timezone');
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
+const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 const router = express.Router();
 
 const STATS_CACHE_KEY = 'orders:stats:v2';
@@ -226,13 +227,16 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get single order
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    const existingOrder = await Order.findById(req.params.id).select('documents');
+    if (!existingOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    await saveWithPersistentAttachmentMetadata(existingOrder);
+
     const order = await Order.findById(req.params.id)
       .populate('vendor')
       .populate('employee', 'name')
       .lean();
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
 
     if (order.pipelineRecordId || order._id) {
       const PipelineRecord = require('../models/PipelineRecord');

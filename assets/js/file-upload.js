@@ -244,9 +244,20 @@ async function openEntityAttachment(entityType, entityId, attachment, download =
     }
     if (!response.ok) {
         let message = `File is unavailable (${response.status})`;
-        try { message = (await response.json()).message || message; } catch (_error) { /* keep fallback */ }
+        try {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                message = (await response.json()).message || message;
+            } else {
+                const text = await response.text();
+                if (text) message = text;
+            }
+        } catch (_error) { /* keep fallback */ }
         previewWindow?.close();
-        throw new Error(message);
+        const error = new Error(message);
+        error.status = response.status;
+        error.attachmentUnavailable = response.status === 404;
+        throw error;
     }
     const blobUrl = URL.createObjectURL(await response.blob());
     if (download) {
@@ -267,6 +278,22 @@ async function openEntityAttachment(entityType, entityId, attachment, download =
     setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 }
 
+function markAttachmentUnavailable(row, item, message) {
+    item.unavailable = true;
+    item.unavailableReason = message || 'Stored file is unavailable';
+    row.classList.add('document-unavailable');
+    row.querySelectorAll('[data-attachment-open-action="true"]').forEach((button) => {
+        button.disabled = true;
+        button.title = item.unavailableReason;
+        button.setAttribute('aria-label', item.unavailableReason);
+    });
+    const meta = row.querySelector('.document-meta');
+    if (meta && !meta.dataset.unavailableMarked) {
+        meta.dataset.unavailableMarked = 'true';
+        meta.textContent = `${meta.textContent} • Unavailable`;
+    }
+}
+
 function renderAttachmentList(container, documents = [], context = {}) {
     if (!container) return;
     container.replaceChildren();
@@ -277,7 +304,7 @@ function renderAttachmentList(container, documents = [], context = {}) {
     const renderRows = (items, parent, archivedRows = false) => {
         items.forEach((item) => {
             const row = document.createElement('div');
-            row.className = `document-item${archivedRows ? ' document-archived' : ''}`;
+            row.className = `document-item${archivedRows ? ' document-archived' : ''}${item.unavailable ? ' document-unavailable' : ''}`;
             const info = document.createElement('div');
             info.className = 'document-info';
             const icon = document.createElement('div');
@@ -293,29 +320,44 @@ function renderAttachmentList(container, documents = [], context = {}) {
             const meta = document.createElement('div');
             meta.className = 'document-meta';
             const size = Number(item.size || 0);
-            meta.textContent = `${size ? `${Math.round(size / 1024)} KB` : 'Size unavailable'} • ${item.uploadedAt ? new Date(item.uploadedAt).toLocaleDateString() : 'Date unavailable'}`;
+            meta.textContent = `${size ? `${Math.round(size / 1024)} KB` : 'Size unavailable'} • ${item.uploadedAt ? new Date(item.uploadedAt).toLocaleDateString() : 'Date unavailable'}${item.unavailable ? ' • Unavailable' : ''}`;
+            if (item.unavailable) meta.dataset.unavailableMarked = 'true';
             details.append(name, meta);
             info.append(icon, details);
             const actions = document.createElement('div');
             actions.className = 'document-actions';
-            const addAction = (label, iconClass, handler) => {
+            const addAction = (label, iconClass, handler, options = {}) => {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'btn-icon';
                 button.title = label;
                 button.setAttribute('aria-label', label);
+                if (options.openAction) button.dataset.attachmentOpenAction = 'true';
+                if (item.unavailable && options.openAction) {
+                    button.disabled = true;
+                    button.title = item.unavailableReason || 'Stored file is unavailable';
+                    button.setAttribute('aria-label', button.title);
+                }
                 const actionIcon = document.createElement('i');
                 actionIcon.className = `fas ${iconClass}`;
                 button.appendChild(actionIcon);
                 button.addEventListener('click', async () => {
                     button.disabled = true;
-                    try { await handler(); } catch (error) { window.showToast?.(error.message, 'error'); }
-                    finally { button.disabled = false; }
+                    try {
+                        await handler();
+                    } catch (error) {
+                        if (error.attachmentUnavailable && options.openAction) {
+                            markAttachmentUnavailable(row, item, error.message);
+                        }
+                        window.showToast?.(error.message, 'error');
+                    } finally {
+                        if (!item.unavailable || !options.openAction) button.disabled = false;
+                    }
                 });
                 actions.appendChild(button);
             };
-            addAction('View', 'fa-eye', () => openEntityAttachment(context.entityType, context.entityId, item, false));
-            addAction('Download', 'fa-download', () => openEntityAttachment(context.entityType, context.entityId, item, true));
+            addAction('View', 'fa-eye', () => openEntityAttachment(context.entityType, context.entityId, item, false), { openAction: true });
+            addAction('Download', 'fa-download', () => openEntityAttachment(context.entityType, context.entityId, item, true), { openAction: true });
             if (item.documentId && context.allowArchive !== false) {
                 addAction(archivedRows ? 'Restore' : 'Archive', archivedRows ? 'fa-undo' : 'fa-archive', async () => {
                     if (!archivedRows && !confirm('Archive this attachment? The stored file will be retained and can be restored.')) return;

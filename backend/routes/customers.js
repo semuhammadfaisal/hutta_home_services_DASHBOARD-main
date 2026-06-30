@@ -9,6 +9,7 @@ const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache'
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
+const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 const router = express.Router();
 
 // Get all customers (paginated)
@@ -143,6 +144,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
+    await saveWithPersistentAttachmentMetadata(customer);
     res.json(customer);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

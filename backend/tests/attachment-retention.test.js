@@ -8,6 +8,7 @@ const Vendor = require('../models/Vendor');
 const Employee = require('../models/Employee');
 const Order = require('../models/Order');
 const { prepareDocumentUpdate } = require('../utils/documents');
+const { ensurePersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 
 const attachment = () => ({
   name: 'important-contract.pdf',
@@ -78,4 +79,25 @@ test('seven distinct attachments remain distinct', () => {
   assert.equal(customer.documents.length, 7);
   assert.equal(new Set(customer.documents.map(document => document.documentId)).size, 7);
   assert.deepEqual(customer.documents.map(document => document.name), ['1.pdf', '2.pdf', '3.pdf', '4.pdf', '5.pdf', '6.pdf', '7.pdf']);
+});
+
+test('default attachment document ids are replaced with stable persisted ids', () => {
+  const document = {
+    documentId: 'temporary-default-id',
+    status: 'active',
+    $isDefault: field => field === 'documentId' || field === 'status'
+  };
+  const entity = {
+    documents: [document],
+    marked: null,
+    markModified(field) {
+      this.marked = field;
+    }
+  };
+
+  assert.equal(ensurePersistentAttachmentMetadata(entity), true);
+  assert.match(document.documentId, /^[0-9a-f-]{36}$/i);
+  assert.notEqual(document.documentId, 'temporary-default-id');
+  assert.equal(document.status, 'active');
+  assert.equal(entity.marked, 'documents');
 });

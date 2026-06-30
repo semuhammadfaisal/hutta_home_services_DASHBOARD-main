@@ -6,6 +6,7 @@ const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
+const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 const router = express.Router();
 
 // Get all employees
@@ -76,6 +77,7 @@ router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
+    await saveWithPersistentAttachmentMetadata(employee);
     res.json(employee);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
