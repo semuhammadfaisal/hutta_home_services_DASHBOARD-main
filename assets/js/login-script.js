@@ -35,9 +35,23 @@ class LoginManager {
 
     async handleLogin(e) {
         e.preventDefault();
-        
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
+
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+
+        if (!emailInput || !passwordInput) {
+            this.showError('The login form could not be loaded. Please refresh the page.');
+            return;
+        }
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+            this.showError('Enter your email address and password.');
+            return;
+        }
+
         this.showLoading(true);
         this.hideError();
         
