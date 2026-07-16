@@ -3,10 +3,14 @@ const router = express.Router();
 const multer = require('multer');
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
+const Order = require('../models/Order');
+const Customer = require('../models/Customer');
+const Vendor = require('../models/Vendor');
+const Employee = require('../models/Employee');
 const MAX_UPLOAD_BYTES = parseInt(process.env.CLOUDINARY_MAX_UPLOAD_BYTES || `${50 * 1024 * 1024}`, 10);
 const MAX_UPLOAD_LABEL = `${Math.round((MAX_UPLOAD_BYTES / 1024 / 1024) * 100) / 100}MB`;
 
-function uploadBufferToGridFs(file) {
+function uploadBufferToGridFs(file, user) {
     return new Promise((resolve, reject) => {
         const bucket = initGridFsBucket();
         if (!bucket) return reject(new Error('File storage is not ready'));
@@ -19,7 +23,9 @@ function uploadBufferToGridFs(file) {
                 originalName: file.originalname,
                 mimetype: file.mimetype,
                 size: file.size,
-                uploadedAt: new Date()
+                uploadedAt: new Date(),
+                uploadedBy: user?.userId,
+                uploadedByEmail: user?.email
             }
         });
 
@@ -40,6 +46,34 @@ function uploadBufferToGridFs(file) {
         // Write buffer and end after handlers attached
         uploadStream.end(file.buffer);
     });
+}
+
+async function authorizeStoredFile(req, res, filename) {
+    const url = `/uploads/${filename}`;
+    const entityPolicies = [
+        { Model: Order, roles: ['admin', 'manager', 'account_rep'] },
+        { Model: Customer, roles: ['admin', 'manager', 'account_rep'] },
+        { Model: Vendor, roles: ['admin', 'manager'] },
+        { Model: Employee, roles: ['admin', 'manager'] }
+    ];
+    for (const policy of entityPolicies) {
+        if (await policy.Model.exists({ 'documents.url': url })) {
+            if (!policy.roles.includes(req.user?.role)) {
+                res.status(403).json({ message: 'Access denied: Insufficient permissions' });
+                return false;
+            }
+            return true;
+        }
+    }
+
+    const bucket = initGridFsBucket();
+    const file = bucket ? (await bucket.find({ filename }).limit(1).toArray())[0] : null;
+    const isUploader = file?.metadata?.uploadedBy && String(file.metadata.uploadedBy) === String(req.user?.userId);
+    if (req.user?.role !== 'admin' && !isUploader) {
+        res.status(403).json({ message: 'Access denied: File is not attached to an authorized record' });
+        return false;
+    }
+    return true;
 }
 
 // Use memory storage for multer since we're storing in GridFS
@@ -108,7 +142,7 @@ router.post('/', handleUploadDocuments, async (req, res) => {
 
         const files = [];
         for (const file of req.files) {
-            files.push(await uploadBufferToGridFs(file));
+            files.push(await uploadBufferToGridFs(file, req.user));
         }
 
         console.log('Files uploaded to GridFS:', files.length);
@@ -128,6 +162,7 @@ router.get('/download/:filename', async (req, res) => {
         }
 
         const filename = req.params.filename;
+        if (!(await authorizeStoredFile(req, res, filename))) return;
         console.log('Download request for:', filename);
 
         const files = await bucket.find({ filename }).toArray();
@@ -169,6 +204,7 @@ router.get('/view/:filename', async (req, res) => {
         }
 
         const filename = req.params.filename;
+        if (!(await authorizeStoredFile(req, res, filename))) return;
         console.log('View request for:', filename);
 
         const files = await bucket.find({ filename }).toArray();
@@ -204,6 +240,7 @@ router.get('/view/:filename', async (req, res) => {
 // List all files in GridFS
 router.get('/list', async (req, res) => {
     try {
+        if (req.user?.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
         const bucket = initGridFsBucket();
         if (!bucket) {
             return res.status(503).json({ message: 'File storage is not ready. Please try again in a moment.' });
@@ -234,6 +271,7 @@ router.get('/:filename', async (req, res) => {
         }
 
         const filename = req.params.filename;
+        if (!(await authorizeStoredFile(req, res, filename))) return;
         console.log('Direct file request for:', filename);
 
         const files = await bucket.find({ filename }).toArray();

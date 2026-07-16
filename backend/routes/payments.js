@@ -187,7 +187,6 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     console.log('Update payment request from user:', req.user);
-    console.log('Request body:', req.body);
     
     const oldPayment = await Payment.findById(req.params.id);
     if (!oldPayment) {

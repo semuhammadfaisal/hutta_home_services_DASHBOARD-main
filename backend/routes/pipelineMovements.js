@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
         fromStageName: req.body.fromStageName,
         toStageId: req.body.toStageId,
         toStageName: req.body.toStageName,
-        movedBy: req.body.movedBy || 'Admin'
+        movedBy: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' ').trim() || req.user?.email || 'Unknown User'
     });
 
     try {

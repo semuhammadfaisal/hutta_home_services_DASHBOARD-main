@@ -1,6 +1,6 @@
 function getUserId(req) {
   const id = req.user?.userId || req.user?.id;
-  return id && id !== 'demo-user' ? id : undefined;
+  return id || undefined;
 }
 
 function getUserName(req) {

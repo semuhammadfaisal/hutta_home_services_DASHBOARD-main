@@ -1,4 +1,10 @@
 // API Service for Hutta Home Services
+window.AuthSession = window.AuthSession || { user: null, csrfToken: null, expiresAt: null };
+window.AuthSession.lastUserActivityAt = Date.now();
+['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
+    window.addEventListener(eventName, () => { window.AuthSession.lastUserActivityAt = Date.now(); }, { capture: true, passive: true });
+});
+
 class APIService {
     /** Normalize list endpoints that return { data, pagination } or a raw array. */
     unwrapListPayload(payload) {
@@ -9,11 +15,12 @@ class APIService {
     }
 
     constructor() {
+        localStorage.removeItem('huttaSession');
+        sessionStorage.removeItem('huttaSession');
         // Use relative API path when on production, localhost for development
         this.baseURL = window.location.hostname === 'localhost' 
             ? 'http://localhost:10000/api'
             : `${window.location.origin}/api`;
-        this.token = this.getToken();
         this.demoMode = false; // Disable demo mode - using real backend
         this.requestCache = new Map();
         this.pendingRequests = new Map();
@@ -22,17 +29,32 @@ class APIService {
     }
 
     getToken() {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (session) {
-            try {
-                const sessionData = JSON.parse(session);
-                return sessionData.token;
-            } catch (error) {
-                console.error('Error parsing session:', error);
-                return null;
-            }
-        }
         return null;
+    }
+
+    setSession(payload) {
+        localStorage.removeItem('huttaSession');
+        sessionStorage.removeItem('huttaSession');
+        window.AuthSession.user = payload?.user || null;
+        window.AuthSession.csrfToken = payload?.csrfToken || null;
+        window.AuthSession.expiresAt = payload?.expiresAt || null;
+        return window.AuthSession;
+    }
+
+    clearSession() {
+        this.setSession(null);
+        localStorage.removeItem('huttaSession');
+        sessionStorage.removeItem('huttaSession');
+        sessionStorage.removeItem('dashboardCache');
+        this.clearCache();
+    }
+
+    handleUnauthorized() {
+        this.clearSession();
+        window.dispatchEvent(new CustomEvent('hutta:session-expired'));
+        if (!window.location.pathname.endsWith('/login.html')) {
+            window.location.replace('/pages/login.html');
+        }
     }
 
     async request(endpoint, options = {}) {
@@ -44,12 +66,13 @@ class APIService {
         
         // Request deduplication - prevent duplicate simultaneous requests
         const cacheKey = `${options.method || 'GET'}:${endpoint}`;
+        const cacheableGet = (!options.method || options.method === 'GET') && !endpoint.startsWith('/auth/');
         if (this.pendingRequests.has(cacheKey)) {
             return this.pendingRequests.get(cacheKey);
         }
         
         // Check cache for GET requests (2 minute TTL)
-        if (!options.method || options.method === 'GET') {
+        if (cacheableGet) {
             const cached = this.requestCache.get(cacheKey);
             if (cached && Date.now() - cached.timestamp < 2 * 60 * 1000) {
                 return cached.data;
@@ -59,9 +82,8 @@ class APIService {
         window.AppLogger?.debug('Making request to:', `${this.baseURL}${endpoint}`);
         
         const url = `${this.baseURL}${endpoint}`;
-        const token = this.getToken();
-        
         const config = {
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
@@ -69,8 +91,12 @@ class APIService {
             ...options
         };
 
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        const method = String(config.method || 'GET').toUpperCase();
+        if (Date.now() - window.AuthSession.lastUserActivityAt < 60 * 1000) {
+            config.headers['X-Session-Activity'] = 'active';
+        }
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && window.AuthSession.csrfToken) {
+            config.headers['X-CSRF-Token'] = window.AuthSession.csrfToken;
         }
 
         const requestPromise = (async () => {
@@ -90,6 +116,7 @@ class APIService {
                 }
                 
                 if (!response.ok) {
+                    if (response.status === 401) this.handleUnauthorized();
                     console.error('API Error Response:', {
                         status: response.status,
                         statusText: response.statusText,
@@ -112,7 +139,7 @@ class APIService {
                 }
                 
                 // Cache successful GET requests
-                if (!options.method || options.method === 'GET') {
+                if (cacheableGet) {
                     this.requestCache.set(cacheKey, { data, timestamp: Date.now() });
                 } else {
                     // Clear cache on mutations
@@ -196,19 +223,29 @@ class APIService {
             body: JSON.stringify({ email, password })
         });
         
-        if (response.token) {
-            this.token = response.token;
-            const sessionData = {
-                token: response.token,
-                user: response.user,
-                loginTime: new Date().toISOString(),
-                isAuthenticated: true
-            };
-            
-            localStorage.setItem('huttaSession', JSON.stringify(sessionData));
-        }
-        
+        this.setSession(response);
         return response;
+    }
+
+    async getSession() {
+        const response = await this.request('/auth/session');
+        this.setSession(response);
+        return response;
+    }
+
+    async logout() {
+        try {
+            await this.request('/auth/logout', { method: 'POST' });
+        } finally {
+            this.clearSession();
+        }
+    }
+
+    async changePassword(currentPassword, newPassword) {
+        return this.request('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
     }
 
     async getOrder(id) {
@@ -241,6 +278,25 @@ class APIService {
         this.requestCache.delete('GET:/orders');
         const raw = await this.request('/orders?limit=5000');
         return this.unwrapListPayload(raw);
+    }
+
+    async getWebsiteIntakes() {
+        this.requestCache.delete('GET:/intakes?limit=500');
+        return this.request('/intakes?limit=500');
+    }
+
+    async resolveWebsiteIntakeReview(intakeId, customerId) {
+        return this.request(`/intakes/${intakeId}/resolve-review`, {
+            method: 'PUT',
+            body: JSON.stringify(customerId ? { customerId } : {})
+        });
+    }
+
+    async retryWebsiteIntakeEmail(intakeId, type) {
+        return this.request(`/intakes/${intakeId}/retry-email`, {
+            method: 'POST',
+            body: JSON.stringify({ type })
+        });
     }
 
     async getPaymentsCollected() {
@@ -654,12 +710,27 @@ class APIService {
     }
 
     // Reports
-    async getAnalyticsReport(filters = {}) {
+    buildReportParams(filters = {}) {
         const params = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {
-            if (value) params.append(key, value);
+            if (value !== undefined && value !== null && value !== '') params.append(key, value);
         });
+        return params;
+    }
+
+    async getAnalyticsReport(filters = {}) {
+        const params = this.buildReportParams(filters);
         return this.request(`/reports/analytics?${params}`);
+    }
+
+    async getReportRecords(filters = {}) {
+        const params = this.buildReportParams(filters);
+        return this.request(`/reports/records?${params}`);
+    }
+
+    getReportExportUrl(format, filters = {}, section = format === 'pdf' ? 'summary' : 'details') {
+        const params = this.buildReportParams({ ...filters, format, section });
+        return `${this.baseURL}/reports/export?${params}`;
     }
 
     async getFinancialReport(startDate, endDate) {
@@ -785,3 +856,6 @@ class APIService {
 
 // Create global instance
 window.APIService = new APIService();
+window.AuthReady = window.location.pathname.includes('admin-dashboard')
+    ? window.APIService.getSession()
+    : Promise.resolve(null);

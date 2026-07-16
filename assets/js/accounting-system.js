@@ -767,6 +767,10 @@ function payContractor(jobId) {
 }
 
 function showOverridePayoutModal(jobId) {
+    if (window.AuthSession?.user?.role !== 'admin') {
+        alert('Administrator access is required.');
+        return;
+    }
     const job = accountingSystem.getJob(jobId);
     document.getElementById('overrideJobId').value = jobId;
     document.getElementById('overrideJobName').textContent = job.jobName;
@@ -776,16 +780,13 @@ function showOverridePayoutModal(jobId) {
 
 function closeOverridePayoutModal() {
     document.getElementById('overridePayoutModal').classList.remove('active');
-    document.getElementById('overrideApprovalCode').value = '';
 }
 
 function confirmOverridePayout() {
     const jobId = document.getElementById('overrideJobId').value;
-    const approvalCode = document.getElementById('overrideApprovalCode').value;
     const adminNotes = document.getElementById('overrideAdminNotes').value;
-    
-    if (!approvalCode || approvalCode.length < 4) {
-        alert('Please enter admin approval code');
+    if (window.AuthSession?.user?.role !== 'admin') {
+        alert('Administrator access is required.');
         return;
     }
     
@@ -793,7 +794,6 @@ function confirmOverridePayout() {
         accountingSystem.updateJob(jobId, { 
             contractorPaidDate: window.TimezoneConfig ? window.TimezoneConfig.todayInputMDT() : new Date().toISOString().split('T')[0],
             overridePayoutApproval: true,
-            overrideApprovalCode: approvalCode,
             overrideAdminNotes: adminNotes,
             overrideDate: new Date().toISOString()
         });

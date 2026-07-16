@@ -276,7 +276,6 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new order
 router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res) => {
   try {
-    console.log('ORDER REQUEST:', JSON.stringify(req.body, null, 2));
     
     // Check if customer exists, if not create one
     let customerId = null;
@@ -403,7 +402,6 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager', 'account_rep'
       // Only create payment if we have a valid customer ID
       if (!customerId) {
         console.error('Cannot create payment: No customer ID available');
-        console.error('Customer data:', req.body.customer);
         return res.status(201).json(order);
       }
       
@@ -467,7 +465,6 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
   try {
     console.log('=== ORDER UPDATE ===');
     console.log('Order ID:', req.params.id);
-    console.log('Update data:', JSON.stringify(req.body, null, 2));
     
     // Get existing order first
     const existingOrder = await Order.findById(req.params.id);
@@ -480,6 +477,9 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     
     // Prepare update data
     const updateData = prepareDocumentUpdate(existingOrder.documents, stripNotesFromUpdate(req.body));
+    if (req.body.amount === undefined || req.body.amount === null || req.body.amount === '') {
+      delete updateData.amount;
+    }
     
     // Convert dates if provided
     if (req.body.startDate !== undefined) {
@@ -499,8 +499,9 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     }
     
     // Convert numbers if provided
-    if (req.body.amount) {
+    if (req.body.amount !== undefined && req.body.amount !== null && req.body.amount !== '') {
       updateData.amount = parseFloat(req.body.amount);
+      updateData.pricingStatus = 'quoted';
       if (existingOrder.amount !== updateData.amount) {
         changes.amount = updateData.amount;
       }
@@ -513,10 +514,17 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager', 'account_re
     }
     
     // Calculate profit: amount - vendorCost - processingFee
-    const amount = updateData.amount || existingOrder.amount;
+    const amount = updateData.amount !== undefined ? updateData.amount : existingOrder.amount;
     const vendorCost = updateData.vendorCost !== undefined ? updateData.vendorCost : existingOrder.vendorCost;
     const processingFee = updateData.processingFee !== undefined ? updateData.processingFee : existingOrder.processingFee;
-    updateData.profit = amount - vendorCost - processingFee;
+    updateData.profit = Number(amount || 0) - vendorCost - processingFee;
+
+    if (req.body.service !== undefined && String(req.body.service || '').trim() && req.body.service !== 'Unclassified Website Request') {
+      updateData['missingData.serviceCategory'] = false;
+    }
+    if (req.body.customer?.address !== undefined && String(req.body.customer.address || '').trim()) {
+      updateData['missingData.serviceAddress'] = false;
+    }
     
     // Track customer changes
     if (req.body.customer) {

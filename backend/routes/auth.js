@@ -1,8 +1,13 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const authenticateToken = require('../middleware/auth');
+const {
+  clearSessionCookie,
+  createSession,
+  revokeSession,
+  revokeUserSessions
+} = require('../utils/authSessions');
 const { sendPasswordResetEmail } = require('../utils/emailService');
 const router = express.Router();
 
@@ -26,14 +31,6 @@ function getUserPayload(user) {
     department: user.department,
     avatar: user.avatar
   };
-}
-
-function signUserToken(user) {
-  return jwt.sign(
-    { userId: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
-  );
 }
 
 async function syncNoteAuthorNames(user, previousEmail) {
@@ -76,71 +73,24 @@ async function syncNoteAuthorNames(user, previousEmail) {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    
-    // For demo: accept any credentials if no users exist
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      // No users in DB, create demo response
-      const token = jwt.sign(
-        { userId: 'demo-user', email: email, role: 'admin', firstName: 'Admin', lastName: 'User' },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      
-      return res.json({
-        token,
-        user: {
-          id: 'demo-user',
-          email: email,
-          firstName: 'Admin',
-          lastName: 'User',
-          role: 'admin'
-        }
-      });
-    }
-    
-    const user = await User.findOne({ email, isActive: true });
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    const user = await User.findOne({ email, isActive: true, role: { $ne: 'pending' } });
     if (!user) {
-      console.log('User not found:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
     const isPasswordValid = await user.comparePassword(password);
-    console.log('Password validation result:', isPasswordValid);
-    
     if (!isPasswordValid) {
-      console.log('Invalid password for user:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = signUserToken(user);
-
-    res.json({
-      token,
-      user: getUserPayload(user)
-    });
+    const session = await createSession(user, res);
+    req.authSession = session;
+    req.authUser = user;
+    res.set('Cache-Control', 'no-store').json(authenticateToken.sessionPayload(req));
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Register (for creating admin users)
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password, firstName, lastName, role } = req.body;
-    
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    const user = new User({ email, password, firstName, lastName, role });
-    await user.save();
-
-    res.status(201).json({ message: 'User created successfully' });
-  } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -148,7 +98,6 @@ router.post('/register', async (req, res) => {
 // Signup (public user registration)
 router.post('/signup', async (req, res) => {
   try {
-    console.log('Signup request received:', req.body);
     const { name, email, password, requestedRole } = req.body;
     
     if (!name || !email || !password || !requestedRole) {
@@ -158,8 +107,12 @@ router.post('/signup', async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ message: 'Password must be at least 8 characters' });
     }
+    if (!['admin', 'manager', 'account_rep'].includes(requestedRole)) {
+      return res.status(400).json({ message: 'Invalid requested role' });
+    }
     
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
     }
@@ -167,19 +120,16 @@ router.post('/signup', async (req, res) => {
     const [firstName, ...lastNameParts] = name.split(' ');
     const lastName = lastNameParts.join(' ') || firstName;
 
-    console.log('Creating user:', { email, firstName, lastName, role: 'pending', requestedRole });
-
-    const user = new User({ 
-      email, 
-      password, 
+    const user = new User({
+      email: normalizedEmail,
+      password,
       firstName, 
       lastName,
       role: 'pending',
-      requestedRole
+      requestedRole,
+      isActive: false
     });
     await user.save();
-
-    console.log('User created successfully:', user._id);
 
     res.status(201).json({ 
       message: 'Account created successfully',
@@ -193,7 +143,7 @@ router.post('/signup', async (req, res) => {
     });
   } catch (error) {
     console.error('Signup error details:', error);
-    res.status(500).json({ message: error.message || 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -208,7 +158,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
 
     const previousEmail = user.email;
-    user.email = String(email || '').trim();
+    user.email = String(email || '').trim().toLowerCase();
     user.firstName = String(firstName || '').trim();
     user.lastName = String(lastName || '').trim();
     user.phone = phone;
@@ -218,8 +168,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 
     await syncNoteAuthorNames(user, previousEmail);
 
-    const token = signUserToken(user);
-    res.json({ message: 'Profile updated successfully', token, user: getUserPayload(user) });
+    res.json({ message: 'Profile updated successfully', user: getUserPayload(user) });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({ message: 'Email already registered' });
@@ -232,7 +181,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 // Forgot password
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
     const user = await User.findOne({ email, isActive: true });
     
     if (!user) {
@@ -259,6 +208,9 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body;
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
     
     const user = await User.findOne({
       resetPasswordToken: token,
@@ -274,11 +226,47 @@ router.post('/reset-password', async (req, res) => {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpiry = undefined;
     await user.save();
+    await revokeUserSessions(user._id);
     
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/session', authenticateToken, (req, res) => {
+  res.set('Cache-Control', 'no-store').json(authenticateToken.sessionPayload(req));
+});
+
+router.post('/logout', authenticateToken, async (req, res, next) => {
+  try {
+    await revokeSession(req.authSession);
+    clearSessionCookie(res);
+    res.set('Cache-Control', 'no-store').status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/change-password', authenticateToken, async (req, res, next) => {
+  try {
+    const currentPassword = String(req.body.currentPassword || '');
+    const newPassword = String(req.body.newPassword || '');
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    }
+    if (!(await req.authUser.comparePassword(currentPassword))) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    req.authUser.password = newPassword;
+    await req.authUser.save();
+    await revokeUserSessions(req.authUser._id);
+    clearSessionCookie(res);
+    res.json({ message: 'Password changed. Please sign in again.' });
+  } catch (error) {
+    next(error);
   }
 });
 

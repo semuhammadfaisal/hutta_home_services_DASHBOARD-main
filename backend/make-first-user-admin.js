@@ -26,8 +26,10 @@ async function makeFirstUserAdmin() {
       console.log(`   Created: ${user.createdAt.toLocaleDateString()}\n`);
     });
     
-    // Get first user
-    const firstUser = users[0];
+    const bootstrapEmail = String(process.env.BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
+    if (!bootstrapEmail) throw new Error('BOOTSTRAP_ADMIN_EMAIL is required');
+    const firstUser = users.find(user => user.email === bootstrapEmail);
+    if (!firstUser) throw new Error('Configured bootstrap user was not found');
     
     if (firstUser.role === 'admin') {
       console.log(` First user (${firstUser.email}) is already an admin!\n`);
@@ -35,6 +37,7 @@ async function makeFirstUserAdmin() {
       console.log(` Making first user (${firstUser.email}) an admin...\n`);
       
       firstUser.role = 'admin';
+      firstUser.isActive = true;
       await firstUser.save();
       
       console.log(` SUCCESS! ${firstUser.email} is now an admin!\n`);

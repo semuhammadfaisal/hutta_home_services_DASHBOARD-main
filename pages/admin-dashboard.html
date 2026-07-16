@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Hutta Home Services</title>
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -30,6 +31,14 @@
     <link rel="stylesheet" href="../assets/css/payment-detail.css">
     <link rel="stylesheet" href="../assets/css/security-utils.css">
     <link rel="stylesheet" href="../assets/css/premium-saas-overhaul.css">
+    <link rel="stylesheet" href="../assets/css/vendor-onboarding-admin.css">
+    <link rel="stylesheet" href="../assets/css/vendor-email-delivery.css">
+    <link rel="stylesheet" href="../assets/css/vendor-reviews.css">
+    <link rel="stylesheet" href="../assets/css/vendor-reviews-polish.css">
+    <link rel="stylesheet" href="../assets/css/vendor-modal-onboarding-polish.css">
+    <link rel="stylesheet" href="../assets/css/vendor-review-detail-polish.css">
+    <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css">
+    <link rel="stylesheet" href="../assets/css/workflow-center.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -110,6 +119,14 @@
                     <span>Recurring Calendar</span>
                 </a>
             </li>
+            <li class="sidebar-section-label" aria-hidden="true">Workflow Center</li>
+            <li class="menu-item">
+                <a href="#workflow-center" data-section="workflow-center">
+                    <i class="fas fa-inbox"></i>
+                    <span>Request Received</span>
+                    <span class="workflow-nav-badge" id="workflowNavBadge" hidden>0</span>
+                </a>
+            </li>
             <li class="sidebar-section-label" aria-hidden="true">Operations</li>
             <li class="menu-item">
                 <a href="#orders" data-section="orders">
@@ -133,6 +150,13 @@
                 <a href="#vendors" data-section="vendors">
                     <i class="fas fa-handshake"></i>
                     <span>Vendors</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#vendor-reviews" data-section="vendor-reviews">
+                    <i class="fas fa-user-check"></i>
+                    <span>Vendor Reviews</span>
+                    <span class="vendor-review-nav-badge" id="vendorReviewNavBadge" hidden>0</span>
                 </a>
             </li>
             <li class="sidebar-section-label" aria-hidden="true">Finance</li>
@@ -186,6 +210,7 @@
                     <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
+
             <h2 id="commandPaletteTitle" class="visually-hidden">Search dashboard</h2>
             <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Search results"></div>
         </div>
@@ -812,6 +837,27 @@
             </div>
         </section>
 
+        <section id="workflow-center" class="content-section workflow-center-section">
+            <div class="page-header workflow-header">
+                <div>
+                    <p class="workflow-eyebrow">Stage 1 · Workflow Center</p>
+                    <h1>Request Received</h1>
+                    <p>Website requests awaiting intake review and missing job information.</p>
+                </div>
+                <button type="button" class="btn-secondary" onclick="loadWorkflowCenter()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="workflow-summary" aria-label="Website request summary">
+                <div><strong id="workflowTotalCount">0</strong><span>Total requests</span></div>
+                <div><strong id="workflowReviewCount">0</strong><span>Need review</span></div>
+                <div><strong id="workflowEmailIssueCount">0</strong><span>Email issues</span></div>
+            </div>
+            <div id="workflowRequestList" class="workflow-request-list" aria-live="polite">
+                <div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading website requests…</p></div>
+            </div>
+        </section>
+
         <!-- Orders Section -->
         <section id="orders" class="content-section">
             <div class="page-header">
@@ -971,10 +1017,19 @@
             <div class="detail-container order-detail-layout">
                 <div class="detail-info-card order-summary-card">
                     <h3><i class="fas fa-clipboard-list"></i> Order Information</h3>
+                    <div id="detailOrderIntakeBanner" class="order-intake-banner" hidden></div>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Order ID:</span>
                             <span id="detailOrderId">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="display-label">Request Reference:</span>
+                            <span id="detailOrderRequestReference">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="display-label">Source:</span>
+                            <span id="detailOrderSource">-</span>
                         </div>
                         <div class="info-item">
                             <span class="display-label">Pipeline Stage:</span>
@@ -1251,7 +1306,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- Vendors Toolbar -->
             <div class="vendors-toolbar">
                 <div class="vendors-search-filter">
@@ -1319,6 +1374,97 @@
             </div>
         </section>
 
+        <section id="vendor-reviews" class="content-section vendor-reviews-workspace">
+            <div class="page-header vendor-review-hero">
+                <div class="vendor-review-hero-copy">
+                    <div>
+                        <h1>Vendor Reviews</h1>
+                        <p class="vendor-review-lead">Review submitted applications, verify compliance, and activate trusted vendors.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary vendor-review-refresh" onclick="loadVendorReviews(true); refreshVendorInvitations(); refreshVendorEmailStatus()"><i class="fas fa-sync-alt"></i> Refresh all</button>
+            </div>
+            <div class="vendor-review-stats" aria-label="Vendor review totals">
+                <button type="button" data-review-status-card="pending_review" onclick="setVendorReviewStatus('pending_review')"><span class="vendor-review-stat-icon pending"><i class="fas fa-clock"></i></span><span class="vendor-review-stat-copy"><strong id="vendorReviewsPendingCount">0</strong><span>Pending Review</span><small>Ready for a decision</small></span><i class="fas fa-chevron-right vendor-review-stat-arrow"></i></button>
+                <button type="button" data-review-status-card="changes_requested" onclick="setVendorReviewStatus('changes_requested')"><span class="vendor-review-stat-icon changes"><i class="fas fa-pen"></i></span><span class="vendor-review-stat-copy"><strong id="vendorReviewsChangesCount">0</strong><span>Changes Requested</span><small>Waiting on vendors</small></span><i class="fas fa-chevron-right vendor-review-stat-arrow"></i></button>
+                <button type="button" data-review-status-card="rejected" onclick="setVendorReviewStatus('rejected')"><span class="vendor-review-stat-icon rejected"><i class="fas fa-archive"></i></span><span class="vendor-review-stat-copy"><strong id="vendorReviewsRejectedCount">0</strong><span>Rejected Archive</span><small>Retained permanently</small></span><i class="fas fa-chevron-right vendor-review-stat-arrow"></i></button>
+            </div>
+            <section class="vendor-review-queue-panel" aria-labelledby="vendorReviewQueueTitle">
+                <div class="vendor-review-section-head"><div><h2 id="vendorReviewQueueTitle">Submitted applications</h2><p>Open an application to inspect details and documents before making a decision.</p></div><span class="vendor-review-secure-note"><i class="fas fa-lock"></i> Read-only review</span></div>
+            <div class="vendor-review-toolbar">
+                <label class="vendor-review-search"><i class="fas fa-search"></i><input id="vendorReviewSearch" type="search" placeholder="Search company, email, or category" autocomplete="off"></label>
+                <label class="vendor-review-filter-label"><span>Status</span><select id="vendorReviewStatusFilter" class="filter-select" autocomplete="off"><option value="pending_review">Pending Review</option><option value="changes_requested">Changes Requested</option><option value="rejected">Rejected Archive</option><option value="all">All Reviews</option></select></label>
+            </div>
+            <div class="vendor-review-table-wrap">
+                <table class="vendor-review-table">
+                    <caption class="visually-hidden">Vendor applications awaiting review or retained in review history</caption>
+                    <thead><tr><th>Company</th><th>Email</th><th>Category</th><th>Requested Category</th><th>Submitted</th><th>Missing Docs</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="vendorReviewsTableBody" aria-live="polite"><tr><td colspan="8" class="table-muted">Loading vendor reviews...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="vendor-review-pagination">
+                <button type="button" id="vendorReviewPrevious" class="btn-secondary" onclick="changeVendorReviewPage(-1)">Previous</button>
+                <span id="vendorReviewPageLabel">Page 1 of 1</span>
+                <button type="button" id="vendorReviewNext" class="btn-secondary" onclick="changeVendorReviewPage(1)">Next</button>
+            </div>
+            </section>
+            <section class="vendor-onboarding-panel vendor-review-invitations" id="vendorInvitationsPanel" aria-labelledby="vendorInvitationsTitle">
+                <div class="vendor-onboarding-panel-head">
+                    <div class="vendor-review-section-title"><div><h2 id="vendorInvitationsTitle">Vendor Invitations</h2><p>Manage secure form links, delivery status, expiry, and follow-up actions.</p></div></div>
+                    <div class="vendor-invitation-head-actions">
+                        <div class="vendor-clear-dropdown">
+                            <button type="button" class="btn-secondary" id="vendorClearMenuButton" onclick="toggleVendorClearMenu(event)" aria-haspopup="true" aria-expanded="false" aria-controls="vendorClearMenu"><i class="fas fa-broom"></i> Clear <i class="fas fa-chevron-down"></i></button>
+                            <div class="vendor-clear-menu" id="vendorClearMenu" role="menu" hidden>
+                                <button type="button" role="menuitem" onclick="clearVendorInvitations('current')"><strong>Current filter</strong><span>Revoke invitations matching current filters</span></button>
+                                <button type="button" role="menuitem" onclick="clearVendorInvitations('active')"><strong>Active invitations</strong><span>Revoke sent, failed, and processing links</span></button>
+                                <button type="button" role="menuitem" onclick="clearVendorInvitations('delivery_failed')"><strong>Delivery failed</strong><span>Revoke failed email invitations</span></button>
+                                <button type="button" role="menuitem" onclick="clearVendorInvitations('expired')"><strong>Expired invitations</strong><span>Revoke links past their expiry date</span></button>
+                                <button type="button" role="menuitem" onclick="clearVendorInvitations('all')"><strong>All invitations</strong><span>Remove every invitation from this list</span></button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-secondary" onclick="refreshVendorInvitations(); refreshVendorEmailStatus()"><i class="fas fa-sync-alt"></i> Refresh invitations</button>
+                    </div>
+                </div>
+                <div id="vendorEmailDeliveryWarning" class="vendor-email-delivery-warning" role="status" aria-live="polite" hidden></div>
+                <div class="vendor-review-toolbar vendor-invitation-toolbar">
+                    <label class="vendor-review-search"><i class="fas fa-search"></i><input id="vendorInvitationSearch" type="search" placeholder="Search email, company, category, or update email" autocomplete="off"></label>
+                    <label class="vendor-review-filter-label"><span>Status</span><select id="vendorInvitationStatusFilter" class="filter-select" autocomplete="off"><option value="all">All Invitations</option><option value="sent">Sent</option><option value="delivery_failed">Delivery Failed</option><option value="submitted">Submitted</option><option value="expired">Expired</option><option value="revoked">Revoked</option><option value="processing">Processing</option></select></label>
+                </div>
+                <div class="vendor-invitations-table-wrap">
+                    <table class="vendor-invitations-table">
+                        <caption class="visually-hidden">Secure vendor onboarding invitations and delivery status</caption>
+                        <thead><tr><th>Vendor</th><th>Email</th><th>Update Email</th><th>Category</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
+                        <tbody id="vendorInvitationsTableBody" aria-live="polite"><tr><td colspan="7" class="table-muted">Loading invitations...</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="vendor-review-pagination vendor-invitation-pagination">
+                    <button type="button" id="vendorInvitationPrevious" class="btn-secondary" onclick="changeVendorInvitationPage(-1)">Previous</button>
+                    <span id="vendorInvitationPageLabel">Page 1 of 1</span>
+                    <button type="button" id="vendorInvitationNext" class="btn-secondary" onclick="changeVendorInvitationPage(1)">Next</button>
+                </div>
+            </section>
+        </section>
+
+        <section id="vendor-review-detail" class="content-section vendor-review-detail-workspace">
+            <header class="vendor-review-detail-header">
+                <div class="vendor-review-detail-heading">
+                    <button type="button" class="btn-secondary vendor-review-back" onclick="backToVendorReviews()"><i class="fas fa-arrow-left"></i> Back to Reviews</button>
+                    <div class="vendor-review-title-row"><div><p class="vendor-review-eyebrow">Read-only Application</p><h1 id="vendorReviewDetailTitle">Vendor Application</h1><div id="vendorReviewDetailMeta" class="vendor-review-detail-meta"></div></div></div>
+                </div>
+                <div id="vendorReviewDetailActions" class="vendor-review-detail-actions"></div>
+            </header>
+            <div id="vendorReviewDetailAlert" class="vendor-review-detail-alert" hidden></div>
+            <div id="vendorReviewDetailContent" class="vendor-review-detail-content"><p class="table-muted">Choose an application to review.</p></div>
+        </section>
+
+        <div class="vendor-decision-overlay" id="vendorReviewDecisionModal" hidden>
+            <form class="vendor-decision-dialog" id="vendorReviewDecisionForm" role="dialog" aria-modal="true" aria-labelledby="vendorDecisionTitle" aria-describedby="vendorDecisionDescription">
+                <div class="vendor-decision-header"><span class="vendor-decision-icon" id="vendorDecisionIcon"><i class="fas fa-check"></i></span><div><p class="vendor-review-eyebrow">Review Decision</p><h2 id="vendorDecisionTitle">Approve Vendor</h2></div><button type="button" class="vendor-decision-close" onclick="closeVendorReviewDecision()" aria-label="Close decision dialog"><i class="fas fa-times"></i></button></div>
+                <div class="vendor-decision-body"><p id="vendorDecisionDescription">Confirm this vendor application decision.</p><div class="vendor-decision-summary"><span>Application</span><strong id="vendorDecisionVendorName">Vendor</strong></div><label id="vendorDecisionMessageField" class="vendor-decision-message" hidden><span id="vendorDecisionMessageLabel">Message</span><textarea id="vendorDecisionMessage" maxlength="2000" rows="5" placeholder="Enter a clear reason or instructions for the vendor"></textarea><small><span id="vendorDecisionMessageCount">0</span> / 2000</small></label><div class="vendor-decision-impact" id="vendorDecisionImpact"></div><div class="vendor-decision-error" id="vendorDecisionError" role="alert" hidden></div></div>
+                <div class="vendor-decision-footer"><button type="button" class="btn-secondary" onclick="closeVendorReviewDecision()">Cancel</button><button type="submit" class="vendor-decision-confirm" id="vendorDecisionConfirm"><i class="fas fa-check"></i><span>Approve &amp; Add Vendor</span></button></div>
+            </form>
+        </div>
+
         <!-- Vendor Detail Section -->
         <section id="vendor-detail" class="content-section">
             <div class="page-header vendor-detail-header">
@@ -1340,6 +1486,8 @@
                     </button>
                 </div>
             </div>
+
+            <div id="vendorOnboardingReviewBanner" class="vendor-review-banner" hidden></div>
             
             <div class="detail-container">
                 <div class="detail-info-card">
@@ -1611,7 +1759,7 @@
                             </div>
                         </div>
                         <div class="pipeline-toolbar-buttons">
-                            <button type="button" class="pipeline-btn-clear" onclick="clearPipelineData()" title="Remove all pipeline records and stages">
+                            <button type="button" class="pipeline-btn-clear" data-rbac-role="admin" onclick="clearPipelineData()" title="Remove all pipeline records and stages">
                                 <i class="fas fa-eraser" aria-hidden="true"></i>
                                 <span>Clear data</span>
                             </button>
@@ -2306,22 +2454,43 @@
                 <div>
                     <span class="reports-eyebrow">Live reporting center</span>
                     <h1>Reports & Analytics</h1>
-                    <p>Real-time revenue, work order, pipeline, maintenance, and payment performance from your CRM data.</p>
+                    <p>Performance insights calculated from orders, payments, customers, assigned employees, vendors, pipeline, and recurring services.</p>
+                </div>
+                <div class="reports-header-actions">
+                    <div class="report-update-meta"><span class="report-updated-at" id="reportUpdatedAt">Not updated yet</span><span id="reportAppliedRange">Last 30 Days</span></div>
+                    <button class="btn-secondary" id="reportDefinitionsButton" type="button" onclick="toggleReportDefinitions()" aria-expanded="false" aria-controls="reportDefinitionsPanel"><i class="fas fa-circle-info"></i> Calculations</button>
+                    <button class="btn-secondary" id="reportRefreshButton" onclick="refreshReports()" type="button"><i class="fas fa-rotate"></i> Refresh reports</button>
+                    <div class="report-export-menu">
+                        <button class="btn-secondary" id="reportExportButton" type="button" onclick="toggleReportExportMenu(event)" aria-haspopup="menu" aria-controls="reportExportMenu" aria-expanded="false"><i class="fas fa-download"></i> Export <i class="fas fa-chevron-down"></i></button>
+                        <div class="report-export-options" id="reportExportMenu" role="menu" hidden>
+                            <button type="button" role="menuitem" onclick="exportReports('csv')"><i class="fas fa-file-csv"></i><span><strong>Export CSV</strong><small>Detailed report records</small></span></button>
+                            <button type="button" role="menuitem" onclick="exportReports('pdf')"><i class="fas fa-file-pdf"></i><span><strong>Download PDF</strong><small>Executive summary</small></span></button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="reports-filter-bar">
-                <div class="report-search">
-                    <i class="fas fa-search"></i>
-                    <input id="reportSearchInput" type="search" placeholder="Search reports, KPIs, customers..." oninput="filterReports()" aria-label="Search reports" autocomplete="off">
+                <div class="report-filter-topline">
+                    <div class="report-date-presets" id="reportDatePresets" role="group" aria-label="Report date presets">
+                        <button type="button" data-preset="today" aria-pressed="false">Today</button>
+                        <button type="button" data-preset="week" aria-pressed="false">This Week</button>
+                        <button type="button" data-preset="month" aria-pressed="false">This Month</button>
+                        <button type="button" data-preset="last-month" aria-pressed="false">Last Month</button>
+                        <button type="button" data-preset="quarter" aria-pressed="false">This Quarter</button>
+                        <button type="button" data-preset="ytd" aria-pressed="false">Year to Date</button>
+                        <button type="button" data-preset="last-30" class="active" aria-pressed="true">Last 30 Days</button>
+                        <button type="button" data-preset="custom" aria-pressed="false">Custom</button>
+                    </div>
+                    <button type="button" class="report-more-filters" id="reportAdvancedToggle" onclick="toggleReportAdvancedFilters()" aria-expanded="false" aria-controls="reportAdvancedFilters"><i class="fas fa-sliders"></i> More filters <span id="reportAdvancedCount" hidden>0</span></button>
                 </div>
-                <div class="report-filter-grid">
+                <div class="report-filter-grid report-primary-filters">
                     <label>
-                        <span>Start</span>
+                        <span>Start date</span>
                         <input type="date" id="reportStartDate" autocomplete="off">
                     </label>
                     <label>
-                        <span>End</span>
+                        <span>End date</span>
                         <input type="date" id="reportEndDate" autocomplete="off">
                     </label>
                     <label>
@@ -2329,32 +2498,71 @@
                         <select id="reportCustomerFilter" autocomplete="off"><option value="">All customers</option></select>
                     </label>
                     <label>
-                        <span>Technician</span>
-                        <select id="reportTechnicianFilter" autocomplete="off"><option value="">All technicians</option></select>
+                        <span>Assigned employee</span>
+                        <select id="reportEmployeeFilter" autocomplete="off"><option value="">All assigned employees</option></select>
                     </label>
                     <label>
                         <span>Service</span>
                         <select id="reportServiceFilter" autocomplete="off"><option value="">All services</option></select>
                     </label>
+                </div>
+                <div class="report-filter-grid report-advanced-filters" id="reportAdvancedFilters" hidden>
                     <label>
-                        <span>Status</span>
-                        <select id="reportStatusFilter" autocomplete="off"><option value="">All statuses</option></select>
+                        <span>Vendor</span>
+                        <select id="reportVendorFilter" autocomplete="off"><option value="">All vendors</option></select>
                     </label>
                     <label>
-                        <span>Location</span>
-                        <select id="reportLocationFilter" autocomplete="off"><option value="">All locations</option></select>
+                        <span>Order status</span>
+                        <select id="reportOrderStatusFilter" autocomplete="off"><option value="">All order statuses</option></select>
+                    </label>
+                    <label>
+                        <span>Payment status</span>
+                        <select id="reportPaymentStatusFilter" autocomplete="off"><option value="">All payment statuses</option></select>
+                    </label>
+                    <label>
+                        <span>Pipeline stage</span>
+                        <select id="reportPipelineStageFilter" autocomplete="off"><option value="">All pipeline stages</option></select>
+                    </label>
+                    <label>
+                        <span>City</span>
+                        <select id="reportCityFilter" autocomplete="off"><option value="">All cities</option></select>
+                    </label>
+                    <label>
+                        <span>State</span>
+                        <select id="reportStateFilter" autocomplete="off"><option value="">All states</option></select>
+                    </label>
+                    <label>
+                        <span>ZIP</span>
+                        <select id="reportZipFilter" autocomplete="off"><option value="">All ZIP codes</option></select>
                     </label>
                 </div>
+                <div class="report-active-filters" id="reportActiveFilters" aria-live="polite"></div>
                 <div class="report-filter-actions">
-                    <button class="btn-primary" onclick="generateReports()" type="button"><i class="fas fa-sync-alt"></i> Sync</button>
+                    <span class="report-filter-dirty" id="reportFilterDirty" hidden><i class="fas fa-circle"></i> Filters changed — apply to update reports</span>
+                    <button class="btn-secondary" onclick="resetReportFilters()" type="button">Reset</button>
+                    <button class="btn-primary" id="reportApplyButton" onclick="applyReportFilters()" type="button"><i class="fas fa-filter"></i> Apply filters <span id="reportDirtyCount" hidden>0</span></button>
                 </div>
             </div>
 
             <div id="reportsSkeleton" class="reports-skeleton" aria-hidden="true"></div>
-
-            <div id="reportsDashboard" class="reports-dashboard">
-                <div id="reportsTabContent" class="reports-tab-content"></div>
+            <div id="reportsStatus" class="reports-status" role="status" aria-live="polite">
+                <i class="fas fa-chart-line"></i>
+                <div><strong>Reports are ready to load</strong><span>Open this section or refresh reports to retrieve live analytics.</span></div>
             </div>
+            <div id="reportsDashboard" class="reports-dashboard" hidden>
+                <div class="reports-tabs" id="reportsTabs" role="tablist" aria-label="Report categories">
+                    <button id="reportTabOverview" type="button" role="tab" data-report-tab="overview" aria-controls="reportsTabContent" aria-selected="true" tabindex="0" class="active">Overview</button>
+                    <button id="reportTabFinancial" type="button" role="tab" data-report-tab="financial" aria-controls="reportsTabContent" aria-selected="false" tabindex="-1">Financial</button>
+                    <button id="reportTabOperations" type="button" role="tab" data-report-tab="operations" aria-controls="reportsTabContent" aria-selected="false" tabindex="-1">Operations</button>
+                    <button id="reportTabRelationships" type="button" role="tab" data-report-tab="relationships" aria-controls="reportsTabContent" aria-selected="false" tabindex="-1">Customers &amp; Team</button>
+                    <button id="reportTabPipeline" type="button" role="tab" data-report-tab="pipeline" aria-controls="reportsTabContent" aria-selected="false" tabindex="-1">Pipeline</button>
+                    <button id="reportTabDetails" type="button" role="tab" data-report-tab="details" aria-controls="reportsTabContent" aria-selected="false" tabindex="-1">Detailed Records</button>
+                </div>
+                <div id="reportDefinitionsPanel" class="report-definitions-panel" role="region" aria-labelledby="reportDefinitionsButton" hidden></div>
+                <div id="reportDataQuality" class="report-data-quality" hidden></div>
+                <div id="reportsTabContent" class="reports-tab-content" role="tabpanel" aria-labelledby="reportTabOverview" tabindex="0"></div>
+            </div>
+            <noscript><div class="reports-status error"><strong>JavaScript is required to load Reports & Analytics.</strong></div></noscript>
         </section>
 
         <!-- Users Section (Admin Only) -->
@@ -3076,17 +3284,44 @@
     </div>
 
     <!-- Vendor Modal -->
-    <div class="modal-overlay" id="vendorModal">
+    <div class="modal-overlay" id="vendorModal" data-vendor-mode="manual">
         <div class="modal-content vendor-modal">
-            <div class="modal-header">
-                <h2 id="vendorModalTitle">Add New Vendor</h2>
-                <button class="modal-close" onclick="closeVendorModal()">
+            <div class="modal-header vendor-modal-header">
+                <div class="vendor-modal-heading">
+                    <span class="vendor-modal-heading-icon" id="vendorModalHeadingIcon" aria-hidden="true"><i class="fas fa-user-plus"></i></span>
+                    <div><span class="vendor-modal-eyebrow" id="vendorModalEyebrow">Vendor Management</span><h2 id="vendorModalTitle">Add New Vendor</h2><p id="vendorModalSubtitle">Create a complete vendor profile directly in the dashboard.</p></div>
+                </div>
+                <button type="button" class="modal-close" onclick="closeVendorModal()" aria-label="Close vendor form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
             <div class="modal-body">
-                <form id="vendorForm">
+                <div id="vendorEntryModeSwitch" class="vendor-entry-mode-switch" role="tablist" aria-label="Choose how to add a vendor">
+                    <button type="button" class="active" role="tab" aria-selected="true" aria-controls="vendorForm" data-vendor-mode="manual" onclick="setVendorEntryMode('manual')"><span class="vendor-mode-icon"><i class="fas fa-keyboard"></i></span><span><strong>Enter Manually</strong><small>Create the vendor profile yourself</small></span><i class="fas fa-check vendor-mode-check"></i></button>
+                    <button type="button" role="tab" aria-selected="false" aria-controls="vendorInviteForm" data-vendor-mode="invite" onclick="setVendorEntryMode('invite')"><span class="vendor-mode-icon"><i class="fas fa-paper-plane"></i></span><span><strong>Email Vendor Form</strong><small>Send a secure self-service form</small></span><i class="fas fa-check vendor-mode-check"></i></button>
+                </div>
+                <form id="vendorInviteForm" class="vendor-invite-form" role="tabpanel" hidden>
+                    <div class="vendor-invite-layout">
+                        <div class="vendor-invite-card">
+                            <div class="vendor-invite-fields">
+                                <div class="form-group vendor-invite-field full"><label for="vendorInviteEmail">Vendor Email <span class="required-mark">Required</span></label><div class="vendor-input-with-icon"><i class="fas fa-envelope"></i><input type="email" id="vendorInviteEmail" required autocomplete="email" placeholder="vendor@company.com"></div><small>The secure form and confirmations will be sent here.</small></div>
+                                <div class="form-group vendor-invite-field full"><label for="vendorInviteUpdateEmail">Your Email for Updates <span class="optional-mark">Optional</span></label><div class="vendor-input-with-icon"><i class="fas fa-bell"></i><input type="email" id="vendorInviteUpdateEmail" autocomplete="email" placeholder="you@company.com"></div><small>We’ll send vendor onboarding updates to this email.</small></div>
+                                <div class="form-group vendor-invite-field"><label for="vendorInviteCompanyName">Company Name <span class="optional-mark">Optional</span></label><div class="vendor-input-with-icon"><i class="fas fa-building"></i><input type="text" id="vendorInviteCompanyName" maxlength="160" autocomplete="organization" placeholder="Company or vendor name"></div></div>
+                                <div class="form-group vendor-invite-field"><label for="vendorInviteCategory">Assigned Category <span class="required-mark">Required</span></label><div class="vendor-input-with-icon"><i class="fas fa-tags"></i><select id="vendorInviteCategory" required><option value="">Select Category</option><option value="electrical">Electrical</option><option value="plumbing">Plumbing</option><option value="civil">Civil</option><option value="carpentry">Carpentry</option><option value="hvac">HVAC</option><option value="painting">Painting</option><option value="cleaning">Cleaning</option></select></div><small>The vendor can request a different category for review.</small></div>
+                                <div class="form-group vendor-invite-field full"><div class="vendor-field-label-row"><label for="vendorInviteMessage">Personal Message <span class="optional-mark">Optional</span></label><span id="vendorInviteMessageCount">0 / 1000</span></div><textarea id="vendorInviteMessage" maxlength="1000" rows="4" placeholder="Add a welcome note or instructions for the vendor..."></textarea></div>
+                            </div>
+                            <div id="vendorInviteResult" class="vendor-invite-result" role="status" aria-live="polite" hidden></div>
+                        </div>
+                        <aside class="vendor-invite-summary" aria-label="Invitation workflow">
+                            <span class="vendor-invite-summary-icon"><i class="fas fa-route"></i></span><h3>What happens next?</h3>
+                            <ol><li><span>1</span><div><strong>Secure email sent</strong><small>The link expires after seven days.</small></div></li><li><span>2</span><div><strong>Vendor completes form</strong><small>Business details and documents are submitted securely.</small></div></li><li><span>3</span><div><strong>Your team reviews</strong><small>Approve, request changes, or reject from Vendor Reviews.</small></div></li></ol>
+                            <div class="vendor-invite-security"><i class="fas fa-lock"></i><span><strong>Protected onboarding</strong><small>One-time token · permanent document retention</small></span></div>
+                        </aside>
+                    </div>
+                </form>
+                <form id="vendorForm" role="tabpanel">
+                    <div class="vendor-manual-intro" id="vendorManualIntro"><span><i class="fas fa-pen-to-square"></i></span><div><strong>Create vendor manually</strong><p>Enter the information you already have. Required fields are marked with an asterisk.</p></div></div>
                     <div class="form-section vendor-core-section">
                         <h3><i class="fas fa-address-card"></i> Vendor Information</h3>
                         <div class="form-group full-width">
@@ -3307,9 +3542,9 @@
                 </form>
             </div>
             
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeVendorModal()">Cancel</button>
-                <button type="button" class="btn-primary" onclick="saveVendor()">Save Vendor</button>
+            <div class="modal-footer vendor-modal-footer">
+                <div class="vendor-modal-footer-hint" id="vendorModalFooterHint"><i class="fas fa-circle-info"></i><span>Vendor details can be updated later.</span></div>
+                <div class="vendor-modal-footer-actions"><button type="button" class="btn-secondary" onclick="closeVendorModal()">Cancel</button><button type="button" class="btn-primary" id="vendorManualSaveButton" onclick="saveVendor()"><i class="fas fa-check"></i> Save Vendor</button><button type="button" class="btn-primary" id="vendorInviteSendButton" onclick="sendVendorInvitation()" hidden><i class="fas fa-paper-plane"></i> Send Secure Form</button></div>
             </div>
         </div>
     </div>
@@ -3791,10 +4026,6 @@
                     <div id="overrideAmount" style="font-size: 1.5rem; font-weight: bold; color: #f44336; margin-bottom: 20px;">$0.00</div>
                 </div>
                 <div class="form-group">
-                    <label for="overrideApprovalCode">Admin Approval Code *</label>
-                    <input type="password" id="overrideApprovalCode" placeholder="Enter admin code" required autocomplete="current-password">
-                </div>
-                <div class="form-group">
                     <label for="overrideAdminNotes">Admin Notes</label>
                     <textarea id="overrideAdminNotes" rows="3" placeholder="Reason for override..." autocomplete="off"></textarea>
                 </div>
@@ -3811,64 +4042,101 @@
     </div>
 
     <!-- Add User Modal -->
-    <div class="modal-overlay" id="addUserModal">
-        <div class="modal-content user-modal">
-            <div class="modal-header">
-                <h2><i class="fas fa-user-plus"></i> Add New User</h2>
-                <button class="modal-close" onclick="closeAddUserModal()">
+    <div class="modal-overlay" id="addUserModal" aria-hidden="true">
+        <div class="modal-content user-modal user-create-modal" role="dialog" aria-modal="true" aria-labelledby="addUserModalTitle" aria-describedby="addUserModalDescription">
+            <div class="modal-header user-create-header">
+                <div class="user-create-heading">
+                    <span class="user-create-heading-icon" aria-hidden="true">
+                        <i class="fas fa-user-plus"></i>
+                    </span>
+                    <div>
+                        <span class="user-create-eyebrow">Team access</span>
+                        <h2 id="addUserModalTitle">Add New User</h2>
+                        <p id="addUserModalDescription">Create a dashboard account and choose the right access level.</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close user-create-close" onclick="closeAddUserModal()" aria-label="Close add user form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <div class="modal-body">
-                <form id="addUserForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="newUserFirstName">First Name *</label>
-                            <input type="text" id="newUserFirstName" required autocomplete="given-name">
+            <div class="modal-body user-create-body">
+                <form id="addUserForm" class="user-create-form">
+                    <div class="user-create-grid">
+                        <div class="user-create-field">
+                            <label for="newUserFirstName">First name <span aria-hidden="true">*</span></label>
+                            <div class="user-create-input">
+                                <i class="far fa-user" aria-hidden="true"></i>
+                                <input type="text" id="newUserFirstName" placeholder="Enter first name" required autocomplete="given-name">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="newUserLastName">Last Name *</label>
-                            <input type="text" id="newUserLastName" required autocomplete="family-name">
+                        <div class="user-create-field">
+                            <label for="newUserLastName">Last name <span aria-hidden="true">*</span></label>
+                            <div class="user-create-input">
+                                <i class="far fa-user" aria-hidden="true"></i>
+                                <input type="text" id="newUserLastName" placeholder="Enter last name" required autocomplete="family-name">
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="newUserEmail">Email *</label>
-                        <input type="email" id="newUserEmail" required autocomplete="email">
+                    <div class="user-create-field">
+                        <label for="newUserEmail">Email address <span aria-hidden="true">*</span></label>
+                        <div class="user-create-input">
+                            <i class="far fa-envelope" aria-hidden="true"></i>
+                            <input type="email" id="newUserEmail" placeholder="name@company.com" required autocomplete="email">
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="newUserPassword">Password *</label>
-                        <input type="password" id="newUserPassword" required minlength="8" autocomplete="current-password">
-                        <small style="color: #6b7280; font-size: 12px;">Minimum 8 characters</small>
+                    <div class="user-create-field">
+                        <label for="newUserPassword">Temporary password <span aria-hidden="true">*</span></label>
+                        <div class="user-create-input user-create-password">
+                            <i class="fas fa-lock" aria-hidden="true"></i>
+                            <input type="password" id="newUserPassword" placeholder="Create a secure password" required minlength="8" autocomplete="new-password">
+                            <button type="button" id="newUserPasswordToggle" class="user-create-password-toggle" onclick="toggleNewUserPassword()" aria-label="Show password" aria-pressed="false">
+                                <i class="far fa-eye" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <small><i class="fas fa-shield-alt" aria-hidden="true"></i> Use at least 8 characters.</small>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="newUserRole">Role *</label>
-                        <select id="newUserRole" required autocomplete="off">
-                            <option value="">Select Role</option>
-                            <option value="admin">Admin</option>
-                            <option value="manager">Manager</option>
-                            <option value="account_rep">Account Rep</option>
-                        </select>
+                    <div class="user-create-field">
+                        <label for="newUserRole">Access role <span aria-hidden="true">*</span></label>
+                        <div class="user-create-input user-create-select">
+                            <i class="fas fa-user-shield" aria-hidden="true"></i>
+                            <select id="newUserRole" required autocomplete="off">
+                                <option value="">Choose an access role</option>
+                                <option value="admin">Admin</option>
+                                <option value="manager">Manager</option>
+                                <option value="account_rep">Account Representative</option>
+                            </select>
+                        </div>
+                        <small>Select the minimum access this team member needs.</small>
                     </div>
                     
-                    <div class="form-group">
-                        <label class="checkbox-label">
+                    <div class="user-create-email-card">
+                        <div class="user-create-email-icon" aria-hidden="true">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                        <label class="user-create-email-option" for="sendEmailCheckbox">
+                            <strong>Send login credentials</strong>
+                            <span>Email this user their account details after creation.</span>
+                        </label>
+                        <label class="user-create-switch" aria-label="Send login credentials via email">
                             <input type="checkbox" id="sendEmailCheckbox" checked>
-                            <span class="checkmark"></span>
-                            Send login credentials via email
+                            <span aria-hidden="true"></span>
                         </label>
                     </div>
                 </form>
             </div>
             
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeAddUserModal()">Cancel</button>
-                <button type="button" class="btn-primary" onclick="saveNewUser()">
-                    <i class="fas fa-save"></i> Create User
-                </button>
+            <div class="modal-footer user-create-footer">
+                <p><i class="fas fa-lock" aria-hidden="true"></i> Account details are handled securely.</p>
+                <div class="user-create-actions">
+                    <button type="button" class="btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+                    <button type="button" id="createUserButton" class="btn-primary" onclick="saveNewUser()">
+                        <i class="fas fa-user-plus"></i> Create User
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -3996,6 +4264,7 @@
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
     <script src="../assets/js/dashboard-script.js"></script>
+    <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>
     <script>

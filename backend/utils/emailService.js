@@ -1,376 +1,360 @@
-const nodemailer = require('nodemailer');
+const { buildPublicUrl, getPublicAppUrl } = require('./publicAppUrl');
 
-// Use Resend for email delivery (works on Render)
 const Resend = require('resend').Resend;
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const REQUIRED_SENDER_ADDRESS = 'sales@huttas.com';
+const EMAIL_FROM = `Hutta Home Services <${REQUIRED_SENDER_ADDRESS}>`;
+const EMAIL_REPLY_TO = REQUIRED_SENDER_ADDRESS;
 
-if (resend) {
-  console.log('Using Resend for email delivery');
-} else {
-  console.log('Using Gmail SMTP for email delivery');
+function extractEmailAddress(value) {
+  const match = String(value || '').match(/<([^>]+)>/);
+  return String(match ? match[1] : value || '').trim().toLowerCase();
 }
 
-const transporter = !resend ? nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000
-}) : null;
+function getEmailDeliveryStatus() {
+  const resendConfigured = Boolean(process.env.RESEND_API_KEY);
+  const senderConfigured = extractEmailAddress(process.env.EMAIL_FROM) === REQUIRED_SENDER_ADDRESS;
+  const replyToConfigured = extractEmailAddress(process.env.EMAIL_REPLY_TO) === REQUIRED_SENDER_ADDRESS;
+  const provider = resendConfigured && senderConfigured && replyToConfigured ? 'resend' : 'unconfigured';
+  const warning = provider === 'unconfigured'
+    ? 'Resend email delivery requires RESEND_API_KEY and sales@huttas.com as both EMAIL_FROM and EMAIL_REPLY_TO.'
+    : null;
+  return {
+    provider,
+    warning,
+    publicAppUrl: getPublicAppUrl(),
+    sender: REQUIRED_SENDER_ADDRESS,
+    replyTo: EMAIL_REPLY_TO,
+    resendConfigured,
+    senderConfigured,
+    replyToConfigured
+  };
+}
+
+const emailStatus = getEmailDeliveryStatus();
+if (process.env.NODE_ENV === 'production' && emailStatus.provider !== 'resend') {
+  throw new Error(emailStatus.warning);
+}
+const resend = emailStatus.provider === 'resend' ? new Resend(process.env.RESEND_API_KEY) : null;
+console.log(`Using ${emailStatus.provider} for email delivery from ${REQUIRED_SENDER_ADDRESS}`);
+if (emailStatus.warning) console.warn(`Email delivery warning: ${emailStatus.warning}`);
+
+const htmlToText = (html) => String(html || '')
+  .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+  .replace(/<br\s*\/?>/gi, '\n')
+  .replace(/<\/p>|<\/div>|<\/h\d>/gi, '\n')
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  .replace(/&#039;/g, "'").replace(/&quot;/g, '"')
+  .replace(/[ \t]+/g, ' ').replace(/\n\s+/g, '\n').trim();
+
+const deliverEmail = async ({ to, subject, html, text, attachments }) => {
+  const plainText = text || htmlToText(html);
+  if (!resend) throw new Error('Resend email delivery is not configured');
+  const payload = { from: EMAIL_FROM, to, subject, html, text: plainText, replyTo: EMAIL_REPLY_TO };
+  if (attachments?.length) payload.attachments = attachments;
+  const result = await resend.emails.send(payload);
+  if (result?.error) throw new Error(result.error.message || 'Email delivery failed');
+  return { provider: 'resend', messageId: result?.data?.id || result?.id || null };
+};
+
+const escapeHtml = (value) => String(value || '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+
+const emailShell = (title, content, options = {}) => {
+  const preheader = escapeHtml(options.preheader || title);
+  const subtitle = escapeHtml(options.subtitle || 'Professional Home Services Management');
+  return `
+  <!doctype html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <style>
+      body{margin:0!important;padding:0!important;background:#eef4fb;color:#172033;font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+      table{border-collapse:collapse;border-spacing:0}
+      img{border:0;outline:0;text-decoration:none}
+      a{color:#0056b8}
+      .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
+      .page{width:100%;background:#eef4fb}
+      .page-pad{padding:34px 12px}
+      .wrap{width:100%;max-width:620px;background:#ffffff;border:1px solid #d7e3f1;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(28,68,120,.12)}
+      .head{padding:42px 42px 34px;background:#ffffff;border-bottom:1px solid #e2eaf4;text-align:center}
+      h1{margin:0;color:#0056b8;font-size:31px;line-height:1.2;font-weight:800;letter-spacing:-.02em}
+      .subtitle{margin:11px 0 0;color:#64748b;font-size:15px;line-height:1.55}
+      .body{padding:38px 42px 34px;background:#ffffff;color:#3b465a;font-size:15px;line-height:1.72}
+      .body p{margin:0 0 16px}
+      .body strong{color:#172033}
+      .btn{display:inline-block;margin:20px 0;padding:14px 26px;border-radius:999px;background:#0056b8;color:#ffffff!important;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 9px 22px rgba(0,86,184,.28)}
+      .panel{margin:22px 0;padding:18px 20px;border:1px solid #d7e5f5;border-radius:15px;background:#f7fbff}
+      .notice{margin:22px 0;padding:17px 19px;border:1px solid #bedcff;border-radius:14px;background:#edf7ff;color:#314866}
+      .warning{margin:22px 0;padding:17px 19px;border:1px solid #fed7aa;border-radius:14px;background:#fff8ed;color:#8a4518}
+      .muted{color:#718096;font-size:13px;line-height:1.58}
+      .link-box{margin:14px 0;padding:13px 15px;border:1px solid #d7e5f5;border-radius:11px;background:#f7fbff;color:#0056b8;font-size:13px;line-height:1.5;word-break:break-all}
+      .credential-grid{margin:23px 0;border:1px solid #d5e2f2;border-radius:15px;overflow:hidden;background:#ffffff;box-shadow:0 8px 22px rgba(32,74,124,.06)}
+      .credential-row{padding:18px 20px;border-bottom:1px solid #e7eef7}
+      .credential-row:last-child{border-bottom:0}
+      .credential-label{margin:0 0 7px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+      .credential-value{margin:0;color:#172033!important;font-family:"Courier New",monospace;font-size:15px;font-weight:700;word-break:break-all;text-decoration:none!important}
+      .foot{padding:25px 34px;background:#f7faff;border-top:1px solid #dfe9f4;color:#718096;font-size:12px;line-height:1.6;text-align:center}
+      .foot strong{display:block;margin-bottom:5px;color:#163252;font-size:13px}
+      .foot a{color:#0056b8;text-decoration:none}
+      .legal{padding:15px 18px 0;color:#91a0b2;font-size:10px;line-height:1.5;text-align:center}
+      @media only screen and (max-width:600px){.page-pad{padding:14px 8px}.head{padding:32px 22px 27px}.body{padding:28px 22px 25px}.foot{padding-left:22px;padding-right:22px}h1{font-size:25px}.body{font-size:15px}.btn{display:block;text-align:center}.wrap{border-radius:16px}}
+    </style>
+  </head>
+  <body>
+    <div class="preheader">${preheader}</div>
+    <table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="page-pad" align="center">
+          <table role="presentation" class="wrap" width="620" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td class="head" align="center">
+                <h1>${escapeHtml(title)}</h1>
+                <p class="subtitle">${subtitle}</p>
+              </td>
+            </tr>
+            <tr><td class="body">${content}</td></tr>
+            <tr>
+              <td class="foot">
+                <strong>Hutta Home Services</strong>
+                Professional Home Services Management Platform<br>
+                Questions? Reply to this email or contact <a href="mailto:sales@huttas.com">sales@huttas.com</a>.
+                <div class="legal">This automated message was sent by Hutta Home Services. Keep private links and account credentials secure.</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>`;
+};
 
 const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetUrl = `${process.env.FRONTEND_URL || 'https://hutta-home-services-dashboard.onrender.com'}/pages/reset-password.html?token=${resetToken}`;
-  
-  const mailOptions = {
-    from: `"Hutta Home Services" <${process.env.EMAIL_USER}>`,
+  const resetUrl = buildPublicUrl(`/pages/reset-password.html?token=${encodeURIComponent(resetToken)}`);
+  return deliverEmail({
     to: email,
     subject: 'Password Reset Request',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-          .button { display: inline-block; background: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; }
-          .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Password Reset Request</h1>
-          </div>
-          <div class="content">
-            <p>Hello,</p>
-            <p>You requested to reset your password for your Hutta Home Services account.</p>
-            <p>Click the button below to reset your password:</p>
-            <a href="${resetUrl}" class="button">Reset Password</a>
-            <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #3b82f6;">${resetUrl}</p>
-            <p><strong>This link will expire in 1 hour.</strong></p>
-            <p>If you didn't request this, please ignore this email.</p>
-          </div>
-          <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} Hutta Home Services. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  };
-
-  await transporter.sendMail(mailOptions);
+    text: `Hello,\n\nYou requested to reset your password for your Hutta Home Services account.\n\nReset password: ${resetUrl}\n\nThis link will expire in 1 hour. If you did not request this, please ignore this email.`,
+    html: emailShell('Password Reset Request', `
+      <p>Hello,</p>
+      <p>You requested to reset your password for your Hutta Home Services dashboard account.</p>
+      <p><a class="btn" href="${resetUrl}">Reset Password</a></p>
+      <div class="panel">
+        <p><strong>Copy link if the button does not open:</strong></p>
+        <div class="link-box">${escapeHtml(resetUrl)}</div>
+      </div>
+      <div class="warning">
+        <p><strong>This secure link expires in 1 hour.</strong></p>
+        <p>If you did not request this password reset, you can safely ignore this email.</p>
+      </div>
+    `, { preheader: 'Reset your Hutta Home Services dashboard password.' })
+  });
 };
 
 const sendWelcomeEmail = async (email, password, firstName) => {
-  try {
-    console.log('Attempting to send welcome email to:', email);
-    console.log('EMAIL_USER configured:', process.env.EMAIL_USER ? 'Yes' : 'No');
-    console.log('EMAIL_PASSWORD configured:', process.env.EMAIL_PASSWORD ? 'Yes' : 'No');
-    
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      throw new Error('Email credentials not configured');
-    }
-    
-    const loginUrl = 'https://hutta-home-services-dashboard-main.onrender.com';
-    const path = require('path');
-    const fs = require('fs');
-    
-    // Check if logo exists
-    const logoPath = path.join(__dirname, '../../assets/images/logo.png');
-    const logoExists = fs.existsSync(logoPath);
-    console.log('Logo exists:', logoExists);
-  
-  const mailOptions = {
-    from: `"Hutta Home Services" <${process.env.EMAIL_USER}>`,
+  const loginUrl = getPublicAppUrl();
+  return deliverEmail({
     to: email,
     subject: 'Welcome to Hutta Home Services - Your Account Details',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { 
-            font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif; 
-            line-height: 1.6; 
-            color: #333333; 
-            background-color: #f5f7fa;
-            padding: 20px;
-          }
-          .email-wrapper { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 86, 184, 0.15);
-          }
-          .header { 
-            background: linear-gradient(135deg, #0056B8 0%, #003d82 100%);
-            color: white; 
-            padding: 40px 30px;
-            text-align: center;
-            position: relative;
-          }
-          .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #0056B8, #00a8e8);
-          }
-          .logo-container {
-            margin-bottom: 20px;
-          }
-          .logo-text {
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-          }
-          .header-subtitle {
-            font-size: 16px;
-            opacity: 0.95;
-            margin-top: 8px;
-            font-weight: 400;
-          }
-          .content { 
-            background: #ffffff;
-            padding: 40px 30px;
-          }
-          .greeting {
-            font-size: 20px;
-            font-weight: 600;
-            color: #0056B8;
-            margin-bottom: 20px;
-          }
-          .intro-text {
-            font-size: 15px;
-            color: #4A4A4A;
-            margin-bottom: 30px;
-            line-height: 1.7;
-          }
-          .credentials-box { 
-            background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%);
-            padding: 25px;
-            border-radius: 12px;
-            margin: 30px 0;
-            border: 2px solid #e6f0ff;
-            box-shadow: 0 2px 8px rgba(0, 86, 184, 0.08);
-          }
-          .credentials-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #0056B8;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          .credential-item { 
-            margin: 16px 0;
-          }
-          .credential-label { 
-            font-weight: 600;
-            color: #4A4A4A;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-          }
-          .credential-value { 
-            color: #000000;
-            font-family: 'Courier New', monospace;
-            background: #ffffff;
-            padding: 12px 16px;
-            border-radius: 8px;
-            display: block;
-            font-size: 15px;
-            font-weight: 600;
-            border: 1px solid #d1e3f8;
-            word-break: break-all;
-          }
-          .button-container {
-            text-align: center;
-            margin: 35px 0;
-          }
-          .button { 
-            display: inline-block;
-            background: linear-gradient(135deg, #0056B8 0%, #003d82 100%);
-            color: white !important;
-            padding: 16px 40px;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(0, 86, 184, 0.3);
-            transition: all 0.3s ease;
-          }
-          .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 86, 184, 0.4);
-          }
-          .warning-box { 
-            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-            border-left: 4px solid #ffa726;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 30px 0;
-          }
-          .warning-box strong {
-            color: #e65100;
-            font-size: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-          }
-          .warning-box p {
-            color: #5d4037;
-            margin: 8px 0 0 0;
-            font-size: 14px;
-            line-height: 1.6;
-          }
-          .divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #e6f0ff, transparent);
-            margin: 30px 0;
-          }
-          .support-text {
-            font-size: 14px;
-            color: #6b7280;
-            text-align: center;
-            margin-top: 25px;
-            line-height: 1.6;
-          }
-          .footer { 
-            background: #f8f9fa;
-            text-align: center;
-            padding: 30px;
-            border-top: 1px solid #e5e7eb;
-          }
-          .footer-text {
-            color: #6b7280;
-            font-size: 13px;
-            margin: 8px 0;
-          }
-          .footer-brand {
-            color: #0056B8;
-            font-weight: 700;
-            font-size: 14px;
-            margin-bottom: 8px;
-          }
-          @media only screen and (max-width: 600px) {
-            body { padding: 10px; }
-            .header { padding: 30px 20px; }
-            .content { padding: 30px 20px; }
-            .logo-text { font-size: 26px; }
-            .button { padding: 14px 30px; font-size: 15px; }
-            .credentials-box { padding: 20px; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="email-wrapper">
-          <div class="header">
-            <div class="logo-container">
-              ${logoExists ? '<img src="cid:company-logo" alt="Hutta\'s Home Services" style="max-width: 200px; height: auto; margin-bottom: 15px;" />' : ''}
-              <h1 class="logo-text">Hutta's Home Services</h1>
-            </div>
-            <p class="header-subtitle">Professional Home Services Management</p>
-          </div>
-          
-          <div class="content">
-            <div class="greeting">Hello ${firstName}! </div>
-            
-            <p class="intro-text">
-              Welcome to Hutta Home Services! Your account has been successfully created by our administrator. 
-              You now have access to our comprehensive dashboard to manage home services efficiently.
-            </p>
-            
-            <div class="credentials-box">
-              <div class="credentials-title">
-                 Your Login Credentials
-              </div>
-              <div class="credential-item">
-                <div class="credential-label"> Email Address</div>
-                <div class="credential-value">${email}</div>
-              </div>
-              <div class="credential-item">
-                <div class="credential-label"> Password</div>
-                <div class="credential-value">${password}</div>
-              </div>
-            </div>
-            
-            <div class="button-container">
-              <a href="${loginUrl}" class="button"> Login to Dashboard</a>
-            </div>
-            
-            <div class="divider"></div>
-            
-            <p class="support-text">
-              If you have any questions or need assistance getting started, our support team is here to help. 
-              We're excited to have you on board!
-            </p>
-          </div>
-          
-          <div class="footer">
-            <div class="footer-brand">Hutta Home Services</div>
-            <p class="footer-text">&copy; ${new Date().getFullYear()} Hutta Home Services. All rights reserved.</p>
-            <p class="footer-text">Professional Home Services Management Platform</p>
-          </div>
+    text: `Hello ${firstName || 'there'},\n\nWelcome to Hutta Home Services.\n\nEmail: ${email}\nPassword: ${password}\n\nLogin: ${loginUrl}\n\nPlease change your password after your first login.`,
+    html: emailShell('Welcome to Hutta Home Services', `
+      <p>Hello ${escapeHtml(firstName || 'there')},</p>
+      <p>Your Hutta Home Services dashboard account has been created. Use the credentials below to sign in.</p>
+      <div class="credential-grid">
+        <div class="credential-row">
+          <p class="credential-label">Email Address</p>
+          <p class="credential-value">${escapeHtml(email)}</p>
         </div>
-      </body>
-      </html>
-    `
-  };
-  
-  // Add logo attachment only if it exists
-  if (logoExists) {
-    mailOptions.attachments = [{
-      filename: 'logo.png',
-      path: logoPath,
-      cid: 'company-logo'
-    }];
-  }
-
-  console.log('Sending email to:', email);
-  
-  if (resend) {
-    // Resend API (works on Render)
-    const result = await resend.emails.send({
-      from: `Hutta Home Services <onboarding@resend.dev>`,
-      to: email,
-      subject: mailOptions.subject,
-      html: mailOptions.html
-    });
-    console.log('Email sent via Resend:', result.id);
-    return result;
-  } else {
-    // Gmail SMTP fallback
-    const result = await transporter.sendMail(mailOptions);
-    console.log('Email sent via Gmail:', result.messageId);
-    return result;
-  }
-  } catch (error) {
-    console.error('Email sending error:', error.message);
-    console.error('Error details:', error);
-    throw error;
-  }
+        <div class="credential-row">
+          <p class="credential-label">Temporary Password</p>
+          <p class="credential-value">${escapeHtml(password)}</p>
+        </div>
+      </div>
+      <p><a class="btn" href="${loginUrl}">Login to Dashboard</a></p>
+      <div class="warning">
+        <p><strong>Security recommendation</strong></p>
+        <p>Please change this temporary password after your first login.</p>
+      </div>
+      <p class="muted">If you have questions or need access help, contact your Hutta Home Services administrator.</p>
+    `, { preheader: 'Your Hutta Home Services dashboard login credentials are ready.' })
+  });
 };
 
-module.exports = { sendPasswordResetEmail, sendWelcomeEmail };
+const sendVendorInvitationEmail = async ({ email, companyName, categoryLabel, token, expiresAt, personalMessage, purpose = 'initial' }) => {
+  const formUrl = buildPublicUrl('/pages/vendor-onboarding.html', `token=${encodeURIComponent(token)}`);
+  const greeting = companyName ? `Hello ${escapeHtml(companyName)},` : 'Hello,';
+  const changeCopy = purpose === 'changes_requested'
+    ? '<p>We reviewed your submission and need a few updates. Use the secure link below to revise your information.</p>'
+    : '<p>Hutta Home Services has invited you to complete our secure vendor onboarding form.</p>';
+  const subject = purpose === 'changes_requested' ? 'Updates requested for your vendor application' : 'Complete your Hutta vendor onboarding';
+  return deliverEmail({
+    to: email,
+    subject,
+    text: `${companyName ? `Hello ${companyName},` : 'Hello,'}\n\n${purpose === 'changes_requested' ? 'We reviewed your submission and need a few updates.' : 'Hutta Home Services has invited you to complete our secure vendor onboarding form.'}\n\nAssigned service category: ${categoryLabel}\n${personalMessage ? `\nMessage from our team: ${personalMessage}\n` : ''}\nOpen the secure form: ${formUrl}\n\nThis one-time link expires ${new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })} Arizona time. Do not forward it.`,
+    html: emailShell(purpose === 'changes_requested' ? 'Vendor Application Updates' : 'Vendor Onboarding Invitation', `
+      <p>${greeting}</p>${changeCopy}
+      <div class="panel">
+        <p class="credential-label">Assigned Service Category</p>
+        <p><strong>${escapeHtml(categoryLabel)}</strong></p>
+      </div>
+      ${personalMessage ? `<p><strong>Message from our team:</strong><br>${escapeHtml(personalMessage)}</p>` : ''}
+      <p><a class="btn" href="${formUrl}">${purpose === 'changes_requested' ? 'Update Application' : 'Open Secure Vendor Form'}</a></p>
+      <div class="notice">
+        <p><strong>Private one-time link</strong></p>
+        <p>This link expires ${escapeHtml(new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }))} Arizona time. Please do not forward it.</p>
+      </div>
+    `, {
+      preheader: purpose === 'changes_requested' ? 'Updates are requested for your Hutta vendor application.' : 'Complete your secure Hutta vendor onboarding form.'
+    })
+  });
+};
+
+const sendVendorSubmissionReceivedEmail = ({ email, companyName }) => deliverEmail({
+  to: email,
+  subject: 'Vendor application received',
+  html: emailShell('Application Received', `
+    <p>Hello ${escapeHtml(companyName || 'Vendor')},</p>
+    <p>We received your vendor application and documents. Our team will review the submission and contact you if anything else is needed.</p>
+    <div class="notice">
+      <p><strong>No action is required right now.</strong></p>
+      <p>Your documents are retained securely for review and audit history.</p>
+    </div>
+  `, { preheader: 'Your Hutta vendor application was received.' })
+});
+
+const sendVendorDecisionEmail = ({ email, companyName, action, message, token, expiresAt, categoryLabel }) => {
+  if (action === 'changes_requested') {
+    return sendVendorInvitationEmail({ email, companyName, categoryLabel, token, expiresAt, personalMessage: message, purpose: 'changes_requested' });
+  }
+  const approved = action === 'approved';
+  return deliverEmail({
+    to: email,
+    subject: approved ? 'Your vendor application is approved' : 'Update on your vendor application',
+    html: emailShell(approved ? 'Vendor Application Approved' : 'Vendor Application Update', `
+      <p>Hello ${escapeHtml(companyName || 'Vendor')},</p>
+      <p>${approved ? 'Your vendor application has been approved. Welcome to the Hutta Home Services vendor network.' : 'Our team has completed its review of your vendor application.'}</p>
+      ${message ? `<p><strong>Message from our team:</strong><br>${escapeHtml(message)}</p>` : ''}
+      <div class="${approved ? 'notice' : 'panel'}">
+        <p><strong>${approved ? 'Approved vendor status' : 'Application retained for review history'}</strong></p>
+        <p>${approved ? 'Your vendor profile is now active in our system.' : 'Your submitted information and documents remain securely retained.'}</p>
+      </div>
+    `, {
+      preheader: approved ? 'Your Hutta vendor application has been approved.' : 'There is an update on your Hutta vendor application.'
+    })
+  });
+};
+
+const sendStaffVendorSubmissionEmail = ({ emails, companyName, vendorId }) => {
+  if (!emails?.length) return Promise.resolve();
+  const reviewUrl = buildPublicUrl('/pages/admin-dashboard.html', 'vendor-reviews');
+  return deliverEmail({
+    to: emails,
+    subject: `Vendor application submitted: ${companyName}`,
+    text: `${companyName} submitted a vendor application.\n\nReview vendor: ${reviewUrl}\nVendor reference: ${vendorId}`,
+    html: emailShell('Vendor Submission Ready for Review', `
+      <p><strong>${escapeHtml(companyName)}</strong> submitted a vendor application.</p>
+      <div class="panel">
+        <p class="credential-label">Vendor Reference</p>
+        <p><strong>${escapeHtml(vendorId)}</strong></p>
+      </div>
+      <p><a class="btn" href="${reviewUrl}">Review Vendor</a></p>
+      <p class="muted">Vendor reference: ${escapeHtml(vendorId)}</p>
+    `, { preheader: `${companyName} submitted a vendor application for review.` })
+  });
+};
+
+const sendStaffVendorReviewUpdateEmail = ({ emails, companyName, vendorId, vendorEmail, action, message, deliveryError }) => {
+  const recipients = [...new Set((emails || []).filter(Boolean))];
+  if (!recipients.length) return Promise.resolve();
+  const reviewUrl = buildPublicUrl('/pages/admin-dashboard.html', 'vendor-reviews');
+  const labels = {
+    approved: 'Vendor application approved',
+    rejected: 'Vendor application rejected',
+    changes_requested: 'Vendor changes requested',
+    invitation_delivery_failed: 'Vendor invitation delivery failed',
+    confirmation_delivery_failed: 'Vendor confirmation email delivery failed',
+    decision_delivery_failed: 'Vendor decision email delivery failed',
+    update_recipient_retry: 'Vendor onboarding update notice'
+  };
+  const title = labels[action] || 'Vendor onboarding update';
+  const detail = deliveryError
+    ? `Delivery issue: ${deliveryError}`
+    : message || 'No additional message was provided.';
+  return deliverEmail({
+    to: recipients,
+    subject: `${title}: ${companyName || vendorEmail || 'Vendor'}`,
+    text: `${title}\n\nVendor: ${companyName || 'Vendor'}\n${vendorEmail ? `Vendor email: ${vendorEmail}\n` : ''}${detail}\n\nReview dashboard: ${reviewUrl}${vendorId ? `\nVendor reference: ${vendorId}` : ''}`,
+    html: emailShell(title, `
+      <p><strong>${escapeHtml(companyName || 'Vendor')}</strong> has a vendor onboarding update.</p>
+      <div class="panel">
+        ${vendorEmail ? `<p><strong>Vendor email:</strong> ${escapeHtml(vendorEmail)}</p>` : ''}
+        <p>${escapeHtml(detail)}</p>
+      </div>
+      <p><a class="btn" href="${reviewUrl}">Open Vendor Reviews</a></p>
+      ${vendorId ? `<p class="muted">Vendor reference: ${escapeHtml(vendorId)}</p>` : ''}
+    `, { preheader: `${title} for ${companyName || vendorEmail || 'a vendor'}.` })
+  });
+};
+
+const sendWebsiteRequestConfirmationEmail = ({ recipients, requestReference, customerName, email, phone, serviceDetails }) => deliverEmail({
+  to: recipients,
+  subject: `We received your request — ${requestReference}`,
+  text: `Hello ${customerName},\n\nWe received your service request. Reference: ${requestReference}\nEmail: ${email}\nPhone: ${phone}\nService details: ${serviceDetails || 'Not provided'}\n\nOur team will contact you. This message confirms receipt and is not a quote or scheduling confirmation.`,
+  html: emailShell('Request Received', `
+    <p>Hello ${escapeHtml(customerName)},</p>
+    <p>Thank you for contacting Hutta Home Services. We received your request and our team will contact you.</p>
+    <div class="panel">
+      <p class="credential-label">Request Reference</p>
+      <p><strong>${escapeHtml(requestReference)}</strong></p>
+      <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
+      <p><strong>Service details:</strong><br>${escapeHtml(serviceDetails || 'Not provided')}</p>
+    </div>
+    <div class="notice">
+      <p>This email confirms receipt only. It is not a quote or scheduling confirmation.</p>
+    </div>
+  `, { preheader: `Your service request ${requestReference} was received.` })
+});
+
+const sendWebsiteOperationsAlertEmail = ({ recipients, requestReference, customerName, email, phone, serviceDetails }) => {
+  const workflowUrl = buildPublicUrl('/pages/admin-dashboard.html', 'workflow-center');
+  return deliverEmail({
+    to: recipients,
+    subject: `New website request: ${requestReference}`,
+    text: `New website request ${requestReference}\nCustomer: ${customerName}\nEmail: ${email}\nPhone: ${phone}\nService details: ${serviceDetails || 'Not provided'}\nMissing: service category and service address\n\nOpen Workflow Center: ${workflowUrl}`,
+    html: emailShell('New Website Request', `
+      <p><strong>${escapeHtml(customerName)}</strong> submitted a website service request.</p>
+      <div class="panel">
+        <p class="credential-label">Request Reference</p>
+        <p><strong>${escapeHtml(requestReference)}</strong></p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
+        <p><strong>Service details:</strong><br>${escapeHtml(serviceDetails || 'Not provided')}</p>
+      </div>
+      <div class="warning">
+        <p><strong>Missing intake information</strong></p>
+        <p>Service category and service address require staff follow-up.</p>
+      </div>
+      <p><a class="btn" href="${workflowUrl}">Open Workflow Center</a></p>
+    `, { preheader: `${requestReference} is ready in Workflow Center.` })
+  });
+};
+
+module.exports = {
+  deliverEmail,
+  getEmailDeliveryStatus,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+  sendVendorInvitationEmail,
+  sendVendorSubmissionReceivedEmail,
+  sendVendorDecisionEmail,
+  sendStaffVendorSubmissionEmail,
+  sendStaffVendorReviewUpdateEmail,
+  sendWebsiteRequestConfirmationEmail,
+  sendWebsiteOperationsAlertEmail
+};

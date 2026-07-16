@@ -1,4 +1,457 @@
 /* Users Management Styles */
+
+/* Add user modal */
+#addUserModal {
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.58);
+    backdrop-filter: blur(8px);
+}
+
+#addUserModal .user-create-modal {
+    width: min(94vw, 680px);
+    max-width: 680px;
+    max-height: min(92vh, 860px);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 22px;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.26);
+    overflow: hidden;
+}
+
+#addUserModal .user-create-modal::before {
+    display: none;
+}
+
+#addUserModal .user-create-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 26px 28px 24px;
+    background: linear-gradient(145deg, #f3f8ff 0%, #ffffff 72%);
+    border-bottom: 1px solid #e4ebf4;
+}
+
+#addUserModal .user-create-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0;
+}
+
+#addUserModal .user-create-heading-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    flex: 0 0 50px;
+    border-radius: 15px;
+    background: #0056b8;
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(0, 86, 184, 0.22);
+    font-size: 19px;
+}
+
+#addUserModal .user-create-eyebrow {
+    display: block;
+    margin-bottom: 4px;
+    color: #0056b8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+#addUserModal .user-create-header h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.25;
+}
+
+#addUserModal .user-create-header p {
+    max-width: 460px;
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+#addUserModal .user-create-close {
+    position: static;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 14px;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+}
+
+#addUserModal .user-create-close:hover {
+    border-color: #fecaca;
+    background: #fff1f2;
+    color: #dc2626;
+    transform: none;
+}
+
+#addUserModal .user-create-body {
+    padding: 26px 28px;
+    background: #ffffff;
+}
+
+#addUserModal .user-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#addUserModal .user-create-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+#addUserModal .user-create-field label {
+    display: block;
+    margin: 0 0 8px;
+    color: #243247;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+#addUserModal .user-create-field label span {
+    color: #dc2626;
+}
+
+#addUserModal .user-create-input {
+    position: relative;
+}
+
+#addUserModal .user-create-input > i {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    z-index: 1;
+    width: 18px;
+    color: #8290a5;
+    font-size: 14px;
+    text-align: center;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: color 0.18s ease;
+}
+
+#addUserModal .user-create-input input,
+#addUserModal .user-create-input select {
+    width: 100%;
+    height: 48px;
+    padding: 0 44px;
+    border: 1px solid #d5deea;
+    border-radius: 12px;
+    outline: none;
+    background-color: #ffffff;
+    color: #172033;
+    font: inherit;
+    font-size: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+#addUserModal .user-create-input input::placeholder {
+    color: #9aa6b7;
+}
+
+#addUserModal .user-create-input input:hover,
+#addUserModal .user-create-input select:hover {
+    border-color: #afbdd0;
+}
+
+#addUserModal .user-create-input:focus-within > i {
+    color: #0056b8;
+}
+
+#addUserModal .user-create-input input:focus,
+#addUserModal .user-create-input select:focus {
+    border-color: #0056b8;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(0, 86, 184, 0.1);
+    transform: none;
+}
+
+#addUserModal .user-create-input select {
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 20 20'%3E%3Cpath fill='%2364748b' d='M5.8 7.5 10 11.7l4.2-4.2 1.3 1.3L10 14.3 4.5 8.8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 44px;
+}
+
+#addUserModal .user-create-password input {
+    padding-right: 48px;
+}
+
+#addUserModal .user-create-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+#addUserModal .user-create-password-toggle:hover,
+#addUserModal .user-create-password-toggle:focus-visible {
+    background: #eef5ff;
+    color: #0056b8;
+    outline: none;
+}
+
+#addUserModal .user-create-field small {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 7px;
+    color: #718096;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+#addUserModal .user-create-field small i {
+    color: #0056b8;
+}
+
+#addUserModal .user-create-email-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 13px;
+    padding: 14px 15px;
+    border: 1px solid #cfe0f5;
+    border-radius: 14px;
+    background: #f2f7fd;
+}
+
+#addUserModal .user-create-email-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #0056b8;
+    box-shadow: 0 3px 10px rgba(0, 86, 184, 0.09);
+}
+
+#addUserModal .user-create-email-option {
+    min-width: 0;
+    cursor: pointer;
+}
+
+#addUserModal .user-create-email-option strong,
+#addUserModal .user-create-email-option span {
+    display: block;
+}
+
+#addUserModal .user-create-email-option strong {
+    margin-bottom: 3px;
+    color: #17304f;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+#addUserModal .user-create-email-option span {
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+#addUserModal .user-create-switch {
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+}
+
+#addUserModal .user-create-switch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+#addUserModal .user-create-switch > span {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #aeb9c8;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#addUserModal .user-create-switch > span::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.2);
+    transition: transform 0.2s ease;
+}
+
+#addUserModal .user-create-switch input:checked + span {
+    background: #0056b8;
+}
+
+#addUserModal .user-create-switch input:checked + span::after {
+    transform: translateX(20px);
+}
+
+#addUserModal .user-create-switch input:focus-visible + span {
+    box-shadow: 0 0 0 4px rgba(0, 86, 184, 0.16);
+}
+
+#addUserModal .user-create-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 28px;
+    border-top: 1px solid #e4ebf4;
+    background: #f8fafc;
+}
+
+#addUserModal .user-create-footer > p {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: #718096;
+    font-size: 11px;
+}
+
+#addUserModal .user-create-footer > p i {
+    color: #0056b8;
+}
+
+#addUserModal .user-create-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#addUserModal .user-create-actions button {
+    min-height: 42px;
+    padding: 0 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+#addUserModal .user-create-actions .btn-secondary {
+    border: 1px solid #d5deea;
+    background: #ffffff;
+    color: #475569;
+}
+
+#addUserModal .user-create-actions .btn-secondary:hover {
+    border-color: #b8c5d6;
+    background: #f8fafc;
+    color: #1e293b;
+    transform: none;
+}
+
+#addUserModal .user-create-actions .btn-primary {
+    background: #0056b8;
+    box-shadow: 0 7px 18px rgba(0, 86, 184, 0.22);
+}
+
+#addUserModal .user-create-actions .btn-primary:hover {
+    background: #004a9f;
+    box-shadow: 0 9px 22px rgba(0, 86, 184, 0.28);
+    transform: translateY(-1px);
+}
+
+#addUserModal .user-create-actions .btn-primary:disabled {
+    cursor: wait;
+    opacity: 0.7;
+    transform: none;
+}
+
+@media (max-width: 640px) {
+    #addUserModal {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    #addUserModal .user-create-modal {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        border-radius: 20px;
+    }
+
+    #addUserModal .user-create-header,
+    #addUserModal .user-create-body,
+    #addUserModal .user-create-footer {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    #addUserModal .user-create-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    #addUserModal .user-create-heading-icon {
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
+    }
+
+    #addUserModal .user-create-header h2 {
+        font-size: 21px;
+    }
+
+    #addUserModal .user-create-footer {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    #addUserModal .user-create-footer > p {
+        justify-content: center;
+    }
+
+    #addUserModal .user-create-actions,
+    #addUserModal .user-create-actions button {
+        flex: 1;
+    }
+
+    #addUserModal .user-create-actions button {
+        justify-content: center;
+    }
+}
+
 .users-table-container {
     background: #ffffff;
     border-radius: 10px;

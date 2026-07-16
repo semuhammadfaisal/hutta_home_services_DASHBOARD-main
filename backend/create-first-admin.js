@@ -6,12 +6,17 @@ const User = require('./models/User');
 
 async function createFirstAdmin() {
   try {
+    const email = String(process.env.BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
+    const password = String(process.env.BOOTSTRAP_ADMIN_PASSWORD || '');
+    if (!email || password.length < 12) {
+      throw new Error('BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD (minimum 12 characters) are required');
+    }
     console.log(' Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGODB_URI);
     console.log(' Connected to MongoDB\n');
 
     // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: 'admin@huttas.com' });
+    const existingAdmin = await User.findOne({ email });
     
     if (existingAdmin) {
       console.log('  Admin user already exists!');
@@ -29,10 +34,10 @@ async function createFirstAdmin() {
 
     // Create admin user
     const adminUser = new User({
-      email: 'admin@huttas.com',
-      password: 'huttasAdmin#457583sset4',
-      firstName: 'Admin',
-      lastName: 'Hutta',
+      email,
+      password,
+      firstName: process.env.BOOTSTRAP_ADMIN_FIRST_NAME || 'Admin',
+      lastName: process.env.BOOTSTRAP_ADMIN_LAST_NAME || 'User',
       role: 'admin',
       phone: '',
       department: 'Administration',
@@ -42,8 +47,7 @@ async function createFirstAdmin() {
     await adminUser.save();
 
     console.log(' Admin user created successfully!\n');
-    console.log(' Email: admin@huttas.com');
-    console.log(' Password: huttasAdmin#457583sset4');
+    console.log(' Email:', email);
     console.log(' Role: admin');
     console.log('\n You can now login to the dashboard with these credentials.');
     console.log(' Make sure to keep these credentials secure!');

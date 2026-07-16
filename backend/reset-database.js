@@ -16,6 +16,7 @@ const Notification = require('./models/Notification');
 const PipelineRecord = require('./models/PipelineRecord');
 const PipelineMovement = require('./models/PipelineMovement');
 const Stage = require('./models/Stage');
+const AuthSession = require('./models/AuthSession');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -51,7 +52,8 @@ async function resetDatabase() {
       Notifications: await Notification.countDocuments(),
       PipelineRecords: await PipelineRecord.countDocuments(),
       PipelineMovements: await PipelineMovement.countDocuments(),
-      Stages: await Stage.countDocuments()
+      Stages: await Stage.countDocuments(),
+      AuthSessions: await AuthSession.countDocuments()
     };
 
     let totalRecords = 0;
@@ -98,6 +100,9 @@ async function resetDatabase() {
       await Notification.deleteMany({});
       console.log(' Cleared Notifications');
 
+      await AuthSession.deleteMany({});
+      console.log(' Cleared Authentication Sessions');
+
       await PipelineRecord.deleteMany({});
       console.log(' Cleared Pipeline Records');
 
@@ -109,12 +114,18 @@ async function resetDatabase() {
 
       console.log('\n Creating admin user...\n');
 
-      // Create admin user
+      const bootstrapEmail = String(process.env.BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
+      const bootstrapPassword = String(process.env.BOOTSTRAP_ADMIN_PASSWORD || '');
+      if (!bootstrapEmail || bootstrapPassword.length < 12) {
+        throw new Error('BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD (minimum 12 characters) are required');
+      }
+
+      // Create admin user from one-time deployment credentials.
       const adminUser = new User({
-        email: 'admin@huttas.com',
-        password: 'huttasAdmin#457583sset4',
-        firstName: 'Admin',
-        lastName: 'Hutta',
+        email: bootstrapEmail,
+        password: bootstrapPassword,
+        firstName: process.env.BOOTSTRAP_ADMIN_FIRST_NAME || 'Admin',
+        lastName: process.env.BOOTSTRAP_ADMIN_LAST_NAME || 'User',
         role: 'admin',
         phone: '',
         department: 'Administration',
@@ -127,8 +138,7 @@ async function resetDatabase() {
       console.log('═══════════════════════════════════════════');
       console.log(' Database Reset Complete!');
       console.log('═══════════════════════════════════════════');
-      console.log(' Email:    admin@huttas.com');
-      console.log(' Password: huttasAdmin#457583sset4');
+      console.log(' Email:   ', bootstrapEmail);
       console.log(' Role:     admin');
       console.log('═══════════════════════════════════════════');
       console.log('\n You can now login to the dashboard with these credentials.');

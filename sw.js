@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_NAME = 'hutta-static-v2';
+const CACHE_NAME = 'hutta-static-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

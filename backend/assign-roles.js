@@ -1,86 +1,29 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const User = require('./models/User');
+const { revokeUserSessions } = require('./utils/authSessions');
 
-async function assignRoles() {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log(' Connected to MongoDB\n');
-
-    // Get all users
-    const users = await User.find();
-    
-    if (users.length === 0) {
-      console.log(' No users found in database');
-      await mongoose.disconnect();
-      return;
-    }
-
-    console.log(' Current Users:\n');
-    users.forEach((user, index) => {
-      console.log(`${index + 1}. ${user.email} - Role: ${user.role || 'NO ROLE'}`);
-    });
-
-    console.log('\n─────────────────────────────────────────');
-    console.log('Available Roles:');
-    console.log('  admin        - Full access to everything');
-    console.log('  manager      - Operations only (no financial)');
-    console.log('  account_rep  - Sales focus (limited access)');
-    console.log('─────────────────────────────────────────\n');
-
-    // Example: Assign roles to specific users
-    // EDIT THESE LINES TO ASSIGN ROLES TO YOUR USERS:
-    
-    // Method 1: Assign by email
-    await assignRoleByEmail('your-email@example.com', 'admin');
-    
-    // Method 2: Assign to all users without role
-    await assignDefaultRole('account_rep');
-    
-    // Method 3: Make first user admin
-    await makeFirstUserAdmin();
-
-    console.log('\n Role assignment complete!');
-    await mongoose.disconnect();
-  } catch (error) {
-    console.error(' Error:', error.message);
-    process.exit(1);
+async function assignRole() {
+  const email = String(process.env.ROLE_USER_EMAIL || '').trim().toLowerCase();
+  const role = String(process.env.ROLE_USER_ROLE || '').trim();
+  if (!email || !['admin', 'manager', 'account_rep'].includes(role)) {
+    throw new Error('ROLE_USER_EMAIL and a valid ROLE_USER_ROLE are required');
   }
-}
 
-// Assign role to specific user by email
-async function assignRoleByEmail(email, role) {
+  await mongoose.connect(process.env.MONGODB_URI);
   const user = await User.findOne({ email });
-  if (user) {
-    user.role = role;
-    await user.save();
-    console.log(` Assigned ${role} to ${email}`);
-  } else {
-    console.log(`  User ${email} not found`);
-  }
+  if (!user) throw new Error('User not found');
+  user.role = role;
+  user.isActive = true;
+  await user.save();
+  await revokeUserSessions(user._id);
+  console.log(`Assigned ${role} to ${email}; existing sessions were revoked.`);
 }
 
-// Assign default role to users without role
-async function assignDefaultRole(defaultRole) {
-  const usersWithoutRole = await User.find({ 
-    $or: [{ role: null }, { role: { $exists: false } }] 
-  });
-  
-  for (const user of usersWithoutRole) {
-    user.role = defaultRole;
-    await user.save();
-    console.log(` Assigned ${defaultRole} to ${user.email}`);
-  }
-}
-
-// Make first user admin
-async function makeFirstUserAdmin() {
-  const firstUser = await User.findOne().sort({ createdAt: 1 });
-  if (firstUser && firstUser.role !== 'admin') {
-    firstUser.role = 'admin';
-    await firstUser.save();
-    console.log(` Made ${firstUser.email} an admin`);
-  }
-}
-
-assignRoles();
+assignRole()
+  .catch(error => {
+    console.error('Role assignment failed:', error.message);
+    process.exitCode = 1;
+  })
+  .finally(() => mongoose.disconnect());

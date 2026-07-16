@@ -15,7 +15,14 @@ const {
 
 const router = express.Router();
 const TZ = 'America/Phoenix';
-const DASHBOARD_STATS_CACHE_VERSION = 'business-health-active-pipeline-orders-v5';
+const DASHBOARD_STATS_CACHE_VERSION = 'business-health-active-pipeline-orders-v6-approved-vendors';
+const APPROVED_VENDOR_MATCH = {
+  $or: [
+    { onboardingSource: { $exists: false } },
+    { onboardingSource: 'manual' },
+    { onboardingStatus: 'approved' }
+  ]
+};
 
 function addMonths(date, months) {
   const d = new Date(date);
@@ -447,6 +454,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
         { $sort: { _id: 1 } }
       ]),
       Vendor.aggregate([
+        { $match: APPROVED_VENDOR_MATCH },
         { $group: { _id: '$category', count: { $sum: 1 } } },
         { $sort: { _id: 1 } }
       ]),
@@ -505,7 +513,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
         { $project: { _id: 0, name: 1, email: 1, totalRevenue: 1, totalOrders: 1 } }
       ]),
       Customer.countDocuments(),
-      Vendor.countDocuments(),
+      Vendor.countDocuments(APPROVED_VENDOR_MATCH),
       Employee.countDocuments(),
       Employee.aggregate([
         {

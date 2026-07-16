@@ -8,7 +8,7 @@ const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 
 // KPI: payments collected = sum of budgets for records in Paid/Close stages + received/completed payments not already counted
 // Exclude NO BID stages from calculations
-router.get('/kpi/payments-collected', async (req, res) => {
+router.get('/kpi/payments-collected', checkRole(['admin']), async (req, res) => {
     try {
         const Stage = require('../models/Stage');
         const Payment = require('../models/Payment');

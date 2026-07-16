@@ -76,10 +76,10 @@ const ROLE_PERMISSIONS = {
     [ROLES.MANAGER]: [
         // Operations but not finances or settings
         PERMISSIONS.VIEW_DASHBOARD,
-        PERMISSIONS.VIEW_ORDERS, PERMISSIONS.CREATE_ORDERS, PERMISSIONS.EDIT_ORDERS, PERMISSIONS.DELETE_ORDERS,
-        PERMISSIONS.VIEW_CUSTOMERS, PERMISSIONS.CREATE_CUSTOMERS, PERMISSIONS.EDIT_CUSTOMERS, PERMISSIONS.DELETE_CUSTOMERS,
-        PERMISSIONS.VIEW_VENDORS, PERMISSIONS.CREATE_VENDORS, PERMISSIONS.EDIT_VENDORS, PERMISSIONS.DELETE_VENDORS,
-        PERMISSIONS.VIEW_EMPLOYEES, PERMISSIONS.CREATE_EMPLOYEES, PERMISSIONS.EDIT_EMPLOYEES, PERMISSIONS.DELETE_EMPLOYEES,
+        PERMISSIONS.VIEW_ORDERS, PERMISSIONS.CREATE_ORDERS, PERMISSIONS.EDIT_ORDERS,
+        PERMISSIONS.VIEW_CUSTOMERS, PERMISSIONS.CREATE_CUSTOMERS, PERMISSIONS.EDIT_CUSTOMERS,
+        PERMISSIONS.VIEW_VENDORS, PERMISSIONS.CREATE_VENDORS, PERMISSIONS.EDIT_VENDORS,
+        PERMISSIONS.VIEW_EMPLOYEES, PERMISSIONS.CREATE_EMPLOYEES, PERMISSIONS.EDIT_EMPLOYEES,
         PERMISSIONS.VIEW_PIPELINE, PERMISSIONS.MANAGE_PIPELINE
         // NO: Accounting, Payments, Settings, Reports
     ],
@@ -102,16 +102,11 @@ class RBACManager {
     
     // Initialize RBAC with user session
     init() {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (session) {
-            try {
-                const sessionData = JSON.parse(session);
-                this.currentUser = sessionData.user;
-                this.currentRole = sessionData.user?.role || ROLES.ADMIN; // Default to admin if not set
-                this.applyRoleRestrictions();
-            } catch (error) {
-                console.error('Failed to parse session:', error);
-            }
+        const user = window.AuthSession?.user;
+        if (user) {
+            this.currentUser = user;
+            this.currentRole = user.role || null;
+            this.applyRoleRestrictions();
         }
     }
     
@@ -146,8 +141,10 @@ class RBACManager {
             'accounting': PERMISSIONS.VIEW_ACCOUNTING,
             'reports': PERMISSIONS.VIEW_REPORTS,
             'settings': PERMISSIONS.VIEW_SETTINGS,
+            'users': PERMISSIONS.MANAGE_SETTINGS,
             'employees': PERMISSIONS.VIEW_EMPLOYEES,
-            'vendors': PERMISSIONS.VIEW_VENDORS
+            'vendors': PERMISSIONS.VIEW_VENDORS,
+            'vendor-reviews': PERMISSIONS.VIEW_VENDORS
         };
         
         Object.entries(menuItems).forEach(([section, permission]) => {
@@ -255,11 +252,9 @@ class RBACManager {
 window.RBAC = new RBACManager();
 
 // Initialize RBAC when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Wait for session to be loaded
-    setTimeout(() => {
-        window.RBAC.init();
-    }, 100);
+document.addEventListener('DOMContentLoaded', async () => {
+    try { await window.AuthReady; } catch (_error) { return; }
+    window.RBAC.init();
 });
 
 // Export for use in other modules

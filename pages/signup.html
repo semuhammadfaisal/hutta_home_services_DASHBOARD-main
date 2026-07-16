@@ -4,137 +4,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - Hutta Home Services</title>
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/login-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<body>
-    <div class="login-wrapper">
-        <div class="login-image-section">
-            <div class="floating-elements">
-                <div class="float-element float-1"></div>
-                <div class="float-element float-2"></div>
-                <div class="float-element float-3"></div>
-            </div>
-            <div class="image-overlay">
-                <div class="brand-content">
-                    <div class="brand-logo">
-                        <img src="../assets/images/logo.png" alt="Hutta Home Services" class="login-logo">
+<body class="signup-page">
+    <div class="page-shell">
+        <aside class="hero-panel" aria-hidden="true">
+            <div class="hero-bg"></div>
+            <div class="hero-noise"></div>
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+
+            <div class="hero-content">
+                <img src="../assets/images/logo.png" alt="Hutta Home Services" class="hero-logo">
+                <blockquote class="hero-quote">
+                    "Join a team that transforms homes through trusted, professional service."
+                </blockquote>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <span class="stat-number">10K+</span>
+                        <span class="stat-label">Happy Customers</span>
                     </div>
-                    <p>Join thousands of satisfied customers and transform your home with our professional services.</p>
-                    <div class="stats">
-                        <div class="stat">
-                            <h3>10K+</h3>
-                            <span>Happy Customers</span>
-                        </div>
-                        <div class="stat">
-                            <h3>500+</h3>
-                            <span>Expert Technicians</span>
-                        </div>
-                        <div class="stat">
-                            <h3>24/7</h3>
-                            <span>Support Available</span>
-                        </div>
+                    <div class="hero-stat">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Expert Technicians</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">Support Available</span>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="login-form-section">
-            <div class="login-container">
-                <div class="login-header">
-                    <div class="welcome-badge">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Create Account</span>
+
+            <div class="hero-footer">
+                <span class="trust-badge">
+                    <i class="fas fa-shield-halved"></i>
+                    Secure account registration
+                </span>
+            </div>
+        </aside>
+
+        <main class="form-panel">
+            <div class="form-card">
+                <header class="card-header">
+                    <div class="card-eyebrow">
+                        <i class="fas fa-user-plus" aria-hidden="true"></i>
+                        Create account
                     </div>
-                    <h1>Get Started</h1>
-                    <p>Create your account to access our services</p>
-                </div>
-            
-            <form class="login-form" id="signupForm">
+                    <h1 class="card-title">Get started</h1>
+                    <p class="card-subtitle">Request access to the Hutta Home Services operations dashboard.</p>
+                </header>
+
+                <form class="auth-form" id="signupForm" novalidate>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="fullName">Full Name</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-user"></i>
-                            <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required>
+                    <div class="field-group">
+                        <label class="field-label" for="fullName">Full name</label>
+                        <div class="field-wrap">
+                            <i class="fas fa-user field-icon" aria-hidden="true"></i>
+                            <input class="field-input" type="text" id="fullName" name="fullName" placeholder="Enter your full name" autocomplete="name" aria-describedby="errorMessage" required>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-envelope"></i>
-                            <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    <div class="field-group">
+                        <label class="field-label" for="email">Email address</label>
+                        <div class="field-wrap">
+                            <i class="fas fa-envelope field-icon" aria-hidden="true"></i>
+                            <input class="field-input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" aria-describedby="errorMessage" required>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" id="password" name="password" placeholder="Create a password" required>
-                            <button type="button" class="toggle-password" id="togglePassword">
-                                <i class="fas fa-eye"></i>
+                    <div class="field-group">
+                        <label class="field-label" for="password">Password</label>
+                        <div class="field-wrap field-wrap--password">
+                            <i class="fas fa-lock field-icon" aria-hidden="true"></i>
+                            <input class="field-input" type="password" id="password" name="password" placeholder="At least 8 characters" autocomplete="new-password" aria-describedby="errorMessage" required>
+                            <button type="button" class="pw-toggle" id="togglePassword" aria-label="Show password">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="confirmPassword">Confirm Password</label>
-                        <div class="input-wrapper">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
-                            <button type="button" class="toggle-password" id="toggleConfirmPassword">
-                                <i class="fas fa-eye"></i>
+                    <div class="field-group">
+                        <label class="field-label" for="confirmPassword">Confirm password</label>
+                        <div class="field-wrap field-wrap--password">
+                            <i class="fas fa-lock field-icon" aria-hidden="true"></i>
+                            <input class="field-input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Repeat your password" autocomplete="new-password" aria-describedby="errorMessage" required>
+                            <button type="button" class="pw-toggle" id="toggleConfirmPassword" aria-label="Show confirmed password">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="requestedRole">Select Your Role</label>
-                    <div class="input-wrapper">
-                        <i class="fas fa-user-tag"></i>
-                        <select id="requestedRole" name="requestedRole" required>
+                <div class="field-group">
+                    <label class="field-label" for="requestedRole">Requested role</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-user-tag field-icon" aria-hidden="true"></i>
+                        <select id="requestedRole" name="requestedRole" aria-describedby="roleHelp errorMessage" required>
                             <option value="">Choose your role...</option>
                             <option value="account_rep">Account Representative - Sales & Customer Service</option>
                             <option value="manager">Manager - Operations & Team Management</option>
                             <option value="admin">Administrator - Full System Access</option>
                         </select>
                     </div>
-                    <small>Your request will be reviewed by an administrator</small>
+                    <small id="roleHelp">Your request will be reviewed by an administrator before access is enabled.</small>
                 </div>
-                
-                <div class="form-options">
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
-                        <span class="checkmark"></span>
-                        <span>I agree to the <a href="#" class="forgot-password">Terms & Conditions</a></span>
-                    </label>
-                </div>
-                
-                <button type="submit" class="login-btn" id="signupBtn">
-                    <span class="btn-text">Create Account</span>
-                    <i class="fas fa-spinner fa-spin btn-spinner" style="display: none;"></i>
+
+                <label class="remember-row terms-row">
+                    <input type="checkbox" id="agreeTerms" name="agreeTerms" class="sr-only" required>
+                    <span class="custom-check" aria-hidden="true"></span>
+                    <span class="remember-text">I agree to the <a href="#" class="link-primary">Terms &amp; Conditions</a></span>
+                </label>
+
+                <button type="submit" class="submit-btn" id="signupBtn">
+                    <span class="submit-btn__text">Create account</span>
+                    <i class="fas fa-arrow-right submit-btn__arrow" aria-hidden="true"></i>
+                    <i class="fas fa-circle-notch fa-spin submit-btn__spinner" aria-hidden="true"></i>
                 </button>
-                
-                <div class="error-message" id="errorMessage" style="display: none;">
-                    <i class="fas fa-exclamation-circle"></i>
+
+                <div class="alert alert--error" id="errorMessage" style="display:none" role="alert" aria-live="polite">
+                    <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
                     <span id="errorText"></span>
                 </div>
 
-                <div class="signup-link">
-                    Already have an account? <a href="login.html">Sign In</a>
-                </div>
-            </form>
+                </form>
+
+                <footer class="card-footer">
+                    Already have an account?&nbsp;<a href="login.html" class="link-primary">Sign in</a>
+                </footer>
             </div>
-        </div>
-    </div>
+        </main>
+    </div><!-- /page-shell -->
     
     <script src="../assets/js/api-service.js"></script>
     <script src="../assets/js/signup-script.js"></script>

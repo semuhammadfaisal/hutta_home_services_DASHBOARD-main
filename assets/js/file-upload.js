@@ -147,6 +147,9 @@ async function uploadFiles(files, onProgress = null) {
         xhr.addEventListener('error', () => reject(new Error('Network error while uploading files.')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled.')));
         xhr.open('POST', `${baseURL}/upload`);
+        xhr.withCredentials = true;
+        if (window.AuthSession?.csrfToken) xhr.setRequestHeader('X-CSRF-Token', window.AuthSession.csrfToken);
+        xhr.setRequestHeader('X-Session-Activity', 'active');
         xhr.send(formData);
     }).catch(error => {
         console.error('File upload error:', error);
@@ -158,15 +161,6 @@ function attachmentBaseUrl() {
     return window.location.hostname === 'localhost'
         ? 'http://localhost:10000/api/attachments'
         : `${window.location.origin}/api/attachments`;
-}
-
-function attachmentToken() {
-    try {
-        const session = JSON.parse(localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession') || '{}');
-        return session.token || '';
-    } catch (_error) {
-        return '';
-    }
 }
 
 async function uploadEntityAttachments(entityType, entityId, files, metadata = {}, onProgress = null) {
@@ -192,8 +186,9 @@ async function uploadEntityAttachments(entityType, entityId, files, metadata = {
         });
         xhr.addEventListener('error', () => reject(new Error('Network error while uploading attachments')));
         xhr.open('POST', `${attachmentBaseUrl()}/${entityType}/${entityId}`);
-        const token = attachmentToken();
-        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.withCredentials = true;
+        if (window.AuthSession?.csrfToken) xhr.setRequestHeader('X-CSRF-Token', window.AuthSession.csrfToken);
+        xhr.setRequestHeader('X-Session-Activity', 'active');
         xhr.send(formData);
     });
 }
@@ -203,7 +198,9 @@ async function attachmentRequest(entityType, entityId, suffix = '', options = {}
         ...options,
         headers: {
             ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-            Authorization: `Bearer ${attachmentToken()}`,
+            ...(!['GET', 'HEAD'].includes(String(options.method || 'GET').toUpperCase()) && window.AuthSession?.csrfToken
+                ? { 'X-CSRF-Token': window.AuthSession.csrfToken }
+                : {}),
             ...(options.headers || {})
         }
     });
@@ -237,7 +234,7 @@ async function openEntityAttachment(entityType, entityId, attachment, download =
         : new URL(attachment.url, window.location.origin).href;
     let response;
     try {
-        response = await fetch(url, { headers: { Authorization: `Bearer ${attachmentToken()}` } });
+        response = await fetch(url);
     } catch (error) {
         previewWindow?.close();
         throw error;

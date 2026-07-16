@@ -707,3 +707,102 @@ h3,
     display: block;
     margin-top: 4px;
 }
+
+.signup-page .form-panel {
+    padding-top: 32px;
+    padding-bottom: 32px;
+}
+
+.signup-page .form-card {
+    max-width: 680px;
+    padding-top: 36px;
+    padding-bottom: 36px;
+}
+
+.signup-page .card-header {
+    margin-bottom: 26px;
+}
+
+.signup-page .auth-form {
+    gap: 18px;
+}
+
+.terms-row {
+    margin-top: 0;
+    align-items: flex-start;
+}
+
+.terms-row .custom-check {
+    margin-top: 1px;
+}
+
+.signup-success {
+    text-align: center;
+}
+
+.signup-success__icon {
+    width: 76px;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 22px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #16a34a, #047857);
+    color: #fff;
+    font-size: 32px;
+    box-shadow: 0 14px 30px rgba(4, 120, 87, .24);
+}
+
+.signup-success__panel,
+.signup-success__notice {
+    margin-top: 24px;
+    padding: 18px;
+    border-radius: var(--r-md);
+    text-align: left;
+}
+
+.signup-success__panel {
+    border: 1px solid var(--border);
+    background: #f8fafc;
+}
+
+.signup-success__panel h2 {
+    margin-bottom: 12px;
+    color: var(--ink-2);
+    font-size: 16px;
+}
+
+.signup-success__panel p {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.55;
+}
+
+.signup-success__panel strong {
+    color: var(--ink);
+}
+
+.signup-success__notice {
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+    font-size: 13.5px;
+    line-height: 1.55;
+}
+
+.signup-success .submit-btn {
+    margin-top: 24px;
+    text-decoration: none;
+}
+
+@media (max-width: 720px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .signup-page .form-card {
+        padding: 28px 22px;
+    }
+}

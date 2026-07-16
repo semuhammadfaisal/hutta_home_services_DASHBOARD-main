@@ -5,6 +5,15 @@ const { buildNote, getUserId, syncLegacyNotes } = require('../utils/notes');
 
 const router = express.Router();
 
+const entityRoles = {
+  orders: ['admin', 'manager', 'account_rep'],
+  customers: ['admin', 'manager', 'account_rep'],
+  vendors: ['admin', 'manager'],
+  payments: ['admin'],
+  'pipeline-records': ['admin', 'manager', 'account_rep'],
+  projects: ['admin', 'manager', 'account_rep']
+};
+
 const modelMap = {
   orders: require('../models/Order'),
   customers: require('../models/Customer'),
@@ -22,6 +31,10 @@ async function findEntity(req, res) {
   const Model = getModel(req.params.entity);
   if (!Model || !mongoose.Types.ObjectId.isValid(req.params.id)) {
     res.status(404).json({ message: 'Notes target not found' });
+    return null;
+  }
+  if (!entityRoles[req.params.entity]?.includes(req.user?.role)) {
+    res.status(403).json({ message: 'Access denied: Insufficient permissions' });
     return null;
   }
 

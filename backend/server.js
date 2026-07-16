@@ -5,12 +5,25 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+const { CANONICAL_PUBLIC_APP_URL, validatePublicAppUrl } = require('./utils/publicAppUrl');
+const PUBLIC_APP_URL = validatePublicAppUrl();
+const authenticateToken = require('./middleware/auth');
+const checkRole = require('./middleware/rbac');
+const { resolveSession } = require('./utils/authSessions');
+const { MAX_BODY_BYTES } = require('./utils/websiteIntake');
+const { startIntakeEmailWorker, stopIntakeEmailWorker } = require('./utils/intakeEmailWorker');
 
 // Set default timezone to Arizona Time (MST / GMT-7, no DST)
 process.env.TZ = 'America/Phoenix';
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+
+if (process.env.NODE_ENV === 'production' && String(process.env.HUTTAS_WEBHOOK_SECRET || '').length < 32) {
+  throw new Error('HUTTAS_WEBHOOK_SECRET must contain at least 32 characters in production');
+}
+
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 const SLOW_MS = parseInt(process.env.SLOW_REQUEST_MS || '1000', 10);
 
@@ -30,8 +43,8 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
-    'https://hutta-home-services-dashboard.onrender.com',
-    'https://hutta-home-services-dashboard-main.onrender.com'
+    CANONICAL_PUBLIC_APP_URL,
+    PUBLIC_APP_URL
   ],
   credentials: true
 }));
@@ -60,20 +73,19 @@ app.use('/api/auth/forgot-password', authRouteLimiter);
 app.use('/api/', apiLimiter);
 
 // Body parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
-// Debug middleware to log request body
-app.use('/api/vendors', (req, res, next) => {
-  if (req.method === 'POST' || req.method === 'PUT') {
-    console.log('=== VENDOR REQUEST DEBUG ===');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    console.log('Documents:', req.body.documents);
-    console.log('Documents type:', typeof req.body.documents);
-    console.log('Is array:', Array.isArray(req.body.documents));
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buffer) => {
+    if (req.originalUrl?.split('?')[0] !== '/api/integrations/website-requests') return;
+    if (buffer.length > MAX_BODY_BYTES) {
+      const error = new Error('Website request body is too large');
+      error.status = 413;
+      throw error;
+    }
+    req.rawBody = Buffer.from(buffer);
   }
-  next();
-});
+}));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Request logging + slow request warning
 app.use((req, res, next) => {
@@ -109,25 +121,32 @@ app.get('/api/health', async (req, res) => {
 
 // API Routes with error handling
 try {
+  // Explicit public API allowlist. Protected endpoints inside these mixed routers
+  // apply their own authentication before the default-deny boundary below.
   app.use('/api/auth', require('./routes/auth'));
-  app.use('/api/users', require('./routes/users'));
+  app.use('/api/vendor-onboarding', require('./routes/vendorOnboarding'));
+  app.use('/api/integrations', require('./routes/websiteRequests'));
+
+  // Every API mounted after this line requires an active, approved session.
+  app.use('/api', authenticateToken);
+  app.use('/api/users', checkRole(['admin']), require('./routes/users'));
   app.use('/api/dashboard', require('./routes/dashboard'));
   app.use('/api/orders', require('./routes/orders'));
   app.use('/api/customers', require('./routes/customers'));
   app.use('/api/vendors', require('./routes/vendors'));
   app.use('/api/employees', require('./routes/employees'));
   app.use('/api/projects', require('./routes/projects'));
-  app.use('/api/payments', require('./routes/payments'));
+  app.use('/api/payments', checkRole(['admin']), require('./routes/payments'));
   app.use('/api/notes', require('./routes/notes'));
-  app.use('/api/reports', require('./routes/reports'));
-  app.use('/api/settings', require('./routes/settings'));
+  app.use('/api/reports', checkRole(['admin']), require('./routes/reports'));
+  app.use('/api/settings', checkRole(['admin']), require('./routes/settings'));
   app.use('/api/notifications', require('./routes/notifications'));
+  app.use('/api/intakes', require('./routes/intakes'));
   app.use('/api/stages', require('./routes/stages'));
   app.use('/api/pipeline-records', require('./routes/pipelineRecords'));
   app.use('/api/pipeline-movements', require('./routes/pipelineMovements'));
   app.use('/api/attachments', require('./routes/attachments'));
-  const authenticateToken = require('./middleware/auth');
-  app.use('/api/upload', authenticateToken, require('./routes/gridfs-upload'));
+  app.use('/api/upload', require('./routes/gridfs-upload'));
   app.use('/uploads', authenticateToken, require('./routes/gridfs-upload'));
   console.log(' All routes loaded');
 } catch (error) {
@@ -135,8 +154,7 @@ try {
   process.exit(1);
 }
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '..'), {
+const staticOptions = {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript');
@@ -146,7 +164,57 @@ app.use(express.static(path.join(__dirname, '..'), {
       res.setHeader('Content-Type', 'text/html');
     }
   }
-}));
+};
+
+async function serveDashboard(req, res, next) {
+  try {
+    const resolved = await resolveSession(req, res);
+    if (!resolved) {
+      const returnTo = encodeURIComponent('/pages/admin-dashboard.html' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''));
+      return res.redirect(302, `/pages/login.html?returnTo=${returnTo}`);
+    }
+    res.set({
+      'Cache-Control': 'private, no-store, max-age=0',
+      Pragma: 'no-cache',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    return res.sendFile(path.join(__dirname, '../pages/admin-dashboard.html'));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function serveProtectedPage(req, res, next) {
+  try {
+    const resolved = await resolveSession(req, res);
+    if (!resolved) {
+      const returnTo = encodeURIComponent(req.originalUrl.startsWith('/') ? req.originalUrl : '/pages/admin-dashboard.html');
+      return res.redirect(302, `/pages/login.html?returnTo=${returnTo}`);
+    }
+    const fileName = path.posix.basename(req.path);
+    res.set({ 'Cache-Control': 'private, no-store, max-age=0', Pragma: 'no-cache' });
+    return res.sendFile(path.join(__dirname, '../pages', fileName));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+app.get(['/pages/admin-dashboard.html', '/admin-dashboard.html'], serveDashboard);
+
+// Public static content is deliberately limited; the repository root and the
+// protected dashboard HTML are never exposed through static middleware.
+app.use('/assets', express.static(path.join(__dirname, '../assets'), staticOptions));
+app.use('/config', express.static(path.join(__dirname, '../config'), staticOptions));
+app.use('/components', express.static(path.join(__dirname, '../components'), staticOptions));
+app.use('/pages', (req, res, next) => {
+  const fileName = path.posix.basename(req.path).toLowerCase();
+  if (fileName === 'admin-dashboard.html') return serveDashboard(req, res, next);
+  const publicPages = new Set(['login.html', 'signup.html', 'forgot-password.html', 'reset-password.html', 'vendor-onboarding.html']);
+  if (fileName.endsWith('.html') && !publicPages.has(fileName)) return serveProtectedPage(req, res, next);
+  return next();
+}, express.static(path.join(__dirname, '../pages'), { ...staticOptions, index: false }));
+app.get('/sw.js', (_req, res) => res.sendFile(path.join(__dirname, '../sw.js')));
+app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../favicon.ico')));
 
 // Serve index.html for root
 app.get('/', (req, res) => {
@@ -156,6 +224,11 @@ app.get('/', (req, res) => {
 // Catch-all route for SPA
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
+    // Never serve index.html for a missing file. Doing so can execute the root
+    // redirect from a nested URL and previously caused /pages/pages/... loops.
+    if (path.extname(req.path)) {
+      return res.status(404).type('text/plain').send('File not found');
+    }
     res.sendFile(path.join(__dirname, '../index.html'));
   } else {
     res.status(404).json({ message: 'Not found' });
@@ -164,10 +237,15 @@ app.get('*', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(' Error:', err);
+  const websiteIntakeRequest = req.originalUrl?.split('?')[0] === '/api/integrations/website-requests';
+  if (websiteIntakeRequest) {
+    console.error(' Website intake request error:', err?.name || 'request_error');
+  } else {
+    console.error(' Error:', err);
+  }
   res.status(err.status || 500).json({
     message: err.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err : {}
+    error: process.env.NODE_ENV === 'development' && !websiteIntakeRequest ? err : {}
   });
 });
 
@@ -185,6 +263,7 @@ async function startServer() {
       console.log(' Server running on port', PORT);
       console.log(' API Base: http://localhost:' + PORT + '/api');
       console.log(' Health check: http://localhost:' + PORT + '/api/health');
+      startIntakeEmailWorker();
     });
   } catch (error) {
     console.error(' Failed to start server:', error);
@@ -193,3 +272,6 @@ async function startServer() {
 }
 
 startServer();
+
+process.once('SIGTERM', stopIntakeEmailWorker);
+process.once('SIGINT', stopIntakeEmailWorker);

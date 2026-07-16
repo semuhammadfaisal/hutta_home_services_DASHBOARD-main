@@ -113,10 +113,16 @@ class DashboardManager {
                 // Load section-specific data
                 if (targetSection === 'orders') {
                     loadOrdersSection();
+                } else if (targetSection === 'workflow-center') {
+                    loadWorkflowCenter();
                 } else if (targetSection === 'customers') {
                     loadCustomersSection();
                 } else if (targetSection === 'vendors') {
                     loadVendorsSection();
+                } else if (targetSection === 'vendor-reviews') {
+                    window.loadVendorReviews?.();
+                    window.refreshVendorInvitations?.();
+                    window.refreshVendorEmailStatus?.();
                 } else if (targetSection === 'employees') {
                     loadEmployeesSection();
                 } else if (targetSection === 'payments') {
@@ -187,6 +193,21 @@ class DashboardManager {
     }
 
     showSection(sectionId) {
+        const sectionPermissions = {
+            vendors: window.PERMISSIONS?.VIEW_VENDORS,
+            'vendor-reviews': window.PERMISSIONS?.VIEW_VENDORS,
+            employees: window.PERMISSIONS?.VIEW_EMPLOYEES,
+            payments: window.PERMISSIONS?.VIEW_PAYMENTS,
+            accounting: window.PERMISSIONS?.VIEW_ACCOUNTING,
+            reports: window.PERMISSIONS?.VIEW_REPORTS,
+            settings: window.PERMISSIONS?.VIEW_SETTINGS,
+            users: window.PERMISSIONS?.MANAGE_SETTINGS
+        };
+        const requiredPermission = sectionPermissions[sectionId];
+        if (requiredPermission && !window.RBAC?.hasPermission(requiredPermission)) {
+            window.showToast?.('You do not have permission to access this section.', 'error');
+            return;
+        }
         // Hide all sections
         document.querySelectorAll('.content-section').forEach(section => {
             section.classList.remove('active');
@@ -540,25 +561,16 @@ class DashboardManager {
             return await window.APIService.getOrdersFresh();
         } catch (error) {
             console.warn('Unable to load orders for dashboard overview:', error);
-            return [];
+            return null;
         }
     }
 
     async getSyncedOrdersOverview(stats = {}, orders = null) {
-        if (stats.ordersOverview?.version === 'real-orders-v2') {
-            return stats.ordersOverview;
-        }
-
-        try {
-            const sourceOrders = Array.isArray(orders) ? orders : await window.APIService.getOrdersFresh();
-            return this.buildOrdersOverviewFromOrders(sourceOrders);
-        } catch (error) {
-            console.warn('Unable to sync orders overview from orders:', error);
-            return {};
-        }
+        if (Array.isArray(orders)) return this.buildOrdersOverviewFromOrders(orders);
+        return stats.ordersOverview || {};
     }
 
-    renderOrdersOverview(stats = {}, syncedOverview = null, orders = []) {
+    renderOrdersOverview(stats = {}, syncedOverview = null, orders = null) {
         const container = document.getElementById('ordersOverviewCards');
         const totalEl = document.getElementById('ordersOverviewTotal');
         if (!container) return;
@@ -574,17 +586,20 @@ class DashboardManager {
             { key: 'cancelled', label: 'Cancelled', value: Number(overview.cancelled ?? statusCounts.get('cancelled') ?? statusCounts.get('canceled') ?? 0), icon: 'times-circle' },
             { key: 'priority', label: 'High Priority Orders', value: Number(overview.highPriority ?? 0), icon: 'exclamation-circle' }
         ];
-        const total = Number(stats.totalOrders ?? cards.slice(0, 5).reduce((sum, card) => sum + card.value, 0));
+        const ordersData = Array.isArray(orders) ? orders : null;
+        const total = ordersData
+            ? ordersData.length
+            : Number(stats.totalOrders ?? cards.slice(0, 5).reduce((sum, card) => sum + card.value, 0));
         if (totalEl) totalEl.textContent = `${total.toLocaleString()} order${total === 1 ? '' : 's'}`;
 
-        const ordersData = Array.isArray(orders) ? orders : [];
+        const liveOrders = ordersData || [];
         const activeOrders = cards.find(card => card.key === 'progress')?.value || 0;
         const completedOrders = cards.find(card => card.key === 'completed')?.value || 0;
         const completedRate = total ? Math.round((completedOrders / total) * 100) : 0;
-        const priorityCounts = this.buildOrdersPriorityBreakdown(ordersData, overview);
-        const weeklySeries = this.buildOrdersWeeklyPerformanceSeries(ordersData);
-        const trendSeries = this.buildOrderVolumeDailySeriesForDays(ordersData, 30);
-        const recentHighPriority = this.getRecentHighPriorityOrders(ordersData);
+        const priorityCounts = this.buildOrdersPriorityBreakdown(liveOrders, overview);
+        const weeklySeries = this.buildOrdersWeeklyPerformanceSeries(liveOrders);
+        const trendSeries = this.buildOrderVolumeDailySeriesForDays(liveOrders, 30);
+        const recentHighPriority = this.getRecentHighPriorityOrders(liveOrders);
         const flowRows = [
             { key: 'new', label: 'New Orders', value: cards.find(card => card.key === 'new')?.value || 0, icon: 'plus-circle' },
             { key: 'progress', label: 'In Progress', value: activeOrders, icon: 'spinner' },
@@ -603,7 +618,7 @@ class DashboardManager {
                 label: 'Total Orders',
                 value: total,
                 icon: 'shopping-bag',
-                delta: this.getOrdersDeltaLabel(ordersData, () => true, 30),
+                delta: this.getOrdersDeltaLabel(liveOrders, () => true, 30),
                 spark: trendSeries.slice(-10)
             },
             {
@@ -611,24 +626,24 @@ class DashboardManager {
                 label: 'Active Orders',
                 value: activeOrders,
                 icon: 'layer-group',
-                delta: this.getOrdersDeltaLabel(ordersData, order => this.getOrderOverviewStatus(order) === 'inProgress', 7),
-                spark: this.buildOrdersStatusSparkline(ordersData, 'inProgress')
+                delta: this.getOrdersDeltaLabel(liveOrders, order => this.getOrderOverviewStatus(order) === 'inProgress', 7),
+                spark: this.buildOrdersStatusSparkline(liveOrders, 'inProgress')
             },
             {
                 key: 'completed',
                 label: 'Completed Rate',
                 value: `${completedRate}%`,
                 icon: 'check-circle',
-                delta: this.getOrdersDeltaLabel(ordersData, order => this.getOrderOverviewStatus(order) === 'completed', 30),
-                spark: this.buildOrdersStatusSparkline(ordersData, 'completed')
+                delta: this.getOrdersDeltaLabel(liveOrders, order => this.getOrderOverviewStatus(order) === 'completed', 30),
+                spark: this.buildOrdersStatusSparkline(liveOrders, 'completed')
             },
             {
                 key: 'priority',
                 label: 'High Priority Orders',
                 value: priorityCounts.high,
                 icon: 'exclamation-circle',
-                delta: this.getOrdersDeltaLabel(ordersData, order => ['high', 'urgent'].includes(this.normalizeOrderOverviewText(order.priority)), 7),
-                spark: this.buildOrdersPrioritySparkline(ordersData)
+                delta: this.getOrdersDeltaLabel(liveOrders, order => ['high', 'urgent'].includes(this.normalizeOrderOverviewText(order.priority)), 7),
+                spark: this.buildOrdersPrioritySparkline(liveOrders)
             }
         ];
 
@@ -663,7 +678,7 @@ class DashboardManager {
                 </article>
                 <article class="orders-overview-detail-card orders-weekly-card">
                     <div class="orders-detail-head">
-                        <h3>Weekly Performance</h3>
+                        <h3>Weekly Performance <span>Orders created this week</span></h3>
                     </div>
                     ${this.renderOrdersWeeklyPerformance(weeklySeries)}
                 </article>
@@ -701,7 +716,7 @@ class DashboardManager {
         const previousEnd = this.addRevenueDays(currentStart, -1);
         const previousStart = this.addRevenueDays(previousEnd, -(days - 1));
         const countInRange = (start, end) => orders.filter(order => {
-            const dateInput = this.getRevenueOrderDateInput(order);
+            const dateInput = this.getOrderActivityDateInput(order);
             return dateInput && dateInput >= start && dateInput <= end && predicate(order);
         }).length;
         const current = countInRange(currentStart, currentEnd);
@@ -826,7 +841,7 @@ class DashboardManager {
         const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const series = labels.map((label, index) => ({ label, value: 0, date: this.addRevenueDays(start, index) }));
         orders.forEach(order => {
-            const dateInput = this.getRevenueOrderDateInput(order);
+            const dateInput = this.getOrderActivityDateInput(order);
             const bucket = series.find(item => item.date === dateInput);
             if (bucket) bucket.value += 1;
         });
@@ -943,7 +958,7 @@ class DashboardManager {
     countOrdersByDate(orders = []) {
         const counts = new Map();
         (Array.isArray(orders) ? orders : []).forEach(order => {
-            const dateInput = this.getRevenueOrderDateInput(order);
+            const dateInput = this.getOrderActivityDateInput(order);
             if (!dateInput) return;
             counts.set(dateInput, (counts.get(dateInput) || 0) + 1);
         });
@@ -1616,7 +1631,7 @@ class DashboardManager {
             const orderDate = order.createdAt ? (tz() ? tz().formatDateMDT(order.createdAt, { month: 'short', day: 'numeric' }) : new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '';
             const customerName = order.customer?.name || order.customer;
             const customerEmail = order.customer?.email || '';
-            const statusDisplay = order.pipelineStage || (order.status || 'new').replace('-', ' ');
+            const statusDisplay = getOrderVisibleStatus(order) || 'new';
             const statusClass = getOrderStatusBadgeClass(order);
 
             return `
@@ -1631,6 +1646,7 @@ class DashboardManager {
                                 </button>
                             </div>
                             <div class="order-date">${orderDate}</div>
+                            ${order.source === 'website' ? `<div class="order-number-meta"><span class="order-source-badge"><i class="fas fa-globe"></i> Website</span>${order.requiresIntakeReview || order.missingData?.serviceCategory || order.missingData?.serviceAddress ? '<span class="order-missing-badge"><i class="fas fa-exclamation-triangle"></i> Intake incomplete</span>' : ''}</div>` : ''}
                         </div>
                     </div>
                 </td>
@@ -1646,9 +1662,9 @@ class DashboardManager {
                 <td><span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span></td>
                 <td><span class="order-date-cell">${order.startDate ? this.formatDate(order.startDate) : 'N/A'}</span></td>
                 <td><span class="order-date-cell">${(order.scheduleDate || order.startDate) ? this.formatDate(order.scheduleDate || order.startDate) : 'N/A'}</span></td>
-                <td><span class="order-amount">$${order.amount?.toLocaleString() || '0'}</span></td>
+                <td><span class="order-amount">${order.pricingStatus === 'unquoted' ? 'Unquoted' : `$${Number(order.amount || 0).toLocaleString()}`}</span></td>
                 <td><span class="order-cost">$${order.vendorCost?.toLocaleString() || '0'}</span></td>
-                <td><span class="order-profit">$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}</span></td>
+                <td><span class="order-profit">${order.pricingStatus === 'unquoted' ? '—' : `$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}`}</span></td>
                 <td onclick="event.stopPropagation()">
                     <div class="order-actions">
                         <button class="action-btn edit" onclick="editOrder('${order._id || order.id}')" title="Edit">
@@ -1707,7 +1723,7 @@ class DashboardManager {
             const timeSafe = escapePaymentHtml(timeAgo);
             const orderNumber = escapePaymentHtml(order.orderId || (order._id ? `#${String(order._id).slice(-6).toUpperCase()}` : 'New order'));
             const amount = Number(order.amount) || 0;
-            const amountText = `$${amount.toLocaleString(undefined, { minimumFractionDigits: amount % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+            const amountText = order.pricingStatus === 'unquoted' ? 'Unquoted' : `$${amount.toLocaleString(undefined, { minimumFractionDigits: amount % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
             const status = escapePaymentHtml(this.formatStatus(order.pipelineStage || order.status || 'created'));
             const orderId = order._id || order.id;
             if (!orderId) {
@@ -2157,6 +2173,15 @@ class DashboardManager {
         return Number.isNaN(date.getTime()) ? null : this.toRevenueDateInput(date);
     }
 
+    getOrderActivityDateInput(order) {
+        const value = order?.createdAt || order?.date || order?.scheduleDate || order?.startDate || null;
+        if (!value) return null;
+        const config = tz();
+        if (config?.formatForInput) return config.formatForInput(value);
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : this.toRevenueDateInput(date);
+    }
+
     getRevenueDateSeries(start, end) {
         const dates = [];
         const config = tz();
@@ -2562,9 +2587,7 @@ async function loadUnreadCount() {
                 clearInterval(notificationIntervalId);
                 notificationIntervalId = null;
             }
-            localStorage.removeItem('huttaSession');
-            sessionStorage.removeItem('huttaSession');
-            window.location.href = '/pages/login.html';
+            window.APIService.handleUnauthorized();
         }
     }
 }
@@ -3096,7 +3119,7 @@ window.setTableLoading = setTableLoading;
 window.setCardLoading = setCardLoading;
 
 // Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Check if we're on the dashboard page
     if (!window.location.pathname.includes('admin-dashboard')) {
         return;
@@ -3106,31 +3129,14 @@ document.addEventListener('DOMContentLoaded', function() {
     updateDashboardDateTime();
     setInterval(updateDashboardDateTime, 60 * 1000);
     
-    // Check authentication
-    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-    
-    if (!session) {
-        window.AppLogger?.debug('No session, redirecting to login...');
-        window.location.href = '/pages/login.html';
-        return;
-    }
-    
-    let sessionData;
     try {
-        sessionData = JSON.parse(session);
+        await window.AuthReady;
     } catch (error) {
-        window.AppLogger?.debug('Invalid session, redirecting to login...');
-        localStorage.removeItem('huttaSession');
-        sessionStorage.removeItem('huttaSession');
-        window.location.href = '/pages/login.html';
         return;
     }
-    
-    if (!sessionData.isAuthenticated || !sessionData.token) {
-        window.AppLogger?.debug('Not authenticated, redirecting to login...');
-        window.location.href = '/pages/login.html';
-        return;
-    }
+
+    const sessionData = { user: window.AuthSession.user, isAuthenticated: true };
+    window.RBAC?.init();
     
     window.AppLogger?.debug('Session valid, initializing dashboard...');
     
@@ -3139,6 +3145,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Create global dashboard instance
     window.dashboard = new DashboardManager();
+
+    if (window.location.hash === '#workflow-center') {
+        window.dashboard.showSection('workflow-center');
+        document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+        document.querySelector('[data-section="workflow-center"]')?.parentElement?.classList.add('active');
+        loadWorkflowCenter();
+    }
     
     // Initialize additional features
     addHoverEffects();
@@ -3636,6 +3649,8 @@ function showAddOrderModal() {
     // Reset required fields
     document.getElementById('customerName').required = true;
     document.getElementById('customerAddressSelect').required = false;
+    document.getElementById('amount').required = true;
+    document.querySelector('label[for="amount"]').textContent = 'Revenue *';
     
     // Make customer fields editable (remove read-only)
     document.getElementById('customerName').readOnly = false;
@@ -3711,7 +3726,7 @@ async function editOrder(orderId) {
         document.getElementById('customerName').readOnly = true;
         document.getElementById('customerEmail').readOnly = true;
         document.getElementById('customerPhone').readOnly = true;
-        document.getElementById('customerAddress').readOnly = true;
+        document.getElementById('customerAddress').readOnly = order.source !== 'website';
         
         // Disable customer selection dropdown
         document.getElementById('customerSearchInput').disabled = true;
@@ -3723,10 +3738,12 @@ async function editOrder(orderId) {
         document.getElementById('customerName').style.cssText = readOnlyStyle;
         document.getElementById('customerEmail').style.cssText = readOnlyStyle;
         document.getElementById('customerPhone').style.cssText = readOnlyStyle;
-        document.getElementById('customerAddress').style.cssText = readOnlyStyle;
+        document.getElementById('customerAddress').style.cssText = order.source === 'website' ? '' : readOnlyStyle;
         
         document.getElementById('service').value = order.service || '';
         document.getElementById('amount').value = order.amount || '';
+        document.getElementById('amount').required = order.pricingStatus !== 'unquoted';
+        document.querySelector('label[for="amount"]').textContent = order.pricingStatus === 'unquoted' ? 'Revenue (unquoted)' : 'Revenue *';
         document.getElementById('vendorCost').value = order.vendorCost || '';
         document.getElementById('processingFee').value = order.processingFee || '';
         document.getElementById('profit').value = order.profit || '';
@@ -4073,9 +4090,7 @@ function viewOrder(orderId, fromRecentActivity = false) {
 }
 
 function getOrderStageDisplay(order) {
-    const stage = order?.pipelineStage || '';
-    const status = order?.status || '';
-    const displayValue = stage || status || '-';
+    const displayValue = getOrderVisibleStatus(order) || '-';
     const classValue = getOrderStatusBadgeClass(order);
 
     return {
@@ -4089,7 +4104,7 @@ function renderOrderStageBadge(order) {
     return `<span class="order-status-badge ${stageDisplay.className}">${stageDisplay.label}</span>`;
 }
 
-async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity = false) {
+async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity = false, fromWorkflow = false) {
     try {
         const order = await window.APIService.getOrder(orderId);
         currentDetailOrderId = order._id || order.id || orderId;
@@ -4101,7 +4116,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             document.getElementById('modalDetailOrderId').textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
             document.getElementById('modalDetailOrderStatus').innerHTML = renderOrderStageBadge(order);
             document.getElementById('modalDetailOrderPriority').innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
-            document.getElementById('modalDetailOrderRevenue').textContent = order.amount ? `$${order.amount.toLocaleString()}` : '-';
+            document.getElementById('modalDetailOrderRevenue').textContent = order.pricingStatus === 'unquoted' ? 'Unquoted' : (order.amount ? `$${order.amount.toLocaleString()}` : '-');
             document.getElementById('modalDetailOrderCost').textContent = order.vendorCost ? `$${order.vendorCost.toLocaleString()}` : '-';
             document.getElementById('modalDetailOrderProfit').textContent = order.amount && order.vendorCost ? `$${(order.amount - order.vendorCost).toLocaleString()}` : '-';
             document.getElementById('modalDetailOrderService').textContent = order.service || '-';
@@ -4154,7 +4169,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         }
         
         // Store the source for back navigation
-        window.orderDetailSource = fromPipeline ? 'pipeline' : fromRecentActivity ? 'dashboard' : 'orders';
+        window.orderDetailSource = fromPipeline ? 'pipeline' : fromRecentActivity ? 'dashboard' : fromWorkflow ? 'workflow-center' : 'orders';
 
         // Update back button text and function
         const backButton = document.querySelector('#order-detail .btn-secondary');
@@ -4172,6 +4187,12 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
                         dashLink.parentElement.classList.add('active');
                     }
                 };
+            } else if (fromWorkflow) {
+                backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Workflow Center';
+                backButton.onclick = () => {
+                    showSection('workflow-center');
+                    loadWorkflowCenter();
+                };
             } else {
                 backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Orders';
                 backButton.onclick = backToOrders;
@@ -4180,6 +4201,9 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         
         document.getElementById('orderDetailTitle').textContent = `Order ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
         const detailOrderId = document.getElementById('detailOrderId');
+        const detailOrderRequestReference = document.getElementById('detailOrderRequestReference');
+        const detailOrderSource = document.getElementById('detailOrderSource');
+        const detailOrderIntakeBanner = document.getElementById('detailOrderIntakeBanner');
         const detailOrderStatus = document.getElementById('detailOrderStatus');
         const detailOrderPriority = document.getElementById('detailOrderPriority');
         const detailOrderRevenue = document.getElementById('detailOrderRevenue');
@@ -4198,9 +4222,19 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         const detailOrderNoteComposer = document.getElementById('detailOrderNoteComposer');
         
         if (detailOrderId) detailOrderId.textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
+        if (detailOrderRequestReference) detailOrderRequestReference.textContent = order.requestReference || '-';
+        if (detailOrderSource) detailOrderSource.innerHTML = order.source === 'website' ? '<span class="order-source-badge"><i class="fas fa-globe"></i> Website</span>' : 'Manual';
+        if (detailOrderIntakeBanner) {
+            const missing = [];
+            if (order.missingData?.serviceCategory) missing.push('service category');
+            if (order.missingData?.serviceAddress) missing.push('service address');
+            if (order.requiresIntakeReview) missing.push('customer match review');
+            detailOrderIntakeBanner.hidden = order.source !== 'website' || !missing.length;
+            detailOrderIntakeBanner.innerHTML = missing.length ? `<strong>Intake follow-up required:</strong> ${missing.map(escapePaymentHtml).join(', ')}.` : '';
+        }
         if (detailOrderStatus) detailOrderStatus.innerHTML = renderOrderStageBadge(order);
         if (detailOrderPriority) detailOrderPriority.innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
-        if (detailOrderRevenue) detailOrderRevenue.textContent = '$' + (order.amount?.toLocaleString() || '0');
+        if (detailOrderRevenue) detailOrderRevenue.textContent = order.pricingStatus === 'unquoted' ? 'Unquoted' : '$' + (order.amount?.toLocaleString() || '0');
         if (detailOrderCost) detailOrderCost.textContent = '$' + (order.vendorCost?.toLocaleString() || '0');
         if (detailOrderProfit) detailOrderProfit.textContent = '$' + (order.profit?.toLocaleString() || '0');
         if (detailOrderService) detailOrderService.textContent = order.service || '-';
@@ -4260,7 +4294,12 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
 
 function backToOrders() {
     currentDetailOrderId = null;
-    showSection('orders');
+    if (window.orderDetailSource === 'workflow-center') {
+        showSection('workflow-center');
+        loadWorkflowCenter();
+    } else {
+        showSection('orders');
+    }
 }
 
 function closeOrderDetailModal() {
@@ -4506,39 +4545,20 @@ window.resetSettings = resetSettings;
 // Reports Management Functions
 let reportsInitialized = false;
 let reportsSourceData = null;
-let reportSortState = { key: '', direction: 'asc' };
-
-const reportColors = ['#2563eb', '#14b8a6', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
-
-const emptyLiveReportData = {
-    kpis: [
-        { label: 'Total Revenue', value: 0, format: 'currency', icon: 'fa-dollar-sign', trend: 0, compare: 'No revenue in range' },
-        { label: 'Revenue Growth %', value: 0, format: 'percent', icon: 'fa-arrow-trend-up', trend: 0, compare: 'No previous period revenue' },
-        { label: 'Outstanding Payments', value: 0, format: 'currency', icon: 'fa-file-invoice-dollar', trend: 0, compare: '0 pending payments' },
-        { label: 'Open Work Orders', value: 0, format: 'number', icon: 'fa-briefcase', trend: 0, compare: '0 overdue' },
-        { label: 'Average Job Value', value: 0, format: 'currency', icon: 'fa-receipt', trend: 0, compare: '0 jobs in range' },
-        { label: 'Quote Conversion Rate', value: 0, format: 'percent', icon: 'fa-bullseye', trend: 0, compare: '0 completed of 0' },
-        { label: 'Average Payment Time', value: 0, format: 'days', icon: 'fa-clock', trend: 0, compare: '0 paid payments analyzed' },
-        { label: 'Recurring Revenue %', value: 0, format: 'percent', icon: 'fa-rotate', trend: 0, compare: '0 recurring customers' }
-    ],
-    revenueByService: [],
-    monthlyRevenue: [],
-    yoyRevenue: [],
-    recurringSplit: [],
-    aging: [],
-    revenueByProperty: [],
-    paymentSpeedBands: [],
-    topCustomers: [],
-    repeatJobFrequency: [],
-    avgPayDaysByCustomer: [],
-    averageJobValue: 0,
-    quoteConversionRate: 0,
-    profitByCategory: [],
-    operations: { statusCards: [], progress: [], table: [], overdueWorkOrders: [], pendingApprovalJobs: [], timeline: [], heatmap: [] },
-    sales: { funnel: [], newLeadsMonthly: [], leadSources: [], reps: [], lostDeals: [] },
-    customers: { retention: [], behavior: [], rankings: [], highRiskUnpaid: [] },
-    scheduling: { maintenance: [], upcomingMaintenanceByProperty: [], renewals: [], utilization: [], calendar: [], heatmap: [] },
-    filterOptions: { customers: [], properties: [], technicians: [], services: [], statuses: [], locations: [] }
+let reportsActiveTab = 'overview';
+let reportsAppliedFilters = {};
+let reportsLoading = false;
+let reportsRuntimeWarning = '';
+let reportRecordsState = { rows: [], page: 1, pageSize: 25, total: 0, pages: 1, sort: 'date', direction: 'desc', error: '' };
+const reportColors = ['#0056b8', '#14b8a6', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9', '#64748b'];
+const reportTabs = new Set(['overview', 'financial', 'operations', 'relationships', 'pipeline', 'details']);
+const reportFilterLabels = {
+    customerId: 'Customer', employeeId: 'Assigned employee', vendorId: 'Vendor', service: 'Service', orderStatus: 'Order status',
+    paymentStatus: 'Payment status', pipelineStageId: 'Pipeline stage', city: 'City', state: 'State', zip: 'ZIP'
+};
+const reportFilterElementIds = {
+    customerId: 'reportCustomerFilter', employeeId: 'reportEmployeeFilter', vendorId: 'reportVendorFilter', service: 'reportServiceFilter', orderStatus: 'reportOrderStatusFilter',
+    paymentStatus: 'reportPaymentStatusFilter', pipelineStageId: 'reportPipelineStageFilter', city: 'reportCityFilter', state: 'reportStateFilter', zip: 'reportZipFilter'
 };
 
 function formatReportMoney(value) {
@@ -4548,70 +4568,201 @@ function formatReportMoney(value) {
 function formatReportValue(value, format) {
     if (format === 'currency') return formatReportMoney(value);
     if (format === 'percent') return `${Number(value || 0).toFixed(1).replace('.0', '')}%`;
-    if (format === 'days') return `${Number(value || 0).toFixed(1).replace('.0', '')}d`;
     return Number(value || 0).toLocaleString();
+}
+
+function escapeReportHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
+}
+
+function encodeReportValue(value) {
+    return encodeURIComponent(String(value ?? '')).replace(/'/g, '%27');
 }
 
 function getReportFilters() {
     return {
         startDate: document.getElementById('reportStartDate')?.value,
         endDate: document.getElementById('reportEndDate')?.value,
-        customer: document.getElementById('reportCustomerFilter')?.value,
-        technician: document.getElementById('reportTechnicianFilter')?.value,
+        customerId: document.getElementById('reportCustomerFilter')?.value,
+        employeeId: document.getElementById('reportEmployeeFilter')?.value,
+        vendorId: document.getElementById('reportVendorFilter')?.value,
         service: document.getElementById('reportServiceFilter')?.value,
-        status: document.getElementById('reportStatusFilter')?.value,
-        location: document.getElementById('reportLocationFilter')?.value
+        orderStatus: document.getElementById('reportOrderStatusFilter')?.value,
+        paymentStatus: document.getElementById('reportPaymentStatusFilter')?.value,
+        pipelineStageId: document.getElementById('reportPipelineStageFilter')?.value,
+        city: document.getElementById('reportCityFilter')?.value,
+        state: document.getElementById('reportStateFilter')?.value,
+        zip: document.getElementById('reportZipFilter')?.value
     };
+}
+
+function reportFilterDifferences() {
+    const draft = getReportFilters();
+    return Object.keys(draft).filter(key => String(draft[key] || '') !== String(reportsAppliedFilters[key] || ''));
+}
+
+function selectedReportFilterLabel(key, value) {
+    const select = document.getElementById(reportFilterElementIds[key]);
+    return Array.from(select?.options || []).find(option => option.value === String(value))?.textContent?.trim() || value;
+}
+
+function markReportFiltersDirty() {
+    const differences = reportFilterDifferences();
+    const dirty = differences.length > 0 && Boolean(Object.keys(reportsAppliedFilters).length);
+    const notice = document.getElementById('reportFilterDirty');
+    const count = document.getElementById('reportDirtyCount');
+    const exportButton = document.getElementById('reportExportButton');
+    if (notice) notice.hidden = !dirty;
+    if (count) {
+        count.hidden = !dirty;
+        count.textContent = String(differences.length);
+    }
+    if (exportButton) {
+        exportButton.disabled = dirty || !reportsSourceData || reportsLoading;
+        exportButton.title = dirty ? 'Apply filter changes before exporting' : '';
+    }
+    const advancedKeys = ['vendorId', 'orderStatus', 'paymentStatus', 'pipelineStageId', 'city', 'state', 'zip'];
+    const advancedCount = advancedKeys.filter(key => getReportFilters()[key]).length;
+    const badge = document.getElementById('reportAdvancedCount');
+    if (badge) {
+        badge.hidden = !advancedCount;
+        badge.textContent = String(advancedCount);
+    }
+}
+
+function renderAppliedFilterChips() {
+    const container = document.getElementById('reportActiveFilters');
+    if (!container) return;
+    const entries = Object.entries(reportsAppliedFilters).filter(([key, value]) => value && reportFilterLabels[key]);
+    container.innerHTML = entries.length
+        ? `<span class="report-active-label">Applied:</span>${entries.map(([key, value]) => `<button type="button" onclick="clearReportFilter('${key}')"><span>${escapeReportHtml(reportFilterLabels[key])}: ${escapeReportHtml(selectedReportFilterLabel(key, value))}</span><i class="fas fa-xmark" aria-hidden="true"></i><span class="visually-hidden">Remove ${escapeReportHtml(reportFilterLabels[key])} filter</span></button>`).join('')}`
+        : '';
+}
+
+function clearReportFilter(key) {
+    const element = document.getElementById(reportFilterElementIds[key]);
+    if (!element) return;
+    element.value = '';
+    applyReportFilters();
+}
+
+function setReportLoadingControls(loading) {
+    const applyButton = document.getElementById('reportApplyButton');
+    const refreshButton = document.getElementById('reportRefreshButton');
+    const exportButton = document.getElementById('reportExportButton');
+    if (applyButton) {
+        applyButton.disabled = loading;
+        applyButton.classList.toggle('is-loading', loading);
+    }
+    if (refreshButton) {
+        refreshButton.disabled = loading;
+        refreshButton.classList.toggle('is-loading', loading);
+    }
+    if (exportButton) exportButton.disabled = loading || reportFilterDifferences().length > 0 || !reportsSourceData;
+    document.getElementById('reports')?.setAttribute('aria-busy', loading ? 'true' : 'false');
 }
 
 function showReportsSkeleton(show) {
     const skeleton = document.getElementById('reportsSkeleton');
-    const dashboard = document.getElementById('reportsDashboard');
-    if (!skeleton || !dashboard) return;
+    if (!skeleton) return;
     skeleton.innerHTML = show ? Array.from({ length: 8 }, () => '<div class="skeleton-block"></div>').join('') : '';
     skeleton.classList.toggle('active', show);
-    dashboard.style.display = show ? 'none' : '';
 }
 
-async function generateReports() {
-    const filters = getReportFilters();
+function setReportsStatus(type, title, message, retry = false) {
+    const status = document.getElementById('reportsStatus');
+    const dashboard = document.getElementById('reportsDashboard');
+    if (!status || !dashboard) return;
+    const icon = type === 'error' ? 'fa-triangle-exclamation' : type === 'empty' ? 'fa-inbox' : 'fa-chart-line';
+    status.className = `reports-status ${type || ''}`;
+    status.innerHTML = `<i class="fas ${icon}"></i><div><strong>${escapeReportHtml(title)}</strong><span>${escapeReportHtml(message)}</span>${retry ? '<button type="button" class="btn-secondary" onclick="refreshReports()">Retry</button>' : ''}</div>`;
+    status.hidden = false;
+    dashboard.hidden = true;
+}
 
+function validateReportsPayload(payload) {
+    const valid = payload && typeof payload === 'object' && payload.meta && payload.summary && payload.charts && payload.tables && payload.filterOptions && payload.dataQuality;
+    if (!valid) throw new Error('The reports service returned an incomplete response.');
+    return payload;
+}
+
+async function generateReports(filters = reportsAppliedFilters) {
+    if (reportsLoading) return;
+    if (!filters.startDate || !filters.endDate || filters.startDate > filters.endDate) {
+        setReportsStatus('error', 'Choose a valid date range', 'Start date must be on or before end date.');
+        return;
+    }
+    const previousData = reportsSourceData;
+    const previousFilters = { ...reportsAppliedFilters };
+    reportsLoading = true;
+    reportsAppliedFilters = { ...filters };
+    reportsRuntimeWarning = '';
+    setReportLoadingControls(true);
     showReportsSkeleton(true);
+    setReportsStatus('loading', 'Loading reports…', 'Calculating live performance from your CRM data.');
     try {
-        reportsSourceData = await window.APIService.getAnalyticsReport(filters);
+        const [analyticsResult, recordsResult] = await Promise.allSettled([
+            window.APIService.getAnalyticsReport(reportsAppliedFilters),
+            window.APIService.getReportRecords({ ...reportsAppliedFilters, page: reportRecordsState.page, pageSize: reportRecordsState.pageSize, sort: reportRecordsState.sort, direction: reportRecordsState.direction })
+        ]);
+        if (analyticsResult.status === 'rejected') throw analyticsResult.reason;
+        reportsSourceData = validateReportsPayload(analyticsResult.value);
+        if (recordsResult.status === 'fulfilled') {
+            reportRecordsState = { ...reportRecordsState, ...recordsResult.value.pagination, rows: recordsResult.value.rows || [], error: '' };
+        } else {
+            reportRecordsState = { ...reportRecordsState, rows: [], error: 'Detailed records could not be loaded.' };
+        }
+        populateReportFilters();
+        renderAppliedFilterChips();
+        renderReportsMeta();
+        const status = document.getElementById('reportsStatus');
+        const dashboard = document.getElementById('reportsDashboard');
+        if (status) status.hidden = true;
+        if (dashboard) dashboard.hidden = false;
+        renderReportTabContent();
     } catch (error) {
         console.error('Failed to load live analytics report:', error);
-        reportsSourceData = JSON.parse(JSON.stringify(emptyLiveReportData));
-        if (window.showToast) {
-            showToast('Live report data unavailable. Showing empty report state.', 'error');
+        if (previousData) {
+            reportsSourceData = previousData;
+            reportsAppliedFilters = previousFilters;
+            reportsRuntimeWarning = `Refresh failed. Showing the last successfully loaded report. ${error?.message || ''}`.trim();
+            const status = document.getElementById('reportsStatus');
+            const dashboard = document.getElementById('reportsDashboard');
+            if (status) status.hidden = true;
+            if (dashboard) dashboard.hidden = false;
+            renderReportsMeta();
+            renderReportTabContent();
+        } else {
+            reportsSourceData = null;
+            setReportsStatus('error', 'Reports could not be loaded', error?.message || 'The service is unavailable. Check your connection and try again.', true);
         }
     } finally {
+        reportsLoading = false;
+        setReportLoadingControls(false);
+        markReportFiltersDirty();
         showReportsSkeleton(false);
-        renderReportsDashboard();
     }
 }
 
 function renderReportsDashboard() {
-    if (!reportsSourceData) reportsSourceData = JSON.parse(JSON.stringify(emptyLiveReportData));
-    populateReportFilters();
+    if (!reportsSourceData) return;
+    renderReportsMeta();
     renderReportTabContent();
-    filterReports();
 }
 
-function cardShell(title, subtitle, body, className = '') {
-    const icon = getReportIcon(title);
+function reportCard(title, subtitle, body, className = '') {
     return `
         <section class="analytics-card ${className} report-searchable" data-report-text="${title} ${subtitle}">
             <div class="analytics-card-header">
                 <div class="report-title-group">
-                    <span class="report-card-icon"><i class="fas ${icon}"></i></span>
+                    <span class="report-card-icon"><i class="fas ${getReportIcon(title)}"></i></span>
                     <div>
-                    <h3>${title}</h3>
-                    <p>${subtitle}</p>
+                    <h3>${escapeReportHtml(title)}</h3>
+                    <p>${escapeReportHtml(subtitle)}</p>
                     </div>
                 </div>
             </div>
-            ${body || emptyState('No report data available')}
+            ${body || reportEmptyState('No report data available')}
         </section>
     `;
 }
@@ -4620,395 +4771,516 @@ function getReportIcon(title) {
     if (/revenue|average job|recurring/i.test(title)) return 'fa-chart-line';
     if (/work order|approval/i.test(title)) return 'fa-clipboard-list';
     if (/lead|quote/i.test(title)) return 'fa-bullseye';
-    if (/maintenance/i.test(title)) return 'fa-calendar-check';
+    if (/recurring/i.test(title)) return 'fa-calendar-check';
     if (/pay/i.test(title)) return 'fa-clock';
     if (/customer|client/i.test(title)) return 'fa-users';
     return 'fa-chart-simple';
 }
 
-function emptyState(message) {
-    return `<div class="empty-state"><div><i class="fas fa-chart-simple"></i><p>${message}</p></div></div>`;
+function reportEmptyState(message) {
+    return `<div class="empty-state"><div><i class="fas fa-chart-simple"></i><p>${escapeReportHtml(message)}</p></div></div>`;
 }
 
-function renderLineChart(series, type = 'line') {
-    if (!series || !series.length) return emptyState('No chart data for this filter set');
-    const width = 620;
-    const height = 170;
-    const max = Math.max(...series.map(item => item.value), 1);
-    const min = Math.min(...series.map(item => item.value), 0);
+function renderRevenueProfitChart(series) {
+    if (!series?.length) return reportEmptyState('No revenue or profit data matches these filters.');
+    const width = 680;
+    const height = 190;
+    const plot = { left: 58, right: 668, top: 10, bottom: 158 };
+    const values = series.flatMap(item => [Number(item.revenue || 0), Number(item.profit || 0)]);
+    const rawMin = Math.min(0, ...values);
+    const rawMax = Math.max(0, ...values);
+    const padding = Math.max((rawMax - rawMin) * .08, 1);
+    const min = rawMin < 0 ? rawMin - padding : 0;
+    const max = rawMax + padding;
     const range = Math.max(max - min, 1);
-    const points = series.map((item, index) => {
-        const x = series.length === 1 ? width / 2 : (index / (series.length - 1)) * width;
-        const y = height - ((item.value - min) / range) * (height - 22) - 10;
+    const yFor = value => plot.bottom - ((Number(value || 0) - min) / range) * (plot.bottom - plot.top);
+    const pointsFor = key => series.map((item, index) => {
+        const x = series.length === 1 ? (plot.left + plot.right) / 2 : plot.left + (index / (series.length - 1)) * (plot.right - plot.left);
+        const y = yFor(item[key]);
         return { ...item, x, y };
     });
-    const line = points.map(point => `${point.x},${point.y}`).join(' ');
-    const area = `0,${height} ${line} ${width},${height}`;
+    const revenue = pointsFor('revenue');
+    const profit = pointsFor('profit');
+    const ticks = Array.from({ length: 5 }, (_, index) => {
+        const value = max - (index / 4) * range;
+        return { value, y: yFor(value) };
+    });
+    const labelStep = Math.max(1, Math.ceil(series.length / 6));
+    const compact = value => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
     return `
-        <div class="${type === 'area' ? 'area-chart' : 'line-chart'}">
-            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img">
-                ${[35, 75, 115, 155].map(y => `<line class="chart-grid-line" x1="0" x2="${width}" y1="${y}" y2="${y}"></line>`).join('')}
-                ${type === 'area' ? `<polygon class="chart-area" points="${area}"></polygon>` : ''}
-                <polyline class="chart-line" points="${line}"></polyline>
-                ${points.map(point => `<circle class="chart-point"><title>${point.label}: ${point.value.toLocaleString()}</title></circle>`.replace('<circle class="chart-point"', `<circle class="chart-point" cx="${point.x}" cy="${point.y}" r="4"`)).join('')}
+        <div class="report-chart-legend"><span><i style="background:#0056b8"></i>Revenue</span><span><i style="background:#14b8a6"></i>Profit</span></div>
+        <div class="line-chart">
+            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Revenue and profit trend. Revenue ranges from ${formatReportMoney(Math.min(...revenue.map(point => point.revenue)))} to ${formatReportMoney(Math.max(...revenue.map(point => point.revenue)))}.">
+                ${ticks.map(tick => `<line class="chart-grid-line" x1="${plot.left}" x2="${plot.right}" y1="${tick.y}" y2="${tick.y}"></line><text class="report-chart-tick" x="${plot.left - 8}" y="${tick.y + 4}" text-anchor="end">${escapeReportHtml(compact(tick.value))}</text>`).join('')}
+                ${min < 0 ? `<line class="report-zero-line" x1="${plot.left}" x2="${plot.right}" y1="${yFor(0)}" y2="${yFor(0)}"></line>` : ''}
+                <polyline class="chart-line" points="${revenue.map(point => `${point.x},${point.y}`).join(' ')}"></polyline>
+                <polyline class="chart-line report-profit-line" points="${profit.map(point => `${point.x},${point.y}`).join(' ')}"></polyline>
+                ${revenue.map(point => `<circle class="chart-point" cx="${point.x}" cy="${point.y}" r="4" tabindex="0" aria-label="${escapeReportHtml(point.label)} revenue ${formatReportMoney(point.revenue)}"><title>${escapeReportHtml(point.label)} revenue: ${formatReportMoney(point.revenue)}</title></circle>`).join('')}
+                ${profit.map(point => `<circle class="chart-point report-profit-point" cx="${point.x}" cy="${point.y}" r="4" tabindex="0" aria-label="${escapeReportHtml(point.label)} profit ${formatReportMoney(point.profit)}"><title>${escapeReportHtml(point.label)} profit: ${formatReportMoney(point.profit)}</title></circle>`).join('')}
             </svg>
         </div>
-        <div class="chart-axis-labels">${series.map(item => `<span>${item.label}</span>`).join('')}</div>
+        <div class="chart-axis-labels">${series.filter((_item, index) => index % labelStep === 0 || index === series.length - 1).map(item => `<span>${escapeReportHtml(item.label)}</span>`).join('')}</div>
+        <table class="visually-hidden"><caption>Revenue and profit trend data</caption><thead><tr><th>Period</th><th>Revenue</th><th>Profit</th></tr></thead><tbody>${series.map(item => `<tr><td>${escapeReportHtml(item.label)}</td><td>${formatReportMoney(item.revenue)}</td><td>${formatReportMoney(item.profit)}</td></tr>`).join('')}</tbody></table>
     `;
 }
 
-function renderDonutChart(items) {
-    if (!items || !items.length) return emptyState('No live data for this report yet');
-    const total = items.reduce((sum, item) => sum + item.value, 0) || 1;
-    let cursor = 0;
-    const segments = items.map((item, index) => {
-        const start = cursor;
-        cursor += (item.value / total) * 100;
-        return `${reportColors[index % reportColors.length]} ${start}% ${cursor}%`;
-    }).join(', ');
-    return `
-        <div class="donut-chart-wrap">
-            <div class="donut-chart" style="--segments: ${segments};"></div>
-            <div class="donut-legend">
-                ${items.map((item, index) => `
-                    <div class="legend-item">
-                        <span><i class="legend-color" style="background:${reportColors[index % reportColors.length]}"></i>${item.label}</span>
-                        <strong>${item.value}${item.value <= 100 ? '%' : ''}</strong>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-}
-
-function renderHorizontalBars(items, suffix = '') {
-    if (!items || !items.length) return emptyState('No live data for this report yet');
+function renderReportBars(items, options = {}) {
+    if (!items?.length) return reportEmptyState(options.empty || 'No data matches the current filters.');
     const max = Math.max(...items.map(item => item.value), 1);
-    return `<div class="horizontal-bars">${items.map((item, index) => `
-        <div class="bar-row">
-            <span>${item.label}</span>
+    return `<div class="horizontal-bars">${items.slice(0, options.limit || 10).map((item, index) => `
+        <button type="button" class="bar-row report-bar-button" onclick="${options.drilldown ? `drilldownReports('${options.drilldown}','${encodeReportValue(item.label)}')` : ''}">
+            <span>${escapeReportHtml(item.label)}</span>
             <div class="bar-track"><div class="bar-fill" style="width:${(item.value / max) * 100}%; background:${reportColors[index % reportColors.length]}"></div></div>
-            <strong>${typeof item.value === 'number' && item.value > 999 ? formatReportMoney(item.value) : item.value + suffix}</strong>
-        </div>
+            <strong>${options.currency ? formatReportMoney(item.value) : Number(item.value || 0).toLocaleString()}</strong>
+        </button>
     `).join('')}</div>`;
 }
 
-function renderStackedBars(items) {
-    if (!items || !items.length) return emptyState('No live data for this report yet');
-    return `<div class="stacked-bars">${items.map(item => {
-        const paid = Math.max(100 - item.value, 8);
-        return `
-            <div class="stacked-row">
-                <span>${item.label}</span>
-                <div class="stacked-track">
-                    <div class="stacked-segment" style="width:${item.value}%; background:#2563eb"></div>
-                    <div class="stacked-segment" style="width:${paid}%; background:#14b8a6"></div>
-                </div>
-                <strong>${item.value}%</strong>
-            </div>
-        `;
-    }).join('')}</div>`;
-}
-
-function renderTable(headers, rows) {
-    if (!rows || !rows.length) return emptyState('No rows match the current filters');
+function renderReportTable(headers, rows, options = {}) {
+    if (!rows?.length) return reportEmptyState(options.empty || 'No rows match the current filters.');
     return `
+        <div class="report-table-scroll-hint"><i class="fas fa-arrows-left-right"></i> Scroll horizontally to see all columns</div>
         <div class="report-table-wrap">
             <table class="report-table">
-                <thead><tr>${headers.map((header, index) => `<th data-sort-key="${header.key}" data-column="${index}" onclick="sortReportTable(this)">${header.label} <i class="fas fa-sort"></i></th>`).join('')}</tr></thead>
+                <thead><tr>${headers.map(header => {
+                    const activeSort = options.sortable && reportRecordsState.sort === header.key;
+                    const ariaSort = activeSort ? (reportRecordsState.direction === 'asc' ? 'ascending' : 'descending') : 'none';
+                    const icon = activeSort ? (reportRecordsState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+                    return `<th${options.sortable ? ` aria-sort="${ariaSort}"` : ''}>${options.sortable ? `<button type="button" class="report-sort-button" onclick="sortReportRecords('${header.key}')">${escapeReportHtml(header.label)} <i class="fas ${icon}" aria-hidden="true"></i></button>` : escapeReportHtml(header.label)}</th>`;
+                }).join('')}</tr></thead>
                 <tbody>
-                    ${rows.map(row => `<tr>${headers.map(header => `<td>${formatReportCell(row[header.key], header.key)}</td>`).join('')}</tr>`).join('')}
+                    ${rows.map(row => {
+                        const action = options.rowAction?.(row);
+                        const interactive = action ? ` class="report-clickable-row" role="link" tabindex="0" aria-label="View ${escapeReportHtml(row.order || row.invoice || row.customer || row.employee || row.vendor || 'report record')}" onclick="${action}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"` : '';
+                        return `<tr${interactive}>${headers.map(header => `<td>${formatReportCell(row[header.key], header)}</td>`).join('')}</tr>`;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
     `;
 }
 
-function formatReportCell(value, key) {
-    if (key === 'status' || key === 'health') return `<span class="health-pill ${value}">${value}</span>`;
-    if (typeof value === 'number' && (key === 'revenue' || key === 'profit' || key === 'clv' || key === 'value' || key === 'amount')) return formatReportMoney(value);
-    if (typeof value === 'number' && key === 'avgDays') return `${value}d`;
-    return value;
+function formatReportCell(value, header) {
+    if (header.format === 'currency') return formatReportMoney(value);
+    if (header.format === 'percent') return formatReportValue(value, 'percent');
+    if (header.format === 'date') return value ? formatDisplayDate(value) : '—';
+    if (header.badge) return `<span class="health-pill ${escapeReportHtml(String(value).toLowerCase().replace(/\s+/g, '-'))}">${escapeReportHtml(value || 'unknown')}</span>`;
+    return escapeReportHtml(value ?? '—');
 }
 
-function renderProgressList(items) {
-    if (!items || !items.length) return emptyState('No live data for this report yet');
-    return `<div class="progress-list">${items.map(item => `
-        <div class="progress-row">
-            <div class="progress-meta"><span>${item.label}</span><strong>${item.value}%</strong></div>
-            <div class="progress-track"><div class="progress-fill" style="width:${item.value}%"></div></div>
-        </div>
-    `).join('')}</div>`;
-}
-
-function renderStatusCards(items) {
-    if (!items || !items.length) return emptyState('No live data for this report yet');
-    return `<div class="status-card-grid">${items.map(item => `
-        <div class="status-card">
-            <span>${item.label}</span>
-            <strong>${item.value}</strong>
-            <span class="status-pill ${item.status}">${item.status}</span>
-        </div>
-    `).join('')}</div>`;
-}
-
-function renderTimeline(items) {
-    if (!items || !items.length) return emptyState('No live activity in this range');
-    return `<div class="activity-timeline">${items.map(item => `
-        <div class="timeline-item">
-            <span class="timeline-dot"></span>
-            <div><strong>${item.title}</strong><span>${item.meta}</span></div>
-            <time>${item.time}</time>
-        </div>
-    `).join('')}</div>`;
-}
-
-function renderHeatmap(items = []) {
-    if (!items || !items.length) return emptyState('No live scheduling density in this range');
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const rows = ['8a', '10a', '12p', '2p', '4p', '6p'];
-    const buckets = items.reduce((map, item) => {
-        const dayIndex = item.day === 0 ? 6 : item.day - 1;
-        const hourIndex = Math.min(rows.length - 1, Math.max(0, Math.floor(((item.hour || 8) - 8) / 2)));
-        const key = `${hourIndex}-${dayIndex}`;
-        map[key] = (map[key] || 0) + (item.value || 1);
-        return map;
-    }, {});
-    const max = Math.max(...Object.values(buckets), 1);
-    return `<div class="heatmap">
-        <span></span>${days.map(day => `<span class="heatmap-label">${day}</span>`).join('')}
-        ${rows.map((row, rowIndex) => `<span class="heatmap-label">${row}</span>${days.map((day, dayIndex) => {
-            const value = buckets[`${rowIndex}-${dayIndex}`] || 0;
-            const alpha = value ? .12 + (value / max) * .62 : .06;
-            return `<span class="heatmap-cell" style="background:rgba(37,99,235,${alpha})">${value}</span>`;
-        }).join('')}`).join('')}
-    </div>`;
-}
-
-function renderCalendarWidget() {
-    const calendar = reportsSourceData?.scheduling?.calendar || [];
-    const counts = calendar.reduce((map, item) => {
-        map[item.day] = (map[item.day] || 0) + 1;
-        return map;
-    }, {});
-    return `<div class="calendar-widget">${Array.from({ length: 28 }, (_, index) => {
-        const day = index + 1;
-        const count = counts[day] || 0;
-        return `<div class="calendar-day ${count ? 'has-work' : ''}"><strong>${day}</strong>${count ? `${count} visits` : 'Open'}</div>`;
-    }).join('')}</div>`;
-}
-
-function renderFunnel(items) {
-    if (!items || !items.length) return emptyState('No live pipeline data in this range');
-    return `<div class="funnel-chart">${items.map(item => `
-        <div class="funnel-step" style="width:${item.width}%"><span>${item.label}</span><strong>${item.value}</strong></div>
-    `).join('')}</div>`;
-}
-
-function renderLeaderboard(items) {
-    if (!items || !items.length) return emptyState('No sales rep performance data yet');
-    return `<div class="leaderboard">${items.map(item => `
-        <div class="leader-card"><span>${item.name}</span><strong>${typeof item.revenue === 'number' ? formatReportMoney(item.revenue) : item.revenue}</strong><small>${item.close} close - ${item.cycle}</small></div>
-    `).join('')}</div>`;
+function renderReportKpis(summary, definitions = {}) {
+    const cards = [
+        ['Revenue', summary.revenue, 'currency', 'fa-dollar-sign', 'financial', 'revenue'],
+        ['Collected Payments', summary.collectedPayments, 'currency', 'fa-circle-check', 'financial', 'collectedPayments'],
+        ['Gross Profit', summary.grossProfit, 'currency', 'fa-chart-line', 'financial', 'grossProfit'],
+        ['Profit Margin', summary.profitMargin, 'percent', 'fa-percent', 'financial', 'profitMargin'],
+        ['Total Orders', summary.totalOrders, 'number', 'fa-clipboard-list', 'details', 'totalOrders'],
+        ['Completed Orders', summary.completedOrders, 'number', 'fa-check-double', 'completed', 'completedOrders'],
+        ['Outstanding Balance', summary.outstandingBalance, 'currency', 'fa-file-invoice-dollar', 'financial', 'outstandingBalance'],
+        ['Average Order Value', summary.averageOrderValue, 'currency', 'fa-receipt', 'details', 'averageOrderValue']
+    ];
+    return `<div class="report-kpi-grid">${cards.map(([label, value, format, icon, target, definitionKey]) => `
+        <button type="button" class="report-kpi-card" onclick="drilldownReports('summary','${target}')" title="${escapeReportHtml(definitions[definitionKey] || '')}" aria-label="${escapeReportHtml(label)} ${escapeReportHtml(formatReportValue(value, format))}. ${escapeReportHtml(definitions[definitionKey] || 'Open underlying report.')}">
+            <span class="report-kpi-icon"><i class="fas ${icon}"></i></span>
+            <span>${label}</span><strong>${formatReportValue(value, format)}</strong>
+            <small><i class="fas fa-circle-info" aria-hidden="true"></i> View definition and records <i class="fas fa-arrow-right" aria-hidden="true"></i></small>
+        </button>`).join('')}</div>`;
 }
 
 function renderReportTabContent() {
     const content = document.getElementById('reportsTabContent');
-    if (!content) return;
-    const data = reportsSourceData || emptyLiveReportData;
-    content.innerHTML = `
-        <div class="reports-only-summary">
-            <div class="reports-section-heading">
-                <div>
-                    <span>Snapshot</span>
-                    <h2>Performance Summary</h2>
-                </div>
-                <small>Synced from live orders, payments, customers, projects, and pipeline records</small>
-            </div>
-            <div class="report-metric-strip">
-                <div><i class="fas fa-receipt"></i><span>Average Job Value</span><strong>${formatReportMoney(data.averageJobValue)}</strong></div>
-                <div><i class="fas fa-bullseye"></i><span>Quote-to-Close Conversion</span><strong>${formatReportValue(data.quoteConversionRate, 'percent')}</strong></div>
-            </div>
-        </div>
-        <div class="reports-section-heading">
-            <div>
-                <span>Financial</span>
-                <h2>Revenue Reports</h2>
-            </div>
-        </div>
-        <div class="report-dashboard-grid reports-clean-grid">
-            ${cardShell('Revenue by Service Type', 'Live revenue grouped by service category', renderHorizontalBars(data.revenueByService), 'wide')}
-            ${cardShell('Average Job Value', 'Average revenue per work order in the selected range', `<div class="single-report-number">${formatReportMoney(data.averageJobValue)}</div>`)}
-            ${cardShell('Month-over-Month Revenue Growth', 'Live monthly revenue trend', renderLineChart(data.monthlyRevenue, 'area'), 'wide')}
-            ${cardShell('Year-over-Year Revenue Growth', 'Live revenue grouped by year', renderLineChart(data.yoyRevenue, 'line'))}
-            ${cardShell('Repeat Job Frequency per Client', 'Customers ranked by number of jobs', renderTable([
-                { key: 'customer', label: 'Client' },
-                { key: 'jobs', label: 'Jobs' },
-                { key: 'repeatFrequency', label: 'Frequency' },
-                { key: 'revenue', label: 'Revenue' }
-            ], data.repeatJobFrequency), 'wide')}
-            ${cardShell('Revenue per Customer', 'Customer revenue and payment speed', renderTable([
-                { key: 'customer', label: 'Customer' },
-                { key: 'revenue', label: 'Revenue' },
-                { key: 'jobs', label: 'Jobs' },
-                { key: 'speed', label: 'Avg Pay Time' },
-                { key: 'health', label: 'Health' }
-            ], data.topCustomers))}
-            ${cardShell('Recurring vs. One-Time Split by Revenue', 'Revenue mix, not order count', renderDonutChart(data.recurringSplit))}
-        </div>
-        <div class="reports-section-heading">
-            <div>
-                <span>Operations</span>
-                <h2>Work Orders & Approvals</h2>
-            </div>
-        </div>
-        <div class="report-dashboard-grid reports-clean-grid">
-            ${cardShell('Clients with Open/Unresolved Work Orders', 'Open work orders and overdue exposure by client', renderTable([
-                { key: 'client', label: 'Client' },
-                { key: 'open', label: 'Open' },
-                { key: 'overdue', label: 'Overdue' },
-                { key: 'backlog', label: 'Backlog' },
-                { key: 'sla', label: 'SLA' },
-                { key: 'status', label: 'Status' }
-            ], data.operations.table), 'wide')}
-            ${cardShell('Overdue Work Orders', 'Work orders past due and not completed', renderTable([
-                { key: 'orderId', label: 'Order' },
-                { key: 'customer', label: 'Customer' },
-                { key: 'service', label: 'Service' },
-                { key: 'dueDate', label: 'Due Date' },
-                { key: 'amount', label: 'Amount' },
-                { key: 'status', label: 'Status' }
-            ], data.operations.overdueWorkOrders))}
-            ${cardShell('Jobs Pending Client Approval', 'Open jobs currently waiting on approval', renderTable([
-                { key: 'orderId', label: 'Order' },
-                { key: 'customer', label: 'Customer' },
-                { key: 'service', label: 'Service' },
-                { key: 'amount', label: 'Amount' },
-                { key: 'status', label: 'Status' }
-            ], data.operations.pendingApprovalJobs))}
-        </div>
-        <div class="reports-section-heading">
-            <div>
-                <span>Pipeline & Maintenance</span>
-                <h2>Sales and Scheduling</h2>
-            </div>
-        </div>
-        <div class="report-dashboard-grid reports-clean-grid">
-            ${cardShell('New Leads Added per Month', 'Live pipeline records created by month', renderLineChart(data.sales.newLeadsMonthly, 'area'), 'wide')}
-            ${cardShell('Quote-to-Close Conversion Rate', 'Completed jobs divided by total jobs in range', `<div class="single-report-number">${formatReportValue(data.quoteConversionRate, 'percent')}</div>`)}
-            ${cardShell('Upcoming Scheduled Maintenance by Property', 'Upcoming project/maintenance schedule', renderTable([
-                { key: 'property', label: 'Property' },
-                { key: 'customer', label: 'Customer' },
-                { key: 'date', label: 'Date' },
-                { key: 'progress', label: 'Progress' },
-                { key: 'status', label: 'Status' }
-            ], data.scheduling.upcomingMaintenanceByProperty), 'wide')}
-            ${cardShell('Average Days Each Customer Takes to Pay', 'Completion date to paid date, grouped by customer', renderTable([
-                { key: 'customer', label: 'Customer' },
-                { key: 'avgDays', label: 'Avg Days' },
-                { key: 'paidPayments', label: 'Paid Payments' }
-            ], data.avgPayDaysByCustomer), 'wide')}
-        </div>
-    `;
-}
-
-function filterReports() {
-    const input = document.getElementById('reportSearchInput');
-    if (!input) return;
-    const query = input.value.trim().toLowerCase();
-    document.querySelectorAll('#reports .report-searchable').forEach(item => {
-        const text = (item.dataset.reportText || item.textContent || '').toLowerCase();
-        item.style.display = !query || text.includes(query) ? '' : 'none';
-    });
-}
-
-function sortReportTable(header) {
-    const table = header.closest('table');
-    const tbody = table?.querySelector('tbody');
-    if (!tbody) return;
-    const key = header.dataset.sortKey;
-    const column = Number(header.dataset.column);
-    reportSortState = {
-        key,
-        direction: reportSortState.key === key && reportSortState.direction === 'asc' ? 'desc' : 'asc'
+    if (!content || !reportsSourceData) return;
+    const data = reportsSourceData;
+    const table = (title, subtitle, headers, rows, options = {}) => reportCard(title, subtitle, renderReportTable(headers, rows, options), options.className || 'wide');
+    const paymentHeaders = [{ key: 'date', label: 'Date', format: 'date' }, { key: 'invoice', label: 'Invoice / Milestone' }, { key: 'customer', label: 'Customer' }, { key: 'order', label: 'Order' }, { key: 'status', label: 'Status', badge: true }, { key: 'amount', label: 'Amount', format: 'currency' }];
+    const sections = {
+        overview: () => `${renderReportKpis(data.summary, data.meta.definitions)}<div class="report-dashboard-grid reports-clean-grid">
+            ${reportCard('Revenue and Profit Trend', 'Order-created-date revenue and calculated gross profit', renderRevenueProfitChart(data.charts.revenueProfitTrend), 'wide')}
+            ${reportCard('Orders by Status', 'Active qualifying orders', renderReportBars(data.charts.ordersByStatus, { drilldown: 'order-status' }))}
+            ${reportCard('Revenue by Service', 'Click a service to inspect its work orders', renderReportBars(data.charts.revenueByService, { currency: true, drilldown: 'service' }))}
+            ${reportCard('Payment Collection Status', 'Payment and milestone value by status', renderReportBars(data.charts.paymentStatus, { currency: true, drilldown: 'payment-status' }))}
+        </div>`,
+        financial: () => `<div class="report-tab-summary"><strong>${formatReportMoney(data.summary.revenue)}</strong><span>active-order revenue</span><strong>${formatReportMoney(data.summary.collectedPayments)}</strong><span>cash collected by received date</span><strong>${formatReportMoney(data.summary.outstandingBalance)}</strong><span>outstanding balance</span></div><div class="report-dashboard-grid reports-clean-grid">
+            ${reportCard('Revenue and Profit Trend', 'Revenue uses active orders created in this period', renderRevenueProfitChart(data.charts.revenueProfitTrend), 'wide')}
+            ${reportCard('Payment Collection Status', 'Click a status to inspect matching payment and milestone records', renderReportBars(data.charts.paymentStatus, { currency: true, drilldown: 'payment-status' }))}
+            ${table('Top Services', 'Revenue, profit, and order count', [{ key: 'label', label: 'Service' }, { key: 'orders', label: 'Orders' }, { key: 'value', label: 'Revenue', format: 'currency' }, { key: 'profit', label: 'Profit', format: 'currency' }], data.tables.topServices, { rowAction: row => `drilldownReports('service','${encodeReportValue(row.label)}')` })}
+            ${table('Payment Records', 'Received, completed, pending, failed, and cancelled payment entries', paymentHeaders, data.tables.paymentRecords, { rowAction: row => `showPaymentDetail('${row.paymentId}')` })}
+            ${table('Outstanding Invoices', 'Click a row to open payment details', [{ key: 'invoice', label: 'Invoice' }, { key: 'customer', label: 'Customer' }, { key: 'order', label: 'Order' }, { key: 'dueDate', label: 'Due Date', format: 'date' }, { key: 'amount', label: 'Amount', format: 'currency' }, { key: 'status', label: 'Status', badge: true }], data.tables.outstandingInvoices, { rowAction: row => `showPaymentDetail('${row.paymentId}')` })}
+        </div>`,
+        operations: () => `<div class="report-tab-summary"><strong>${data.summary.totalOrders.toLocaleString()}</strong><span>qualifying active orders</span><strong>${formatReportValue(data.summary.completionRate, 'percent')}</strong><span>completion rate</span></div><div class="report-dashboard-grid reports-clean-grid">${reportCard('Orders by Status', 'Cancelled and lost/no-bid work is excluded from headline reporting', renderReportBars(data.charts.ordersByStatus, { drilldown: 'order-status' }), 'wide')}${table('Recurring Service Performance', 'Recurring service orders grouped by service type', [{ key: 'service', label: 'Service' }, { key: 'orders', label: 'Recurring Orders' }, { key: 'revenue', label: 'Revenue', format: 'currency' }, { key: 'profit', label: 'Profit', format: 'currency' }], data.tables.recurringServices, { rowAction: row => `drilldownReports('service','${encodeReportValue(row.service)}')` })}</div>${renderDetailedRecords()}`,
+        relationships: () => `<div class="report-dashboard-grid reports-clean-grid">${table('Top Customers', 'Click a linked customer to inspect qualifying orders', [{ key: 'customer', label: 'Customer' }, { key: 'orders', label: 'Orders' }, { key: 'revenue', label: 'Revenue', format: 'currency' }, { key: 'profit', label: 'Profit', format: 'currency' }], data.tables.topCustomers, { rowAction: row => row.customerId ? `drilldownReports('customer','${encodeReportValue(row.customerId)}')` : '' })}${table('Assigned Employee Performance', 'Click an assigned employee to inspect their work', [{ key: 'employee', label: 'Assigned Employee' }, { key: 'orders', label: 'Orders' }, { key: 'completed', label: 'Completed' }, { key: 'revenue', label: 'Revenue', format: 'currency' }, { key: 'profit', label: 'Profit', format: 'currency' }], data.tables.employeePerformance, { rowAction: row => row.employeeId ? `drilldownReports('employee','${encodeReportValue(row.employeeId)}')` : '' })}${table('Vendor Performance', 'Click an assigned vendor to inspect related report records', [{ key: 'vendor', label: 'Vendor' }, { key: 'orders', label: 'Orders' }, { key: 'revenue', label: 'Revenue', format: 'currency' }, { key: 'cost', label: 'Vendor Cost', format: 'currency' }, { key: 'profit', label: 'Profit', format: 'currency' }], data.tables.vendorPerformance, { rowAction: row => row.vendorId ? `drilldownReports('vendor','${encodeReportValue(row.vendorId)}')` : '' })}</div>`,
+        pipeline: () => `<div class="report-tab-summary"><strong>${formatReportValue(data.summary.pipelineConversion, 'percent')}</strong><span>pipeline conversion</span></div>${table('Pipeline by Stage', 'Click a stage to inspect matching report records', [{ key: 'stage', label: 'Stage' }, { key: 'records', label: 'Records' }, { key: 'value', label: 'Pipeline Value', format: 'currency' }], data.tables.pipelineStages, { rowAction: row => `drilldownReports('pipeline-stage','${encodeReportValue(row.stageId)}')` })}`,
+        details: () => renderDetailedRecords()
     };
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    rows.sort((a, b) => {
-        const first = a.children[column]?.textContent.trim() || '';
-        const second = b.children[column]?.textContent.trim() || '';
-        const firstNumber = Number(first.replace(/[$,%Kdgx\s]/g, ''));
-        const secondNumber = Number(second.replace(/[$,%Kdgx\s]/g, ''));
-        const result = Number.isFinite(firstNumber) && Number.isFinite(secondNumber) && firstNumber !== secondNumber
-            ? firstNumber - secondNumber
-            : first.localeCompare(second);
-        return reportSortState.direction === 'asc' ? result : -result;
-    });
-    rows.forEach(row => tbody.appendChild(row));
-    if (window.showToast) showToast(`Sorted ${key} ${reportSortState.direction}`, 'info');
+    const activeHasData = reportsActiveTab === 'pipeline' ? data.tables.pipelineStages.length > 0 : data.summary.totalOrders > 0;
+    const emptyNotice = !activeHasData
+        ? '<div class="reports-empty-inline"><i class="fas fa-inbox"></i><div><strong>No records match these filters.</strong><span>Try a broader date range or reset one or more filters.</span></div></div>'
+        : '';
+    content.innerHTML = emptyNotice + (sections[reportsActiveTab] || sections.overview)();
 }
 
 function populateReportFilters() {
-    const options = reportsSourceData?.filterOptions || emptyLiveReportData.filterOptions;
+    const options = reportsSourceData?.filterOptions || {};
     const filterValues = {
         reportCustomerFilter: options.customers || [],
-        reportTechnicianFilter: options.technicians || [],
+        reportEmployeeFilter: options.employees || [],
+        reportVendorFilter: options.vendors || [],
         reportServiceFilter: options.services || [],
-        reportStatusFilter: options.statuses || [],
-        reportLocationFilter: options.locations || []
+        reportOrderStatusFilter: options.orderStatuses || [],
+        reportPaymentStatusFilter: options.paymentStatuses || [],
+        reportPipelineStageFilter: options.pipelineStages || [],
+        reportCityFilter: options.cities || [],
+        reportStateFilter: options.states || [],
+        reportZipFilter: options.zips || []
     };
     Object.entries(filterValues).forEach(([id, values]) => {
         const select = document.getElementById(id);
         if (!select) return;
         const currentValue = select.value;
         const firstOption = select.querySelector('option')?.outerHTML || '<option value="">All</option>';
-        select.innerHTML = firstOption + values.map(value => `<option value="${value}">${value}</option>`).join('');
-        if (values.includes(currentValue)) select.value = currentValue;
-        if (!select.dataset.reportListener) {
-            select.addEventListener('change', generateReports);
-            select.dataset.reportListener = 'true';
-        }
+        select.innerHTML = firstOption + values.map(value => {
+            const option = typeof value === 'object' ? value : { id: value, label: value };
+            return `<option value="${escapeReportHtml(option.id)}">${escapeReportHtml(option.label)}</option>`;
+        }).join('');
+        if (Array.from(select.options).some(option => option.value === currentValue)) select.value = currentValue;
     });
 }
 
-function exportReports(format) {
-    if (window.showToast) showToast(`${format} export prepared for Reports`, 'success');
+function renderReportsMeta() {
+    if (!reportsSourceData) return;
+    const updated = document.getElementById('reportUpdatedAt');
+    const range = document.getElementById('reportAppliedRange');
+    const quality = document.getElementById('reportDataQuality');
+    if (updated) updated.textContent = `Updated ${new Date(reportsSourceData.meta.generatedAt).toLocaleString('en-US', { timeZone: reportsSourceData.meta.timezone })} MST`;
+    if (range) range.textContent = `${formatDisplayDate(reportsSourceData.meta.period.start)} – ${formatDisplayDate(reportsSourceData.meta.period.end)}`;
+    if (quality) {
+        const warnings = [...(reportsSourceData.dataQuality?.warnings || []), ...(reportRecordsState.error ? [reportRecordsState.error] : []), ...(reportsRuntimeWarning ? [reportsRuntimeWarning] : [])];
+        quality.hidden = !warnings.length;
+        quality.innerHTML = warnings.length ? `<i class="fas fa-triangle-exclamation"></i><div><strong>Data quality notice</strong>${warnings.map(warning => `<span>${escapeReportHtml(warning)}</span>`).join('')}</div>` : '';
+    }
+    renderReportDefinitions();
 }
 
-function toggleReportsDarkMode() {
-    document.body.classList.toggle('reports-dark-mode');
+function renderReportDefinitions() {
+    const panel = document.getElementById('reportDefinitionsPanel');
+    if (!panel || !reportsSourceData) return;
+    const labels = {
+        revenue: 'Revenue', collectedPayments: 'Collected payments', grossProfit: 'Gross profit',
+        outstandingBalance: 'Outstanding balance', averageOrderValue: 'Average order value', recurringServices: 'Recurring services'
+    };
+    panel.innerHTML = `<div class="report-definitions-header"><div><span>Data trust</span><h2>How calculations work</h2></div><button type="button" onclick="toggleReportDefinitions(false)" aria-label="Close calculation definitions"><i class="fas fa-xmark"></i></button></div><div class="report-definition-grid">${Object.entries(reportsSourceData.meta.definitions || {}).map(([key, definition]) => `<article><strong>${escapeReportHtml(labels[key] || key)}</strong><p>${escapeReportHtml(definition)}</p></article>`).join('')}</div><div class="report-date-basis"><i class="fas fa-calendar-check"></i><div><strong>Date basis</strong><span>Order and revenue metrics use order creation date. Collected payments use payment or milestone received date. Pipeline metrics use pipeline creation date.</span></div></div>`;
 }
 
-// Load reports when reports section is shown
-function loadReportsSection() {
-    const endDate = nowInMDT();
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - 30);
+function toggleReportDefinitions(force) {
+    const panel = document.getElementById('reportDefinitionsPanel');
+    const button = document.getElementById('reportDefinitionsButton');
+    if (!panel || !button) return;
+    const open = typeof force === 'boolean' ? force : panel.hidden;
+    panel.hidden = !open;
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) panel.querySelector('button')?.focus();
+    else button.focus();
+}
 
-    const startInput = document.getElementById('reportStartDate');
-    const endInput = document.getElementById('reportEndDate');
-    if (startInput && !startInput.value) startInput.value = formatDisplayDateInput(startDate);
-    if (endInput && !endInput.value) endInput.value = todayDateInput();
-    [startInput, endInput].forEach(input => {
-        if (input && !input.dataset.reportListener) {
-            input.addEventListener('change', generateReports);
-            input.dataset.reportListener = 'true';
+function renderDetailedRecords() {
+    const headers = [
+        { key: 'date', label: 'Date', format: 'date' }, { key: 'order', label: 'Order' }, { key: 'customer', label: 'Customer' },
+        { key: 'service', label: 'Service' }, { key: 'employee', label: 'Assigned Employee' }, { key: 'vendor', label: 'Vendor' },
+        { key: 'status', label: 'Order Status', badge: true }, { key: 'revenue', label: 'Revenue', format: 'currency' },
+        { key: 'cost', label: 'Cost', format: 'currency' }, { key: 'profit', label: 'Profit', format: 'currency' }, { key: 'paymentStatus', label: 'Payment Status' }
+    ];
+    const body = reportRecordsState.error
+        ? reportEmptyState(reportRecordsState.error)
+        : renderReportTable(headers, reportRecordsState.rows, { sortable: true, rowAction: row => `showOrderDetail('${row.id}', false, false)` });
+    const first = reportRecordsState.total ? ((reportRecordsState.page - 1) * reportRecordsState.pageSize) + 1 : 0;
+    const last = Math.min(reportRecordsState.total, reportRecordsState.page * reportRecordsState.pageSize);
+    return reportCard('Detailed Records', `${reportRecordsState.total.toLocaleString()} matching work orders`, `${body}<div class="report-pagination"><label>Rows <select onchange="changeReportPageSize(this.value)" aria-label="Rows per page">${[10, 25, 50, 100].map(size => `<option value="${size}" ${size === reportRecordsState.pageSize ? 'selected' : ''}>${size}</option>`).join('')}</select></label><span>${first.toLocaleString()}–${last.toLocaleString()} of ${reportRecordsState.total.toLocaleString()}</span><button type="button" class="btn-secondary" onclick="changeReportRecordsPage(-1)" ${reportRecordsState.page <= 1 ? 'disabled' : ''}>Previous</button><span>Page ${reportRecordsState.page} of ${reportRecordsState.pages}</span><button type="button" class="btn-secondary" onclick="changeReportRecordsPage(1)" ${reportRecordsState.page >= reportRecordsState.pages ? 'disabled' : ''}>Next</button></div>`, 'full');
+}
+
+function setReportTab(tab, focusTab = false) {
+    if (!reportTabs.has(tab)) return;
+    reportsActiveTab = tab;
+    document.querySelectorAll('#reportsTabs [data-report-tab]').forEach(button => {
+        const active = button.dataset.reportTab === tab;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', active ? 'true' : 'false');
+        button.tabIndex = active ? 0 : -1;
+        if (active) {
+            document.getElementById('reportsTabContent')?.setAttribute('aria-labelledby', button.id);
+            if (focusTab) button.focus();
         }
     });
+    renderReportTabContent();
+}
 
-    if (!reportsInitialized) {
-        reportsInitialized = true;
-        generateReports();
-    } else {
-        renderReportsDashboard();
+async function changeReportRecordsPage(delta) {
+    const nextPage = Math.min(reportRecordsState.pages, Math.max(1, reportRecordsState.page + delta));
+    if (nextPage === reportRecordsState.page) return;
+    reportRecordsState.page = nextPage;
+    try {
+        const result = await window.APIService.getReportRecords({ ...reportsAppliedFilters, page: nextPage, pageSize: reportRecordsState.pageSize, sort: reportRecordsState.sort, direction: reportRecordsState.direction });
+        reportRecordsState = { ...reportRecordsState, ...result.pagination, rows: result.rows || [], error: '' };
+        renderReportTabContent();
+    } catch (error) {
+        reportRecordsState.error = error?.message || 'Detailed records could not be loaded.';
+        renderReportTabContent();
     }
 }
 
+async function changeReportPageSize(value) {
+    reportRecordsState.pageSize = Math.min(100, Math.max(10, Number(value) || 25));
+    reportRecordsState.page = 1;
+    try {
+        const result = await window.APIService.getReportRecords({ ...reportsAppliedFilters, page: 1, pageSize: reportRecordsState.pageSize, sort: reportRecordsState.sort, direction: reportRecordsState.direction });
+        reportRecordsState = { ...reportRecordsState, ...result.pagination, rows: result.rows || [], error: '' };
+    } catch (error) {
+        reportRecordsState.error = error?.message || 'Detailed records could not be loaded.';
+    }
+    renderReportTabContent();
+}
+
+async function sortReportRecords(key) {
+    reportRecordsState.direction = reportRecordsState.sort === key && reportRecordsState.direction === 'asc' ? 'desc' : 'asc';
+    reportRecordsState.sort = key;
+    reportRecordsState.page = 1;
+    try {
+        const result = await window.APIService.getReportRecords({ ...reportsAppliedFilters, page: 1, pageSize: reportRecordsState.pageSize, sort: key, direction: reportRecordsState.direction });
+        reportRecordsState = { ...reportRecordsState, ...result.pagination, rows: result.rows || [], error: '' };
+    } catch (error) {
+        reportRecordsState.error = error?.message || 'Detailed records could not be sorted.';
+    }
+    renderReportsMeta();
+    renderReportTabContent();
+}
+
+function drilldownReports(type, encodedValue) {
+    const value = decodeURIComponent(encodedValue || '');
+    if (type === 'order-status') {
+        document.getElementById('reportOrderStatusFilter').value = value;
+        reportRecordsState.page = 1;
+        applyReportFilters().then(() => setReportTab('details'));
+        return;
+    }
+    if (type === 'service') {
+        document.getElementById('reportServiceFilter').value = value;
+        reportRecordsState.page = 1;
+        applyReportFilters().then(() => setReportTab('details'));
+        return;
+    }
+    if (type === 'payment-status') {
+        document.getElementById('reportPaymentStatusFilter').value = value;
+        applyReportFilters().then(() => setReportTab('financial'));
+        return;
+    }
+    const directFilterMap = { customer: 'reportCustomerFilter', employee: 'reportEmployeeFilter', vendor: 'reportVendorFilter', 'pipeline-stage': 'reportPipelineStageFilter' };
+    if (directFilterMap[type]) {
+        document.getElementById(directFilterMap[type]).value = value;
+        reportRecordsState.page = 1;
+        applyReportFilters().then(() => setReportTab(type === 'pipeline-stage' ? 'pipeline' : 'details'));
+        return;
+    }
+    if (type === 'summary' && value === 'completed') {
+        document.getElementById('reportOrderStatusFilter').value = 'completed';
+        applyReportFilters().then(() => setReportTab('details'));
+        return;
+    }
+    setReportTab(reportTabs.has(value) ? value : 'details');
+}
+
+function reportDateValue(date) {
+    return formatDisplayDateInput(date);
+}
+
+function applyReportDatePreset(preset) {
+    const now = nowInMDT();
+    const start = new Date(now);
+    const end = new Date(now);
+    document.querySelectorAll('#reportDatePresets [data-preset]').forEach(button => {
+        const active = button.dataset.preset === preset;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (preset === 'custom') {
+        document.getElementById('reportStartDate')?.focus();
+        markReportFiltersDirty();
+        return;
+    }
+    if (preset === 'today') start.setHours(0, 0, 0, 0);
+    if (preset === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    if (preset === 'month') start.setDate(1);
+    if (preset === 'last-month') {
+        start.setMonth(start.getMonth() - 1, 1);
+        end.setDate(0);
+    }
+    if (preset === 'quarter') start.setMonth(Math.floor(start.getMonth() / 3) * 3, 1);
+    if (preset === 'ytd') start.setMonth(0, 1);
+    if (preset === 'last-30') start.setDate(start.getDate() - 29);
+    document.getElementById('reportStartDate').value = reportDateValue(start);
+    document.getElementById('reportEndDate').value = reportDateValue(end);
+    markReportFiltersDirty();
+}
+
+function toggleReportAdvancedFilters(force) {
+    const panel = document.getElementById('reportAdvancedFilters');
+    const button = document.getElementById('reportAdvancedToggle');
+    if (!panel || !button) return;
+    const open = typeof force === 'boolean' ? force : panel.hidden;
+    panel.hidden = !open;
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) panel.querySelector('select')?.focus();
+}
+
+async function applyReportFilters() {
+    reportRecordsState.page = 1;
+    return generateReports(getReportFilters());
+}
+
+async function refreshReports() {
+    window.APIService?.clearCache?.();
+    return generateReports(Object.keys(reportsAppliedFilters).length ? reportsAppliedFilters : getReportFilters());
+}
+
+function resetReportFilters() {
+    document.querySelectorAll('#reports .report-filter-grid select').forEach(select => { select.value = ''; });
+    applyReportDatePreset('last-30');
+    setReportTab('overview');
+    reportRecordsState.page = 1;
+    applyReportFilters();
+}
+
+function toggleReportExportMenu(event) {
+    event?.stopPropagation();
+    const menu = document.getElementById('reportExportMenu');
+    const button = document.getElementById('reportExportButton');
+    if (!menu || !button) return;
+    const open = menu.hidden;
+    menu.hidden = !open;
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) menu.querySelector('[role="menuitem"]')?.focus();
+}
+
+function closeReportExportMenu(restoreFocus = false) {
+    const menu = document.getElementById('reportExportMenu');
+    const button = document.getElementById('reportExportButton');
+    if (menu) menu.hidden = true;
+    if (button) {
+        button.setAttribute('aria-expanded', 'false');
+        if (restoreFocus) button.focus();
+    }
+}
+
+async function exportReports(format) {
+    if (!reportsSourceData) {
+        if (window.showToast) showToast('Load reports before exporting.', 'warning');
+        return;
+    }
+    if (reportFilterDifferences().length) {
+        if (window.showToast) showToast('Apply filter changes before exporting.', 'warning');
+        return;
+    }
+    const button = document.getElementById('reportExportButton');
+    const original = button?.innerHTML;
+    closeReportExportMenu();
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Preparing ${format.toUpperCase()}…`;
+    }
+    try {
+        const response = await fetch(window.APIService.getReportExportUrl(format, reportsAppliedFilters, format === 'pdf' ? 'summary' : 'details'), { credentials: 'include' });
+        if (response.status === 401) window.APIService.handleUnauthorized?.();
+        if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.message || `Export failed with status ${response.status}`);
+        }
+        const blob = await response.blob();
+        const disposition = response.headers.get('content-disposition') || '';
+        const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `hutta-report.${format}`;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        if (window.showToast) showToast(`${format.toUpperCase()} report downloaded.`, 'success');
+    } catch (error) {
+        if (window.showToast) showToast(error?.message || 'Report export failed.', 'error');
+    } finally {
+        if (button) {
+            button.innerHTML = original;
+            button.disabled = reportFilterDifferences().length > 0;
+            button.focus();
+        }
+    }
+}
+
+function initializeReportsWorkspace() {
+    if (reportsInitialized) return;
+    reportsInitialized = true;
+    applyReportDatePreset('last-30');
+    document.querySelectorAll('#reportDatePresets [data-preset]').forEach(button => button.addEventListener('click', () => applyReportDatePreset(button.dataset.preset)));
+    document.querySelectorAll('#reports .report-filter-grid input, #reports .report-filter-grid select').forEach(input => input.addEventListener('change', markReportFiltersDirty));
+    const tabButtons = Array.from(document.querySelectorAll('#reportsTabs [data-report-tab]'));
+    tabButtons.forEach((button, index) => {
+        button.addEventListener('click', () => setReportTab(button.dataset.reportTab));
+        button.addEventListener('keydown', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            let nextIndex = index;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabButtons.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabButtons.length) % tabButtons.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = tabButtons.length - 1;
+            setReportTab(tabButtons[nextIndex].dataset.reportTab, true);
+        });
+    });
+    document.addEventListener('click', event => {
+        if (!event.target.closest('.report-export-menu')) closeReportExportMenu();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        if (!document.getElementById('reportExportMenu')?.hidden) closeReportExportMenu(true);
+        else if (!document.getElementById('reportDefinitionsPanel')?.hidden) toggleReportDefinitions(false);
+    });
+    markReportFiltersDirty();
+}
+
+// Load reports whenever the section is activated, including direct #reports URLs.
+function loadReportsSection() {
+    initializeReportsWorkspace();
+    if (!reportsSourceData && !reportsLoading) applyReportFilters();
+    else renderReportsDashboard();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializeReportsWorkspace();
+    if (window.location.hash === '#reports') {
+        Promise.resolve(window.AuthReady).then(() => window.setTimeout(() => {
+            window.dashboard?.showSection?.('reports');
+            loadReportsSection();
+        }, 0)).catch(() => {});
+    }
+});
+window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#reports') loadReportsSection();
+});
+
 // Global functions
 window.generateReports = generateReports;
-window.filterReports = filterReports;
-window.sortReportTable = sortReportTable;
+window.applyReportFilters = applyReportFilters;
+window.refreshReports = refreshReports;
+window.resetReportFilters = resetReportFilters;
+window.setReportTab = setReportTab;
+window.changeReportRecordsPage = changeReportRecordsPage;
+window.changeReportPageSize = changeReportPageSize;
+window.sortReportRecords = sortReportRecords;
+window.drilldownReports = drilldownReports;
 window.exportReports = exportReports;
-window.toggleReportsDarkMode = toggleReportsDarkMode;
+window.toggleReportExportMenu = toggleReportExportMenu;
+window.toggleReportDefinitions = toggleReportDefinitions;
+window.toggleReportAdvancedFilters = toggleReportAdvancedFilters;
+window.clearReportFilter = clearReportFilter;
 
 // Payment Management Functions
 let currentPaymentId = null;
@@ -5657,34 +5929,18 @@ const NOTE_ENTITY_LABELS = {
 };
 
 function getCurrentUserIdForNotes() {
-    try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        const user = session ? JSON.parse(session).user : null;
-        return user?.id || user?._id || null;
-    } catch (error) {
-        return null;
-    }
+    const user = window.AuthSession?.user;
+    return user?.id || user?._id || null;
 }
 
 function getCurrentUserEmailForNotes() {
-    try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        const user = session ? JSON.parse(session).user : null;
-        return user?.email || null;
-    } catch (error) {
-        return null;
-    }
+    return window.AuthSession?.user?.email || null;
 }
 
 function getCurrentUserDisplayNameForNotes() {
-    try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        const user = session ? JSON.parse(session).user : null;
-        const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
-        return fullName || user?.email || null;
-    } catch (error) {
-        return null;
-    }
+    const user = window.AuthSession?.user;
+    const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+    return fullName || user?.email || null;
 }
 
 function getNoteAuthorDisplayName(note, currentUserId, currentUserEmail) {
@@ -7142,6 +7398,10 @@ function setVendorComplianceFields(vendor = {}) {
             el.value = formatDisplayDateInput(vendor[field.key]);
         } else {
             el.value = vendor[field.key] || '';
+            if (field.key === 'einTaxId') {
+                el.value = '';
+                el.placeholder = vendor.einTaxIdMasked || 'Enter EIN or Tax ID';
+            }
         }
     });
 }
@@ -7300,7 +7560,9 @@ function renderVendorComplianceDetails(vendor = {}) {
     const fieldItems = VENDOR_COMPLIANCE_FIELDS.map((field) => `
         <div class="info-item ${field.key === 'businessAddress' ? 'full-width' : ''}">
             <span class="display-label">${escapePaymentHtml(field.label)}:</span>
-            <span>${formatVendorComplianceValue(field, vendor[field.key])}</span>
+            <span>${field.key === 'einTaxId'
+                ? `<span class="tax-id-row"><span>${escapePaymentHtml(vendor.einTaxIdMasked || '-')}</span>${vendor.einTaxIdMasked ? `<button type="button" class="reveal-tax-id" onclick="revealVendorTaxId('${vendor._id}')">Reveal</button>` : ''}</span>`
+                : formatVendorComplianceValue(field, vendor[field.key])}</span>
         </div>
     `).join('');
 
@@ -7490,8 +7752,12 @@ function vendorMatchesCurrentFilters(vendor) {
     }
 
     if (statusFilter !== 'all') {
-        const isActive = statusFilter === 'true';
-        if (getVendorActiveState(vendor) !== isActive) return false;
+        if (statusFilter === 'true' || statusFilter === 'false') {
+            const isActive = statusFilter === 'true';
+            if (getVendorActiveState(vendor) !== isActive) return false;
+        } else if ((vendor.onboardingStatus || 'approved') !== statusFilter) {
+            return false;
+        }
     }
 
     return true;
@@ -7535,6 +7801,7 @@ function restoreVendorModalFromSnapshot(snapshot) {
     initializeVendorComplianceUploads();
     document.getElementById('vendorModalTitle').textContent = snapshot.isEdit ? 'Edit Vendor' : 'Add New Vendor';
     document.getElementById('vendorForm').reset();
+    document.getElementById('vendorInviteForm')?.reset();
 
     const data = snapshot.vendorData || {};
     document.getElementById('vendorName').value = data.name || '';
@@ -7824,6 +8091,9 @@ function showAddVendorModal() {
     initializeVendorComplianceUploads();
     document.getElementById('vendorModalTitle').textContent = 'Add New Vendor';
     document.getElementById('vendorForm').reset();
+    document.getElementById('vendorInviteForm')?.reset();
+    document.getElementById('vendorEntryModeSwitch').hidden = false;
+    window.setVendorEntryMode?.('manual', true);
     setVendorComplianceFields({});
     setVendorComplianceDocumentPreviews({ documents: [] });
     renderNotesManager('vendors', '', {}, 'vendorNotes');
@@ -7849,12 +8119,14 @@ function showAddVendorModal() {
     vendorModal.style.display = '';
     document.body.classList.add('vendor-modal-open');
     vendorModal.classList.add('show');
+    requestAnimationFrame(() => document.getElementById('vendorName')?.focus());
 }
 
 async function editVendor(vendorId) {
     try {
         currentVendorId = vendorId;
         const vendor = await window.APIService.getVendor(vendorId);
+        window.prepareVendorEditMode?.();
         
         document.getElementById('vendorModalTitle').textContent = 'Edit Vendor';
         
@@ -8094,12 +8366,15 @@ function renderVendorsTable(vendors) {
         const ratingText = `${Number(vendor.rating || 0)}/5`;
         const categoryClass = normalizeFilterValue(vendor.category || 'uncategorized');
         const progress = Math.max(0, Math.min(100, Number(vendor.__optimisticProgress || 0)));
+        const onboardingStatus = vendor.onboardingStatus || 'approved';
         const statusCell = isPending
             ? `<div class="vendor-saving-status">
                     <span>${escapePaymentHtml(vendor.__optimisticStatus || 'Saving')} ${progress}%</span>
                     <div class="vendor-save-progress" aria-hidden="true"><span style="width: ${progress}%"></span></div>
                </div>`
-            : `<span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span>`;
+            : onboardingStatus !== 'approved'
+                ? `<span class="onboarding-status-badge ${escapePaymentHtml(onboardingStatus)}">${escapePaymentHtml(onboardingStatus.replace(/_/g, ' '))}</span>`
+                : `<span class="vendor-status-badge ${vendor.isActive ? 'active' : 'inactive'}">${vendor.isActive ? 'Active' : 'Inactive'}</span>`;
         const actionsCell = isPending
             ? `<div class="vendor-actions vendor-actions-disabled"><span class="vendor-saving-action">Saving...</span></div>`
             : `<div class="vendor-actions">
@@ -8157,6 +8432,7 @@ async function loadVendorsSection() {
         initializeVendorFilters();
         updateVendorFilterOptions(allVendors);
         filterVendors();
+        window.refreshVendorInvitations?.();
     } catch (error) {
         console.error('Failed to load vendors:', error);
         renderVendorsTable([]);
@@ -8233,8 +8509,12 @@ function filterVendors() {
     
     // Apply status filter
     if (statusFilter !== 'all') {
-        const isActive = statusFilter === 'true';
-        filtered = filtered.filter(vendor => getVendorActiveState(vendor) === isActive);
+        if (statusFilter === 'true' || statusFilter === 'false') {
+            const isActive = statusFilter === 'true';
+            filtered = filtered.filter(vendor => getVendorActiveState(vendor) === isActive);
+        } else {
+            filtered = filtered.filter(vendor => (vendor.onboardingStatus || 'approved') === statusFilter);
+        }
     }
     
     renderVendorsTable(filtered);
@@ -8798,7 +9078,7 @@ async function showCustomerProfile(customerId) {
                     <td>${order.orderId}</td>
                     <td>${order.service}</td>
                     <td><span class="order-status-badge ${statusClass}">${statusDisplay}</span></td>
-                    <td>$${order.amount.toLocaleString()}</td>
+                    <td>${order.pricingStatus === 'unquoted' ? 'Unquoted' : `$${Number(order.amount || 0).toLocaleString()}`}</td>
                     <td>${formatDisplayDate(order.createdAt)}</td>
                 </tr>
             `;
@@ -9269,6 +9549,120 @@ function initializeServiceSuggestions() {
     });
 }
 
+function workflowDeliveryBadge(label, state) {
+    const status = state?.status || 'pending';
+    const classes = status === 'sent' || status === 'skipped' ? 'success' : status === 'permanently_failed' ? 'error' : status === 'retry_scheduled' ? 'warning' : 'info';
+    const text = status.replaceAll('_', ' ');
+    return `<span class="workflow-badge ${classes}"><i class="fas ${status === 'sent' ? 'fa-check-circle' : status === 'permanently_failed' ? 'fa-exclamation-circle' : 'fa-clock'}"></i>${escapePaymentHtml(label)}: ${escapePaymentHtml(text)}</span>`;
+}
+
+function renderWorkflowCenter(intakes) {
+    const list = document.getElementById('workflowRequestList');
+    if (!list) return;
+    const rows = Array.isArray(intakes) ? intakes : [];
+    const reviewCount = rows.filter(item => item.requiresReview || item.orderId?.missingData?.serviceCategory || item.orderId?.missingData?.serviceAddress).length;
+    const emailIssueCount = rows.filter(item => ['retry_scheduled', 'permanently_failed'].includes(item.customerConfirmation?.status) || ['retry_scheduled', 'permanently_failed'].includes(item.operationsAlert?.status)).length;
+    document.getElementById('workflowTotalCount').textContent = rows.length.toLocaleString();
+    document.getElementById('workflowReviewCount').textContent = reviewCount.toLocaleString();
+    document.getElementById('workflowEmailIssueCount').textContent = emailIssueCount.toLocaleString();
+    const navBadge = document.getElementById('workflowNavBadge');
+    if (navBadge) {
+        navBadge.textContent = rows.length.toLocaleString();
+        navBadge.hidden = rows.length === 0;
+    }
+
+    if (!rows.length) {
+        list.innerHTML = '<div class="workflow-empty"><i class="fas fa-inbox"></i><p>No website requests have been received.</p></div>';
+        return;
+    }
+
+    list.innerHTML = rows.map(item => {
+        const customer = item.normalizedCustomer || {};
+        const received = item.receivedAt ? (tz() ? tz().formatDateTimeMDT?.(item.receivedAt) || tz().formatDateMDT(item.receivedAt) : new Date(item.receivedAt).toLocaleString()) : '-';
+        const candidates = Array.isArray(item.matchingCustomerIds) ? item.matchingCustomerIds : [];
+        const select = item.customerMatchReason === 'multiple_email_matches'
+            ? `<select id="workflowCustomer-${item._id}" aria-label="Select matching customer"><option value="">Select matching customer</option>${candidates.map(candidate => `<option value="${escapePaymentHtml(candidate._id)}">${escapePaymentHtml(candidate.name)} · ${escapePaymentHtml(candidate.phone || 'No phone')}</option>`).join('')}</select>`
+            : '';
+        const reviewLabel = item.customerMatchReason === 'multiple_email_matches' ? 'Multiple email matches' : item.customerMatchReason === 'email_match_phone_mismatch' ? 'Phone differs from customer' : item.customerId ? 'Customer linked' : 'New customer';
+        const customerFailed = item.customerConfirmation?.status === 'permanently_failed';
+        const operationsFailed = item.operationsAlert?.status === 'permanently_failed';
+        const missingBadges = [
+            item.orderId?.missingData?.serviceAddress ? '<span class="workflow-badge warning"><i class="fas fa-map-marker-alt"></i> Missing service address</span>' : '',
+            item.orderId?.missingData?.serviceCategory ? '<span class="workflow-badge warning"><i class="fas fa-tools"></i> Missing category</span>' : ''
+        ].filter(Boolean).join('');
+        return `<article class="workflow-request-card">
+            <div class="workflow-card-head">
+                <div><span class="workflow-reference">${escapePaymentHtml(item.requestReference)}</span><h3>${escapePaymentHtml(customer.name || 'Customer')}</h3></div>
+                <time class="workflow-received">${escapePaymentHtml(received)}</time>
+            </div>
+            <div class="workflow-contact"><span><i class="fas fa-envelope"></i> ${escapePaymentHtml(customer.email || '-')}</span><span><i class="fas fa-phone"></i> ${escapePaymentHtml(customer.phone || '-')}</span></div>
+            <div class="workflow-details">${escapePaymentHtml(item.formSnapshot?.serviceDetails || 'No service details provided.')}</div>
+            <div class="workflow-badges">
+                ${missingBadges || '<span class="workflow-badge success"><i class="fas fa-check-circle"></i> Job information complete</span>'}
+                <span class="workflow-badge ${item.requiresReview ? 'warning' : 'success'}"><i class="fas fa-user-check"></i> ${escapePaymentHtml(reviewLabel)}</span>
+                ${workflowDeliveryBadge('Customer email', item.customerConfirmation)}
+                ${workflowDeliveryBadge('Operations email', item.operationsAlert)}
+            </div>
+            <div class="workflow-card-actions">
+                <button type="button" class="btn-primary" onclick="openWorkflowOrder('${escapePaymentHtml(item.orderId?._id || item.orderId || '')}')"><i class="fas fa-external-link-alt"></i> Open Order</button>
+                ${select}
+                ${item.requiresReview ? `<button type="button" class="btn-secondary" onclick="resolveIntakeReview('${item._id}', '${escapePaymentHtml(item.customerMatchReason || '')}')"><i class="fas fa-check"></i> Resolve Review</button>` : ''}
+                ${customerFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_customer_confirmation')">Retry Customer Email</button>` : ''}
+                ${operationsFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_operations_alert')">Retry Operations Email</button>` : ''}
+            </div>
+        </article>`;
+    }).join('');
+}
+
+async function loadWorkflowCenter() {
+    const list = document.getElementById('workflowRequestList');
+    if (list) list.innerHTML = '<div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading website requests…</p></div>';
+    try {
+        const intakes = await window.APIService.getWebsiteIntakes();
+        renderWorkflowCenter(intakes);
+    } catch (error) {
+        if (list) list.innerHTML = `<div class="workflow-empty"><i class="fas fa-exclamation-circle"></i><p>${escapePaymentHtml(error.message || 'Unable to load website requests')}</p></div>`;
+    }
+}
+
+async function resolveIntakeReview(intakeId, reason) {
+    const select = document.getElementById(`workflowCustomer-${intakeId}`);
+    const customerId = select?.value || '';
+    if (reason === 'multiple_email_matches' && !customerId) {
+        showToast('Select the matching customer first.', 'error');
+        return;
+    }
+    try {
+        await window.APIService.resolveWebsiteIntakeReview(intakeId, customerId);
+        window.APIService.clearCache?.();
+        showToast('Customer review resolved.', 'success');
+        await loadWorkflowCenter();
+    } catch (error) {
+        showToast(error.message || 'Unable to resolve review', 'error');
+    }
+}
+
+async function retryIntakeEmail(intakeId, type) {
+    try {
+        await window.APIService.retryWebsiteIntakeEmail(intakeId, type);
+        window.APIService.clearCache?.();
+        showToast('Email queued for retry.', 'success');
+        await loadWorkflowCenter();
+    } catch (error) {
+        showToast(error.message || 'Unable to retry email', 'error');
+    }
+}
+
+function openWorkflowOrder(orderId) {
+    if (!orderId) return;
+    showOrderDetail(orderId, false, false, true);
+}
+
+window.loadWorkflowCenter = loadWorkflowCenter;
+window.resolveIntakeReview = resolveIntakeReview;
+window.retryIntakeEmail = retryIntakeEmail;
+window.openWorkflowOrder = openWorkflowOrder;
+
 async function loadOrdersSection() {
     try {
         window.AppLogger?.debug('loadOrdersSection called');
@@ -9474,6 +9868,8 @@ function getOrderSearchText(order) {
         order.priority,
         order.orderType,
         order.status,
+        order.workflowStatus,
+        order.requestReference,
         order.pipelineStage,
         visibleStatus,
         order.description,
@@ -9493,7 +9889,7 @@ function formatOrderFilterLabel(value) {
 }
 
 function getOrderVisibleStatus(order) {
-    return order.pipelineStage || order.status || '';
+    return order.pipelineStage || order.workflowStatus || order.status || '';
 }
 
 function getOrderStatusFilterValues(order) {
@@ -9642,7 +10038,7 @@ function closeProfileModal() {
     modal.classList.remove('show');
 }
 
-function saveProfile() {
+async function saveProfile() {
     const firstName = document.getElementById('firstName').value;
     const lastName = document.getElementById('lastName').value;
     const email = document.getElementById('profileEmail').value;
@@ -9650,6 +10046,14 @@ function saveProfile() {
     const role = document.getElementById('role').value;
     const department = document.getElementById('department').value;
     const avatar = document.getElementById('profileAvatar').src;
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    if ((currentPassword || newPassword || confirmPassword) &&
+        (!currentPassword || newPassword.length < 8 || newPassword !== confirmPassword)) {
+        showToast('Enter the current password and matching new passwords of at least 8 characters', 'error');
+        return;
+    }
     
     // Get current user info
     const sessionData = SessionManager.getUserInfo();
@@ -9658,21 +10062,10 @@ function saveProfile() {
         return;
     }
     
-    // Update profile via API
-    window.APIService.updateProfile({
-        email,
-        firstName,
-        lastName,
-        phone,
-        department,
-        avatar
-    }).then(response => {
-        // Update session data with new user info
-        if (response.token) {
-            sessionData.token = response.token;
-            window.APIService.token = response.token;
-        }
-
+    try {
+        const response = await window.APIService.updateProfile({
+            email, firstName, lastName, phone, department, avatar
+        });
         sessionData.user = {
             ...sessionData.user,
             email: response.user.email,
@@ -9682,20 +10075,22 @@ function saveProfile() {
             department: response.user.department,
             avatar: response.user.avatar
         };
-        
-        // Save to storage
-        const storage = localStorage.getItem('huttaSession') ? localStorage : sessionStorage;
-        storage.setItem('huttaSession', JSON.stringify(sessionData));
-        
-        // Update UI
+        window.AuthSession.user = sessionData.user;
         updateUserInfo(sessionData);
-        
+
+        if (currentPassword || newPassword || confirmPassword) {
+            await window.APIService.changePassword(currentPassword, newPassword);
+            window.APIService.clearSession();
+            window.location.replace('/pages/login.html');
+            return;
+        }
+
         showToast('Profile updated successfully!', 'success');
         closeProfileModal();
-    }).catch(error => {
+    } catch (error) {
         console.error('Profile update error:', error);
         showToast('Failed to update profile: ' + error.message, 'error');
-    });
+    }
     
     // Clear password fields
     document.getElementById('currentPassword').value = '';
@@ -9810,6 +10205,7 @@ async function showVendorDetail(vendorId) {
     try {
         currentDetailVendorId = vendorId;
         const vendor = await window.APIService.getVendor(vendorId);
+        window.renderVendorOnboardingReview?.(vendor);
         window.AppLogger?.debug('Vendor data received:', vendor);
         window.AppLogger?.debug('Vendor notes:', vendor.notes);
         window.AppLogger?.debug('Vendor notes type:', typeof vendor.notes);
@@ -10332,11 +10728,40 @@ window.deleteUser = deleteUser;
 function showAddUserModal() {
     document.getElementById('addUserForm').reset();
     document.getElementById('sendEmailCheckbox').checked = true;
-    document.getElementById('addUserModal').classList.add('show');
+    const modal = document.getElementById('addUserModal');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    resetNewUserPasswordVisibility();
+    window.setTimeout(() => document.getElementById('newUserFirstName')?.focus(), 120);
 }
 
 function closeAddUserModal() {
-    document.getElementById('addUserModal').classList.remove('show');
+    const modal = document.getElementById('addUserModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function resetNewUserPasswordVisibility() {
+    const passwordInput = document.getElementById('newUserPassword');
+    const toggleButton = document.getElementById('newUserPasswordToggle');
+    if (!passwordInput || !toggleButton) return;
+
+    passwordInput.type = 'password';
+    toggleButton.setAttribute('aria-label', 'Show password');
+    toggleButton.setAttribute('aria-pressed', 'false');
+    toggleButton.innerHTML = '<i class="far fa-eye" aria-hidden="true"></i>';
+}
+
+function toggleNewUserPassword() {
+    const passwordInput = document.getElementById('newUserPassword');
+    const toggleButton = document.getElementById('newUserPasswordToggle');
+    if (!passwordInput || !toggleButton) return;
+
+    const shouldShow = passwordInput.type === 'password';
+    passwordInput.type = shouldShow ? 'text' : 'password';
+    toggleButton.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+    toggleButton.setAttribute('aria-pressed', String(shouldShow));
+    toggleButton.innerHTML = `<i class="far ${shouldShow ? 'fa-eye-slash' : 'fa-eye'}" aria-hidden="true"></i>`;
 }
 
 async function saveNewUser() {
@@ -10346,15 +10771,15 @@ async function saveNewUser() {
         return;
     }
     
-    const saveBtn = document.querySelector('#addUserModal .btn-primary');
+    const saveBtn = document.getElementById('createUserButton');
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
     
     const userData = {
-        firstName: document.getElementById('newUserFirstName').value,
-        lastName: document.getElementById('newUserLastName').value,
-        email: document.getElementById('newUserEmail').value,
+        firstName: document.getElementById('newUserFirstName').value.trim(),
+        lastName: document.getElementById('newUserLastName').value.trim(),
+        email: document.getElementById('newUserEmail').value.trim().toLowerCase(),
         password: document.getElementById('newUserPassword').value,
         role: document.getElementById('newUserRole').value
     };
@@ -10375,13 +10800,14 @@ async function saveNewUser() {
         showToast('Failed to create user: ' + error.message, 'error');
     } finally {
         saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i class="fas fa-save"></i> Create User';
+        saveBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create User';
     }
 }
 
 window.showAddUserModal = showAddUserModal;
 window.closeAddUserModal = closeAddUserModal;
 window.saveNewUser = saveNewUser;
+window.toggleNewUserPassword = toggleNewUserPassword;
 window.forceRefreshDashboard = forceRefreshDashboard;
 
 

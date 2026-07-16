@@ -1,0 +1,1310 @@
+/*
+  Final vendor automation branding pass.
+  Loaded last to normalize typography, spacing, and readability without changing behavior.
+*/
+
+#vendor-reviews,
+#vendor-review-detail,
+#vendorModal,
+.vendor-decision-overlay,
+.onboarding-shell {
+  --vendor-auto-blue: #0056b8;
+  --vendor-auto-blue-hover: #004494;
+  --vendor-auto-blue-soft: #eef5ff;
+  --vendor-auto-ink: #101828;
+  --vendor-auto-muted: #667085;
+  --vendor-auto-subtle: #98a2b3;
+  --vendor-auto-border: #e3e8ef;
+  --vendor-auto-border-strong: #cbd5e1;
+  --vendor-auto-surface: #ffffff;
+  --vendor-auto-soft: #f8fafc;
+  --vendor-auto-success: #12805c;
+  --vendor-auto-warning: #b54708;
+  --vendor-auto-danger: #b42318;
+  --vendor-auto-radius: 10px;
+  --vendor-auto-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 24px rgba(16, 24, 40, .05);
+  color: var(--vendor-auto-ink);
+  font-family: Inter, "Plus Jakarta Sans", Manrope, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+}
+
+#vendor-reviews :is(button, input, select, textarea),
+#vendor-review-detail :is(button, input, select, textarea),
+#vendorModal :is(button, input, select, textarea),
+.vendor-decision-overlay :is(button, input, select, textarea),
+.onboarding-shell :is(button, input, select, textarea) {
+  font-family: inherit;
+  font-size: 15px;
+}
+
+#vendor-reviews :is(p, a, td, li),
+#vendor-review-detail :is(p, a, td, li),
+#vendorModal :is(p, a, li),
+.vendor-decision-overlay :is(p, li),
+.onboarding-shell :is(p, a, li) {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+#vendor-reviews :is(small, .table-muted),
+#vendor-review-detail :is(small, .table-muted),
+#vendorModal small,
+.vendor-decision-overlay small,
+.onboarding-shell small {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#vendor-reviews :is(.vendor-review-eyebrow, .vendor-onboarding-eyebrow),
+#vendor-review-detail .vendor-review-eyebrow,
+#vendorModal .vendor-modal-eyebrow,
+.vendor-decision-overlay .vendor-review-eyebrow,
+.onboarding-shell :is(.eyebrow, .section-eyebrow, .state-eyebrow) {
+  color: var(--vendor-auto-blue) !important;
+  font-size: 12px !important;
+  font-weight: 800;
+  letter-spacing: .1em;
+  line-height: 1.2;
+}
+
+.vendor-review-nav-badge {
+  min-width: 24px;
+  padding: 3px 7px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* Vendor Reviews workspace */
+#vendor-reviews.vendor-reviews-workspace {
+  padding-bottom: 44px;
+}
+
+#vendor-reviews .vendor-review-hero {
+  min-height: 132px;
+  margin-bottom: 20px !important;
+  padding: 26px 28px !important;
+  border-color: var(--vendor-auto-border) !important;
+  border-radius: var(--vendor-auto-radius) !important;
+  box-shadow: var(--vendor-auto-shadow) !important;
+}
+
+#vendor-reviews .vendor-review-hero h1 {
+  font-size: clamp(28px, 2.5vw, 36px) !important;
+  line-height: 1.12 !important;
+}
+
+#vendor-reviews .vendor-review-lead {
+  max-width: 720px;
+  margin-top: 9px !important;
+  color: var(--vendor-auto-muted) !important;
+  font-size: 15px !important;
+}
+
+#vendor-reviews .vendor-review-refresh {
+  min-height: 44px;
+  padding: 10px 16px !important;
+  font-size: 14px !important;
+}
+
+#vendor-reviews .vendor-review-stats {
+  gap: 16px;
+  margin: 0 0 20px;
+}
+
+#vendor-reviews .vendor-review-stats button {
+  min-height: 118px;
+  padding: 20px;
+  border-radius: var(--vendor-auto-radius);
+}
+
+#vendor-reviews .vendor-review-stat-icon {
+  width: 48px;
+  height: 48px;
+  font-size: 18px;
+}
+
+#vendor-reviews .vendor-review-stat-copy strong {
+  font-size: 30px;
+}
+
+#vendor-reviews .vendor-review-stat-copy > span {
+  font-size: 15px;
+}
+
+#vendor-reviews .vendor-review-stat-copy small {
+  font-size: 13px;
+}
+
+#vendor-reviews .vendor-review-queue-panel,
+#vendor-reviews .vendor-review-invitations {
+  margin-bottom: 20px !important;
+  padding: 24px !important;
+  border-color: var(--vendor-auto-border) !important;
+  border-radius: var(--vendor-auto-radius) !important;
+  box-shadow: var(--vendor-auto-shadow) !important;
+}
+
+#vendor-reviews .vendor-review-section-head,
+#vendor-reviews .vendor-onboarding-panel-head {
+  gap: 18px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+#vendor-reviews .vendor-review-section-head h2,
+#vendor-reviews .vendor-review-invitations h2 {
+  font-size: 21px !important;
+  line-height: 1.25;
+}
+
+#vendor-reviews .vendor-review-section-head p:not(.vendor-review-eyebrow),
+#vendor-reviews .vendor-review-invitations .vendor-onboarding-panel-head p {
+  color: var(--vendor-auto-muted) !important;
+  font-size: 14px !important;
+}
+
+#vendor-reviews .vendor-review-secure-note {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+#vendor-reviews .vendor-review-toolbar {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+#vendor-reviews .vendor-review-search {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+}
+
+#vendor-reviews .vendor-review-search input {
+  min-height: 38px;
+  font-size: 14px;
+}
+
+#vendor-reviews .vendor-review-filter-label {
+  gap: 10px;
+  font-size: 14px;
+}
+
+#vendor-reviews .vendor-review-filter-label select {
+  min-height: 40px;
+  min-width: 210px;
+  font-size: 14px;
+}
+
+#vendor-reviews .vendor-invitation-pagination {
+  margin-top: 10px;
+}
+
+#vendor-reviews .vendor-invitation-pagination .btn-secondary {
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
+#vendor-reviews .vendor-review-table-wrap,
+#vendor-reviews .vendor-invitations-table-wrap {
+  border-radius: var(--vendor-auto-radius);
+}
+
+#vendor-reviews .vendor-invitations-table {
+  min-width: 1040px;
+  table-layout: fixed;
+}
+
+#vendor-reviews .vendor-invitations-table th:nth-child(1),
+#vendor-reviews .vendor-invitations-table td:nth-child(1) {
+  width: 18%;
+}
+
+#vendor-reviews .vendor-invitations-table th:nth-child(2),
+#vendor-reviews .vendor-invitations-table td:nth-child(2) {
+  width: 18%;
+}
+
+#vendor-reviews .vendor-invitations-table th:nth-child(3),
+#vendor-reviews .vendor-invitations-table td:nth-child(3) {
+  width: 17%;
+}
+
+#vendor-reviews .vendor-invitations-table th:nth-child(4),
+#vendor-reviews .vendor-invitations-table td:nth-child(4) {
+  width: 11%;
+}
+
+#vendor-reviews .vendor-invitations-table th:nth-child(5),
+#vendor-reviews .vendor-invitations-table td:nth-child(5) {
+  width: 15%;
+}
+
+#vendor-reviews .vendor-invitations-table th:nth-child(6),
+#vendor-reviews .vendor-invitations-table td:nth-child(6) {
+  width: 9%;
+}
+
+#vendor-reviews .vendor-invitations-table th:nth-child(7),
+#vendor-reviews .vendor-invitations-table td:nth-child(7) {
+  width: 12%;
+}
+
+#vendor-reviews .vendor-review-table th,
+#vendor-reviews .vendor-invitations-table th {
+  padding: 10px 12px;
+  color: var(--vendor-auto-muted) !important;
+  font-size: 12px;
+  letter-spacing: .045em;
+}
+
+#vendor-reviews .vendor-review-table td,
+#vendor-reviews .vendor-invitations-table td {
+  padding: 10px 12px;
+  color: #344054;
+  font-size: 13px;
+}
+
+#vendor-reviews .vendor-invitations-table th,
+#vendor-reviews .vendor-invitations-table td {
+  white-space: normal !important;
+  vertical-align: top;
+}
+
+#vendor-reviews .vendor-invitations-table td {
+  overflow-wrap: anywhere;
+  line-height: 1.32;
+}
+
+#vendor-reviews .vendor-review-company strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+#vendor-reviews .vendor-review-company span {
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+#vendor-reviews :is(.vendor-review-category, .vendor-review-requested, .vendor-review-missing, .invite-status, .onboarding-status-badge) {
+  min-height: 24px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+#vendor-reviews .vendor-review-table .btn-secondary,
+#vendor-reviews .invitation-actions button {
+  min-height: 30px;
+  padding: 6px 8px !important;
+  font-size: 13px !important;
+}
+
+#vendor-reviews .invitation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 112px;
+}
+
+#vendor-reviews .invitation-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+#vendor-reviews .invitation-actions button:hover {
+  border-color: #175cd3;
+  color: #175cd3;
+  box-shadow: 0 8px 18px rgba(23, 92, 211, .12);
+}
+
+#vendor-reviews .vendor-review-open .fa-arrow-right {
+  font-size: 12px;
+}
+
+#vendor-reviews .invitation-status-stack {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+#vendor-reviews .invitation-delivery-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#vendor-reviews .invitation-delivery-detail.error {
+  color: #b45309;
+}
+
+#vendor-reviews .vendor-duplicate-warning,
+#vendorInviteResult .vendor-duplicate-warning {
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  border: 1px solid #f59e0b;
+  border-radius: 14px;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+#vendor-reviews .vendor-duplicate-warning strong,
+#vendorInviteResult .vendor-duplicate-warning strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #92400e;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+#vendor-reviews .vendor-duplicate-warning p,
+#vendorInviteResult .vendor-duplicate-warning p {
+  margin: 8px 0 0;
+  color: #92400e;
+  font-size: 14px;
+}
+
+#vendor-reviews .vendor-duplicate-warning ul,
+#vendorInviteResult .vendor-duplicate-warning ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+#vendor-reviews .vendor-duplicate-warning li,
+#vendorInviteResult .vendor-duplicate-warning li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 14px;
+}
+
+#vendor-reviews .vendor-duplicate-warning li small,
+#vendorInviteResult .vendor-duplicate-warning li small {
+  color: #a16207;
+  font-size: 12.5px;
+  text-align: right;
+}
+
+#vendor-reviews .vendor-review-loading,
+#vendor-reviews .vendor-review-empty {
+  min-height: 210px;
+  padding: 34px;
+}
+
+#vendor-reviews .vendor-review-loading strong,
+#vendor-reviews .vendor-review-empty strong {
+  font-size: 16px;
+}
+
+#vendor-reviews .vendor-review-loading small,
+#vendor-reviews .vendor-review-empty p {
+  font-size: 14px;
+}
+
+#vendor-reviews .vendor-review-pagination {
+  gap: 14px;
+  font-size: 14px;
+}
+
+/* Read-only review detail */
+#vendor-review-detail.vendor-review-detail-workspace {
+  font-size: 15px;
+}
+
+#vendor-review-detail .vendor-review-detail-header {
+  gap: 26px !important;
+  margin-bottom: 20px !important;
+  padding: 22px 24px !important;
+  border-color: var(--vendor-auto-border) !important;
+  border-radius: var(--vendor-auto-radius) !important;
+  box-shadow: var(--vendor-auto-shadow) !important;
+}
+
+#vendor-review-detail .vendor-review-back {
+  min-height: 40px !important;
+  margin-bottom: 16px !important;
+  padding: 9px 13px !important;
+  font-size: 14px !important;
+}
+
+#vendor-review-detail .vendor-review-title-row h1 {
+  font-size: clamp(26px, 2.3vw, 34px) !important;
+  line-height: 1.14 !important;
+}
+
+#vendor-review-detail .vendor-review-detail-meta {
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+#vendor-review-detail .vendor-review-detail-meta > span:not(.onboarding-status-badge) {
+  font-size: 13px;
+}
+
+#vendor-review-detail .onboarding-status-badge {
+  min-height: 28px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+#vendor-review-detail .vendor-review-detail-actions {
+  gap: 10px;
+}
+
+#vendor-review-detail .vendor-review-detail-actions button {
+  min-height: 42px !important;
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+}
+
+#vendor-review-detail .vendor-review-detail-alert {
+  padding: 14px 16px;
+  font-size: 14px;
+}
+
+#vendor-review-detail .vendor-review-detail-content {
+  gap: 18px;
+}
+
+#vendor-review-detail .vendor-review-overview {
+  gap: 24px;
+  padding: 24px;
+  border-radius: var(--vendor-auto-radius);
+}
+
+#vendor-review-detail .vendor-review-overview-identity {
+  padding-right: 24px;
+}
+
+#vendor-review-detail .vendor-review-overview-identity p {
+  font-size: 12px;
+}
+
+#vendor-review-detail .vendor-review-overview-identity h2 {
+  font-size: 24px !important;
+}
+
+#vendor-review-detail .vendor-review-overview-identity a {
+  font-size: 15px;
+}
+
+#vendor-review-detail .vendor-review-overview-metrics {
+  gap: 12px;
+}
+
+#vendor-review-detail .vendor-review-overview-metrics > div {
+  min-height: 82px;
+  padding: 14px;
+}
+
+#vendor-review-detail .vendor-review-overview-metrics > div > span {
+  width: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+
+#vendor-review-detail .vendor-review-overview-metrics strong {
+  font-size: 15px;
+}
+
+#vendor-review-detail .vendor-review-overview-metrics small {
+  font-size: 13px;
+}
+
+#vendor-review-detail .vendor-review-category-request {
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+#vendor-review-detail .vendor-review-category-request span {
+  font-size: 14px;
+}
+
+#vendor-review-detail .vendor-review-category-request strong {
+  font-size: 15px;
+}
+
+#vendor-review-detail .vendor-review-card {
+  padding: 22px;
+  border-radius: var(--vendor-auto-radius);
+}
+
+#vendor-review-detail .vendor-review-card h2 {
+  margin-bottom: 16px;
+  font-size: 20px !important;
+}
+
+#vendor-review-detail .vendor-review-fields {
+  gap: 14px;
+}
+
+#vendor-review-detail .vendor-review-field {
+  padding: 13px 14px;
+}
+
+#vendor-review-detail .vendor-review-field span {
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+#vendor-review-detail .vendor-review-field strong {
+  font-size: 15px;
+}
+
+#vendor-review-detail .vendor-review-list li,
+#vendor-review-detail .vendor-review-history article {
+  padding: 13px 14px;
+  font-size: 14px;
+}
+
+#vendor-review-detail .vendor-review-checklist {
+  gap: 10px;
+}
+
+#vendor-review-detail .vendor-review-checklist span {
+  min-height: 40px;
+  padding: 9px 12px;
+  font-size: 14px;
+}
+
+#vendor-review-detail .vendor-review-tax button {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+/* Review decision dialog */
+.vendor-decision-overlay .vendor-decision-dialog {
+  width: min(100%, 560px);
+  border-radius: 16px;
+}
+
+.vendor-decision-overlay .vendor-decision-header {
+  gap: 14px;
+  padding: 20px 22px;
+}
+
+.vendor-decision-overlay .vendor-decision-header h2 {
+  font-size: 22px !important;
+}
+
+.vendor-decision-overlay .vendor-decision-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+
+.vendor-decision-overlay .vendor-decision-body {
+  padding: 22px;
+}
+
+.vendor-decision-overlay .vendor-decision-body > p {
+  font-size: 14px;
+}
+
+.vendor-decision-overlay .vendor-decision-summary {
+  padding: 14px;
+}
+
+.vendor-decision-overlay .vendor-decision-summary span {
+  font-size: 12px;
+}
+
+.vendor-decision-overlay .vendor-decision-summary strong {
+  font-size: 15px;
+}
+
+.vendor-decision-overlay .vendor-decision-message > span {
+  font-size: 14px;
+}
+
+.vendor-decision-overlay .vendor-decision-message textarea {
+  min-height: 126px;
+  padding: 12px 13px;
+  font-size: 15px;
+}
+
+.vendor-decision-overlay .vendor-decision-impact {
+  gap: 10px;
+  padding: 13px 14px;
+}
+
+.vendor-decision-overlay .vendor-decision-impact::before {
+  font-size: 13px;
+}
+
+.vendor-decision-overlay .vendor-decision-impact strong,
+.vendor-decision-overlay .vendor-decision-impact span,
+.vendor-decision-overlay .vendor-decision-error {
+  font-size: 14px;
+}
+
+.vendor-decision-overlay .vendor-decision-footer {
+  padding: 16px 22px;
+}
+
+.vendor-decision-overlay .vendor-decision-footer button {
+  min-height: 42px;
+  padding: 10px 15px;
+  font-size: 14px;
+}
+
+/* Add / Invite vendor modal */
+#vendorModal .vendor-modal-header {
+  min-height: 94px;
+  padding: 22px 28px !important;
+}
+
+#vendorModal .vendor-modal-heading {
+  gap: 16px;
+}
+
+#vendorModal .vendor-modal-heading-icon {
+  width: 48px;
+  height: 48px;
+  font-size: 18px;
+}
+
+#vendorModal .vendor-modal-header h2 {
+  font-size: 26px !important;
+  line-height: 1.18;
+}
+
+#vendorModal .vendor-modal-header p {
+  max-width: 620px;
+  font-size: 14px;
+}
+
+#vendorModal .vendor-entry-mode-switch {
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 6px;
+}
+
+#vendorModal .vendor-entry-mode-switch > button {
+  min-height: 78px;
+  padding: 14px 16px;
+}
+
+#vendorModal .vendor-mode-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+#vendorModal .vendor-entry-mode-switch strong {
+  font-size: 15px;
+}
+
+#vendorModal .vendor-entry-mode-switch small {
+  font-size: 13px;
+}
+
+#vendorModal .vendor-mode-check {
+  font-size: 14px;
+}
+
+#vendorModal .vendor-manual-intro {
+  gap: 13px;
+  padding: 16px;
+}
+
+#vendorModal .vendor-manual-intro > span {
+  width: 38px;
+  height: 38px;
+}
+
+#vendorModal .vendor-manual-intro strong {
+  font-size: 15px;
+}
+
+#vendorModal .vendor-manual-intro p {
+  font-size: 14px;
+}
+
+#vendorModal .vendor-invite-layout {
+  gap: 20px;
+}
+
+#vendorModal .vendor-invite-card,
+#vendorModal .vendor-invite-summary {
+  border-radius: var(--vendor-auto-radius);
+}
+
+#vendorModal .vendor-invite-card {
+  padding: 22px;
+}
+
+#vendorModal .vendor-invite-intro {
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+}
+
+#vendorModal .vendor-invite-intro > span {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+
+#vendorModal .vendor-invite-intro h3,
+#vendorModal .vendor-invite-summary h3 {
+  font-size: 19px !important;
+}
+
+#vendorModal .vendor-invite-intro p {
+  font-size: 14px;
+}
+
+#vendorModal .vendor-invite-fields {
+  gap: 18px;
+}
+
+#vendorModal .vendor-invite-field label,
+#vendorModal .vendor-field-label-row > span {
+  font-size: 14px;
+}
+
+#vendorModal :is(.required-mark, .optional-mark) {
+  font-size: 12px;
+}
+
+#vendorModal .vendor-input-with-icon > i {
+  font-size: 14px;
+}
+
+#vendorModal .vendor-invite-field input,
+#vendorModal .vendor-invite-field select,
+#vendorModal .vendor-invite-field textarea {
+  min-height: 46px;
+  font-size: 15px;
+}
+
+#vendorModal .vendor-input-with-icon input,
+#vendorModal .vendor-input-with-icon select {
+  padding-left: 40px !important;
+}
+
+#vendorModal .vendor-invite-field small {
+  font-size: 13px;
+}
+
+#vendorModal .vendor-invite-summary {
+  padding: 22px;
+}
+
+#vendorModal .vendor-invite-summary-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+
+#vendorModal .vendor-invite-summary ol {
+  gap: 17px;
+}
+
+#vendorModal .vendor-invite-summary li {
+  grid-template-columns: 30px 1fr;
+  gap: 11px;
+}
+
+#vendorModal .vendor-invite-summary li > span {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+
+#vendorModal .vendor-invite-summary li strong {
+  font-size: 14px;
+}
+
+#vendorModal .vendor-invite-summary li small {
+  font-size: 13px;
+}
+
+#vendorModal .vendor-invite-security strong,
+#vendorModal .vendor-invite-security small {
+  font-size: 13px;
+}
+
+#vendorModal .vendor-invite-result {
+  padding: 13px 14px;
+  font-size: 14px;
+}
+
+#vendorModal .vendor-invite-result button {
+  min-height: 34px;
+  font-size: 13px;
+}
+
+#vendorModal .vendor-modal-footer {
+  min-height: 78px;
+}
+
+#vendorModal .vendor-modal-footer-hint {
+  font-size: 14px;
+}
+
+#vendorModal .vendor-modal-footer-actions .btn-primary,
+#vendorModal .vendor-modal-footer-actions .btn-secondary {
+  min-height: 42px;
+  font-size: 14px;
+}
+
+#vendorModal #vendorInviteSendButton {
+  min-width: 190px;
+}
+
+/* Public vendor onboarding page */
+.onboarding-shell {
+  width: min(100% - 36px, 1160px);
+  margin-top: 30px;
+}
+
+.onboarding-header {
+  margin-bottom: 24px;
+}
+
+.onboarding-brand {
+  gap: 16px;
+}
+
+.brand-logo {
+  width: 124px;
+  height: 56px;
+}
+
+.onboarding-header h1 {
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.12;
+}
+
+.secure-session {
+  min-height: 42px;
+  padding: 9px 14px;
+}
+
+.secure-session > span {
+  font-size: 12px;
+}
+
+.secure-session strong,
+.secure-session small {
+  font-size: 13px;
+}
+
+.state-card {
+  padding: 62px 36px;
+  border-radius: 18px;
+}
+
+.state-card h2 {
+  font-size: 30px;
+}
+
+.state-card > p:not(.state-eyebrow):not(.reference) {
+  font-size: 16px;
+}
+
+.state-help,
+.success-next,
+.reference {
+  font-size: 14px;
+}
+
+.form-progress {
+  padding: 16px 20px 14px;
+  border-radius: 14px;
+}
+
+.progress-heading div > span,
+.progress-heading div > strong,
+.progress-heading > span {
+  font-size: 13px;
+}
+
+.progress-steps a {
+  font-size: 13px;
+}
+
+.progress-steps a > span {
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+}
+
+.onboarding-layout {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 22px;
+}
+
+.onboarding-main-column {
+  gap: 18px;
+}
+
+.form-notice {
+  gap: 13px;
+  padding: 16px 18px;
+}
+
+.notice-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.form-notice strong {
+  font-size: 15px;
+}
+
+.form-notice p {
+  font-size: 14px;
+}
+
+.form-card,
+.intro-card,
+.sidebar-trust-card,
+.sidebar-help-card {
+  border-radius: 14px;
+}
+
+.form-card {
+  padding: 26px;
+}
+
+.section-heading {
+  gap: 14px;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+}
+
+.section-heading > span {
+  flex-basis: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+
+.section-heading h2 {
+  font-size: 22px;
+}
+
+.section-heading p:not(.section-eyebrow) {
+  font-size: 14px;
+}
+
+.form-grid {
+  gap: 18px;
+}
+
+.field {
+  gap: 8px;
+}
+
+.field > span {
+  font-size: 14px;
+}
+
+.field > span em,
+.field > span small {
+  font-size: 12px;
+}
+
+.field input,
+.field textarea,
+.field select,
+.repeat-row input {
+  min-height: 46px;
+  padding: 12px 14px;
+  font-size: 15px;
+}
+
+.sensitive-field #taxHelp {
+  font-size: 13px;
+}
+
+.repeat-block {
+  margin-top: 22px;
+  padding-top: 18px;
+}
+
+.repeat-head h3 {
+  font-size: 16px;
+}
+
+.repeat-head p {
+  font-size: 13px;
+}
+
+.repeat-head button,
+.repeat-row button {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.repeat-head button > span {
+  font-size: 16px;
+}
+
+.repeat-row {
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 11px;
+}
+
+.assigned-category {
+  padding: 16px 18px;
+}
+
+.assigned-category div > span {
+  font-size: 13px;
+}
+
+.assigned-category strong {
+  font-size: 17px;
+}
+
+.assigned-badge {
+  font-size: 12px;
+}
+
+.check-row {
+  gap: 12px;
+  padding: 16px;
+}
+
+.check-row span strong {
+  font-size: 15px;
+}
+
+.check-row span small {
+  font-size: 13px;
+}
+
+.upload-grid {
+  gap: 14px;
+}
+
+.upload-field {
+  min-height: 142px;
+  padding: 17px;
+}
+
+.upload-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+
+.upload-copy strong {
+  font-size: 15px;
+}
+
+.upload-copy small,
+.file-status {
+  font-size: 13px;
+}
+
+.submission-card {
+  padding: 24px;
+}
+
+.submission-heading h2 {
+  font-size: 22px;
+}
+
+.submission-heading p,
+.submit-error,
+.submit-privacy {
+  font-size: 14px;
+}
+
+.submit-button {
+  min-height: 64px;
+}
+
+.submit-button span {
+  font-size: 17px;
+}
+
+.submit-button small {
+  font-size: 13px;
+}
+
+.invite-card,
+.sidebar-trust-card,
+.sidebar-help-card {
+  padding: 20px;
+}
+
+.sidebar-card-heading h2 {
+  font-size: 18px;
+}
+
+.sidebar-card-heading .eyebrow {
+  font-size: 12px;
+}
+
+.invite-summary span {
+  font-size: 12px;
+}
+
+.invite-summary strong {
+  font-size: 15px;
+}
+
+.sidebar-trust-card strong,
+.sidebar-help-card strong {
+  font-size: 15px;
+}
+
+.sidebar-trust-card p,
+.sidebar-help-card p,
+.sidebar-trust-card li {
+  font-size: 14px;
+}
+
+.onboarding-footer {
+  font-size: 13px;
+}
+
+@media (max-width: 1050px) {
+  #vendor-reviews .vendor-review-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-sidebar {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  #vendorModal .vendor-invite-layout,
+  #vendor-reviews .vendor-review-toolbar,
+  #vendor-review-detail .vendor-review-overview,
+  #vendor-review-detail .vendor-review-detail-header {
+    grid-template-columns: 1fr;
+  }
+
+  #vendor-reviews .vendor-review-filter-label,
+  #vendor-review-detail .vendor-review-detail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #vendor-reviews .vendor-review-filter-label select,
+  #vendor-review-detail .vendor-review-detail-actions button,
+  #vendorModal .vendor-modal-footer-actions button {
+    width: 100%;
+  }
+
+  #vendorModal .vendor-modal-header {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  #vendor-reviews .vendor-review-hero,
+  #vendor-reviews .vendor-review-queue-panel,
+  #vendor-reviews .vendor-review-invitations,
+  #vendor-review-detail .vendor-review-detail-header,
+  #vendor-review-detail .vendor-review-card {
+    padding: 18px !important;
+  }
+
+  #vendor-reviews .vendor-review-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #vendor-reviews .vendor-review-refresh,
+  #vendorModal #vendorInviteSendButton {
+    width: 100%;
+  }
+
+  #vendorModal .vendor-entry-mode-switch,
+  #vendorModal .vendor-invite-fields,
+  .form-grid,
+  .upload-grid,
+  .onboarding-sidebar,
+  #vendor-review-detail .vendor-review-fields,
+  #vendor-review-detail .vendor-review-checklist {
+    grid-template-columns: 1fr;
+  }
+
+  #vendorModal .vendor-modal-header {
+    padding: 18px 20px !important;
+  }
+
+  #vendorModal .vendor-modal-heading {
+    align-items: flex-start;
+  }
+
+  #vendorModal .vendor-modal-header h2 {
+    font-size: 23px !important;
+  }
+
+  #vendorModal .vendor-modal-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #vendorModal .vendor-modal-footer-actions {
+    width: 100%;
+    flex-direction: column-reverse;
+  }
+
+  .onboarding-shell {
+    width: min(100% - 20px, 1160px);
+    margin-top: 18px;
+  }
+
+  .onboarding-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .brand-logo {
+    width: 106px;
+    height: 50px;
+  }
+
+  .form-card {
+    padding: 20px;
+  }
+
+  .repeat-row {
+    grid-template-columns: 1fr;
+  }
+}

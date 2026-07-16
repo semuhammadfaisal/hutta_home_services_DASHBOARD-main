@@ -98,7 +98,7 @@ async function saveEmployeePayment() {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'X-CSRF-Token': window.AuthSession?.csrfToken || ''
             },
             body: JSON.stringify(employeePaymentData)
         });

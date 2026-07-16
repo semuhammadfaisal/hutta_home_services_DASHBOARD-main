@@ -31,7 +31,11 @@ router.get('/unread-count', authenticateToken, async (req, res) => {
 // Mark notification as read
 router.put('/:id/read', authenticateToken, async (req, res) => {
   try {
-    await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.userId },
+      { isRead: true }
+    );
+    if (!notification) return res.status(404).json({ message: 'Notification not found' });
     res.json({ message: 'Notification marked as read' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -55,8 +59,8 @@ router.put('/mark-all-read', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const notification = new Notification({
-      userId: req.user.userId,
-      ...req.body
+      ...req.body,
+      userId: req.user.userId
     });
     await notification.save();
     res.status(201).json(notification);

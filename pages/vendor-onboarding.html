@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Vendor Onboarding | Hutta Home Services</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/vendor-onboarding.css">
+  <link rel="stylesheet" href="../assets/css/vendor-onboarding-polish.css">
+  <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css">
+</head>
+<body>
+  <div class="onboarding-page-accent" aria-hidden="true"></div>
+  <main class="onboarding-shell">
+    <header class="onboarding-header">
+      <div class="onboarding-brand">
+        <div class="brand-logo"><img src="../assets/images/logo.png" alt="Hutta Home Services" width="716" height="351" decoding="async" fetchpriority="high"></div>
+        <div><p class="eyebrow">Hutta Home Services</p><h1>Secure Vendor Onboarding</h1></div>
+      </div>
+      <div class="secure-session"><span aria-hidden="true">●</span><div><strong>Private session</strong><small>Encrypted submission</small></div></div>
+    </header>
+
+    <section id="loadingState" class="state-card" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div><p class="state-eyebrow">Secure Invitation</p><h2>Opening your vendor form</h2><p>Please wait while we safely validate your one-time invitation.</p>
+    </section>
+    <section id="errorState" class="state-card hidden" role="alert">
+      <div class="state-icon error" aria-hidden="true">!</div><p class="state-eyebrow">Unable to Continue</p><h2>Invitation unavailable</h2><p id="errorMessage">This invitation cannot be opened.</p><div class="state-help">Check that you opened the complete link from your latest invitation email.</div>
+    </section>
+    <section id="successState" class="state-card hidden" aria-live="polite">
+      <div class="state-icon success" aria-hidden="true">✓</div><p class="state-eyebrow">Submission Complete</p><h2>Application received</h2><p>Thank you. Your information and documents were submitted securely for review.</p><p class="reference" id="submissionReference"></p><div class="success-next"><strong>What happens next?</strong><span>Our team will review your application and contact you if anything else is needed. You can safely close this page.</span></div>
+    </section>
+
+    <form id="onboardingForm" class="onboarding-form hidden" novalidate>
+      <nav class="form-progress" aria-label="Onboarding form progress">
+        <div class="progress-heading"><div><span>Application progress</span><strong id="progressLabel">Step 1 of 4</strong></div><span id="progressPercent">25%</span></div>
+        <div class="progress-track" aria-hidden="true"><span id="formProgressBar"></span></div>
+        <div class="progress-steps">
+          <a href="#section-company" class="active" data-progress-step="1"><span>1</span><strong>Company</strong></a>
+          <a href="#section-business" data-progress-step="2"><span>2</span><strong>Business</strong></a>
+          <a href="#section-license" data-progress-step="3"><span>3</span><strong>License</strong></a>
+          <a href="#section-documents" data-progress-step="4"><span>4</span><strong>Documents</strong></a>
+        </div>
+      </nav>
+
+      <div class="onboarding-layout">
+        <div class="onboarding-main-column">
+          <section class="form-notice" aria-label="Form guidance"><span class="notice-icon" aria-hidden="true">i</span><div><strong>Complete what you have available</strong><p>Only fields marked Required must be completed. Missing compliance documents will become a follow-up item and will not block submission.</p></div></section>
+
+          <section class="form-card" id="section-company" data-form-step="1">
+            <div class="section-heading"><span>1</span><div><p class="section-eyebrow">Contact Information</p><h2>Company &amp; Contacts</h2><p>Tell us how to identify and reach your business.</p></div></div>
+            <div class="form-grid">
+              <label class="field full"><span>Company or Vendor Name <em>Required</em></span><input id="name" name="name" required maxlength="160" autocomplete="organization" placeholder="Enter your company or vendor name"></label>
+              <label class="field"><span>Primary Email <small>Invitation email</small></span><input id="email" type="email" disabled></label>
+              <label class="field"><span>Primary Phone <small>Optional</small></span><input id="phone" name="phone" type="tel" maxlength="40" autocomplete="tel" placeholder="(000) 000-0000"></label>
+              <label class="field full"><span>Primary Address <small>Optional</small></span><textarea id="address" name="address" rows="3" maxlength="500" autocomplete="street-address" placeholder="Street, city, state, ZIP"></textarea></label>
+            </div>
+            <div class="repeat-block"><div class="repeat-head"><div><h3>Additional Emails</h3><p>Add another billing or operations contact.</p></div><button type="button" data-add="email"><span>+</span> Add Email</button></div><div id="additionalEmails"></div></div>
+            <div class="repeat-block"><div class="repeat-head"><div><h3>Additional Phones</h3><p>Add office, dispatch, or emergency numbers.</p></div><button type="button" data-add="phone"><span>+</span> Add Phone</button></div><div id="additionalPhones"></div></div>
+            <div class="repeat-block"><div class="repeat-head"><div><h3>Additional Addresses</h3><p>Add mailing or secondary business locations.</p></div><button type="button" data-add="address"><span>+</span> Add Address</button></div><div id="additionalAddresses"></div></div>
+          </section>
+
+          <section class="form-card" id="section-business" data-form-step="2">
+            <div class="section-heading"><span>2</span><div><p class="section-eyebrow">Business Identity</p><h2>Legal Business Details</h2><p>Provide legal and ownership information where available.</p></div></div>
+            <div class="form-grid">
+              <label class="field"><span>Full Legal Business Name <small>Optional</small></span><input id="legalBusinessName" name="legalBusinessName" maxlength="200" placeholder="Legal registered name"></label>
+              <label class="field"><span>Business Entity Type <small>Optional</small></span><select id="businessEntityType" name="businessEntityType"><option value="">Select entity type</option><option>LLC</option><option>Sole Proprietor</option><option>Corporation</option><option>Partnership</option><option>Other</option></select></label>
+              <label class="field"><span>Primary Owner or Operator <small>Optional</small></span><input id="primaryOwnerName" name="primaryOwnerName" maxlength="160" placeholder="Full name"></label>
+              <label class="field sensitive-field"><span>EIN or Tax ID <small>Encrypted</small></span><input id="einTaxId" name="einTaxId" maxlength="40" autocomplete="off" aria-describedby="taxHelp" placeholder="XX-XXXXXXX"><small id="taxHelp"><span aria-hidden="true">●</span> Encrypted before storage. Leave a masked value unchanged when updating.</small></label>
+              <label class="field full"><span>Business Address <small>Optional</small></span><textarea id="businessAddress" name="businessAddress" rows="3" maxlength="500" placeholder="Registered business address"></textarea></label>
+            </div>
+          </section>
+
+          <section class="form-card" id="section-license" data-form-step="3">
+            <div class="section-heading"><span>3</span><div><p class="section-eyebrow">Services &amp; Credentials</p><h2>Category &amp; License</h2><p>Confirm the assigned service category and provide ROC details.</p></div></div>
+            <div class="assigned-category"><div><span>Assigned service category</span><strong id="categoryInlineDisplay">Loading…</strong></div><span class="assigned-badge">Admin assigned</span></div>
+            <label class="check-row required-check"><input type="checkbox" id="categoryConfirmed" name="categoryConfirmed" value="true" required><span><strong>Confirm assigned category</strong><small>I confirm that the service category shown above is appropriate for this application.</small></span></label>
+            <label class="field full category-request"><span>Request a Different Category <small>Optional</small></span><input id="requestedCategory" name="requestedCategory" maxlength="100" placeholder="Enter a different category for staff review"></label>
+            <div class="form-grid top-gap">
+              <label class="field"><span>ROC License Number <small>Optional</small></span><input id="rocLicenseNumber" name="rocLicenseNumber" maxlength="100" placeholder="License number"></label>
+              <label class="field"><span>License Type / Classification <small>Optional</small></span><input id="rocLicenseTypeClassification" name="rocLicenseTypeClassification" maxlength="160" placeholder="Type or classification"></label>
+              <label class="field"><span>License Expiration Date <small>Optional</small></span><input id="rocLicenseExpirationDate" name="rocLicenseExpirationDate" type="date"></label>
+            </div>
+          </section>
+
+          <section class="form-card" id="section-documents" data-form-step="4">
+            <div class="section-heading"><span>4</span><div><p class="section-eyebrow">Compliance</p><h2>Supporting Documents</h2><p>Upload documents you have available now. Accepted: PDF, Word, TXT, JPG, and PNG.</p></div></div>
+            <div id="existingDocuments" class="existing-documents hidden"></div>
+            <div class="upload-grid">
+              <label class="upload-field"><span class="upload-icon" aria-hidden="true">↥</span><span class="upload-copy"><strong>Signed Hutta Contract</strong><small>Optional · 50 MB maximum</small></span><input type="file" name="huttasContract" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><span class="file-status">Choose file</span></label>
+              <label class="upload-field"><span class="upload-icon" aria-hidden="true">↥</span><span class="upload-copy"><strong>Signed W-9</strong><small>Optional · 50 MB maximum</small></span><input type="file" name="w9" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><span class="file-status">Choose file</span></label>
+              <label class="upload-field"><span class="upload-icon" aria-hidden="true">↥</span><span class="upload-copy"><strong>Certificate of Insurance</strong><small>Optional · 50 MB maximum</small></span><input type="file" name="certificateOfInsurance" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><span class="file-status">Choose file</span></label>
+              <label class="upload-field"><span class="upload-icon" aria-hidden="true">↥</span><span class="upload-copy"><strong>Workers Compensation</strong><small>Optional · 50 MB maximum</small></span><input type="file" name="workersCompInsurance" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><span class="file-status">Choose file</span></label>
+              <label class="upload-field"><span class="upload-icon" aria-hidden="true">↥</span><span class="upload-copy"><strong>Additional Insured GL Policy</strong><small>Optional · 50 MB maximum</small></span><input type="file" name="huttasAdditionalInsured" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><span class="file-status">Choose file</span></label>
+              <label class="upload-field"><span class="upload-icon" aria-hidden="true">↥</span><span class="upload-copy"><strong>Other Documents</strong><small>Optional · up to five files</small></span><input type="file" name="generalDocuments" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><span class="file-status">Choose files</span></label>
+            </div>
+          </section>
+
+          <section class="form-card submission-card">
+            <div class="submission-heading"><span aria-hidden="true">✓</span><div><h2>Review &amp; Submit</h2><p>Confirm the information is accurate before submitting for review.</p></div></div>
+            <label class="check-row acknowledgement"><input type="checkbox" id="accuracyAccepted" name="accuracyAccepted" value="true" required><span><strong>Accuracy and authorization acknowledgement</strong><small>I certify that I am authorized to submit this information and that it is accurate to the best of my knowledge.</small></span></label>
+            <label class="website-field" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+            <div id="submitError" class="submit-error hidden" role="alert"></div>
+            <button id="submitButton" class="submit-button" type="submit"><span>Submit Vendor Application</span><small>Securely send for review</small></button>
+            <p class="submit-privacy"><span aria-hidden="true">●</span> Your documents remain private and are retained securely for audit and recovery.</p>
+          </section>
+        </div>
+
+        <aside class="onboarding-sidebar">
+          <section class="intro-card invite-card">
+            <div class="sidebar-card-heading"><span aria-hidden="true">✉</span><div><p class="eyebrow">Your Invitation</p><h2>Application details</h2></div></div>
+            <div class="invite-summary"><span>Invited email</span><strong id="inviteEmailDisplay">—</strong><span>Assigned category</span><strong id="categoryDisplay">—</strong><span>Link expires</span><strong id="expiryDisplay">—</strong></div>
+          </section>
+          <section class="sidebar-trust-card"><div class="trust-icon" aria-hidden="true">◆</div><div><strong>Secure by design</strong><p>Your Tax ID is encrypted and invitation tokens are never stored in plain text.</p></div><ul><li><span>✓</span> Private authenticated link</li><li><span>✓</span> Encrypted sensitive information</li><li><span>✓</span> Permanent document retention</li></ul></section>
+          <section class="sidebar-help-card"><strong>Need help?</strong><p>If information or documents are unavailable, complete the required fields and submit what you have. Our team can follow up.</p></section>
+        </aside>
+      </div>
+    </form>
+
+    <footer class="onboarding-footer"><span>Hutta Home Services</span><span>Secure Vendor Onboarding</span></footer>
+  </main>
+  <script src="../assets/js/vendor-onboarding.js"></script>
+</body>
+</html>

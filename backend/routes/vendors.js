@@ -8,13 +8,20 @@ const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache'
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
+const { encryptTaxId } = require('../utils/taxIdCrypto');
 const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 const router = express.Router();
 
 // Get all vendors
 router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    const vendors = await Vendor.find().sort({ name: 1 }).lean();
+    const vendors = await Vendor.find({
+      $or: [
+        { onboardingSource: { $exists: false } },
+        { onboardingSource: 'manual' },
+        { onboardingStatus: 'approved' }
+      ]
+    }).sort({ name: 1 }).lean();
     res.json(vendors);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -25,8 +32,6 @@ router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, 
 router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const vendor = await Vendor.findById(req.params.id);
-    console.log('Fetched vendor from DB:', vendor);
-    console.log('Vendor notes from DB:', vendor?.notes);
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
@@ -41,23 +46,20 @@ router.get('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
 // Create new vendor
 router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    console.log('=== VENDOR CREATION DEBUG ===');
-    console.log('req.body:', req.body);
-    console.log('req.body.notes:', req.body.notes);
-    console.log('req.body.documents type:', typeof req.body.documents);
-    console.log('req.body.documents is array:', Array.isArray(req.body.documents));
-    console.log('req.body.documents:', JSON.stringify(req.body.documents));
-    
     const vendorData = { ...req.body };
     delete vendorData.documents;
     delete vendorData.documentsMode;
+    if (vendorData.einTaxId && !String(vendorData.einTaxId).includes('*')) {
+      const encryptedTaxId = encryptTaxId(vendorData.einTaxId);
+      vendorData.einTaxIdEncrypted = encryptedTaxId.encrypted;
+      vendorData.einTaxIdIv = encryptedTaxId.iv;
+      vendorData.einTaxIdTag = encryptedTaxId.tag;
+      vendorData.einTaxIdLast4 = encryptedTaxId.last4;
+    }
+    delete vendorData.einTaxId;
     seedInitialNote(vendorData, req.body.notes, req);
     const vendor = new Vendor(vendorData);
-    console.log('Vendor before save:', vendor);
-    console.log('Vendor notes before save:', vendor.notes);
     await vendor.save();
-    console.log('Vendor after save:', vendor);
-    console.log('Vendor notes after save:', vendor.notes);
     invalidateDashboardStatsCache();
     res.status(201).json(vendor);
   } catch (error) {
@@ -70,12 +72,24 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
 // Update vendor
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    console.log('Updating vendor with data:', req.body);
-    const existingVendor = await Vendor.findById(req.params.id).select('documents');
+    const existingVendor = await Vendor.findById(req.params.id).select('documents onboardingSource onboardingStatus');
     if (!existingVendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
+    if (existingVendor.onboardingSource === 'invitation' && existingVendor.onboardingStatus !== 'approved') {
+      return res.status(409).json({ message: 'Vendor applications are read-only until approved; use the Vendor Reviews workflow' });
+    }
     const updateData = prepareDocumentUpdate(existingVendor.documents, stripNotesFromUpdate(req.body));
+    ['onboardingSource', 'onboardingStatus', 'invitationId', 'submittedAt', 'reviewedAt', 'reviewedBy', 'reviewMessage', 'onboardingHistory', 'onboardingEmailStatus', 'onboardingEmailError']
+      .forEach(field => delete updateData[field]);
+    if (updateData.einTaxId && !String(updateData.einTaxId).includes('*')) {
+      const encryptedTaxId = encryptTaxId(updateData.einTaxId);
+      updateData.einTaxIdEncrypted = encryptedTaxId.encrypted;
+      updateData.einTaxIdIv = encryptedTaxId.iv;
+      updateData.einTaxIdTag = encryptedTaxId.tag;
+      updateData.einTaxIdLast4 = encryptedTaxId.last4;
+    }
+    delete updateData.einTaxId;
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id, 
       updateData,
@@ -105,6 +119,9 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     const vendor = await Vendor.findById(id);
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
+    }
+    if (vendor.onboardingSource === 'invitation' && vendor.onboardingStatus !== 'approved') {
+      return res.status(409).json({ message: 'Pending, changes-requested, and rejected applications are permanently retained in Vendor Reviews' });
     }
 
     await retainEntityAttachments('vendor', vendor, req);

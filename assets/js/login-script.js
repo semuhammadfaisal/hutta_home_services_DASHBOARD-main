@@ -38,8 +38,6 @@ class LoginManager {
         
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-        const rememberMe = document.getElementById('rememberMe').checked;
-        
         this.showLoading(true);
         this.hideError();
         
@@ -53,11 +51,14 @@ class LoginManager {
                 return;
             }
             
-            // The APIService.login already stores the session with token
-            // Just show success and redirect
             this.showSuccess();
             setTimeout(() => {
-                window.location.href = window.DASHBOARD_URL || '/pages/admin-dashboard.html';
+                const params = new URLSearchParams(window.location.search);
+                const returnTo = params.get('returnTo');
+                const safeReturnTo = returnTo?.startsWith('/') && !returnTo.startsWith('//')
+                    ? returnTo
+                    : (window.DASHBOARD_URL || '/pages/admin-dashboard.html');
+                window.location.href = safeReturnTo;
             }, 1000);
         } catch (error) {
             this.showError(error.message || 'Login failed. Please try again.');
@@ -69,28 +70,6 @@ class LoginManager {
     validateCredentials(email, password) {
         // This will be handled by the backend API
         return true;
-    }
-
-    handleSuccessfulLogin(email, rememberMe) {
-        // Create session data
-        const sessionData = {
-            email: email,
-            loginTime: new Date().toISOString(),
-            isAuthenticated: true
-        };
-        
-        // Store session
-        if (rememberMe) {
-            localStorage.setItem('huttaSession', JSON.stringify(sessionData));
-        } else {
-            sessionStorage.setItem('huttaSession', JSON.stringify(sessionData));
-        }
-        
-        // Show success and redirect
-        this.showSuccess();
-        setTimeout(() => {
-            window.location.href = '/pages/admin-dashboard.html';
-        }, 1000);
     }
 
     checkExistingSession() {
@@ -144,8 +123,7 @@ class LoginManager {
     }
 
     clearSession() {
-        localStorage.removeItem('huttaSession');
-        sessionStorage.removeItem('huttaSession');
+        window.APIService?.clearSession();
     }
 
     delay(ms) {
@@ -156,42 +134,19 @@ class LoginManager {
 // Session Management for Dashboard
 class SessionManager {
     static checkAuthentication() {
-        const session = localStorage.getItem('huttaSession') || 
-                       sessionStorage.getItem('huttaSession');
-        
-        if (!session) {
-            return null; // Don't redirect, let caller handle it
-        }
-        
-        try {
-            const sessionData = JSON.parse(session);
-            if (!sessionData.isAuthenticated) {
-                return null;
-            }
-            return sessionData;
-        } catch (error) {
-            return null;
-        }
+        return window.AuthSession?.user ? { user: window.AuthSession.user, isAuthenticated: true } : null;
     }
 
-    static logout() {
-        localStorage.removeItem('huttaSession');
-        sessionStorage.removeItem('huttaSession');
-        window.location.href = '/pages/login.html';
+    static async logout() {
+        try {
+            await window.APIService?.logout();
+        } finally {
+            window.location.replace('/pages/login.html');
+        }
     }
 
     static getUserInfo() {
-        const session = localStorage.getItem('huttaSession') || 
-                       sessionStorage.getItem('huttaSession');
-        
-        if (session) {
-            try {
-                return JSON.parse(session);
-            } catch (error) {
-                return null;
-            }
-        }
-        return null;
+        return this.checkAuthentication();
     }
 }
 

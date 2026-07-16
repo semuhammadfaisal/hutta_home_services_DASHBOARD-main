@@ -111,38 +111,28 @@ class SignupManager {
             'account_rep': 'Account Representative'
         };
         
-        const formSection = document.querySelector('.login-form-section');
-        formSection.innerHTML = `
-            <div class="login-container" style="text-align: center; padding: 40px 20px;">
-                <div style="margin-bottom: 30px;">
-                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                        <i class="fas fa-check" style="font-size: 40px; color: white;"></i>
-                    </div>
-                    <h1 style="color: #111827; margin-bottom: 10px;">Account Created!</h1>
-                    <p style="color: #6b7280; font-size: 16px;">Your registration was successful</p>
+        const formCard = document.querySelector('.form-card');
+        formCard.innerHTML = `
+            <div class="signup-success">
+                <div class="signup-success__icon"><i class="fas fa-check" aria-hidden="true"></i></div>
+                <h1 class="card-title">Account created</h1>
+                <p class="card-subtitle">Your registration was submitted successfully.</p>
+
+                <div class="signup-success__panel">
+                    <h2><i class="fas fa-circle-info"></i> What happens next?</h2>
+                    <p>You requested: <strong>${roleNames[requestedRole]}</strong></p>
+                    <p>An administrator will review your account and assign the appropriate access.</p>
+                    <p>You will receive an email when your account is approved.</p>
                 </div>
-                
-                <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 30px; text-align: left;">
-                    <h3 style="color: #374151; margin-bottom: 16px; font-size: 18px;">
-                        <i class="fas fa-info-circle" style="color: #3b82f6;"></i> What's Next?
-                    </h3>
-                    <div style="color: #6b7280; line-height: 1.8;">
-                        <p style="margin-bottom: 12px;"> You requested: <strong style="color: #111827;">${roleNames[requestedRole]}</strong></p>
-                        <p style="margin-bottom: 12px;"> Your request is pending admin approval</p>
-                        <p style="margin-bottom: 12px;"> You'll receive an email once approved</p>
-                        <p> After approval, you can login with full access</p>
-                    </div>
+
+                <div class="signup-success__notice">
+                    <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                    <strong> Approval required:</strong> You cannot sign in until an administrator approves your account.
                 </div>
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin-bottom: 30px; text-align: left;">
-                    <p style="color: #92400e; margin: 0; font-size: 14px;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Important:</strong> You cannot login until an administrator approves your account and assigns your role.
-                    </p>
-                </div>
-                
-                <a href="login.html" class="login-btn" style="display: inline-block; text-decoration: none; padding: 14px 32px;">
-                    <i class="fas fa-arrow-left"></i> Go to Login Page
+
+                <a href="login.html" class="submit-btn">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                    Go to sign in
                 </a>
             </div>
         `;
@@ -150,18 +140,8 @@ class SignupManager {
 
     showLoading(show) {
         const signupBtn = document.getElementById('signupBtn');
-        const btnText = signupBtn.querySelector('.btn-text');
-        const spinner = signupBtn.querySelector('.btn-spinner');
-        
-        if (show) {
-            signupBtn.disabled = true;
-            btnText.style.display = 'none';
-            spinner.style.display = 'inline-block';
-        } else {
-            signupBtn.disabled = false;
-            btnText.style.display = 'inline-block';
-            spinner.style.display = 'none';
-        }
+        signupBtn.disabled = show;
+        signupBtn.classList.toggle('is-loading', show);
     }
 
     showError(message) {

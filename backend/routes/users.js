@@ -3,7 +3,8 @@ const router = express.Router();
 const User = require('../models/User');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
-const { sendWelcomeEmail } = require('../utils/emailService');
+const { getEmailDeliveryStatus, sendWelcomeEmail } = require('../utils/emailService');
+const { revokeUserSessions } = require('../utils/authSessions');
 
 // Get all users (admin only, paginated)
 router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
@@ -15,7 +16,7 @@ router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
     const [total, users] = await Promise.all([
       User.countDocuments(),
       User.find()
-        .select('-password')
+        .select('-password -resetPasswordToken -resetPasswordExpiry')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -100,14 +101,36 @@ router.patch('/:id/role', authenticateToken, checkRole(['admin']), async (req, r
     
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { role },
+      { role, isActive: true },
       { new: true }
     ).select('-password');
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+    await revokeUserSessions(user._id);
     
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch('/:id/status', authenticateToken, checkRole(['admin']), async (req, res) => {
+  try {
+    if (String(req.params.id) === String(req.user.userId) && req.body.isActive === false) {
+      return res.status(400).json({ message: 'You cannot deactivate your own account' });
+    }
+    if (typeof req.body.isActive !== 'boolean') {
+      return res.status(400).json({ message: 'isActive must be a boolean' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: req.body.isActive },
+      { new: true }
+    ).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.isActive) await revokeUserSessions(user._id);
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -129,6 +152,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     }
     
     await User.findByIdAndDelete(req.params.id);
+    await revokeUserSessions(user._id);
     
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
@@ -139,15 +163,17 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
 // Test email configuration (admin only)
 router.get('/test-email', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
-    const { sendWelcomeEmail } = require('../utils/emailService');
-    
-    // Check if email credentials are configured
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    const emailStatus = getEmailDeliveryStatus();
+    if (emailStatus.provider !== 'resend') {
       return res.status(500).json({ 
         message: 'Email not configured',
         details: {
-          EMAIL_USER: process.env.EMAIL_USER ? 'Set' : 'Missing',
-          EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? 'Set' : 'Missing'
+          provider: emailStatus.provider,
+          sender: emailStatus.sender,
+          replyTo: emailStatus.replyTo,
+          resendConfigured: emailStatus.resendConfigured,
+          senderConfigured: emailStatus.senderConfigured,
+          replyToConfigured: emailStatus.replyToConfigured
         }
       });
     }

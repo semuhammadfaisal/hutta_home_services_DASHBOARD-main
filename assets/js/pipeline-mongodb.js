@@ -4,16 +4,16 @@ const API_BASE_URL = '/api';
 function getPipelineAuthHeaders(includeJson = true) {
     const headers = {};
     if (includeJson) headers['Content-Type'] = 'application/json';
-    try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (session) {
-            const token = JSON.parse(session).token;
-            if (token) headers.Authorization = `Bearer ${token}`;
-        }
-    } catch (e) {
-        console.warn('Pipeline auth header skipped:', e);
-    }
+    if (window.AuthSession?.csrfToken) headers['X-CSRF-Token'] = window.AuthSession.csrfToken;
+    headers['X-Session-Activity'] = 'active';
     return headers;
+}
+
+async function refreshOrdersOverviewFromLiveData() {
+    window.APIService?.clearCache?.();
+    if (!window.dashboard?.renderDashboard) return;
+    window.dashboard.forceFreshDashboardStats = true;
+    await window.dashboard.renderDashboard();
 }
 
 async function throwIfPipelineRequestFailed(response, fallbackMessage) {
@@ -394,7 +394,8 @@ window.PipelineAutoScroll = {
 };
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    try { await window.AuthReady; } catch (_error) { return; }
     window.AppLogger?.debug('Pipeline MongoDB script loaded');
     createPipelineAutoScrollZones();
     
@@ -500,12 +501,7 @@ function unwrapApiListResponse(json) {
 // Fetch all orders data
 async function fetchAllOrdersData() {
     try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) return [];
-        const token = JSON.parse(session).token;
-        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`);
         if (!response.ok) return [];
         const json = await response.json();
         return unwrapApiListResponse(json);
@@ -518,12 +514,7 @@ async function fetchAllOrdersData() {
 // Fetch all employees data
 async function fetchAllEmployeesData() {
     try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) return [];
-        const token = JSON.parse(session).token;
-        const response = await fetch(`${API_BASE_URL}/employees`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`${API_BASE_URL}/employees`);
         return response.ok ? await response.json() : [];
     } catch (error) {
         console.error('Error fetching employees:', error);
@@ -1278,20 +1269,14 @@ async function loadEmployeeForOrder(orderId) {
         }
         
         // Fallback: fetch from API if not in cache
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) {
+        if (!window.AuthSession?.user) {
             window.AppLogger?.debug('No session found');
             employeeEl.textContent = 'Not assigned';
             return;
         }
         
-        const sessionData = JSON.parse(session);
-        const token = sessionData.token;
-        
         window.AppLogger?.debug('Fetching order details for:', orderId);
-        const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`${API_BASE_URL}/orders/${orderId}`);
         
         if (!response.ok) {
             console.error('Failed to load order:', response.status, response.statusText);
@@ -1308,9 +1293,7 @@ async function loadEmployeeForOrder(orderId) {
                 employeeEl.textContent = order.employee.name;
             } else if (typeof order.employee === 'string') {
                 window.AppLogger?.debug('Employee is ID, fetching employee details:', order.employee);
-                const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const empResponse = await fetch(`${API_BASE_URL}/employees/${order.employee}`);
                 if (empResponse.ok) {
                     const employee = await empResponse.json();
                     window.AppLogger?.debug('Employee fetched:', employee);
@@ -1340,17 +1323,7 @@ let selectedCustomerId = null;
 
 async function loadAvailableCustomers() {
     try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) return;
-        
-        const sessionData = JSON.parse(session);
-        const token = sessionData.token;
-        
-        const response = await fetch(`${API_BASE_URL}/customers?limit=5000`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const response = await fetch(`${API_BASE_URL}/customers?limit=5000`);
         
         if (!response.ok) throw new Error('Failed to load customers');
 
@@ -1404,24 +1377,14 @@ async function selectCustomer(customerId, customerName) {
 
 async function loadCustomerWorkOrders(customerId) {
     try {
-        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-        if (!session) return;
-        
-        const sessionData = JSON.parse(session);
-        const token = sessionData.token;
-        
         // Get customer details first
-        const customerResponse = await fetch(`${API_BASE_URL}/customers/${customerId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const customerResponse = await fetch(`${API_BASE_URL}/customers/${customerId}`);
         
         if (!customerResponse.ok) throw new Error('Failed to load customer');
         const customer = await customerResponse.json();
         
         // Get all orders and filter by customer email
-        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`);
         
         if (!response.ok) throw new Error('Failed to load work orders');
         
@@ -1621,15 +1584,9 @@ async function saveRecord(event) {
             // If this pipeline record has a linked order, update the order too
             if (editingRecord?.orderId) {
                 try {
-                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-                    if (session) {
-                        const sessionData = JSON.parse(session);
-                        const token = sessionData.token;
-                        
+                    if (window.AuthSession?.user) {
                         // Get the current order data
-                        const orderResponse = await fetch(`${API_BASE_URL}/orders/${editingRecord.orderId}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
+                        const orderResponse = await fetch(`${API_BASE_URL}/orders/${editingRecord.orderId}`);
                         
                         if (orderResponse.ok) {
                             const currentOrder = await orderResponse.json();
@@ -1658,7 +1615,7 @@ async function saveRecord(event) {
                                 method: 'PUT',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
+                                    'X-CSRF-Token': window.AuthSession.csrfToken
                                 },
                                 body: JSON.stringify(orderUpdateData)
                             });
@@ -1681,13 +1638,8 @@ async function saveRecord(event) {
             let orderIdDisplay = '';
             if (orderIdValue) {
                 try {
-                    const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-                    if (session) {
-                        const sessionData = JSON.parse(session);
-                        const token = sessionData.token;
-                        const orderResponse = await fetch(`${API_BASE_URL}/orders/${orderIdValue}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
+                    if (window.AuthSession?.user) {
+                        const orderResponse = await fetch(`${API_BASE_URL}/orders/${orderIdValue}`);
                         if (orderResponse.ok) {
                             const order = await orderResponse.json();
                             orderIdDisplay = order.orderId || '';
@@ -1781,6 +1733,7 @@ async function deleteRecord(recordId) {
 
         if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
+        await refreshOrdersOverviewFromLiveData();
         if (window.showToast) {
             window.showToast(`Removed "${record.customerName}" from pipeline`, 'success');
         }
@@ -1839,12 +1792,7 @@ async function drop(event) {
             if (/^(paid|close|closed|complete|completed|won|done)$/i.test(newStageName.trim()) && record.orderId) {
                 (async () => {
                     try {
-                        const session = localStorage.getItem('huttaSession') || sessionStorage.getItem('huttaSession');
-                        if (!session) return;
-                        const token = JSON.parse(session).token;
-                        const paymentsRes = await fetch(`${API_BASE_URL}/payments`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
+                        const paymentsRes = await fetch(`${API_BASE_URL}/payments`);
                         if (!paymentsRes.ok) return;
                         const allPayments = await paymentsRes.json();
                         const linked = allPayments.find(p =>
@@ -1855,7 +1803,7 @@ async function drop(event) {
 
                         await fetch(`${API_BASE_URL}/payments/${linked._id}`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            headers: getPipelineAuthHeaders(),
                             body: JSON.stringify({ ...linked, customer: linked.customer?._id || linked.customer, order: linked.order?._id || linked.order, status: 'received', paymentDate: linked.paymentDate || new Date().toISOString() })
                         });
                         if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
@@ -1866,14 +1814,9 @@ async function drop(event) {
                 })();
             }
 
-            if (touchesPaidStage) {
-                if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
-                if (window.dashboard && window.dashboard.renderDashboard) {
-                    window.dashboard.renderDashboard().catch((dashboardError) => {
-                        console.warn('Failed to refresh dashboard after pipeline move:', dashboardError);
-                    });
-                }
-                if (typeof refreshPayments === 'function') refreshPayments();
+            await refreshOrdersOverviewFromLiveData();
+            if (touchesPaidStage && typeof refreshPayments === 'function') {
+                refreshPayments();
             }
         } catch (error) {
             record.stageId = oldStageId;
@@ -1889,7 +1832,7 @@ async function logPipelineMovement(record, oldStageId, oldStageName, newStageId,
     try {
         await fetch(`${API_BASE_URL}/pipeline-movements`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getPipelineAuthHeaders(),
             body: JSON.stringify({
                 recordId: record._id,
                 customerName: record.customerName,
@@ -1922,17 +1865,11 @@ function updateStatistics() {
 }
 
 async function clearPipelineData() {
-    const password = prompt(' WARNING: This will delete ALL pipeline data!\n\nEnter admin password to confirm:');
-    
-    if (!password) return;
-    
-    // Simple password check (you can change this password)
-    if (password !== 'admin123') {
-        alert(' Incorrect password. Access denied.');
+    if (window.AuthSession?.user?.role !== 'admin') {
+        alert('Administrator access is required.');
         return;
     }
-    
-    if (!confirm('Are you absolutely sure? This action cannot be undone!')) return;
+    if (!confirm('WARNING: Delete all pipeline records and stages? This action cannot be undone.')) return;
     
     try {
         for (const record of records) {
@@ -1952,6 +1889,7 @@ async function clearPipelineData() {
         
         if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
+        await refreshOrdersOverviewFromLiveData();
         alert(' Pipeline data cleared successfully!');
     } catch (error) {
         alert('Error clearing data: ' + error.message);
@@ -2498,10 +2436,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
             window.showToast(`Order "${orderIdDisplay || customerName}" added to pipeline!`, 'success');
         }
         
-        // Refresh dashboard if needed
-        if (window.refreshDashboard) {
-            setTimeout(() => window.refreshDashboard(), 1000);
-        }
+        await refreshOrdersOverviewFromLiveData();
         
     } catch (error) {
         console.error('Error creating pipeline record from order:', error);
@@ -2705,6 +2640,7 @@ async function saveStage(event) {
         
         closeStageModal();
         await loadDataFromDB();
+        await refreshOrdersOverviewFromLiveData();
     } catch (error) {
         console.error('Error saving stage:', error);
         alert('Error saving stage: ' + error.message);
@@ -2745,6 +2681,7 @@ async function deleteStage(stageId) {
 
         if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
+        await refreshOrdersOverviewFromLiveData();
         if (window.showToast) {
             window.showToast(`Stage "${stage.name}" deleted`, 'success');
         }
