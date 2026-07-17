@@ -10,7 +10,6 @@ const Employee = require('../models/Employee');
 const Order = require('../models/Order');
 const IncomingQuote = require('../models/IncomingQuote');
 const { ensurePersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
-const { v2: cloudinary } = require('cloudinary');
 
 const router = express.Router();
 const MAX_UPLOAD_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || `${50 * 1024 * 1024}`, 10);
@@ -32,8 +31,6 @@ const ENTITY_CONFIG = {
   vendor: { Model: Vendor, roles: ['admin', 'manager'] },
   employee: { Model: Employee, roles: ['admin', 'manager'] }
 };
-cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET, secure: true });
-const CLOUDINARY_FOLDER = String(process.env.CLOUDINARY_FOLDER || 'hutta-documents').replace(/[^a-zA-Z0-9/_-]/g, '');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -185,53 +182,6 @@ router.get('/retained/:retentionId/:documentId/download', async (req, res, next)
   }
 });
 
-router.post('/direct/:entityType/:entityId/sign', validateEntity, loadEntity, async (req, res) => {
-  if (req.params.entityType === 'incoming-quote' && req.attachmentEntity.status !== 'draft') return res.status(409).json({ message: 'Submitted quote attachments are immutable' });
-  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) return res.status(503).json({ message: 'Direct upload is not configured', fallback: true });
-  const name = safeDownloadName(req.body.name || 'document');
-  const extension = name.split('.').pop().toLowerCase();
-  const mime = String(req.body.type || '').toLowerCase();
-  const size = Number(req.body.size || 0);
-  if (!ALLOWED_EXTENSIONS.has(extension) || !(ALLOWED_MIME_BY_EXTENSION[extension] || []).includes(mime) || size <= 0 || size > MAX_UPLOAD_BYTES) return res.status(400).json({ message: 'File type or size is not allowed' });
-  const resourceType = ['jpg', 'jpeg', 'png'].includes(extension) ? 'image' : 'raw';
-  const timestamp = Math.floor(Date.now() / 1000);
-  const folder = `${CLOUDINARY_FOLDER}/${req.params.entityType}/${req.params.entityId}`;
-  const publicId = `${crypto.randomUUID()}-${name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80)}`;
-  const signed = { folder, public_id: publicId, timestamp, type: 'authenticated', overwrite: false, unique_filename: false };
-  res.json({ cloudName: process.env.CLOUDINARY_CLOUD_NAME, apiKey: process.env.CLOUDINARY_API_KEY, resourceType, publicId: `${folder}/${publicId}`, uploadParams: signed, signature: cloudinary.utils.api_sign_request(signed, process.env.CLOUDINARY_API_SECRET) });
-});
-
-router.post('/direct/:entityType/:entityId/finalize', validateEntity, loadEntity, async (req, res, next) => {
-  try {
-    if (req.params.entityType === 'incoming-quote' && req.attachmentEntity.status !== 'draft') return res.status(409).json({ message: 'Submitted quote attachments are immutable' });
-    const publicId = String(req.body.publicId || '');
-    const resourceType = req.body.resourceType === 'image' ? 'image' : 'raw';
-    const expectedPrefix = `${CLOUDINARY_FOLDER}/${req.params.entityType}/${req.params.entityId}/`;
-    if (!publicId.startsWith(expectedPrefix)) return res.status(400).json({ message: 'Invalid upload reference' });
-    const resource = await cloudinary.api.resource(publicId, { resource_type: resourceType, type: 'authenticated' });
-    if (!resource || Number(resource.bytes || 0) <= 0 || Number(resource.bytes) > MAX_UPLOAD_BYTES) return res.status(400).json({ message: 'Uploaded file failed verification' });
-    const documentId = crypto.randomUUID();
-    const document = {
-      documentId, name: safeDownloadName(req.body.name || publicId.split('/').pop()),
-      url: `/api/attachments/${req.params.entityType}/${req.params.entityId}/${documentId}`,
-      type: String(req.body.type || resource.resource_type || 'application/octet-stream'), size: Number(resource.bytes),
-      storageProvider: 'cloudinary', publicId, storageResourceType: resourceType,
-      uploadedAt: new Date(), uploadedBy: getUserId(req), uploadedByEmail: req.user?.email || '', status: 'active',
-      complianceDocumentType: String(req.body.complianceDocumentType || '').trim() || undefined,
-      complianceDocumentLabel: String(req.body.complianceDocumentLabel || '').trim() || undefined
-    };
-    if (document.complianceDocumentType) {
-      for (const existing of req.attachmentEntity.documents || []) {
-        if (existing.status !== 'archived' && existing.complianceDocumentType === document.complianceDocumentType) {
-          existing.status = 'archived'; existing.archivedAt = new Date(); existing.archivedBy = getUserId(req); existing.archivedByEmail = req.user?.email || ''; existing.archiveReason = 'Superseded by a newer compliance document';
-        }
-      }
-    }
-    req.attachmentEntity.documents.push(document); syncVendorComplianceFlags(req.params.entityType, req.attachmentEntity); await req.attachmentEntity.save();
-    res.status(201).json({ files: [document], documents: req.attachmentEntity.documents });
-  } catch (error) { next(error); }
-});
-
 router.use('/:entityType/:entityId', validateEntity, loadEntity);
 
 router.get('/:entityType/:entityId', async (req, res, next) => {
@@ -347,11 +297,6 @@ async function streamAttachment(req, res, next, disposition) {
       return res.status(404).json({ message: 'Attachment not found' });
     }
 
-    if (document.storageProvider === 'cloudinary' && document.publicId) {
-      const signedUrl = cloudinary.url(document.publicId, { resource_type: document.storageResourceType || 'raw', type: 'authenticated', sign_url: true, secure: true });
-      res.set('Cache-Control', 'private, no-store');
-      return res.redirect(302, signedUrl);
-    }
     if (document.storageProvider && document.storageProvider !== 'gridfs' && /^https?:\/\//i.test(document.url || '')) {
       return res.redirect(document.url);
     }

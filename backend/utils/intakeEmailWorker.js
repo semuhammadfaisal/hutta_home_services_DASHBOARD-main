@@ -267,8 +267,7 @@ async function pollOnce() {
   try {
     await recoverExhaustedMessages();
     let processed = 0;
-    const batchSize = Math.min(10, Math.max(1, Number(process.env.EMAIL_WORKER_BATCH_SIZE || 3)));
-    while (processed < batchSize) {
+    while (processed < 10) {
       const message = await claimMessage();
       if (!message) break;
       await deliverMessage(message);

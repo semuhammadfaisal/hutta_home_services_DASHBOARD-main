@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_NAME = 'hutta-static-v5';
+const CACHE_NAME = 'hutta-static-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -29,13 +29,16 @@ self.addEventListener('fetch', (event) => {
   const cacheable = ['css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'woff2', 'woff', 'ico'].includes(ext);
   if (!cacheable) return;
 
-  event.respondWith(caches.open(CACHE_NAME).then(async (cache) => {
-    const cached = await cache.match(req);
-    const refresh = fetch(req).then(res => {
-      if (res?.ok) cache.put(req, res.clone()).catch(() => {});
-      return res;
-    });
-    if (cached) { event.waitUntil(refresh.catch(() => {})); return cached; }
-    return refresh;
-  }));
+  event.respondWith(
+    caches.open(CACHE_NAME).then((cache) =>
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok && ['http:', 'https:'].includes(new URL(req.url).protocol)) {
+            cache.put(req, res.clone()).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => cache.match(req))
+    )
+  );
 });

@@ -1,14 +1,8 @@
 const mongoose = require('mongoose');
-const { applyNormalizedSearch } = require('../utils/searchNormalization');
 const noteSchema = require('./noteSchema');
 const attachmentSchema = require('./attachmentSchema');
 
 const orderSchema = new mongoose.Schema({
-  normalizedOrderId: { type: String, default: '' },
-  normalizedRequestReference: { type: String, default: '' },
-  normalizedCustomerName: { type: String, default: '' },
-  normalizedCustomerEmail: { type: String, default: '' },
-  normalizedCustomerPhone: { type: String, default: '' },
   orderId: { type: String, required: true },
   workOrderNumber: { type: String },
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
@@ -97,20 +91,5 @@ orderSchema.index({ currentJobScheduleId: 1 }, { sparse: true });
 orderSchema.index({ confirmedJobScheduleId: 1 }, { sparse: true });
 orderSchema.index({ scheduledStart: 1 });
 orderSchema.index({ source: 1, createdAt: -1 });
-orderSchema.index({ normalizedOrderId: 1 });
-orderSchema.index({ normalizedRequestReference: 1 });
-orderSchema.index({ normalizedCustomerName: 1 });
-orderSchema.index({ normalizedCustomerEmail: 1 });
-orderSchema.index({ normalizedCustomerPhone: 1 });
-orderSchema.index({ status: 1, createdAt: -1 });
-orderSchema.index({ pricingStatus: 1, createdAt: -1 });
-orderSchema.index({ vendor: 1, createdAt: -1 });
-orderSchema.index({ employee: 1, createdAt: -1 });
-
-applyNormalizedSearch(orderSchema, {
-  normalizedOrderId: 'orderId', normalizedRequestReference: 'requestReference',
-  normalizedCustomerName: 'customer.name', normalizedCustomerEmail: 'customer.email',
-  normalizedCustomerPhone: 'customer.phone'
-});
 
 module.exports = mongoose.model('Order', orderSchema);

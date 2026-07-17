@@ -20,9 +20,6 @@
     "migrate:stage4-customer-approvals:apply": "node migrate-stage4-customer-approvals.js --apply",
     "migrate:stage5-scheduling": "node migrate-stage5-scheduling.js",
     "migrate:stage5-scheduling:apply": "node migrate-stage5-scheduling.js --apply",
-    "migrate:performance-v2": "node migrate-performance-v2.js",
-    "migrate:performance-v2:apply": "node migrate-performance-v2.js --apply",
-    "perf:budget": "node scripts/check-performance-budget.js",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {

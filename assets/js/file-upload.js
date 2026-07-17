@@ -163,7 +163,7 @@ function attachmentBaseUrl() {
         : `${window.location.origin}/api/attachments`;
 }
 
-async function uploadEntityAttachmentsLegacy(entityType, entityId, files, metadata = {}, onProgress = null) {
+async function uploadEntityAttachments(entityType, entityId, files, metadata = {}, onProgress = null) {
     if (!entityId || !files?.length) return { files: [], documents: [] };
     const formData = new FormData();
     files.forEach((file) => formData.append('documents', file));
@@ -191,61 +191,6 @@ async function uploadEntityAttachmentsLegacy(entityType, entityId, files, metada
         xhr.setRequestHeader('X-Session-Activity', 'active');
         xhr.send(formData);
     });
-}
-
-async function directUploadSession(entityType, entityId, file) {
-    const response = await fetch(`${attachmentBaseUrl()}/direct/${entityType}/${entityId}/sign`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(window.AuthSession?.csrfToken ? { 'X-CSRF-Token': window.AuthSession.csrfToken } : {}) },
-        body: JSON.stringify({ name: file.name, type: file.type, size: file.size })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { const error = new Error(payload.message || 'Unable to prepare direct upload'); error.fallback = Boolean(payload.fallback || response.status === 404); throw error; }
-    return payload;
-}
-
-function uploadFileToCloudinary(file, session, onProgress) {
-    return new Promise((resolve, reject) => {
-        const form = new FormData();
-        Object.entries(session.uploadParams || {}).forEach(([key, value]) => form.append(key, value));
-        form.append('api_key', session.apiKey); form.append('signature', session.signature); form.append('file', file);
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener('progress', event => { if (event.lengthComputable) onProgress?.(event.loaded / event.total); });
-        xhr.addEventListener('load', () => { const payload = JSON.parse(xhr.responseText || '{}'); xhr.status >= 200 && xhr.status < 300 ? resolve(payload) : reject(new Error(payload.error?.message || 'Cloud upload failed')); });
-        xhr.addEventListener('error', () => reject(new Error('Network error while uploading attachment')));
-        xhr.open('POST', `https://api.cloudinary.com/v1_1/${encodeURIComponent(session.cloudName)}/${session.resourceType}/upload`); xhr.send(form);
-    });
-}
-
-async function finalizeDirectUpload(entityType, entityId, file, uploaded, session, metadata) {
-    const response = await fetch(`${attachmentBaseUrl()}/direct/${entityType}/${entityId}/finalize`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(window.AuthSession?.csrfToken ? { 'X-CSRF-Token': window.AuthSession.csrfToken } : {}) },
-        body: JSON.stringify({ publicId: uploaded.public_id, resourceType: session.resourceType, name: file.name, type: file.type, ...metadata })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.message || 'Unable to link uploaded attachment');
-    return payload;
-}
-
-async function uploadEntityAttachments(entityType, entityId, files, metadata = {}, onProgress = null) {
-    if (!entityId || !files?.length) return { files: [], documents: [] };
-    let firstSession;
-    try { firstSession = await directUploadSession(entityType, entityId, files[0]); }
-    catch (error) { if (error.fallback) return uploadEntityAttachmentsLegacy(entityType, entityId, files, metadata, onProgress); throw error; }
-    const progress = new Array(files.length).fill(0); const results = new Array(files.length); let next = 0;
-    const report = () => onProgress?.(Math.round((progress.reduce((sum, value) => sum + value, 0) / files.length) * 100));
-    const worker = async () => {
-        while (next < files.length) {
-            const index = next++; const file = files[index];
-            const session = index === 0 ? firstSession : await directUploadSession(entityType, entityId, file);
-            const uploaded = await uploadFileToCloudinary(file, session, value => { progress[index] = value; report(); });
-            results[index] = await finalizeDirectUpload(entityType, entityId, file, uploaded, session, metadata);
-            progress[index] = 1; report();
-        }
-    };
-    await Promise.all(Array.from({ length: Math.min(3, files.length) }, () => worker()));
-    return { files: results.flatMap(result => result.files || []), documents: results.at(-1)?.documents || [] };
 }
 
 async function attachmentRequest(entityType, entityId, suffix = '', options = {}) {

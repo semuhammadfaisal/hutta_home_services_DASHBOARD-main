@@ -5,7 +5,6 @@ const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const router = express.Router();
-const { prefixRegex, cursorFilter, parseLimit, pagePayload } = require('../utils/cursorPagination');
 
 function normalizeMilestones(milestones = [], paymentAmount = 0) {
   if (!Array.isArray(milestones)) return [];
@@ -84,32 +83,11 @@ function buildPaymentPayload(body, existingPayment = null) {
   return payload;
 }
 
-router.get('/list', authenticateToken, checkRole(['admin']), async (req, res) => {
-  try {
-    const limit = parseLimit(req.query.limit);
-    const query = {};
-    if (req.query.status) query.status = String(req.query.status);
-    if (req.query.vendorPaymentStatus) query.vendorPaymentStatus = String(req.query.vendorPaymentStatus);
-    if (req.query.employeePaymentStatus) query.employeePaymentStatus = String(req.query.employeePaymentStatus);
-    const search = prefixRegex(req.query.search);
-    if (search) query.$or = [{ normalizedPaymentId: search }, { normalizedInvoiceNumber: search }];
-    const after = cursorFilter(req.query.cursor);
-    const finalQuery = after ? { $and: [query, after] } : query;
-    const [total, rows] = await Promise.all([
-      Payment.countDocuments(query),
-      Payment.find(finalQuery).select('paymentId invoiceNumber order customer amount paymentMethod status paymentDate dueDate description transactionId receiptNumber milestones employeePaymentAmount employeePaymentStatus employeePaymentDate vendorPaymentAmount vendorPaymentStatus vendorPaymentDate createdAt')
-        .populate('customer', 'name email').populate('order', 'orderId service')
-        .sort({ createdAt: -1, _id: -1 }).limit(limit + 1).lean()
-    ]);
-    res.json(pagePayload(rows, total, limit));
-  } catch (error) { res.status(500).json({ message: 'Server error', error: error.message }); }
-});
-
 // Get all payments (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 2000));
     const skip = (page - 1) * limit;
 
     // Get NO BID stages and their orders

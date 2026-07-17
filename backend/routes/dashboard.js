@@ -23,7 +23,6 @@ const APPROVED_VENDOR_MATCH = {
     { onboardingStatus: 'approved' }
   ]
 };
-const pendingDashboardStats = new Map();
 
 function addMonths(date, months) {
   const d = new Date(date);
@@ -352,20 +351,12 @@ function buildExecutiveInsights({
 }
 
 router.get('/stats', authenticateToken, async (req, res) => {
-  let inFlightKey = null;
-  let releaseInFlight = null;
   try {
     const topCustomersRange = parseDateRange(req.query.topStartDate, req.query.topEndDate);
     const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
     const cacheKey = `${DASHBOARD_STATS_CACHE_VERSION}:top:${req.query.topStartDate || ''}:${req.query.topEndDate || ''}`;
     const cached = forceRefresh ? null : getDashboardStatsCache(cacheKey);
     if (cached) return res.json(cached);
-    if (!forceRefresh && pendingDashboardStats.has(cacheKey)) {
-      const shared = await pendingDashboardStats.get(cacheKey);
-      if (shared) return res.json(shared);
-    }
-    inFlightKey = cacheKey;
-    pendingDashboardStats.set(cacheKey, new Promise(resolve => { releaseInFlight = resolve; }));
 
     const now = new Date();
     const currentMonthStart = startOfMonthMDT();
@@ -938,12 +929,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
     };
 
     setDashboardStatsCache(cacheKey, payload);
-    releaseInFlight?.(payload);
-    pendingDashboardStats.delete(cacheKey);
     res.json(payload);
   } catch (error) {
-    releaseInFlight?.(null);
-    if (inFlightKey) pendingDashboardStats.delete(inFlightKey);
     console.error('Dashboard stats error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }

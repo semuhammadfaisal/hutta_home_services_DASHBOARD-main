@@ -2,9 +2,8 @@ services:
   - type: web
     name: hutta-home-services
     env: node
-    buildCommand: npm ci --prefix backend
+    buildCommand: yarn install
     startCommand: node backend/server.js
-    healthCheckPath: /api/health/ready
     envVars:
       - key: MONGODB_URI
         sync: false
@@ -24,16 +23,6 @@ services:
         sync: false
       - key: INTAKE_EMAIL_WORKER_ENABLED
         value: true
-      - key: EMAIL_WORKER_BATCH_SIZE
-        value: 3
-      - key: MONGODB_MIN_POOL_SIZE
-        value: 2
-      - key: MONGODB_MAX_POOL_SIZE
-        value: 20
-      - key: MONGODB_WAIT_QUEUE_TIMEOUT_MS
-        value: 2000
-      - key: MONGODB_MAX_IDLE_TIME_MS
-        value: 60000
       - key: TAX_ID_ENCRYPTION_KEY
         sync: false
       - key: FRONTEND_URL

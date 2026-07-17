@@ -7,33 +7,12 @@ const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache'
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
-const { prefixRegex, cursorFilter, parseLimit, pagePayload } = require('../utils/cursorPagination');
 const router = express.Router();
-
-router.get('/list', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
-  try {
-    const limit = parseLimit(req.query.limit);
-    const query = {};
-    if (req.query.status) query.status = String(req.query.status);
-    if (req.query.role) query.role = String(req.query.role);
-    if (req.query.active) query.isActive = req.query.active === 'true';
-    const search = prefixRegex(req.query.search);
-    if (search) query.$or = [{ normalizedName: search }, { normalizedEmail: search }];
-    const after = cursorFilter(req.query.cursor, 'normalizedName', 1, 'string');
-    const finalQuery = after ? { $and: [query, after] } : query;
-    const [total, rows] = await Promise.all([
-      Employee.countDocuments(query),
-      Employee.find(finalQuery).select('name email phone role department status isActive hireDate normalizedName')
-        .sort({ normalizedName: 1, _id: 1 }).limit(limit + 1).lean()
-    ]);
-    res.json(pagePayload(rows, total, limit, 'normalizedName'));
-  } catch (error) { res.status(500).json({ message: 'Server error', error: error.message }); }
-});
 
 // Get all employees
 router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    const employees = await Employee.find().sort({ name: 1 }).limit(100).lean();
+    const employees = await Employee.find().sort({ name: 1 }).lean();
     res.json(employees);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

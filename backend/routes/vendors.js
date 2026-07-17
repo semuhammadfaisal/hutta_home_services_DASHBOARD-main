@@ -10,29 +10,7 @@ const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const { encryptTaxId } = require('../utils/taxIdCrypto');
 const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
-const { prefixRegex, cursorFilter, parseLimit, pagePayload } = require('../utils/cursorPagination');
 const router = express.Router();
-
-router.get('/list', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
-  try {
-    const limit = parseLimit(req.query.limit);
-    const approved = { $or: [{ onboardingSource: { $exists: false } }, { onboardingSource: 'manual' }, { onboardingStatus: 'approved' }] };
-    const filters = [];
-    if (req.query.status) filters.push({ isActive: req.query.status === 'active' });
-    if (req.query.category) filters.push({ category: String(req.query.category) });
-    const search = prefixRegex(req.query.search);
-    if (search) filters.push({ $or: [{ normalizedName: search }, { normalizedEmail: search }, { category: search }] });
-    const base = filters.length ? { $and: [approved, ...filters] } : approved;
-    const after = cursorFilter(req.query.cursor, 'normalizedName', 1, 'string');
-    const query = after ? { $and: [base, after] } : base;
-    const [total, rows] = await Promise.all([
-      Vendor.countDocuments(base),
-      Vendor.find(query).select('name email phone category rating isActive onboardingStatus contractorLicenseNumber rocLicenseNumber certificateOfInsuranceOnFile insuranceExpirationDate createdAt normalizedName')
-        .sort({ normalizedName: 1, _id: 1 }).limit(limit + 1).lean()
-    ]);
-    res.json(pagePayload(rows, total, limit, 'normalizedName'));
-  } catch (error) { res.status(500).json({ message: 'Server error', error: error.message }); }
-});
 
 // Get all vendors
 router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
@@ -43,7 +21,7 @@ router.get('/', authenticateToken, checkRole(['admin', 'manager']), async (req, 
         { onboardingSource: 'manual' },
         { onboardingStatus: 'approved' }
       ]
-    }).sort({ name: 1 }).limit(100).lean();
+    }).sort({ name: 1 }).lean();
     res.json(vendors);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

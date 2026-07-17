@@ -312,14 +312,12 @@ function loadCalendarSection() {
     }
 }
 
-function initializeCalendarFeature() {
+document.addEventListener('DOMContentLoaded', function() {
     calendarView = initCalendarView();
     if (document.getElementById('calendarDays')) {
         setTimeout(loadCalendarSection, 300);
     }
-}
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeCalendarFeature, { once: true });
-else initializeCalendarFeature();
+});
 
 document.addEventListener('click', function(e) {
     if (e.target.closest('a[data-section="calendar"]')) {

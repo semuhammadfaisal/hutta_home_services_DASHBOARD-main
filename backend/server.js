@@ -12,13 +12,11 @@ const checkRole = require('./middleware/rbac');
 const { resolveSession } = require('./utils/authSessions');
 const { MAX_BODY_BYTES } = require('./utils/websiteIntake');
 const { startIntakeEmailWorker, stopIntakeEmailWorker } = require('./utils/intakeEmailWorker');
-const { performanceMiddleware } = require('./utils/performance');
 
 // Set default timezone to Arizona Time (MST / GMT-7, no DST)
 process.env.TZ = 'America/Phoenix';
 
 const app = express();
-app.set('etag', 'strong');
 const PORT = process.env.PORT || 10000;
 
 if (process.env.NODE_ENV === 'production' && String(process.env.HUTTAS_WEBHOOK_SECRET || '').length < 32) {
@@ -26,6 +24,8 @@ if (process.env.NODE_ENV === 'production' && String(process.env.HUTTAS_WEBHOOK_S
 }
 
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+
+const SLOW_MS = parseInt(process.env.SLOW_REQUEST_MS || '1000', 10);
 
 // Global error handlers
 process.on('uncaughtException', (error) => {
@@ -49,7 +49,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(compression({ threshold: 1024, level: 6 }));
+app.use(compression({ threshold: 1024 }));
 
 const authRouteLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -100,9 +100,22 @@ app.use(express.urlencoded({
   }
 }));
 
-app.use(performanceMiddleware);
-app.use('/api', (req, res, next) => {
-  if (req.method === 'GET') res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
+// Request logging + slow request warning
+app.use((req, res, next) => {
+  const started = Date.now();
+  console.log(`${req.method} ${req.path}`);
+
+  const timeout = setTimeout(() => {
+    console.log(` Request timeout: ${req.method} ${req.path}`);
+  }, 5000);
+
+  res.on('finish', () => {
+    clearTimeout(timeout);
+    const ms = Date.now() - started;
+    if (ms >= SLOW_MS) {
+      console.warn(` Slow request ${ms}ms ${req.method} ${req.path}`);
+    }
+  });
   next();
 });
 
@@ -119,11 +132,6 @@ app.get('/api/health', async (req, res) => {
   res.json(payload);
 });
 
-app.get('/api/health/ready', (_req, res) => {
-  const ready = mongoose.connection.readyState === 1;
-  res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'not_ready' });
-});
-
 // API Routes with error handling
 try {
   // Explicit public API allowlist. Protected endpoints inside these mixed routers
@@ -138,7 +146,6 @@ try {
   // Every API mounted after this line requires an active, approved session.
   app.use('/api', authenticateToken);
   app.use('/api/users', checkRole(['admin']), require('./routes/users'));
-  app.use('/api/lookups', require('./routes/lookups'));
   app.use('/api/dashboard', require('./routes/dashboard'));
   app.use('/api/orders', require('./routes/orders'));
   app.use('/api/customers', require('./routes/customers'));
@@ -164,9 +171,7 @@ try {
 }
 
 const staticOptions = {
-  maxAge: '1h',
   setHeaders: (res, filePath) => {
-    if (!res.hasHeader('Cache-Control')) res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
     if (filePath.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript');
     } else if (filePath.endsWith('.css')) {
@@ -176,11 +181,6 @@ const staticOptions = {
     }
   }
 };
-
-app.use(['/assets', '/config', '/components'], (req, res, next) => {
-  if (req.query.v) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  next();
-});
 
 async function serveDashboard(req, res, next) {
   try {
@@ -270,11 +270,8 @@ async function startServer() {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,
-      waitQueueTimeoutMS: parseInt(process.env.MONGODB_WAIT_QUEUE_TIMEOUT_MS || '2000', 10),
-      maxIdleTimeMS: parseInt(process.env.MONGODB_MAX_IDLE_TIME_MS || '60000', 10),
-      maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '20', 10),
-      minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE || '2', 10),
-      autoIndex: process.env.NODE_ENV !== 'production'
+      maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10', 10),
+      minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE || '0', 10)
     });
     console.log(' MongoDB Connected');
     

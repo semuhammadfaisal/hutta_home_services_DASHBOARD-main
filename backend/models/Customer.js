@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const noteSchema = require('./noteSchema');
 const attachmentSchema = require('./attachmentSchema');
-const { applyNormalizedSearch } = require('../utils/searchNormalization');
 
 // Define address subdocument schema for multiple locations
 const addressSchema = new mongoose.Schema({
@@ -34,9 +33,6 @@ const customFieldSchema = new mongoose.Schema({
 }, { _id: false });
 
 const customerSchema = new mongoose.Schema({
-  normalizedName: { type: String, default: '' },
-  normalizedEmail: { type: String, default: '' },
-  normalizedPhone: { type: String, default: '' },
   name: { type: String, required: true },
   email: String,
   phone: String,
@@ -68,12 +64,5 @@ const customerSchema = new mongoose.Schema({
 customerSchema.index({ email: 1, 'addresses.address': 1 });
 customerSchema.index({ createdAt: -1 });
 customerSchema.index({ status: 1 });
-customerSchema.index({ normalizedName: 1 });
-customerSchema.index({ normalizedEmail: 1 });
-customerSchema.index({ normalizedPhone: 1 });
-customerSchema.index({ status: 1, createdAt: -1 });
-customerSchema.index({ customerType: 1, createdAt: -1 });
-
-applyNormalizedSearch(customerSchema, { normalizedName: 'name', normalizedEmail: 'email', normalizedPhone: 'phone' });
 
 module.exports = mongoose.model('Customer', customerSchema);
