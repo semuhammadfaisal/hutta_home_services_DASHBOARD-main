@@ -2,6 +2,23 @@
 
 The CRM accepts server-to-server submissions at `POST /api/integrations/website-requests`. Do not call this endpoint directly from browser JavaScript because the signing secret must remain on the huttas.com server.
 
+## Forminator native webhook compatibility
+
+When the WordPress site uses Forminator's built-in webhook instead of the HMAC helper plugin, configure these Render environment values:
+
+```text
+FORMINATOR_WEBHOOK_KEY=<a separate random secret of at least 32 characters>
+FORMINATOR_FORM_ID=1029
+```
+
+Configure Forminator to POST to:
+
+```text
+https://hutta-home-services-dashboard-main.onrender.com/api/integrations/website-requests/forminator?key=<FORMINATOR_WEBHOOK_KEY>
+```
+
+This compatibility endpoint maps `name-1`, `phone-1`, `email-1`, `textarea-1`, and `consent-1` to the Stage 1 intake contract. It accepts Forminator's flat or nested JSON/form payload, uses its entry ID for idempotency when supplied, and otherwise uses a request-body fingerprint. Use a dedicated key here; do not put `HUTTAS_WEBHOOK_SECRET` in the URL.
+
 ## Configuration
 
 Set these Render environment variables before deploying:

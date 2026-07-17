@@ -8,10 +8,41 @@ const Order = require('../models/Order');
 const {
   MAX_BODY_BYTES,
   SIGNATURE_TOLERANCE_MS,
+  mapForminatorPayload,
+  safeSecretEqual,
   signatureFor,
   validatePayload,
   verifyWebhookSignature
 } = require('../utils/websiteIntake');
+
+test('Forminator native payload maps configured field IDs and creates a stable identifier', () => {
+  const rawBody = Buffer.from('{"form_id":"1029","entry_id":"44","name-1":"Jane Customer","phone-1":"4801234567","email-1":"jane@example.com","textarea-1":"Landscaping","consent-1":"on"}');
+  const mapped = mapForminatorPayload(JSON.parse(rawBody), rawBody, new Date('2026-07-17T10:00:00.000Z'));
+  assert.equal(mapped.externalSubmissionId, 'forminator-1029-44');
+  assert.equal(mapped.name, 'Jane Customer');
+  assert.equal(mapped.phone, '4801234567');
+  assert.equal(mapped.email, 'jane@example.com');
+  assert.equal(mapped.serviceDetails, 'Landscaping');
+  assert.equal(mapped.marketingSmsConsent, true);
+});
+
+test('Forminator mapping supports nested field arrays and body-fingerprint fallback', () => {
+  const body = { fields: [
+    { name: 'name-1', value: 'Nested Customer' },
+    { name: 'phone-1', value: '480 555 1212' },
+    { name: 'email-1', value: 'nested@example.com' }
+  ] };
+  const first = mapForminatorPayload(body, Buffer.from(JSON.stringify(body)));
+  const second = mapForminatorPayload(body, Buffer.from(JSON.stringify(body)));
+  assert.equal(first.name, 'Nested Customer');
+  assert.equal(first.externalSubmissionId, second.externalSubmissionId);
+});
+
+test('Forminator webhook key uses constant-time equality semantics', () => {
+  assert.equal(safeSecretEqual('separate-long-secret', 'separate-long-secret'), true);
+  assert.equal(safeSecretEqual('wrong', 'separate-long-secret'), false);
+  assert.equal(safeSecretEqual('', ''), false);
+});
 
 test('website payload validation normalizes customer data and keeps consent separate', () => {
   const { payload, errors } = validatePayload({

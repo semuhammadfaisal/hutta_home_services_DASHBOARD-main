@@ -28,6 +28,78 @@ function sanitizeText(value, maxLength) {
   return String(value || '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, maxLength);
 }
 
+function safeSecretEqual(supplied, expected) {
+  const suppliedBuffer = Buffer.from(String(supplied || ''), 'utf8');
+  const expectedBuffer = Buffer.from(String(expected || ''), 'utf8');
+  return suppliedBuffer.length > 0 &&
+    suppliedBuffer.length === expectedBuffer.length &&
+    crypto.timingSafeEqual(suppliedBuffer, expectedBuffer);
+}
+
+function unwrapForminatorValue(value) {
+  if (Array.isArray(value)) return value.map(unwrapForminatorValue).filter(Boolean).join(', ');
+  if (value && typeof value === 'object') {
+    for (const key of ['value', 'raw', 'field_value']) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) return unwrapForminatorValue(value[key]);
+    }
+    return Object.values(value).map(unwrapForminatorValue).filter(Boolean).join(' ');
+  }
+  return value == null ? '' : String(value);
+}
+
+function findForminatorField(value, fieldName, depth = 0) {
+  if (!value || typeof value !== 'object' || depth > 8) return undefined;
+  if (Object.prototype.hasOwnProperty.call(value, fieldName)) return unwrapForminatorValue(value[fieldName]);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (item && typeof item === 'object' && (item.name === fieldName || item.field_name === fieldName)) {
+        return unwrapForminatorValue(item.value ?? item.field_value ?? item.raw);
+      }
+    }
+  }
+  for (const nested of Object.values(value)) {
+    const found = findForminatorField(nested, fieldName, depth + 1);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+function firstForminatorValue(body, names) {
+  for (const name of names) {
+    const value = findForminatorField(body, name);
+    if (value !== undefined && String(value).trim()) return String(value).trim();
+  }
+  return '';
+}
+
+function formInputChecked(value) {
+  if (value === true || value === 1) return true;
+  const normalized = String(value || '').trim().toLowerCase();
+  return Boolean(normalized) && !['0', 'false', 'no', 'off', 'unchecked'].includes(normalized);
+}
+
+function mapForminatorPayload(body, rawBody = Buffer.alloc(0), now = new Date()) {
+  const formId = firstForminatorValue(body, ['form_id', 'formId', 'form-id']) ||
+    String(process.env.FORMINATOR_FORM_ID || '1029');
+  const entryId = firstForminatorValue(body, ['entry_id', 'entryId', 'submission_id', 'submissionId']);
+  const fingerprintSource = rawBody.length ? rawBody : Buffer.from(JSON.stringify(body || {}));
+  const fingerprint = crypto.createHash('sha256').update(fingerprintSource).digest('hex').slice(0, 32);
+  const submittedAtValue = firstForminatorValue(body, ['submittedAt', 'submitted_at', 'date_created', 'submission_time']);
+  const submittedAt = submittedAtValue && !Number.isNaN(new Date(submittedAtValue).getTime())
+    ? submittedAtValue
+    : now.toISOString();
+
+  return {
+    externalSubmissionId: sanitizeText(`forminator-${formId}-${entryId || fingerprint}`, 128),
+    submittedAt,
+    name: firstForminatorValue(body, ['name-1']),
+    phone: firstForminatorValue(body, ['phone-1']),
+    email: firstForminatorValue(body, ['email-1']),
+    serviceDetails: firstForminatorValue(body, ['textarea-1']),
+    marketingSmsConsent: formInputChecked(findForminatorField(body, 'consent-1'))
+  };
+}
+
 function parseOperationsRecipients(value = process.env.INTAKE_NOTIFICATION_EMAILS) {
   return [...new Set(String(value || '')
     .split(',')
@@ -265,6 +337,8 @@ module.exports = {
   normalizePhone,
   parseOperationsRecipients,
   processWebsiteRequest,
+  mapForminatorPayload,
+  safeSecretEqual,
   signatureFor,
   validatePayload,
   verifyWebhookSignature

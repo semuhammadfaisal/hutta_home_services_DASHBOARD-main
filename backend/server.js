@@ -76,7 +76,8 @@ app.use('/api/', apiLimiter);
 app.use(express.json({
   limit: '10mb',
   verify: (req, _res, buffer) => {
-    if (req.originalUrl?.split('?')[0] !== '/api/integrations/website-requests') return;
+    const requestPath = req.originalUrl?.split('?')[0];
+    if (!['/api/integrations/website-requests', '/api/integrations/website-requests/forminator'].includes(requestPath)) return;
     if (buffer.length > MAX_BODY_BYTES) {
       const error = new Error('Website request body is too large');
       error.status = 413;
@@ -85,7 +86,19 @@ app.use(express.json({
     req.rawBody = Buffer.from(buffer);
   }
 }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.urlencoded({
+  limit: '10mb',
+  extended: true,
+  verify: (req, _res, buffer) => {
+    if (req.originalUrl?.split('?')[0] !== '/api/integrations/website-requests/forminator') return;
+    if (buffer.length > MAX_BODY_BYTES) {
+      const error = new Error('Forminator request body is too large');
+      error.status = 413;
+      throw error;
+    }
+    req.rawBody = Buffer.from(buffer);
+  }
+}));
 
 // Request logging + slow request warning
 app.use((req, res, next) => {
@@ -100,7 +113,7 @@ app.use((req, res, next) => {
     clearTimeout(timeout);
     const ms = Date.now() - started;
     if (ms >= SLOW_MS) {
-      console.warn(` Slow request ${ms}ms ${req.method} ${req.originalUrl}`);
+      console.warn(` Slow request ${ms}ms ${req.method} ${req.path}`);
     }
   });
   next();
@@ -239,7 +252,7 @@ app.get('*', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  const websiteIntakeRequest = req.originalUrl?.split('?')[0] === '/api/integrations/website-requests';
+  const websiteIntakeRequest = String(req.originalUrl || '').split('?')[0].startsWith('/api/integrations/website-requests');
   if (websiteIntakeRequest) {
     console.error(' Website intake request error:', err?.name || 'request_error');
   } else {
