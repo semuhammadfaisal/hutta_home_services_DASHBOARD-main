@@ -393,17 +393,11 @@ window.PipelineAutoScroll = {
     stop: stopPipelineAutoScroll
 };
 
-// Initialize
-document.addEventListener('DOMContentLoaded', async () => {
+// Initialize whether loaded at boot or lazily after navigation.
+async function initializePipelineFeature() {
     try { await window.AuthReady; } catch (_error) { return; }
     window.AppLogger?.debug('Pipeline MongoDB script loaded');
     createPipelineAutoScrollZones();
-    
-    const pipelineSection = document.getElementById('pipeline');
-    if (pipelineSection && pipelineSection.classList.contains('active')) {
-        window.AppLogger?.debug('Pipeline section is active, loading data...');
-        loadDataFromDB();
-    }
     
     // CRITICAL: Prevent default dragover on document to allow drop
     document.addEventListener('dragover', (e) => {
@@ -427,20 +421,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keyup', (e) => {
         if (e.key === 'Escape') stopPipelineAutoScroll();
     });
-});
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializePipelineFeature, { once: true });
+else initializePipelineFeature();
 
 // Load all data from MongoDB
 async function loadDataFromDB() {
     try {
         window.AppLogger?.debug('Loading pipeline data from database...');
         
-        // Fetch all data in parallel - NO loading overlay for speed
-        const [stagesData, recordsData, ordersData, employeesData] = await Promise.all([
-            fetch(`${API_BASE_URL}/stages`).then(r => r.json()),
-            fetch(`${API_BASE_URL}/pipeline-records`).then(r => r.json()),
-            fetchAllOrdersData(),
-            fetchAllEmployeesData()
+        const stagesData = await fetch(`${API_BASE_URL}/stages`).then(r => r.json());
+        const [stagePages, ordersData, employeesData] = await Promise.all([
+            Promise.all(stagesData.map(stage => fetchPipelineStagePage(stage._id))),
+            fetchAllOrdersData(), fetchAllEmployeesData()
         ]);
+        const recordsData = stagePages.flatMap(page => page.data || []);
         
         stages = stagesData;
         records = recordsData;
@@ -501,7 +496,7 @@ function unwrapApiListResponse(json) {
 // Fetch all orders data
 async function fetchAllOrdersData() {
     try {
-        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`);
+        const response = await fetch(`${API_BASE_URL}/orders/list?limit=100`);
         if (!response.ok) return [];
         const json = await response.json();
         return unwrapApiListResponse(json);
@@ -514,7 +509,7 @@ async function fetchAllOrdersData() {
 // Fetch all employees data
 async function fetchAllEmployeesData() {
     try {
-        const response = await fetch(`${API_BASE_URL}/employees`);
+        const response = await fetch(`${API_BASE_URL}/lookups/employees?limit=50`);
         return response.ok ? await response.json() : [];
     } catch (error) {
         console.error('Error fetching employees:', error);
@@ -529,6 +524,23 @@ function bindPipelineStagesContainerOnce(container) {
     container.addEventListener('click', pipelineStagesContainerClick);
     container.addEventListener('pointerdown', pipelinePointerDragStart, true);
 }
+
+const pipelineStagePages = new Map();
+async function fetchPipelineStagePage(stageId, cursor = '') {
+    const response = await fetch(`${API_BASE_URL}/pipeline-records/board?stageId=${encodeURIComponent(stageId)}&limit=25${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+    if (!response.ok) throw new Error('Failed to load pipeline stage');
+    const page = await response.json(); pipelineStagePages.set(stageId, page.pagination || {}); return page;
+}
+
+async function loadMorePipelineStage(stageId) {
+    const current = pipelineStagePages.get(stageId) || {};
+    if (!current.nextCursor) return;
+    const page = await fetchPipelineStagePage(stageId, current.nextCursor);
+    const existing = new Set(records.map(record => record._id));
+    (page.data || []).forEach(record => { if (!existing.has(record._id)) records.push(record); });
+    filteredRecords = [...records]; applyPipelineFilters({ render: false }); refreshPipelineStageBody(stageId);
+}
+window.loadMorePipelineStage = loadMorePipelineStage;
 
 function shouldIgnorePipelinePointerDrag(target) {
     return target.closest('button, .record-actions, .icon-btn, input, textarea, select, a');
@@ -668,7 +680,7 @@ function refreshPipelineStageBody(stageId) {
     const stageColumn = document.querySelector(`.stage-column[data-stage-id="${stageId}"]`);
     const countBadge = stageColumn?.querySelector('.count-badge');
     if (countBadge) {
-        countBadge.textContent = records.filter((record) => record.stageId === stageId).length;
+        countBadge.textContent = pipelineStagePages.get(stageId)?.total ?? records.filter((record) => record.stageId === stageId).length;
     }
 }
 
@@ -1100,7 +1112,7 @@ function loadStages() {
 
 // Create stage column
 function createStageColumn(stage) {
-    const count = filteredRecords.filter(r => r.stageId === stage._id).length;
+    const count = pipelineStagePages.get(stage._id)?.total ?? filteredRecords.filter(r => r.stageId === stage._id).length;
     const canPlacePickedItem = pickedPipelineItem && pickedPipelineItem.fromStageId !== stage._id;
     
     const column = document.createElement('div');
@@ -1189,7 +1201,7 @@ function renderRecords(stageId) {
     }
     
     // Get employee names from cache (instant lookup, no API calls)
-    return stageRecords.map(record => {
+    const cards = stageRecords.map(record => {
         let employeeName = null;
         
         // If record has orderId, get employee from cached order data
@@ -1323,7 +1335,7 @@ let selectedCustomerId = null;
 
 async function loadAvailableCustomers() {
     try {
-        const response = await fetch(`${API_BASE_URL}/customers?limit=5000`);
+        const response = await fetch(`${API_BASE_URL}/lookups/customers?limit=50`);
         
         if (!response.ok) throw new Error('Failed to load customers');
 
@@ -1383,8 +1395,7 @@ async function loadCustomerWorkOrders(customerId) {
         if (!customerResponse.ok) throw new Error('Failed to load customer');
         const customer = await customerResponse.json();
         
-        // Get all orders and filter by customer email
-        const response = await fetch(`${API_BASE_URL}/orders?limit=5000`);
+        const response = await fetch(`${API_BASE_URL}/orders/list?limit=100&search=${encodeURIComponent(customer.email || customer.name || '')}`);
         
         if (!response.ok) throw new Error('Failed to load work orders');
         
@@ -1406,7 +1417,9 @@ async function loadCustomerWorkOrders(customerId) {
                 const woNumber = order.workOrderNumber || order.orderId || 'N/A';
                 const service = order.service || 'Unknown Service';
                 return `<option value="${order._id}">${woNumber} - ${service}</option>`;
-            }).join('');
+    }).join('');
+    const page = pipelineStagePages.get(stageId) || {};
+    return cards + (page.hasMore ? `<button type="button" class="btn-secondary pipeline-load-more" onclick="loadMorePipelineStage('${stageId}')">Load more</button>` : '');
         
         // Add change event to populate form when work order is selected
         workOrderSelect.onchange = function() {

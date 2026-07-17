@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
-    "postinstall": "cd backend && npm install"
+    "postinstall": "cd backend && npm install",
+    "migrate:performance-v2": "npm --prefix backend run migrate:performance-v2",
+    "migrate:performance-v2:apply": "npm --prefix backend run migrate:performance-v2:apply",
+    "perf:budget": "npm --prefix backend run perf:budget"
   },
   "dependencies": {
     "express": "^4.18.2",

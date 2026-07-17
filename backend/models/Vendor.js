@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const noteSchema = require('./noteSchema');
 const attachmentSchema = require('./attachmentSchema');
+const { applyNormalizedSearch } = require('../utils/searchNormalization');
 
 // Define email subdocument schema
 const emailSchema = new mongoose.Schema({
@@ -29,6 +30,8 @@ const addressSchema = new mongoose.Schema({
 }, { _id: false });
 
 const vendorSchema = new mongoose.Schema({
+  normalizedName: { type: String, default: '' },
+  normalizedEmail: { type: String, default: '' },
   name: { type: String, required: true },
   email: String,
   phone: String,
@@ -92,6 +95,12 @@ const vendorSchema = new mongoose.Schema({
   addresses: { type: [addressSchema], default: [] },
   customFields: { type: [customFieldSchema], default: [] }
 }, { timestamps: true });
+
+vendorSchema.index({ normalizedName: 1 });
+vendorSchema.index({ normalizedEmail: 1 });
+vendorSchema.index({ isActive: 1, onboardingStatus: 1, normalizedName: 1 });
+vendorSchema.index({ category: 1, normalizedName: 1 });
+applyNormalizedSearch(vendorSchema, { normalizedName: 'name', normalizedEmail: 'email' });
 
 vendorSchema.virtual('einTaxIdMasked').get(function() {
   return this.einTaxIdLast4 ? `***-**-${this.einTaxIdLast4}` : '';

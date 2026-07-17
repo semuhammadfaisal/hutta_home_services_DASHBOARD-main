@@ -9,6 +9,7 @@ const attachmentSchema = new mongoose.Schema({
   size: { type: Number, required: true },
   storageProvider: { type: String, default: 'gridfs' },
   publicId: String,
+  storageResourceType: String,
   fileId: mongoose.Schema.Types.Mixed,
   uploadedAt: { type: Date, default: Date.now },
   uploadedBy: String,

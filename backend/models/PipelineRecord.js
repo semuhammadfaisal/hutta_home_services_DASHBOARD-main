@@ -45,5 +45,7 @@ pipelineRecordSchema.index({ orderId: 1 });
 pipelineRecordSchema.index({ stageId: 1, orderId: 1 });
 pipelineRecordSchema.index({ createdAt: -1 });
 pipelineRecordSchema.index({ orderIdDisplay: 1 });
+pipelineRecordSchema.index({ stageId: 1, updatedAt: -1 });
+pipelineRecordSchema.index({ orderId: 1, updatedAt: -1 });
 
 module.exports = mongoose.model('PipelineRecord', pipelineRecordSchema);

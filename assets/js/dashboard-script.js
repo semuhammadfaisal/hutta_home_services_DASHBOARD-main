@@ -104,11 +104,12 @@ class DashboardManager {
         // Menu navigation
         const menuItems = document.querySelectorAll('.menu-item a');
         menuItems.forEach(item => {
-            item.addEventListener('click', (e) => {
+            item.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const targetSection = item.getAttribute('data-section');
                 window.AppLogger?.debug('Menu clicked:', targetSection);
                 this.showSection(targetSection);
+                try { await window.FeatureLoader?.load(targetSection); } catch (error) { showToast(error.message, 'error'); return; }
                 
                 // Load section-specific data
                 if (targetSection === 'orders') {
@@ -3161,24 +3162,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadWorkflowCenter();
     }
     if (window.location.hash === '#incoming-quotes') {
+        await window.FeatureLoader?.load('incoming-quotes');
         window.dashboard.showSection('incoming-quotes');
         document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
         document.querySelector('[data-section="incoming-quotes"]')?.parentElement?.classList.add('active');
         window.loadIncomingQuotes?.();
     }
     if (window.location.hash === '#outgoing-quotes') {
+        await window.FeatureLoader?.load('outgoing-quotes');
         window.dashboard.showSection('outgoing-quotes');
         document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
         document.querySelector('[data-section="outgoing-quotes"]')?.parentElement?.classList.add('active');
         window.loadOutgoingQuotes?.();
     }
     if (window.location.hash === '#customer-approvals') {
+        await window.FeatureLoader?.load('customer-approvals');
         window.dashboard.showSection('customer-approvals');
         document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
         document.querySelector('[data-section="customer-approvals"]')?.parentElement?.classList.add('active');
         window.loadCustomerApprovals?.();
     }
     if (window.location.hash === '#scheduling') {
+        await window.FeatureLoader?.load('scheduling');
         window.dashboard.showSection('scheduling');
         document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
         document.querySelector('[data-section="scheduling"]')?.parentElement?.classList.add('active');
@@ -7193,6 +7198,7 @@ function closeEmployeeModal() {
 }
 
 async function refreshEmployees() {
+    if (window.__employeeServerPagination) return loadEmployeesSection(true);
     try {
         const employees = await window.APIService.getEmployees();
         renderEmployeesTable(employees);
@@ -7267,16 +7273,30 @@ function updateEmployeeStats(employees) {
 
 let allEmployees = [];
 
-async function loadEmployeesSection() {
+async function loadEmployeesSection(reset = true) {
     try {
         const tableContainer = document.querySelector('.employees-table-container');
         if (tableContainer) setTableLoading(tableContainer, true);
         
-        allEmployees = await window.APIService.getEmployees();
+        const state = performancePagination.employees;
+        if (reset) { state.cursor = ''; state.previous = []; }
+        state.controller?.abort(); state.controller = new AbortController();
+        const response = await window.APIService.getEmployeeList({
+            limit: 50, cursor: state.cursor,
+            search: document.getElementById('employeeSearchInput')?.value?.trim(),
+            role: document.getElementById('employeeRoleFilter')?.value,
+            status: document.getElementById('employeeStatusFilter')?.value
+        }, { signal: state.controller.signal });
+        allEmployees = response.data || [];
+        window.__employeeServerPagination = true;
         initializeEmployeeFilters();
         updateEmployeeFilterOptions(allEmployees);
-        filterEmployees();
+        renderEmployeesTable(allEmployees);
+        const totalCount = document.getElementById('totalEmployeesCount');
+        if (totalCount) totalCount.textContent = Number(response.pagination?.total || 0).toLocaleString();
+        renderPerformancePager('.employees-table-container', 'employees', response.pagination || {}, loadEmployeesSection);
     } catch (error) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to load employees:', error);
         renderEmployeesTable([]);
     } finally {
@@ -7326,6 +7346,11 @@ function updateEmployeeFilterOptions(employees = []) {
 }
 
 function filterEmployees() {
+    if (window.__employeeServerPagination) {
+        clearTimeout(window.__employeeServerFilterTimer);
+        window.__employeeServerFilterTimer = setTimeout(() => loadEmployeesSection(true), 300);
+        return;
+    }
     const searchTerm = normalizeSearchText(document.getElementById('employeeSearchInput')?.value);
     const roleFilter = normalizeFilterValue(document.getElementById('employeeRoleFilter')?.value || 'all');
     const statusFilter = normalizeFilterValue(document.getElementById('employeeStatusFilter')?.value || 'all');
@@ -8350,6 +8375,7 @@ function closeVendorModal() {
 }
 
 async function refreshVendors() {
+    if (window.__vendorServerPagination) return loadVendorsSection(true);
     try {
         const vendors = await window.APIService.getVendors();
         allVendors = vendors;
@@ -8457,17 +8483,31 @@ function updateVendorStats(vendors) {
 // Vendor search and filter functionality
 let allVendors = [];
 
-async function loadVendorsSection() {
+async function loadVendorsSection(reset = true) {
     try {
         const tableContainer = document.querySelector('.vendors-table-container');
         if (tableContainer) setTableLoading(tableContainer, true);
         
-        allVendors = await window.APIService.getVendors();
+        const state = performancePagination.vendors;
+        if (reset) { state.cursor = ''; state.previous = []; }
+        state.controller?.abort(); state.controller = new AbortController();
+        const response = await window.APIService.getVendorList({
+            limit: 50, cursor: state.cursor,
+            search: document.getElementById('vendorSearchInput')?.value?.trim(),
+            category: document.getElementById('vendorCategoryFilter')?.value,
+            status: document.getElementById('vendorStatusFilter')?.value
+        }, { signal: state.controller.signal });
+        allVendors = response.data || [];
+        window.__vendorServerPagination = true;
         initializeVendorFilters();
         updateVendorFilterOptions(allVendors);
-        filterVendors();
+        renderVendorsTable(allVendors);
+        const totalCount = document.getElementById('totalVendorsCount');
+        if (totalCount) totalCount.textContent = Number(response.pagination?.total || 0).toLocaleString();
+        renderPerformancePager('.vendors-table-container', 'vendors', response.pagination || {}, loadVendorsSection);
         window.refreshVendorInvitations?.();
     } catch (error) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to load vendors:', error);
         renderVendorsTable([]);
     } finally {
@@ -8515,6 +8555,11 @@ function updateVendorFilterOptions(vendors = []) {
 }
 
 function filterVendors() {
+    if (window.__vendorServerPagination) {
+        clearTimeout(window.__vendorServerFilterTimer);
+        window.__vendorServerFilterTimer = setTimeout(() => loadVendorsSection(true), 300);
+        return;
+    }
     const searchTerm = normalizeSearchText(document.getElementById('vendorSearchInput')?.value);
     const categoryFilter = normalizeFilterValue(document.getElementById('vendorCategoryFilter')?.value || 'all');
     const statusFilter = document.getElementById('vendorStatusFilter')?.value || 'all';
@@ -9188,6 +9233,7 @@ function closeCustomerModal() {
 }
 
 async function refreshCustomers() {
+    if (window.__customerServerPagination) return loadCustomersSection(true);
     try {
         const tableContainer = document.querySelector('.customers-table-container');
         if (tableContainer) setTableLoading(tableContainer, true);
@@ -9280,32 +9326,30 @@ function updateCustomerStats(customers) {
 // Customer search and filter functionality
 let allCustomers = [];
 
-async function loadCustomersSection() {
+async function loadCustomersSection(reset = true) {
     try {
         const tableContainer = document.querySelector('.customers-table-container');
         if (tableContainer) setTableLoading(tableContainer, true);
         
-        allCustomers = await window.APIService.getCustomers();
-        const orders = await window.APIService.getOrders();
-        
-        // Count orders for each customer
-        allCustomers.forEach(customer => {
-            customer.totalOrders = orders.filter(order => {
-                const orderCustomer = order.customer || {};
-                const customerId = order.customerId || orderCustomer._id || order.customer;
-                const customerEmail = orderCustomer.email;
-                const customerName = orderCustomer.name || (typeof order.customer === 'string' ? order.customer : '');
-
-                return String(customerId || '') === String(customer._id || '') ||
-                    (!!customerEmail && !!customer.email && String(customerEmail).toLowerCase() === String(customer.email).toLowerCase()) ||
-                    (!!customerName && !!customer.name && String(customerName).toLowerCase() === String(customer.name).toLowerCase());
-            }).length;
-        });
-        
+        const state = performancePagination.customers;
+        if (reset) { state.cursor = ''; state.previous = []; }
+        state.controller?.abort(); state.controller = new AbortController();
+        const response = await window.APIService.getCustomerList({
+            limit: 50, cursor: state.cursor,
+            search: document.getElementById('customersToolbarSearchInput')?.value?.trim(),
+            customerType: document.getElementById('customerTypeFilter')?.value,
+            status: document.getElementById('customerStatusFilter')?.value
+        }, { signal: state.controller.signal });
+        allCustomers = response.data || [];
+        window.__customerServerPagination = true;
         initializeCustomerFilters();
         updateCustomerFilterOptions(allCustomers);
-        filterCustomers();
+        renderCustomersTable(allCustomers);
+        const totalCount = document.getElementById('totalCustomersCount');
+        if (totalCount) totalCount.textContent = Number(response.pagination?.total || 0).toLocaleString();
+        renderPerformancePager('.customers-table-container', 'customers', response.pagination || {}, loadCustomersSection);
     } catch (error) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to load customers:', error);
         renderCustomersTable([]);
     } finally {
@@ -9348,6 +9392,11 @@ function updateCustomerFilterOptions(customers = []) {
 }
 
 function filterCustomers() {
+    if (window.__customerServerPagination) {
+        clearTimeout(window.__customerServerFilterTimer);
+        window.__customerServerFilterTimer = setTimeout(() => loadCustomersSection(true), 300);
+        return;
+    }
     const searchTerm = normalizeSearchText(document.getElementById('customersToolbarSearchInput')?.value);
     const typeFilter = normalizeFilterValue(document.getElementById('customerTypeFilter')?.value || 'all');
     const statusFilter = normalizeFilterValue(document.getElementById('customerStatusFilter')?.value || 'all');
@@ -9697,7 +9746,28 @@ window.resolveIntakeReview = resolveIntakeReview;
 window.retryIntakeEmail = retryIntakeEmail;
 window.openWorkflowOrder = openWorkflowOrder;
 
-async function loadOrdersSection() {
+const performancePagination = {
+    orders: { cursor: '', previous: [], total: 0 },
+    customers: { cursor: '', previous: [], total: 0 },
+    vendors: { cursor: '', previous: [], total: 0 },
+    employees: { cursor: '', previous: [], total: 0 }
+};
+
+function renderPerformancePager(containerSelector, key, pagination, loadPage) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+    let pager = container.parentElement.querySelector(`.performance-pager[data-key="${key}"]`);
+    if (!pager) {
+        pager = document.createElement('div'); pager.className = 'performance-pager'; pager.dataset.key = key;
+        container.insertAdjacentElement('afterend', pager);
+    }
+    const state = performancePagination[key];
+    pager.innerHTML = `<span>Showing up to ${pagination.limit} of ${Number(pagination.total || 0).toLocaleString()}</span><div><button type="button" class="btn-secondary" data-page="previous" ${state.previous.length ? '' : 'disabled'}>Previous</button><button type="button" class="btn-secondary" data-page="next" ${pagination.hasMore ? '' : 'disabled'}>Next</button></div>`;
+    pager.querySelector('[data-page="previous"]')?.addEventListener('click', () => { state.cursor = state.previous.pop() || ''; loadPage(false); });
+    pager.querySelector('[data-page="next"]')?.addEventListener('click', () => { state.previous.push(state.cursor); state.cursor = pagination.nextCursor || ''; loadPage(false); });
+}
+
+async function loadOrdersSection(reset = true) {
     try {
         window.AppLogger?.debug('loadOrdersSection called');
         if (window.ordersLoading) return; // Prevent duplicate calls
@@ -9707,12 +9777,28 @@ async function loadOrdersSection() {
         const tableContainer = document.querySelector('.orders-table-container');
         if (tableContainer) setTableLoading(tableContainer, true);
         
-        allOrders = await window.APIService.getOrders();
+        const state = performancePagination.orders;
+        if (reset) { state.cursor = ''; state.previous = []; }
+        state.controller?.abort(); state.controller = new AbortController();
+        const dateRange = getOrderDateFilterRange();
+        const response = await window.APIService.getOrderList({
+            limit: 50, cursor: state.cursor,
+            search: document.getElementById('orderSearchInput')?.value?.trim(),
+            status: normalizeOrderFilterValue(document.getElementById('orderStatusFilter')?.value || 'all'),
+            priority: normalizeOrderFilterValue(document.getElementById('orderPriorityFilter')?.value || 'all'),
+            type: normalizeOrderFilterValue(document.getElementById('orderTypeFilter')?.value || 'all'),
+            dateFrom: dateRange?.start ? new Date(dateRange.start).toISOString().slice(0, 10) : '',
+            dateTo: dateRange?.end ? new Date(dateRange.end).toISOString().slice(0, 10) : ''
+        }, { signal: state.controller.signal });
+        allOrders = response.data || [];
+        window.__orderServerPagination = true;
         window.AppLogger?.debug('Orders loaded:', allOrders.length);
         initializeOrderFilters();
         updateOrderStatusFilterOptions(allOrders);
-        filterOrdersImmediate();
+        window.dashboard.renderOrdersTable(allOrders);
+        renderPerformancePager('.orders-table-container', 'orders', response.pagination || {}, loadOrdersSection);
     } catch (error) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to load orders:', error);
         window.dashboard.renderOrdersTable([]);
     } finally {
@@ -9998,6 +10084,11 @@ function updateOrderStatusFilterOptions(orders = []) {
 }
 
 function filterOrdersImmediate() {
+    if (window.__orderServerPagination) {
+        clearTimeout(window.__orderServerFilterTimer);
+        window.__orderServerFilterTimer = setTimeout(() => loadOrdersSection(true), 300);
+        return;
+    }
     const searchTerm = (document.getElementById('orderSearchInput')?.value || '').trim().toLowerCase();
     const statusFilter = normalizeOrderFilterValue(document.getElementById('orderStatusFilter')?.value || 'all');
     const priorityFilter = normalizeOrderFilterValue(document.getElementById('orderPriorityFilter')?.value || 'all');

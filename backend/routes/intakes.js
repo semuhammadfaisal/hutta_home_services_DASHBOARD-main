@@ -17,7 +17,7 @@ router.get('/', allowedRoles, async (req, res) => {
       .populate('customerId', 'name email phone')
       .populate('matchingCustomerIds', 'name email phone')
       .sort({ receivedAt: -1 })
-      .limit(Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 200)))
+      .limit(Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50)))
       .lean();
     res.json(intakes);
   } catch (error) {

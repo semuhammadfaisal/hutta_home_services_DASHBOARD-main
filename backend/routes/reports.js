@@ -12,10 +12,13 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { dateInputToMDT, endOfDayMDT } = require('../utils/timezone');
 const { buildAnalytics, recordsToCsv, idOf, lower } = require('../utils/reportAnalytics');
+const memCache = require('../utils/memoryCache');
 
 const router = express.Router();
 const REPORT_ROLES = ['admin'];
 const SORTABLE_RECORD_FIELDS = new Set(['date', 'order', 'customer', 'service', 'employee', 'vendor', 'status', 'revenue', 'cost', 'profit', 'paymentStatus']);
+const reportInFlight = new Map();
+const REPORT_CACHE_MS = Number(process.env.REPORT_CACHE_MS || 30000);
 
 function defaultPeriod() {
   const end = new Date();
@@ -152,6 +155,19 @@ async function loadReport(query = {}) {
   };
 }
 
+function reportCacheKey(query = {}) {
+  const ignored = new Set(['page', 'pageSize', 'sort', 'direction', 'format']);
+  return `reports:v2:${Object.entries(query).filter(([key]) => !ignored.has(key)).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${key}=${value}`).join('&')}`;
+}
+
+async function loadReportCached(query = {}) {
+  const key = reportCacheKey(query); const cached = memCache.get(key);
+  if (cached) return cached;
+  if (reportInFlight.has(key)) return reportInFlight.get(key);
+  const pending = loadReport(query).then(report => { memCache.set(key, report, REPORT_CACHE_MS); return report; }).finally(() => reportInFlight.delete(key));
+  reportInFlight.set(key, pending); return pending;
+}
+
 function sortRecords(records, sort = 'date', direction = 'desc') {
   const key = SORTABLE_RECORD_FIELDS.has(sort) ? sort : 'date';
   const modifier = lower(direction) === 'asc' ? 1 : -1;
@@ -214,7 +230,7 @@ function writePdf(res, report) {
 
 router.get('/analytics', authenticateToken, checkRole(REPORT_ROLES), async (req, res) => {
   try {
-    const report = await loadReport(req.query);
+    const report = await loadReportCached(req.query);
     const { records, ...analytics } = report;
     res.json(analytics);
   } catch (error) {
@@ -225,7 +241,7 @@ router.get('/analytics', authenticateToken, checkRole(REPORT_ROLES), async (req,
 
 router.get('/records', authenticateToken, checkRole(REPORT_ROLES), async (req, res) => {
   try {
-    const report = await loadReport(req.query);
+    const report = await loadReportCached(req.query);
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const pageSize = Math.min(100, Math.max(10, Number.parseInt(req.query.pageSize, 10) || 25));
     const sorted = sortRecords(report.records, req.query.sort, req.query.direction);
@@ -243,7 +259,7 @@ router.get('/records', authenticateToken, checkRole(REPORT_ROLES), async (req, r
 
 router.get('/export', authenticateToken, checkRole(REPORT_ROLES), async (req, res) => {
   try {
-    const report = await loadReport(req.query);
+    const report = await loadReportCached(req.query);
     const stamp = new Date().toISOString().slice(0, 10);
     if (lower(req.query.format) === 'csv') {
       const csv = recordsToCsv(sortRecords(report.records, req.query.sort, req.query.direction));
@@ -272,7 +288,7 @@ router.get('/export', authenticateToken, checkRole(REPORT_ROLES), async (req, re
 // Legacy endpoints remain available for older clients while using the trusted report contract.
 router.get('/financial', authenticateToken, checkRole(REPORT_ROLES), async (req, res) => {
   try {
-    const report = await loadReport(req.query);
+    const report = await loadReportCached(req.query);
     res.json({
       totalRevenue: report.summary.revenue,
       totalPayments: report.summary.collectedPayments,
@@ -286,7 +302,7 @@ router.get('/financial', authenticateToken, checkRole(REPORT_ROLES), async (req,
 
 router.get('/orders', authenticateToken, checkRole(REPORT_ROLES), async (req, res) => {
   try {
-    const report = await loadReport(req.query);
+    const report = await loadReportCached(req.query);
     res.json({ statusBreakdown: report.charts.ordersByStatus, monthlyOrders: report.charts.revenueProfitTrend });
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message || 'Server error' });

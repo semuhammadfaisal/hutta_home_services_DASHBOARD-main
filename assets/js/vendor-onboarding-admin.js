@@ -858,7 +858,7 @@
     } catch (error) { window.showToast?.(error.message, 'error'); }
   };
 
-  document.addEventListener('DOMContentLoaded', async () => {
+  const initializeVendorAdmin = async () => {
     try { await window.AuthReady; } catch (_error) { return; }
     window.refreshVendorInvitations();
     window.refreshVendorEmailStatus();
@@ -948,5 +948,7 @@
         window.refreshVendorInvitations();
       }, 250);
     });
-  });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeVendorAdmin, { once: true });
+  else initializeVendorAdmin();
 })();

@@ -5,6 +5,23 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
+const { cursorFilter, parseLimit, pagePayload } = require('../utils/cursorPagination');
+
+router.get('/board', async (req, res) => {
+    try {
+        const limit = parseLimit(req.query.limit, 25, 50);
+        const query = {};
+        if (req.query.stageId) query.stageId = req.query.stageId;
+        const after = cursorFilter(req.query.cursor, 'updatedAt');
+        const finalQuery = after ? { $and: [query, after] } : query;
+        const [total, rows] = await Promise.all([
+            PipelineRecord.countDocuments(query),
+            PipelineRecord.find(finalQuery).select('stageId orderId orderIdDisplay customerName email phone priority budget startDate address description updatedAt')
+                .sort({ updatedAt: -1, _id: -1 }).limit(limit + 1).lean()
+        ]);
+        res.json(pagePayload(rows, total, limit, 'updatedAt'));
+    } catch (error) { res.status(500).json({ message: error.message }); }
+});
 
 // KPI: payments collected = sum of budgets for records in Paid/Close stages + received/completed payments not already counted
 // Exclude NO BID stages from calculations

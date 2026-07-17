@@ -10,13 +10,33 @@ const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
+const { prefixRegex, cursorFilter, parseLimit, pagePayload } = require('../utils/cursorPagination');
 const router = express.Router();
+
+router.get('/list', authenticateToken, async (req, res) => {
+  try {
+    const limit = parseLimit(req.query.limit);
+    const query = {};
+    if (req.query.status) query.status = String(req.query.status);
+    if (req.query.customerType) query.customerType = String(req.query.customerType);
+    const search = prefixRegex(req.query.search);
+    if (search) query.$or = [{ normalizedName: search }, { normalizedEmail: search }, { normalizedPhone: search }];
+    const after = cursorFilter(req.query.cursor);
+    const finalQuery = after ? { $and: [query, after] } : query;
+    const [total, rows] = await Promise.all([
+      Customer.countDocuments(query),
+      Customer.find(finalQuery).select('name email phone address city state zipCode customerType status totalOrders totalSpent createdAt')
+        .sort({ createdAt: -1, _id: -1 }).limit(limit + 1).lean()
+    ]);
+    res.json(pagePayload(rows, total, limit));
+  } catch (error) { res.status(500).json({ message: 'Server error', error: error.message }); }
+});
 
 // Get all customers (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 2000));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
     const skip = (page - 1) * limit;
 
     const [total, customers] = await Promise.all([

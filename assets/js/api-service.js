@@ -24,6 +24,7 @@ class APIService {
         this.demoMode = false; // Disable demo mode - using real backend
         this.requestCache = new Map();
         this.pendingRequests = new Map();
+        this.requestSequence = 0;
         window.AppLogger?.debug('APIService initialized - Demo Mode:', this.demoMode);
         window.AppLogger?.debug('API Base URL:', this.baseURL);
     }
@@ -65,7 +66,8 @@ class APIService {
         }
         
         // Request deduplication - prevent duplicate simultaneous requests
-        const cacheKey = `${options.method || 'GET'}:${endpoint}`;
+        const responseCacheKey = `${options.method || 'GET'}:${endpoint}`;
+        const cacheKey = `${responseCacheKey}${options.signal ? `:request-${++this.requestSequence}` : ''}`;
         const cacheableGet = (!options.method || options.method === 'GET') && !endpoint.startsWith('/auth/');
         if (this.pendingRequests.has(cacheKey)) {
             return this.pendingRequests.get(cacheKey);
@@ -73,7 +75,7 @@ class APIService {
         
         // Check cache for GET requests (2 minute TTL)
         if (cacheableGet) {
-            const cached = this.requestCache.get(cacheKey);
+            const cached = this.requestCache.get(responseCacheKey);
             if (cached && Date.now() - cached.timestamp < 2 * 60 * 1000) {
                 return cached.data;
             }
@@ -100,8 +102,14 @@ class APIService {
         }
 
         const requestPromise = (async () => {
+            const requestStarted = performance.now();
             try {
                 const response = await fetch(url, config);
+                window.dispatchEvent(new CustomEvent('hutta:api-performance', { detail: {
+                    endpoint: endpoint.split('?')[0], method, status: response.status,
+                    durationMs: Math.round((performance.now() - requestStarted) * 10) / 10,
+                    serverTiming: response.headers.get('server-timing') || ''
+                } }));
                 
                 // Handle non-JSON responses
                 const contentType = response.headers.get('content-type');
@@ -143,10 +151,9 @@ class APIService {
                 
                 // Cache successful GET requests
                 if (cacheableGet) {
-                    this.requestCache.set(cacheKey, { data, timestamp: Date.now() });
+                    this.requestCache.set(responseCacheKey, { data, timestamp: Date.now() });
                 } else {
-                    // Clear cache on mutations
-                    this.clearCache();
+                    this.invalidateForEndpoint(endpoint);
                 }
                 
                 return data;
@@ -175,6 +182,18 @@ class APIService {
 
     clearCache() {
         this.requestCache.clear();
+        sessionStorage.removeItem('dashboardCache');
+    }
+
+    invalidateForEndpoint(endpoint) {
+        const resource = String(endpoint || '').split('?')[0].split('/').filter(Boolean)[0] || '';
+        const related = new Set([resource, 'dashboard']);
+        if (resource === 'pipeline-records' || resource === 'stages') related.add('orders');
+        if (resource === 'orders') { related.add('customers'); related.add('payments'); related.add('pipeline-records'); }
+        if (resource === 'incoming-quotes' || resource === 'outgoing-quotes' || resource === 'scheduling' || resource === 'intakes') related.add('orders');
+        for (const key of this.requestCache.keys()) {
+            if ([...related].some(tag => key.includes(`/${tag}`))) this.requestCache.delete(key);
+        }
         sessionStorage.removeItem('dashboardCache');
     }
 
@@ -271,21 +290,51 @@ class APIService {
 
     // Orders
     async getOrders() {
-        const raw = await this.request('/orders?limit=5000');
+        const raw = await this.request('/orders/list?limit=100');
         return this.unwrapListPayload(raw);
     }
 
     async getOrdersFresh() {
-        const cacheKey = 'GET:/orders?limit=5000';
+        const cacheKey = 'GET:/orders/list?limit=100';
         this.requestCache.delete(cacheKey);
         this.requestCache.delete('GET:/orders');
-        const raw = await this.request('/orders?limit=5000');
+        const raw = await this.request('/orders/list?limit=100');
         return this.unwrapListPayload(raw);
     }
 
+    async getOrderList(params = {}, options = {}) {
+        const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'all')).toString();
+        return this.request(`/orders/list${query ? `?${query}` : ''}`, options);
+    }
+
+    async getCustomerList(params = {}, options = {}) {
+        const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'all')).toString();
+        return this.request(`/customers/list${query ? `?${query}` : ''}`, options);
+    }
+
+    async getVendorList(params = {}, options = {}) {
+        const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'all')).toString();
+        return this.request(`/vendors/list${query ? `?${query}` : ''}`, options);
+    }
+
+    async getEmployeeList(params = {}, options = {}) {
+        const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'all')).toString();
+        return this.request(`/employees/list${query ? `?${query}` : ''}`, options);
+    }
+
+    async getPaymentList(params = {}) {
+        const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'all')).toString();
+        return this.request(`/payments/list${query ? `?${query}` : ''}`);
+    }
+
+    async lookupCustomers(q = '', limit = 20) { return this.request(`/lookups/customers?q=${encodeURIComponent(q)}&limit=${limit}`); }
+    async lookupVendors(q = '', limit = 20) { return this.request(`/lookups/vendors?q=${encodeURIComponent(q)}&limit=${limit}`); }
+    async lookupEmployees(q = '', limit = 20) { return this.request(`/lookups/employees?q=${encodeURIComponent(q)}&limit=${limit}`); }
+    async lookupOrders(q = '', limit = 20) { return this.request(`/lookups/orders?q=${encodeURIComponent(q)}&limit=${limit}`); }
+
     async getWebsiteIntakes() {
-        this.requestCache.delete('GET:/intakes?limit=500');
-        return this.request('/intakes?limit=500');
+        this.requestCache.delete('GET:/intakes?limit=100');
+        return this.request('/intakes?limit=100');
     }
 
     async resolveWebsiteIntakeReview(intakeId, customerId) {
@@ -667,7 +716,7 @@ class APIService {
 
     // Customers
     async getCustomers() {
-        const raw = await this.request('/customers?limit=5000');
+        const raw = await this.request('/customers/list?limit=100');
         return this.unwrapListPayload(raw);
     }
 
@@ -703,7 +752,8 @@ class APIService {
 
     // Vendors
     async getVendors() {
-        return this.request('/vendors');
+        const raw = await this.request('/vendors/list?limit=100');
+        return this.unwrapListPayload(raw);
     }
 
     async getVendor(id) {
@@ -765,7 +815,7 @@ class APIService {
 
     // Payments
     async getPayments() {
-        const raw = await this.request('/payments?limit=5000');
+        const raw = await this.request('/payments/list?limit=100');
         return this.unwrapListPayload(raw);
     }
 
@@ -900,7 +950,8 @@ class APIService {
 
     // Employees
     async getEmployees() {
-        return this.request('/employees');
+        const raw = await this.request('/employees/list?limit=100');
+        return this.unwrapListPayload(raw);
     }
 
     async getEmployee(id) {

@@ -12,6 +12,7 @@ const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
+const { prefixRegex, cursorFilter, parseLimit, pagePayload } = require('../utils/cursorPagination');
 const router = express.Router();
 
 const STATS_CACHE_KEY = 'orders:stats:v2';
@@ -115,9 +116,54 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// Scalable summary list. Kept separate from the legacy collection endpoint during rollout.
+router.get('/list', authenticateToken, async (req, res) => {
+  try {
+    const PipelineRecord = require('../models/PipelineRecord');
+    const Stage = require('../models/Stage');
+    const limit = parseLimit(req.query.limit);
+    const noBidStages = await Stage.find({ isNoBid: true }).select('_id').lean();
+    const noBidRows = noBidStages.length
+      ? await PipelineRecord.find({ stageId: { $in: noBidStages.map(s => s._id) } }).select('orderId').lean()
+      : [];
+    const query = { _id: { $nin: noBidRows.map(row => row.orderId).filter(Boolean) } };
+    if (req.query.status) query.status = String(req.query.status);
+    if (req.query.workflowStatus) query.workflowStatus = String(req.query.workflowStatus);
+    if (req.query.pricingStatus) query.pricingStatus = String(req.query.pricingStatus);
+    if (req.query.priority) query.priority = String(req.query.priority);
+    if (req.query.type) query.orderType = String(req.query.type);
+    if (req.query.dateFrom || req.query.dateTo) {
+      query.createdAt = {};
+      if (req.query.dateFrom) query.createdAt.$gte = parseMdtDateInput(req.query.dateFrom);
+      if (req.query.dateTo) { const end = parseMdtDateInput(req.query.dateTo); end.setDate(end.getDate() + 1); query.createdAt.$lt = end; }
+    }
+    const search = prefixRegex(req.query.search);
+    if (search) query.$or = [
+      { normalizedOrderId: search }, { normalizedRequestReference: search },
+      { normalizedCustomerName: search }, { normalizedCustomerEmail: search },
+      { normalizedCustomerPhone: search }
+    ];
+    const after = cursorFilter(req.query.cursor);
+    const finalQuery = after ? { $and: [query, after] } : query;
+    const [total, rows] = await Promise.all([
+      Order.countDocuments(query),
+      Order.find(finalQuery)
+        .select('orderId requestReference customer service status priority orderType amount pricingStatus workflowStatus vendor employee pipelineStage createdAt scheduledStart scheduledEnd startDate scheduleDate vendorCost processingFee profit source requiresIntakeReview missingData')
+        .populate('vendor', 'name category').populate('employee', 'name')
+        .sort({ createdAt: -1, _id: -1 }).limit(limit + 1).lean()
+    ]);
+    res.json(pagePayload(rows, total, limit));
+  } catch (error) { res.status(500).json({ message: 'Server error', error: error.message }); }
+});
+
 // Get all orders (paginated body; avoids N+1 pipeline queries)
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    if (req.query.legacyFull !== '1') {
+      const params = new URLSearchParams(req.query);
+      params.delete('legacyFull'); params.set('limit', String(Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50))));
+      return res.redirect(307, `/api/orders/list?${params.toString()}`);
+    }
     const Stage = require('../models/Stage');
     const PipelineRecord = require('../models/PipelineRecord');
 
@@ -204,7 +250,7 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(10000, Math.max(1, parseInt(req.query.limit, 10) || 5000));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
     const total = visibleOrders.length;
     const skip = (page - 1) * limit;
     const data = visibleOrders.slice(skip, skip + limit);
