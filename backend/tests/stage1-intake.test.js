@@ -8,6 +8,7 @@ const Order = require('../models/Order');
 const {
   MAX_BODY_BYTES,
   SIGNATURE_TOLERANCE_MS,
+  isForminatorConnectionProbe,
   mapForminatorPayload,
   safeSecretEqual,
   signatureFor,
@@ -42,6 +43,11 @@ test('Forminator webhook key uses constant-time equality semantics', () => {
   assert.equal(safeSecretEqual('separate-long-secret', 'separate-long-secret'), true);
   assert.equal(safeSecretEqual('wrong', 'separate-long-secret'), false);
   assert.equal(safeSecretEqual('', ''), false);
+});
+
+test('Forminator connection probes are acknowledged without treating partial submissions as probes', () => {
+  assert.equal(isForminatorConnectionProbe(mapForminatorPayload({}, Buffer.from('{}'))), true);
+  assert.equal(isForminatorConnectionProbe(mapForminatorPayload({ 'name-1': 'Jane' })), false);
 });
 
 test('website payload validation normalizes customer data and keeps consent separate', () => {

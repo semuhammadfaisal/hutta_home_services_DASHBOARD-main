@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const {
   MAX_BODY_BYTES,
+  isForminatorConnectionProbe,
   mapForminatorPayload,
   processWebsiteRequest,
   safeSecretEqual,
@@ -60,6 +61,9 @@ router.post('/website-requests/forminator', limiter, async (req, res) => {
     }
 
     const mapped = mapForminatorPayload(req.body, rawBody);
+    if (isForminatorConnectionProbe(mapped)) {
+      return res.status(200).json({ success: true, status: 'ready' });
+    }
     const { payload, errors } = validatePayload(mapped);
     if (errors.length) return res.status(400).json({ message: 'Invalid Forminator request', errors });
 

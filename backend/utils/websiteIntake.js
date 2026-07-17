@@ -100,6 +100,10 @@ function mapForminatorPayload(body, rawBody = Buffer.alloc(0), now = new Date())
   };
 }
 
+function isForminatorConnectionProbe(mapped) {
+  return !mapped?.name && !mapped?.phone && !mapped?.email && !mapped?.serviceDetails;
+}
+
 function parseOperationsRecipients(value = process.env.INTAKE_NOTIFICATION_EMAILS) {
   return [...new Set(String(value || '')
     .split(',')
@@ -337,6 +341,7 @@ module.exports = {
   normalizePhone,
   parseOperationsRecipients,
   processWebsiteRequest,
+  isForminatorConnectionProbe,
   mapForminatorPayload,
   safeSecretEqual,
   signatureFor,
