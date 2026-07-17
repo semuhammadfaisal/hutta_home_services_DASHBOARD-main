@@ -4,6 +4,8 @@ const IntakeSubmission = require('../models/IntakeSubmission');
 const Notification = require('../models/Notification');
 const QuoteInvitation = require('../models/QuoteInvitation');
 const OutgoingQuote = require('../models/OutgoingQuote');
+const JobSchedule = require('../models/JobSchedule');
+const VendorWorkOrder = require('../models/VendorWorkOrder');
 const User = require('../models/User');
 const {
   sendVendorQuoteInvitationEmail,
@@ -12,11 +14,17 @@ const {
   sendCustomerOutgoingQuoteEmail,
   sendCustomerQuoteDecisionEmail,
   sendStaffQuoteDecisionAlertEmail,
+  sendVendorScheduleProposalEmail,
+  sendCustomerScheduleEmail,
+  sendVendorScheduleDecisionEmail,
+  sendStaffScheduleAlertEmail,
   sendWebsiteOperationsAlertEmail,
   sendWebsiteRequestConfirmationEmail
 } = require('./emailService');
 const { decryptToken, hashToken } = require('./incomingQuotes');
 const { decryptToken: decryptOutgoingToken, hashToken: hashOutgoingToken } = require('./outgoingQuotes');
+const { decryptToken: decryptScheduleToken, hashToken: hashScheduleToken } = require('./scheduling');
+const { createVendorWorkOrderPdf } = require('./workOrderPdf');
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MS = 2 * 60 * 1000;
@@ -34,6 +42,7 @@ const STAGE4_TYPES = new Set([
   'customer_quote_change_confirmation',
   'staff_quote_change_alert'
 ]);
+const STAGE5_TYPES = new Set(['vendor_schedule_proposal', 'vendor_schedule_accepted_confirmation', 'customer_schedule_confirmation', 'staff_schedule_accepted_alert', 'vendor_schedule_change_confirmation', 'staff_schedule_change_alert']);
 
 let timer = null;
 let polling = false;
@@ -134,12 +143,12 @@ async function alertPermanentFailure(message, category) {
   const kind = intake ? (message.type === 'website_customer_confirmation' ? 'customer confirmation' : 'operations alert') : message.type.replaceAll('_', ' ');
   await Notification.insertMany(users.map(user => ({
     userId: user._id,
-    title: intake ? 'Website request email failed' : outgoing ? 'Customer quote email failed' : 'Vendor quote email failed',
+    title: intake ? 'Website request email failed' : STAGE5_TYPES.has(message.type) ? 'Scheduling email failed' : outgoing ? 'Customer quote email failed' : 'Vendor quote email failed',
     message: `${kind} for ${message.payload.requestReference || message.payload.quoteReference} failed after ${MAX_ATTEMPTS} attempts.`,
     type: 'error',
     priority: 'high',
-    actionUrl: intake ? '#workflow-center' : STAGE4_TYPES.has(message.type) ? '#customer-approvals' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
-    metadata: { intakeSubmissionId: message.intakeSubmissionId, incomingQuoteId: message.incomingQuoteId, quoteInvitationId: message.quoteInvitationId, outgoingQuoteId: message.outgoingQuoteId, orderId: message.orderId, emailType: message.type, category }
+    actionUrl: intake ? '#workflow-center' : STAGE5_TYPES.has(message.type) ? '#scheduling' : STAGE4_TYPES.has(message.type) ? '#customer-approvals' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
+    metadata: { intakeSubmissionId: message.intakeSubmissionId, incomingQuoteId: message.incomingQuoteId, quoteInvitationId: message.quoteInvitationId, outgoingQuoteId: message.outgoingQuoteId, jobScheduleId: message.jobScheduleId, vendorWorkOrderId: message.vendorWorkOrderId, orderId: message.orderId, emailType: message.type, category }
   })));
 }
 
@@ -155,16 +164,36 @@ async function deliverMessage(message) {
     customer_quote_approval_confirmation: sendCustomerQuoteDecisionEmail,
     staff_quote_approval_alert: sendStaffQuoteDecisionAlertEmail,
     customer_quote_change_confirmation: sendCustomerQuoteDecisionEmail,
-    staff_quote_change_alert: sendStaffQuoteDecisionAlertEmail
+    staff_quote_change_alert: sendStaffQuoteDecisionAlertEmail,
+    vendor_schedule_proposal: sendVendorScheduleProposalEmail,
+    vendor_schedule_accepted_confirmation: sendVendorScheduleDecisionEmail,
+    customer_schedule_confirmation: sendCustomerScheduleEmail,
+    staff_schedule_accepted_alert: sendStaffScheduleAlertEmail,
+    vendor_schedule_change_confirmation: sendVendorScheduleDecisionEmail,
+    staff_schedule_change_alert: sendStaffScheduleAlertEmail
   };
   const sender = senders[message.type];
   if (!sender) throw new Error(`Unsupported email outbox type: ${message.type}`);
   try {
     const payload = { ...message.payload };
     if (payload.encryptedToken) {
-      payload.token = OUTGOING_TOKEN_TYPES.has(message.type) ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
+      payload.token = message.type === 'vendor_schedule_proposal' ? decryptScheduleToken(payload.encryptedToken) : OUTGOING_TOKEN_TYPES.has(message.type) ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
       delete payload.encryptedToken;
     }
+    if (message.type === 'vendor_schedule_proposal') {
+      const activeSchedule = await JobSchedule.exists({ _id: message.jobScheduleId, publicTokenHash: hashScheduleToken(payload.token), status: 'pending_vendor', tokenExpiresAt: { $gt: new Date() } });
+      if (!activeSchedule) { await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: 'schedule_link_inactive' } }); return; }
+    }
+    if (message.type === 'vendor_schedule_accepted_confirmation' && message.vendorWorkOrderId) {
+      const workOrder = await VendorWorkOrder.findById(message.vendorWorkOrderId).lean();
+      if (!workOrder) throw new Error('Vendor work order is missing');
+      const pdf = await createVendorWorkOrderPdf(workOrder);
+      payload.attachments = [{ filename: `${workOrder.workOrderReference}.pdf`, content: pdf }];
+      payload.decision = 'accepted';
+    }
+    if (message.type === 'vendor_schedule_change_confirmation') payload.decision = 'changes_requested';
+    if (message.type === 'staff_schedule_accepted_alert') payload.decision = 'accepted';
+    if (message.type === 'staff_schedule_change_alert') payload.decision = 'changes_requested';
     if (OUTGOING_TOKEN_TYPES.has(message.type)) {
       const activeQuote = await OutgoingQuote.findOne({
         _id: message.outgoingQuoteId,

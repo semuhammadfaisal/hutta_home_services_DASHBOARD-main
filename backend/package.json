@@ -18,6 +18,8 @@
     "migrate:stage3-outgoing-quotes:apply": "node migrate-stage3-outgoing-quotes.js --apply",
     "migrate:stage4-customer-approvals": "node migrate-stage4-customer-approvals.js",
     "migrate:stage4-customer-approvals:apply": "node migrate-stage4-customer-approvals.js --apply",
+    "migrate:stage5-scheduling": "node migrate-stage5-scheduling.js",
+    "migrate:stage5-scheduling:apply": "node migrate-stage5-scheduling.js --apply",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {

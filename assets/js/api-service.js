@@ -135,7 +135,10 @@ class APIService {
                         errorMessage = `HTTP error! status: ${response.status}`;
                     }
                     
-                    throw new Error(errorMessage);
+                    const requestError = new Error(errorMessage);
+                    requestError.data = data;
+                    requestError.status = response.status;
+                    throw requestError;
                 }
                 
                 // Cache successful GET requests
@@ -394,6 +397,11 @@ class APIService {
         return this.request(`/outgoing-quotes/approvals/${orderId}`);
     }
     async retryCustomerApprovalEmail(messageId) { return this.request(`/outgoing-quotes/approvals/outbox/${messageId}/retry`, { method: 'POST', body: '{}' }); }
+    async getSchedulingOrders() { this.requestCache.delete('GET:/scheduling/orders'); return this.request('/scheduling/orders'); }
+    async getSchedulingWorkspace(orderId) { this.requestCache.delete(`GET:/scheduling/orders/${orderId}`); return this.request(`/scheduling/orders/${orderId}`); }
+    async sendScheduleProposal(orderId, payload) { return this.request(`/scheduling/orders/${orderId}/proposals`, { method: 'POST', body: JSON.stringify(payload) }); }
+    async revokeSchedule(scheduleId) { return this.request(`/scheduling/${scheduleId}/revoke`, { method: 'POST', body: '{}' }); }
+    async retryScheduleEmail(id) { return this.request(`/scheduling/outbox/${id}/retry`, { method: 'POST', body: '{}' }); }
 
     async getPaymentsCollected() {
         // Always fresh - bypass cache

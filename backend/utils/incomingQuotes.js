@@ -146,5 +146,6 @@ module.exports = {
   orderReadyForQuotes,
   parseQuotePayload,
   vendorPrimaryEmail,
+  vendorPrimaryPhone,
   vendorSnapshot
 };

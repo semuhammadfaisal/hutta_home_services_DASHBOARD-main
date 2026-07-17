@@ -121,6 +121,8 @@ class DashboardManager {
                     window.loadOutgoingQuotes?.();
                 } else if (targetSection === 'customer-approvals') {
                     window.loadCustomerApprovals?.();
+                } else if (targetSection === 'scheduling') {
+                    window.loadScheduling?.();
                 } else if (targetSection === 'customers') {
                     loadCustomersSection();
                 } else if (targetSection === 'vendors') {
@@ -3175,6 +3177,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
         document.querySelector('[data-section="customer-approvals"]')?.parentElement?.classList.add('active');
         window.loadCustomerApprovals?.();
+    }
+    if (window.location.hash === '#scheduling') {
+        window.dashboard.showSection('scheduling');
+        document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+        document.querySelector('[data-section="scheduling"]')?.parentElement?.classList.add('active');
+        window.loadScheduling?.();
     }
     
     // Initialize additional features

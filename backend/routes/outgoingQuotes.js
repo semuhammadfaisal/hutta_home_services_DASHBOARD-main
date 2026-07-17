@@ -248,7 +248,7 @@ router.put('/settings', checkRole(['admin']), async (req, res, next) => {
 
 router.get('/approvals', async (_req, res, next) => {
   try {
-    const orders = await Order.find({ workflowStatus: { $in: ['quote_sent', 'quote_changes_requested', 'customer_approved'] } })
+    const orders = await Order.find({ $or: [{ workflowStatus: { $in: ['quote_sent', 'quote_changes_requested', 'customer_approved'] } }, { approvedOutgoingQuoteId: { $exists: true, $ne: null } }] })
       .select('orderId requestReference customer service amount workflowStatus currentOutgoingQuoteId approvedOutgoingQuoteId customerApprovedAt updatedAt')
       .sort({ updatedAt: -1 }).lean();
     const quoteIds = orders.map(order => order.currentOutgoingQuoteId).filter(Boolean);

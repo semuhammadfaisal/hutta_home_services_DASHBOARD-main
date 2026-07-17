@@ -14,7 +14,13 @@ const emailOutboxSchema = new mongoose.Schema({
       'customer_quote_approval_confirmation',
       'staff_quote_approval_alert',
       'customer_quote_change_confirmation',
-      'staff_quote_change_alert'
+      'staff_quote_change_alert',
+      'vendor_schedule_proposal',
+      'vendor_schedule_accepted_confirmation',
+      'customer_schedule_confirmation',
+      'staff_schedule_accepted_alert',
+      'vendor_schedule_change_confirmation',
+      'staff_schedule_change_alert'
     ],
     required: true
   },
@@ -26,6 +32,8 @@ const emailOutboxSchema = new mongoose.Schema({
   incomingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'IncomingQuote' },
   quoteInvitationId: { type: mongoose.Schema.Types.ObjectId, ref: 'QuoteInvitation' },
   outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
+  jobScheduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobSchedule' },
+  vendorWorkOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorWorkOrder' },
   status: {
     type: String,
     enum: ['pending', 'processing', 'sent', 'retry_scheduled', 'permanently_failed', 'cancelled'],
@@ -47,5 +55,6 @@ emailOutboxSchema.index({ intakeSubmissionId: 1, type: 1 });
 emailOutboxSchema.index({ incomingQuoteId: 1, type: 1 });
 emailOutboxSchema.index({ quoteInvitationId: 1, type: 1 });
 emailOutboxSchema.index({ outgoingQuoteId: 1, type: 1 });
+emailOutboxSchema.index({ jobScheduleId: 1, type: 1 });
 
 module.exports = mongoose.model('EmailOutbox', emailOutboxSchema);

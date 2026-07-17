@@ -89,6 +89,10 @@ function formatCalendarDate(value) {
         timeZone: 'UTC'
     });
 }
+function formatCalendarTime(value) {
+    if (!value) return '';
+    return new Date(value).toLocaleTimeString('en-US', { timeZone: getCalendarTimezone(), hour: 'numeric', minute: '2-digit' });
+}
 
 function getEventsForDate(year, month, day) {
     const events = [];
@@ -99,28 +103,29 @@ function getEventsForDate(year, month, day) {
         const isRecurring = order.orderType === 'recurring';
         if (isRecurring) return;
 
-        const orderScheduleDate = order.scheduleDate || order.startDate;
+        const orderScheduleDate = order.scheduledStart || order.scheduleDate || order.startDate;
 
         if (orderScheduleDate) {
             const startYmd = getCalendarFieldYmd(orderScheduleDate);
             if (sameYmd(startYmd, year, month, day)) {
                 events.push({
                     type: 'order',
-                    title: order.orderId || order.service || 'Order',
+                    title: `${order.scheduledStart ? `${formatCalendarTime(order.scheduledStart)} ` : ''}${order.orderId || order.service || 'Order'}`,
                     id: order._id,
                     isEndDate: false
                 });
             }
         }
 
-        if (order.endDate) {
-            const endYmd = getCalendarFieldYmd(order.endDate);
+        const orderEndDate = order.scheduledEnd || order.endDate;
+        if (orderEndDate) {
+            const endYmd = getCalendarFieldYmd(orderEndDate);
             if (sameYmd(endYmd, year, month, day)) {
                 const startYmd = orderScheduleDate ? getCalendarFieldYmd(orderScheduleDate) : null;
                 if (!sameYmd(startYmd, year, month, day)) {
                     events.push({
                         type: 'order',
-                        title: order.orderId || order.service || 'Order',
+                        title: `${order.scheduledEnd ? `${formatCalendarTime(order.scheduledEnd)} ` : ''}${order.orderId || order.service || 'Order'}`,
                         id: order._id,
                         isEndDate: true
                     });
@@ -384,8 +389,8 @@ async function showEventDetail(event) {
                     <div class="value">$${data.amount?.toLocaleString() || '0'}</div>
                 </div>
                 <div class="detail-item">
-                    <label>Schedule Date</label>
-                    <div class="value">${formatCalendarDate(data.scheduleDate || data.startDate)}</div>
+                    <label>Confirmed Schedule</label>
+                    <div class="value">${data.scheduledStart ? `${formatCalendarDate(data.scheduledStart)} ${formatCalendarTime(data.scheduledStart)} — ${formatCalendarDate(data.scheduledEnd)} ${formatCalendarTime(data.scheduledEnd)} Arizona time` : formatCalendarDate(data.scheduleDate || data.startDate)}</div>
                 </div>
                 <div class="detail-item">
                     <label>Description</label>

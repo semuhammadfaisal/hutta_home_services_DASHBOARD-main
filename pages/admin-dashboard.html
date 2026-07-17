@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="../assets/css/incoming-quotes.css">
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
+    <link rel="stylesheet" href="../assets/css/scheduling.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -151,6 +152,7 @@
                     <span class="workflow-nav-badge" id="customerApprovalsNavBadge" hidden>0</span>
                 </a>
             </li>
+            <li class="menu-item"><a href="#scheduling" data-section="scheduling"><i class="fas fa-calendar-check"></i><span>Scheduling</span><span class="workflow-nav-badge" id="schedulingNavBadge" hidden>0</span></a></li>
             <li class="sidebar-section-label" aria-hidden="true">Operations</li>
             <li class="menu-item">
                 <a href="#orders" data-section="orders">
@@ -913,6 +915,16 @@
             <section id="customerApprovalWorkspace" class="approval-workspace" hidden>
                 <div class="approval-workspace-head"><div><p class="workflow-eyebrow">Decision audit</p><h2 id="customerApprovalWorkspaceTitle">Customer decision</h2><p id="customerApprovalWorkspaceSummary"></p></div><button class="btn-secondary" type="button" onclick="closeCustomerApprovalWorkspace()">Close</button></div>
                 <div id="customerApprovalDetails"></div>
+            </section>
+        </section>
+
+        <section id="scheduling" class="content-section scheduling-section">
+            <div class="page-header workflow-header"><div><p class="workflow-eyebrow">Stage 5 &middot; Workflow Center</p><h1>Scheduling</h1><p>Propose, confirm, and audit vendor-approved job schedules.</p></div><button class="btn-secondary" onclick="loadScheduling()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+            <div class="workflow-summary scheduling-summary"><div><strong id="scheduleReadyCount">0</strong><span>Ready to schedule</span></div><div><strong id="schedulePendingCount">0</strong><span>Awaiting vendor</span></div><div><strong id="scheduleChangesCount">0</strong><span>Changes requested</span></div><div><strong id="scheduleConfirmedCount">0</strong><span>Confirmed</span></div></div>
+            <div id="schedulingOrderList" class="scheduling-list"><div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading schedules&hellip;</p></div></div>
+            <section id="schedulingWorkspace" class="scheduling-workspace" hidden><div class="scheduling-head"><div><p class="workflow-eyebrow">Schedule workspace</p><h2 id="schedulingWorkspaceTitle"></h2><p id="schedulingWorkspaceSummary"></p></div><button class="btn-secondary" onclick="closeSchedulingWorkspace()">Close</button></div>
+                <form id="scheduleProposalForm" class="scheduling-panel schedule-grid"><h3 class="full">Send vendor schedule proposal</h3><label>Arizona start<input id="scheduleStartInput" type="datetime-local" required></label><label>Arizona end<input id="scheduleEndInput" type="datetime-local" required></label><label class="full">Access instructions<textarea id="scheduleAccessInput" rows="3" maxlength="5000"></textarea></label><label class="full">Internal notes <small>Never sent externally</small><textarea id="scheduleInternalNotes" rows="3" maxlength="5000"></textarea></label><label id="scheduleConflictAckLabel" class="full conflict-ack" hidden><input id="scheduleConflictAck" type="checkbox"> I reviewed the vendor overlap and authorize this proposal.</label><div id="scheduleConflictBox" class="full schedule-conflict" hidden></div><div class="full"><button class="btn-primary" type="submit">Send Secure Proposal</button></div></form>
+                <section class="scheduling-panel"><h3>Schedule revisions and decisions</h3><div id="scheduleHistory"></div></section><section class="scheduling-panel"><h3>Email delivery</h3><div id="scheduleEmails"></div></section>
             </section>
         </section>
 
@@ -4390,6 +4402,7 @@
     <script src="../assets/js/incoming-quotes.js"></script>
     <script src="../assets/js/outgoing-quotes.js"></script>
     <script src="../assets/js/customer-approvals.js"></script>
+    <script src="../assets/js/scheduling.js"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>
