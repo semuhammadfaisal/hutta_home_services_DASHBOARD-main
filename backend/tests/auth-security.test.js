@@ -83,18 +83,20 @@ test('idle and absolute session deadlines fail closed', () => {
   assert.equal(ABSOLUTE_TIMEOUT_MS, 8 * 60 * 60 * 1000);
 });
 
-test('CSRF comparisons are timing-safe and cross-origin requests are rejected', () => {
+test('CSRF comparisons trust the deployed Render origin and reject unconfigured origins', () => {
   const auth = require('../middleware/auth');
+  const { CANONICAL_PUBLIC_APP_URL } = require('../utils/publicAppUrl');
   assert.equal(auth.sameValue('same-token', 'same-token'), true);
   assert.equal(auth.sameValue('same-token', 'different-token'), false);
 
-  const request = origin => ({
-    protocol: 'https',
+  const request = (origin, protocol = 'https', host = 'dashboard.example.com') => ({
+    protocol,
     get(name) {
-      const headers = { origin, referer: undefined, host: 'dashboard.example.com' };
+      const headers = { origin, referer: undefined, host };
       return headers[name];
     }
   });
   assert.equal(auth.isSameOrigin(request('https://dashboard.example.com')), true);
+  assert.equal(auth.isSameOrigin(request(CANONICAL_PUBLIC_APP_URL, 'http', 'internal-render-host')), true);
   assert.equal(auth.isSameOrigin(request('https://evil.example.com')), false);
 });

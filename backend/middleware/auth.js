@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { clearSessionCookie, effectiveExpiry, resolveSession } = require('../utils/authSessions');
+const { CANONICAL_PUBLIC_APP_URL, getPublicAppUrl } = require('../utils/publicAppUrl');
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -29,13 +30,20 @@ function isSameOrigin(req) {
   if (!source) return true;
   try {
     const expected = `${req.protocol}://${req.get('host')}`;
+    const trustedOrigins = new Set([expected, CANONICAL_PUBLIC_APP_URL]);
+    try {
+      trustedOrigins.add(getPublicAppUrl());
+    } catch (_error) {
+      // Server startup validates this setting; keep request checks fail-closed.
+    }
     const allowedDevelopmentOrigins = new Set([
       'http://localhost:3000',
       'http://localhost:5500',
       'http://127.0.0.1:5500'
     ]);
     const origin = new URL(source).origin;
-    return origin === expected || (process.env.NODE_ENV !== 'production' && allowedDevelopmentOrigins.has(origin));
+    return trustedOrigins.has(origin)
+      || (process.env.NODE_ENV !== 'production' && allowedDevelopmentOrigins.has(origin));
   } catch (_error) {
     return false;
   }
