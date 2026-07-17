@@ -115,6 +115,10 @@ class DashboardManager {
                     loadOrdersSection();
                 } else if (targetSection === 'workflow-center') {
                     loadWorkflowCenter();
+                } else if (targetSection === 'incoming-quotes') {
+                    window.loadIncomingQuotes?.();
+                } else if (targetSection === 'outgoing-quotes') {
+                    window.loadOutgoingQuotes?.();
                 } else if (targetSection === 'customers') {
                     loadCustomersSection();
                 } else if (targetSection === 'vendors') {
@@ -3151,6 +3155,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
         document.querySelector('[data-section="workflow-center"]')?.parentElement?.classList.add('active');
         loadWorkflowCenter();
+    }
+    if (window.location.hash === '#incoming-quotes') {
+        window.dashboard.showSection('incoming-quotes');
+        document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+        document.querySelector('[data-section="incoming-quotes"]')?.parentElement?.classList.add('active');
+        window.loadIncomingQuotes?.();
+    }
+    if (window.location.hash === '#outgoing-quotes') {
+        window.dashboard.showSection('outgoing-quotes');
+        document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+        document.querySelector('[data-section="outgoing-quotes"]')?.parentElement?.classList.add('active');
+        window.loadOutgoingQuotes?.();
     }
     
     // Initialize additional features
@@ -7373,9 +7389,11 @@ const VENDOR_COMPLIANCE_FIELDS = [
     { key: 'primaryOwnerName', id: 'vendorPrimaryOwnerName', label: 'Primary Owner / Operator', type: 'text' },
     { key: 'businessAddress', id: 'vendorBusinessAddress', label: 'Business Address', type: 'text' },
     { key: 'einTaxId', id: 'vendorEinTaxId', label: 'EIN / Tax ID Number', type: 'text' },
+    { key: 'contractorLicenseNumber', id: 'vendorContractorLicenseNumber', label: 'Contractor License Number', type: 'text' },
     { key: 'rocLicenseNumber', id: 'vendorRocLicenseNumber', label: 'ROC License Number', type: 'text' },
     { key: 'rocLicenseTypeClassification', id: 'vendorRocLicenseTypeClassification', label: 'ROC License Type / Classification', type: 'text' },
-    { key: 'rocLicenseExpirationDate', id: 'vendorRocLicenseExpirationDate', label: 'ROC License Expiration Date', type: 'date' }
+    { key: 'rocLicenseExpirationDate', id: 'vendorRocLicenseExpirationDate', label: 'ROC License Expiration Date', type: 'date' },
+    { key: 'insuranceExpirationDate', id: 'vendorInsuranceExpirationDate', label: 'Insurance Expiration Date', type: 'date' }
 ];
 
 const VENDOR_COMPLIANCE_DOCUMENT_FIELDS = [

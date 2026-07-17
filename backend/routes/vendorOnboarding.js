@@ -461,9 +461,11 @@ router.get('/public/form', publicLimiter, tokenLimiter, findPublicInvitation, as
         primaryOwnerName: vendor.primaryOwnerName,
         businessAddress: vendor.businessAddress,
         einTaxIdMasked: vendor.einTaxIdLast4 ? `***-**-${vendor.einTaxIdLast4}` : '',
+        contractorLicenseNumber: vendor.contractorLicenseNumber,
         rocLicenseNumber: vendor.rocLicenseNumber,
         rocLicenseTypeClassification: vendor.rocLicenseTypeClassification,
         rocLicenseExpirationDate: vendor.rocLicenseExpirationDate,
+        insuranceExpirationDate: vendor.insuranceExpirationDate,
         requestedCategory: vendor.requestedCategory,
         documents: (vendor.documents || []).map(document => ({
           documentId: document.documentId,
@@ -491,6 +493,9 @@ router.post('/public/form', publicLimiter, tokenLimiter, findPublicInvitation, u
     if (!allowedEntityTypes.has(String(req.body.businessEntityType || ''))) return res.status(400).json({ message: 'Invalid business entity type' });
     if (req.body.rocLicenseExpirationDate && Number.isNaN(Date.parse(req.body.rocLicenseExpirationDate))) {
       return res.status(400).json({ message: 'Invalid ROC license expiration date' });
+    }
+    if (req.body.insuranceExpirationDate && Number.isNaN(Date.parse(req.body.insuranceExpirationDate))) {
+      return res.status(400).json({ message: 'Invalid insurance expiration date' });
     }
 
     const files = allFiles(req);
@@ -535,9 +540,11 @@ router.post('/public/form', publicLimiter, tokenLimiter, findPublicInvitation, u
       businessEntityType: cleanText(req.body.businessEntityType, 80),
       primaryOwnerName: cleanText(req.body.primaryOwnerName, 160),
       businessAddress: cleanText(req.body.businessAddress, 500),
+      contractorLicenseNumber: cleanText(req.body.contractorLicenseNumber, 100),
       rocLicenseNumber: cleanText(req.body.rocLicenseNumber, 100),
       rocLicenseTypeClassification: cleanText(req.body.rocLicenseTypeClassification, 160),
       rocLicenseExpirationDate: req.body.rocLicenseExpirationDate || null,
+      insuranceExpirationDate: req.body.insuranceExpirationDate || null,
       emails: [{ label: 'Primary', address: claimedInvitation.email, isPrimary: true }, ...emails.filter(item => item.address !== claimedInvitation.email)],
       phones: phone ? [{ label: 'Primary', number: phone, isPrimary: true }, ...phones] : phones,
       addresses: address ? [{ label: 'Primary', address, isPrimary: true }, ...addresses] : addresses,

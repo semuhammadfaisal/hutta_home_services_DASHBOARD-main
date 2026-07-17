@@ -125,6 +125,8 @@ try {
   // apply their own authentication before the default-deny boundary below.
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/vendor-onboarding', require('./routes/vendorOnboarding'));
+  app.use('/api/incoming-quotes', require('./routes/incomingQuotes'));
+  app.use('/api/outgoing-quotes', require('./routes/outgoingQuotes'));
   app.use('/api/integrations', require('./routes/websiteRequests'));
 
   // Every API mounted after this line requires an active, approved session.
@@ -209,7 +211,7 @@ app.use('/components', express.static(path.join(__dirname, '../components'), sta
 app.use('/pages', (req, res, next) => {
   const fileName = path.posix.basename(req.path).toLowerCase();
   if (fileName === 'admin-dashboard.html') return serveDashboard(req, res, next);
-  const publicPages = new Set(['login.html', 'signup.html', 'forgot-password.html', 'reset-password.html', 'vendor-onboarding.html']);
+  const publicPages = new Set(['login.html', 'signup.html', 'forgot-password.html', 'reset-password.html', 'vendor-onboarding.html', 'vendor-quote.html', 'customer-quote.html']);
   if (fileName.endsWith('.html') && !publicPages.has(fileName)) return serveProtectedPage(req, res, next);
   return next();
 }, express.static(path.join(__dirname, '../pages'), { ...staticOptions, index: false }));

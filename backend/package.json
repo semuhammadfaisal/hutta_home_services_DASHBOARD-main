@@ -12,6 +12,10 @@
     "migrate:vendor-onboarding:apply": "node migrate-vendor-onboarding.js --apply",
     "migrate:stage1-intake": "node migrate-stage1-intake.js",
     "migrate:stage1-intake:apply": "node migrate-stage1-intake.js --apply",
+    "migrate:stage2-incoming-quotes": "node migrate-stage2-incoming-quotes.js",
+    "migrate:stage2-incoming-quotes:apply": "node migrate-stage2-incoming-quotes.js --apply",
+    "migrate:stage3-outgoing-quotes": "node migrate-stage3-outgoing-quotes.js",
+    "migrate:stage3-outgoing-quotes:apply": "node migrate-stage3-outgoing-quotes.js --apply",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {

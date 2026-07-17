@@ -8,6 +8,7 @@ const Customer = require('../models/Customer');
 const Vendor = require('../models/Vendor');
 const Employee = require('../models/Employee');
 const Order = require('../models/Order');
+const IncomingQuote = require('../models/IncomingQuote');
 const { ensurePersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
 
 const router = express.Router();
@@ -25,6 +26,7 @@ const ALLOWED_MIME_BY_EXTENSION = {
 };
 const ENTITY_CONFIG = {
   order: { Model: Order, roles: ['admin', 'manager', 'account_rep'] },
+  'incoming-quote': { Model: IncomingQuote, roles: ['admin', 'manager', 'account_rep'] },
   customer: { Model: Customer, roles: ['admin', 'manager', 'account_rep'] },
   vendor: { Model: Vendor, roles: ['admin', 'manager'] },
   employee: { Model: Employee, roles: ['admin', 'manager'] }
@@ -198,6 +200,9 @@ router.get('/:entityType/:entityId', async (req, res, next) => {
 router.post('/:entityType/:entityId', handleUpload, async (req, res, next) => {
   const uploaded = [];
   try {
+    if (req.params.entityType === 'incoming-quote' && req.attachmentEntity.status !== 'draft') {
+      return res.status(409).json({ message: 'Submitted quote attachments are immutable; request a revision to change documents' });
+    }
     if (!req.files?.length) return res.status(400).json({ message: 'No files uploaded' });
     const totalBytes = req.files.reduce((sum, file) => sum + Number(file.size || 0), 0);
     if (totalBytes > MAX_BATCH_BYTES) return res.status(413).json({ message: 'Attachment batch exceeds the maximum total size' });
@@ -334,6 +339,9 @@ router.get('/:entityType/:entityId/:documentId', (req, res, next) => streamAttac
 
 router.patch('/:entityType/:entityId/:documentId/archive', async (req, res, next) => {
   try {
+    if (req.params.entityType === 'incoming-quote' && req.attachmentEntity.status !== 'draft') {
+      return res.status(409).json({ message: 'Submitted quote attachments are immutable' });
+    }
     if (ensurePersistentAttachmentMetadata(req.attachmentEntity)) await req.attachmentEntity.save();
     const document = findAttachment(req.attachmentEntity, req.params.documentId);
     if (!document) return res.status(404).json({ message: 'Attachment not found' });
@@ -352,6 +360,9 @@ router.patch('/:entityType/:entityId/:documentId/archive', async (req, res, next
 
 router.patch('/:entityType/:entityId/:documentId/restore', async (req, res, next) => {
   try {
+    if (req.params.entityType === 'incoming-quote' && req.attachmentEntity.status !== 'draft') {
+      return res.status(409).json({ message: 'Submitted quote attachments are immutable' });
+    }
     if (ensurePersistentAttachmentMetadata(req.attachmentEntity)) await req.attachmentEntity.save();
     const document = findAttachment(req.attachmentEntity, req.params.documentId);
     if (!document) return res.status(404).json({ message: 'Attachment not found' });

@@ -345,6 +345,66 @@ const sendWebsiteOperationsAlertEmail = ({ recipients, requestReference, custome
   });
 };
 
+const sendVendorQuoteInvitationEmail = ({ recipients, token, quoteReference, requestReference, vendorName, service, expiresAt, personalMessage, revision = false }) => {
+  const formUrl = buildPublicUrl('/pages/vendor-quote.html', `token=${encodeURIComponent(token)}`);
+  const title = revision ? 'Vendor Quote Revision Requested' : 'Vendor Quote Requested';
+  return deliverEmail({
+    to: recipients,
+    subject: `${revision ? 'Revision requested' : 'Quote requested'}: ${requestReference}`,
+    text: `Hello ${vendorName || 'Vendor'},\n\nHutta Home Services ${revision ? 'requested a revision to' : 'invited you to submit'} quote ${quoteReference} for ${service}.\n${personalMessage ? `\nMessage: ${personalMessage}\n` : ''}\nOpen secure quote form: ${formUrl}\n\nThe one-time link expires ${new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })} Arizona time.`,
+    html: emailShell(title, `
+      <p>Hello ${escapeHtml(vendorName || 'Vendor')},</p>
+      <p>Hutta Home Services ${revision ? 'requested an updated version of' : 'invited you to submit'} a quote for <strong>${escapeHtml(service)}</strong>.</p>
+      <div class="panel"><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Quote:</strong> ${escapeHtml(quoteReference)}</p></div>
+      ${personalMessage ? `<p><strong>Message from our team:</strong><br>${escapeHtml(personalMessage)}</p>` : ''}
+      <p><a class="btn" href="${formUrl}">Open Secure Quote Form</a></p>
+      <div class="notice"><p>This private one-time link expires ${escapeHtml(new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }))} Arizona time. Do not forward it.</p></div>
+    `, { preheader: `${title} for ${requestReference}.` })
+  });
+};
+
+const sendVendorQuoteSubmissionConfirmationEmail = ({ recipients, quoteReference, requestReference, vendorName, total }) => deliverEmail({
+  to: recipients,
+  subject: `Quote received: ${quoteReference}`,
+  text: `Hello ${vendorName || 'Vendor'},\n\nWe received quote ${quoteReference} for ${requestReference}. Total: $${Number(total || 0).toFixed(2)}. Our team will review it.`,
+  html: emailShell('Quote Received', `
+    <p>Hello ${escapeHtml(vendorName || 'Vendor')},</p><p>We received your quote and our team will review it.</p>
+    <div class="panel"><p><strong>Quote:</strong> ${escapeHtml(quoteReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Total:</strong> $${escapeHtml(Number(total || 0).toFixed(2))}</p></div>
+    <p class="muted">No further action is required unless our team requests a revision.</p>
+  `, { preheader: `Your quote ${quoteReference} was received.` })
+});
+
+const sendVendorQuoteStaffAlertEmail = ({ recipients, quoteReference, requestReference, vendorName, total }) => {
+  const workflowUrl = buildPublicUrl('/pages/admin-dashboard.html', 'incoming-quotes');
+  return deliverEmail({
+    to: recipients,
+    subject: `Vendor quote submitted: ${quoteReference}`,
+    text: `${vendorName} submitted ${quoteReference} for ${requestReference}. Total: $${Number(total || 0).toFixed(2)}.\n\nCompare quotes: ${workflowUrl}`,
+    html: emailShell('Vendor Quote Submitted', `
+      <p><strong>${escapeHtml(vendorName)}</strong> submitted a quote.</p>
+      <div class="panel"><p><strong>Quote:</strong> ${escapeHtml(quoteReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Total:</strong> $${escapeHtml(Number(total || 0).toFixed(2))}</p></div>
+      <p><a class="btn" href="${workflowUrl}">Compare Incoming Quotes</a></p>
+    `, { preheader: `${quoteReference} is ready for comparison.` })
+  });
+};
+
+const sendCustomerOutgoingQuoteEmail = ({ recipients, token, customerName, quoteReference, requestReference, customerTotal, validUntil }) => {
+  const quoteUrl = buildPublicUrl('/pages/customer-quote.html', `token=${encodeURIComponent(token)}`);
+  return deliverEmail({
+    to: recipients,
+    subject: `Your Hutta service quote — ${quoteReference}`,
+    text: `Hello ${customerName || 'Customer'},\n\nYour service quote ${quoteReference} for request ${requestReference} is ready. Total: $${Number(customerTotal || 0).toFixed(2)}. Valid through ${new Date(validUntil).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}.\n\nView and download your quote: ${quoteUrl}\n\nCustomer approval will be completed separately. This quote does not confirm scheduling.`,
+    html: emailShell('Your Service Quote Is Ready', `
+      <p>Hello ${escapeHtml(customerName || 'Customer')},</p>
+      <p>Your Hutta Home Services quote is ready to review and download.</p>
+      <div class="panel"><p><strong>Quote:</strong> ${escapeHtml(quoteReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Total:</strong> $${escapeHtml(Number(customerTotal || 0).toFixed(2))}</p><p><strong>Valid through:</strong> ${escapeHtml(new Date(validUntil).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' }))}</p></div>
+      <p><a class="btn" href="${quoteUrl}">View Secure Quote</a></p>
+      <div class="notice"><p>Customer approval will be completed separately. This quote does not confirm scheduling.</p></div>
+      <p class="muted">This private link provides access to your quote. Please do not forward it.</p>
+    `, { preheader: `${quoteReference} is ready to review.` })
+  });
+};
+
 module.exports = {
   deliverEmail,
   getEmailDeliveryStatus,
@@ -356,5 +416,9 @@ module.exports = {
   sendStaffVendorSubmissionEmail,
   sendStaffVendorReviewUpdateEmail,
   sendWebsiteRequestConfirmationEmail,
-  sendWebsiteOperationsAlertEmail
+  sendWebsiteOperationsAlertEmail,
+  sendVendorQuoteInvitationEmail,
+  sendVendorQuoteSubmissionConfirmationEmail,
+  sendVendorQuoteStaffAlertEmail,
+  sendCustomerOutgoingQuoteEmail
 };

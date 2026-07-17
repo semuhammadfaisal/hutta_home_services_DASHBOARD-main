@@ -46,10 +46,12 @@ const vendorSchema = new mongoose.Schema({
   huttasContractSignedDate: Date,
   w9OnFile: { type: Boolean, default: false },
   w9Date: Date,
+  contractorLicenseNumber: String,
   rocLicenseNumber: String,
   rocLicenseTypeClassification: String,
   rocLicenseExpirationDate: Date,
   certificateOfInsuranceOnFile: { type: Boolean, default: false },
+  insuranceExpirationDate: Date,
   workersCompInsuranceOnFile: { type: Boolean, default: false },
   huttasAdditionalInsured: { type: Boolean, default: false },
   category: { 

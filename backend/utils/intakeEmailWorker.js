@@ -2,11 +2,19 @@ const os = require('os');
 const EmailOutbox = require('../models/EmailOutbox');
 const IntakeSubmission = require('../models/IntakeSubmission');
 const Notification = require('../models/Notification');
+const QuoteInvitation = require('../models/QuoteInvitation');
+const OutgoingQuote = require('../models/OutgoingQuote');
 const User = require('../models/User');
 const {
+  sendVendorQuoteInvitationEmail,
+  sendVendorQuoteStaffAlertEmail,
+  sendVendorQuoteSubmissionConfirmationEmail,
+  sendCustomerOutgoingQuoteEmail,
   sendWebsiteOperationsAlertEmail,
   sendWebsiteRequestConfirmationEmail
 } = require('./emailService');
+const { decryptToken, hashToken } = require('./incomingQuotes');
+const { decryptToken: decryptOutgoingToken, hashToken: hashOutgoingToken } = require('./outgoingQuotes');
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MS = 2 * 60 * 1000;
@@ -19,6 +27,10 @@ let polling = false;
 
 function deliveryField(type) {
   return type === 'website_customer_confirmation' ? 'customerConfirmation' : 'operationsAlert';
+}
+
+function isIntakeMessage(type) {
+  return type === 'website_customer_confirmation' || type === 'website_operations_alert';
 }
 
 function errorCategory(error) {
@@ -69,38 +81,99 @@ async function recoverExhaustedMessages() {
     });
     if (!changed.modifiedCount) continue;
     await markIntakeDelivery(message, { status: 'permanently_failed', attempts: message.attempts, lastAttemptAt: message.lastAttemptAt || now, lastErrorCategory: category });
+    await markQuoteDelivery(message, { status: 'permanently_failed', lastErrorCategory: category });
     await alertPermanentFailure(message, category);
   }
 }
 
 async function markIntakeDelivery(message, update) {
+  if (!isIntakeMessage(message.type) || !message.intakeSubmissionId) return;
   const field = deliveryField(message.type);
   const mapped = {};
   for (const [key, value] of Object.entries(update)) mapped[`${field}.${key}`] = value;
   await IntakeSubmission.updateOne({ _id: message.intakeSubmissionId }, { $set: mapped });
 }
 
+async function markQuoteDelivery(message, update) {
+  if (message.outgoingQuoteId && message.type === 'customer_outgoing_quote') {
+    await OutgoingQuote.updateOne({ _id: message.outgoingQuoteId }, { $set: { deliveryStatus: update.status === 'sent' ? 'sent' : update.status } });
+  }
+  if (!message.quoteInvitationId) return;
+  const set = {};
+  if (update.status === 'sent' && ['vendor_quote_invitation', 'vendor_quote_revision_request'].includes(message.type)) {
+    set.status = 'sent';
+    set.sentAt = update.sentAt;
+    set.lastDeliveryProvider = update.provider || undefined;
+    set.lastDeliveryMessageId = update.providerMessageId || undefined;
+    set.lastDeliveryError = undefined;
+  } else if (update.status === 'permanently_failed' && ['vendor_quote_invitation', 'vendor_quote_revision_request'].includes(message.type)) {
+    set.status = 'delivery_failed';
+    set.lastDeliveryError = update.lastErrorCategory;
+  }
+  if (Object.keys(set).length) await QuoteInvitation.updateOne({ _id: message.quoteInvitationId, status: { $nin: ['submitted', 'revoked'] } }, { $set: set });
+}
+
 async function alertPermanentFailure(message, category) {
   const users = await User.find({ isActive: true, role: { $in: ['admin', 'manager', 'account_rep'] } }).select('_id').lean();
   if (!users.length) return;
-  const kind = message.type === 'website_customer_confirmation' ? 'customer confirmation' : 'operations alert';
+  const intake = isIntakeMessage(message.type);
+  const outgoing = message.type === 'customer_outgoing_quote';
+  const kind = intake ? (message.type === 'website_customer_confirmation' ? 'customer confirmation' : 'operations alert') : message.type.replaceAll('_', ' ');
   await Notification.insertMany(users.map(user => ({
     userId: user._id,
-    title: 'Website request email failed',
-    message: `${kind} for ${message.payload.requestReference} failed after ${MAX_ATTEMPTS} attempts.`,
+    title: intake ? 'Website request email failed' : outgoing ? 'Customer quote email failed' : 'Vendor quote email failed',
+    message: `${kind} for ${message.payload.requestReference || message.payload.quoteReference} failed after ${MAX_ATTEMPTS} attempts.`,
     type: 'error',
     priority: 'high',
-    actionUrl: '#workflow-center',
-    metadata: { intakeSubmissionId: message.intakeSubmissionId, orderId: message.orderId, emailType: message.type, category }
+    actionUrl: intake ? '#workflow-center' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
+    metadata: { intakeSubmissionId: message.intakeSubmissionId, incomingQuoteId: message.incomingQuoteId, quoteInvitationId: message.quoteInvitationId, outgoingQuoteId: message.outgoingQuoteId, orderId: message.orderId, emailType: message.type, category }
   })));
 }
 
 async function deliverMessage(message) {
-  const sender = message.type === 'website_customer_confirmation'
-    ? sendWebsiteRequestConfirmationEmail
-    : sendWebsiteOperationsAlertEmail;
+  const senders = {
+    website_customer_confirmation: sendWebsiteRequestConfirmationEmail,
+    website_operations_alert: sendWebsiteOperationsAlertEmail,
+    vendor_quote_invitation: sendVendorQuoteInvitationEmail,
+    vendor_quote_revision_request: sendVendorQuoteInvitationEmail,
+    vendor_quote_submission_confirmation: sendVendorQuoteSubmissionConfirmationEmail,
+    vendor_quote_staff_alert: sendVendorQuoteStaffAlertEmail,
+    customer_outgoing_quote: sendCustomerOutgoingQuoteEmail
+  };
+  const sender = senders[message.type];
+  if (!sender) throw new Error(`Unsupported email outbox type: ${message.type}`);
   try {
-    const result = await sender({ recipients: message.recipients, ...message.payload });
+    const payload = { ...message.payload };
+    if (payload.encryptedToken) {
+      payload.token = message.type === 'customer_outgoing_quote' ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
+      delete payload.encryptedToken;
+    }
+    if (message.type === 'customer_outgoing_quote') {
+      const activeQuote = await OutgoingQuote.findOne({
+        _id: message.outgoingQuoteId,
+        publicTokenHash: hashOutgoingToken(payload.token),
+        status: 'sent',
+        validUntil: { $gt: new Date() }
+      }).select('_id').lean();
+      if (!activeQuote) {
+        await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: 'quote_link_inactive' } });
+        return;
+      }
+    }
+    if (['vendor_quote_invitation', 'vendor_quote_revision_request'].includes(message.type)) {
+      const validInvitation = await QuoteInvitation.exists({
+        _id: message.quoteInvitationId,
+        tokenHash: hashToken(payload.token),
+        status: { $in: ['sent', 'delivery_failed'] },
+        expiresAt: { $gt: new Date() }
+      });
+      if (!validInvitation) {
+        await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: 'invitation_inactive' } });
+        return;
+      }
+    }
+    if (message.type === 'vendor_quote_revision_request') payload.revision = true;
+    const result = await sender({ recipients: message.recipients, ...payload });
     const now = new Date();
     await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, {
       $set: {
@@ -113,7 +186,9 @@ async function deliverMessage(message) {
         lockedBy: null
       }
     });
-    await markIntakeDelivery(message, { status: 'sent', attempts: message.attempts, lastAttemptAt: now, sentAt: now, lastErrorCategory: null });
+    const delivery = { status: 'sent', attempts: message.attempts, lastAttemptAt: now, sentAt: now, lastErrorCategory: null, provider: result?.provider, providerMessageId: result?.messageId };
+    await markIntakeDelivery(message, delivery);
+    await markQuoteDelivery(message, delivery);
   } catch (error) {
     const category = errorCategory(error);
     const permanent = message.attempts >= MAX_ATTEMPTS;
@@ -134,8 +209,9 @@ async function deliverMessage(message) {
       lastAttemptAt: now,
       lastErrorCategory: category
     });
+    await markQuoteDelivery(message, { status: permanent ? 'permanently_failed' : 'retry_scheduled', lastErrorCategory: category });
     if (permanent) await alertPermanentFailure(message, category);
-    console.warn(`Intake email ${message.type} failed for ${message.payload.requestReference}: ${category}`);
+    console.warn(`Email ${message.type} failed for ${message.payload.requestReference || message.payload.quoteReference}: ${category}`);
   }
 }
 

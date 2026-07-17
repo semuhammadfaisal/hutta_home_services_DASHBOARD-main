@@ -3,17 +3,28 @@ const mongoose = require('mongoose');
 const emailOutboxSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['website_customer_confirmation', 'website_operations_alert'],
+    enum: [
+      'website_customer_confirmation',
+      'website_operations_alert',
+      'vendor_quote_invitation',
+      'vendor_quote_submission_confirmation',
+      'vendor_quote_staff_alert',
+      'vendor_quote_revision_request',
+      'customer_outgoing_quote'
+    ],
     required: true
   },
   dedupeKey: { type: String, required: true, unique: true },
   recipients: { type: [String], required: true },
   payload: { type: mongoose.Schema.Types.Mixed, required: true },
-  intakeSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IntakeSubmission', required: true },
+  intakeSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IntakeSubmission' },
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
+  incomingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'IncomingQuote' },
+  quoteInvitationId: { type: mongoose.Schema.Types.ObjectId, ref: 'QuoteInvitation' },
+  outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'sent', 'retry_scheduled', 'permanently_failed'],
+    enum: ['pending', 'processing', 'sent', 'retry_scheduled', 'permanently_failed', 'cancelled'],
     default: 'pending'
   },
   attempts: { type: Number, default: 0 },
@@ -29,5 +40,8 @@ const emailOutboxSchema = new mongoose.Schema({
 
 emailOutboxSchema.index({ status: 1, nextAttemptAt: 1, lockedUntil: 1 });
 emailOutboxSchema.index({ intakeSubmissionId: 1, type: 1 });
+emailOutboxSchema.index({ incomingQuoteId: 1, type: 1 });
+emailOutboxSchema.index({ quoteInvitationId: 1, type: 1 });
+emailOutboxSchema.index({ outgoingQuoteId: 1, type: 1 });
 
 module.exports = mongoose.model('EmailOutbox', emailOutboxSchema);

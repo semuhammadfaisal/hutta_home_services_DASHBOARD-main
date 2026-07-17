@@ -299,6 +299,93 @@ class APIService {
         });
     }
 
+    async getIncomingQuoteOrders() {
+        this.requestCache.delete('GET:/incoming-quotes/orders');
+        return this.request('/incoming-quotes/orders');
+    }
+
+    async getIncomingQuoteEligibleOrders() {
+        this.requestCache.delete('GET:/incoming-quotes/eligible-orders');
+        return this.request('/incoming-quotes/eligible-orders');
+    }
+
+    async getIncomingQuoteVendors() {
+        return this.request('/incoming-quotes/vendor-options');
+    }
+
+    async getIncomingQuoteWorkspace(orderId) {
+        this.requestCache.delete(`GET:/incoming-quotes/orders/${orderId}`);
+        return this.request(`/incoming-quotes/orders/${orderId}`);
+    }
+
+    async startIncomingQuotes(orderId) {
+        return this.request(`/incoming-quotes/orders/${orderId}/start`, { method: 'POST', body: '{}' });
+    }
+
+    async createIncomingQuote(orderId, payload) {
+        return this.request(`/incoming-quotes/orders/${orderId}/quotes`, { method: 'POST', body: JSON.stringify(payload) });
+    }
+
+    async updateIncomingQuote(quoteId, payload) {
+        return this.request(`/incoming-quotes/quotes/${quoteId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    }
+
+    async submitIncomingQuote(quoteId, payload = {}) {
+        return this.request(`/incoming-quotes/quotes/${quoteId}/submit`, { method: 'POST', body: JSON.stringify(payload) });
+    }
+
+    async sendIncomingQuoteInvitation(orderId, payload) {
+        return this.request(`/incoming-quotes/orders/${orderId}/invitations`, { method: 'POST', body: JSON.stringify(payload) });
+    }
+
+    async selectIncomingQuote(quoteId, complianceAcknowledged) {
+        return this.request(`/incoming-quotes/quotes/${quoteId}/select`, { method: 'POST', body: JSON.stringify({ complianceAcknowledged }) });
+    }
+
+    async requestIncomingQuoteRevision(quoteId, payload) {
+        return this.request(`/incoming-quotes/quotes/${quoteId}/request-revision`, { method: 'POST', body: JSON.stringify(payload) });
+    }
+
+    async createStaffIncomingQuoteRevision(quoteId) {
+        return this.request(`/incoming-quotes/quotes/${quoteId}/revise-staff`, { method: 'POST', body: '{}' });
+    }
+
+    async resendIncomingQuoteInvitation(invitationId) {
+        return this.request(`/incoming-quotes/invitations/${invitationId}/resend`, { method: 'POST', body: '{}' });
+    }
+
+    async rotateIncomingQuoteInvitation(invitationId) {
+        return this.request(`/incoming-quotes/invitations/${invitationId}/rotate`, { method: 'POST', body: '{}' });
+    }
+
+    async revokeIncomingQuoteInvitation(invitationId) {
+        return this.request(`/incoming-quotes/invitations/${invitationId}/revoke`, { method: 'POST', body: '{}' });
+    }
+
+    async retryIncomingQuoteEmail(messageId) {
+        return this.request(`/incoming-quotes/outbox/${messageId}/retry`, { method: 'POST', body: '{}' });
+    }
+
+    async getOutgoingQuoteOrders() {
+        this.requestCache.delete('GET:/outgoing-quotes/orders');
+        return this.request('/outgoing-quotes/orders');
+    }
+
+    async getOutgoingQuoteWorkspace(orderId) {
+        this.requestCache.delete(`GET:/outgoing-quotes/orders/${orderId}`);
+        return this.request(`/outgoing-quotes/orders/${orderId}`);
+    }
+
+    async convertOutgoingQuote(orderId) { return this.request(`/outgoing-quotes/orders/${orderId}/convert`, { method: 'POST', body: '{}' }); }
+    async updateOutgoingQuote(quoteId, payload) { return this.request(`/outgoing-quotes/${quoteId}`, { method: 'PATCH', body: JSON.stringify(payload) }); }
+    async sendOutgoingQuote(quoteId) { return this.request(`/outgoing-quotes/${quoteId}/send`, { method: 'POST', body: '{}' }); }
+    async reviseOutgoingQuote(quoteId) { return this.request(`/outgoing-quotes/${quoteId}/revise`, { method: 'POST', body: '{}' }); }
+    async voidOutgoingQuote(quoteId, reason) { return this.request(`/outgoing-quotes/${quoteId}/void`, { method: 'POST', body: JSON.stringify({ reason }) }); }
+    async resendOutgoingQuote(quoteId) { return this.request(`/outgoing-quotes/${quoteId}/resend`, { method: 'POST', body: '{}' }); }
+    async retryOutgoingQuoteEmail(messageId) { return this.request(`/outgoing-quotes/outbox/${messageId}/retry`, { method: 'POST', body: '{}' }); }
+    async getOutgoingQuoteSettings() { return this.request('/outgoing-quotes/settings'); }
+    async updateOutgoingQuoteSettings(payload) { return this.request('/outgoing-quotes/settings', { method: 'PUT', body: JSON.stringify(payload) }); }
+
     async getPaymentsCollected() {
         // Always fresh - bypass cache
         const cacheKey = 'GET:/pipeline-records/kpi/payments-collected';

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Service Quote | Hutta Home Services</title>
+  <link rel="icon" href="../favicon.ico">
+  <link rel="stylesheet" href="../assets/css/customer-quote.css">
+</head>
+<body>
+  <header class="quote-public-header"><img src="../assets/images/logo.png" alt="Hutta Home Services"><span>Secure service quote</span></header>
+  <main class="quote-public-shell">
+    <section id="quoteLoading" class="quote-public-state"><div class="spinner"></div><h1>Loading your quote</h1><p>Please wait while we securely retrieve it.</p></section>
+    <section id="quoteError" class="quote-public-state" hidden><h1>Quote unavailable</h1><p id="quoteErrorMessage">This private link is invalid, expired, or no longer current.</p></section>
+    <article id="quoteDocument" class="quote-public-document" hidden>
+      <div class="quote-public-title"><div><span>Service Quote</span><h1 id="quoteReference"></h1><p id="quoteMeta"></p></div><a id="quotePdfLink" class="quote-download" href="#">Download PDF</a></div>
+      <div class="quote-public-grid"><section><h2>Prepared for</h2><strong id="quoteCustomer"></strong><p id="quoteAddress"></p></section><section><h2>Service</h2><strong id="quoteService"></strong><p id="quoteRequest"></p></section></div>
+      <section class="quote-public-section"><h2>Scope of work</h2><p id="quoteScope" class="preserve"></p><div class="quote-job-meta"><span id="quoteDuration"></span><span id="quoteAvailability"></span><span id="quoteAccess"></span></div><p id="quoteConditions" class="preserve"></p></section>
+      <section class="quote-total"><span>Total customer price</span><strong id="quoteTotal"></strong></section>
+      <section class="quote-public-section"><h2>Terms and conditions</h2><p id="quoteTerms" class="preserve terms"></p><div class="quote-disclosure"><p><strong>Licensed contractor:</strong> <span id="quoteContractor"></span></p><p><strong>License type:</strong> <span id="quoteLicenseType"></span></p><p><strong>ROC number:</strong> <span id="quoteRoc"></span></p><p id="quoteLegal" class="preserve"></p></div></section>
+      <div class="quote-notice">This quote is not an invoice and does not confirm scheduling. Customer approval will be completed separately.</div>
+    </article>
+  </main>
+  <script src="../assets/js/customer-quote.js"></script>
+</body>
+</html>

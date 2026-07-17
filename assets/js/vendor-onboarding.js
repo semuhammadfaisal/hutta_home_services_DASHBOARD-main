@@ -156,8 +156,9 @@
     $('expiryDisplay').textContent = Number.isNaN(expiry.getTime()) ? 'Unavailable' : expiry.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
     document.title = `${payload.companyName || 'Vendor'} Onboarding | Hutta Home Services`;
     value('name', { name: vendor.name || payload.companyName });
-    ['phone','address','legalBusinessName','businessEntityType','primaryOwnerName','businessAddress','rocLicenseNumber','rocLicenseTypeClassification','requestedCategory'].forEach(id => value(id, vendor));
+    ['phone','address','legalBusinessName','businessEntityType','primaryOwnerName','businessAddress','contractorLicenseNumber','rocLicenseNumber','rocLicenseTypeClassification','requestedCategory'].forEach(id => value(id, vendor));
     if (vendor.rocLicenseExpirationDate) $('rocLicenseExpirationDate').value = String(vendor.rocLicenseExpirationDate).slice(0, 10);
+    if (vendor.insuranceExpirationDate) $('insuranceExpirationDate').value = String(vendor.insuranceExpirationDate).slice(0, 10);
     if (vendor.einTaxIdMasked) $('einTaxId').placeholder = vendor.einTaxIdMasked;
     (vendor.emails || []).filter(item => !item.isPrimary && item.address !== payload.email).forEach(item => addRepeatRow('email', item));
     (vendor.phones || []).filter(item => !item.isPrimary).forEach(item => addRepeatRow('phone', item));
