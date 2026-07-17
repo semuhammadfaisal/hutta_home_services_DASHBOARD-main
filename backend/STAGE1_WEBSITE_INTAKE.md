@@ -25,7 +25,7 @@ Set these Render environment variables before deploying:
 
 ```text
 HUTTAS_WEBHOOK_SECRET=<at least 32 random bytes>
-INTAKE_NOTIFICATION_EMAILS=operations@huttas.com,sales@huttas.com
+INTAKE_NOTIFICATION_EMAILS=sales@huttas.com
 INTAKE_EMAIL_WORKER_ENABLED=true
 ```
 
