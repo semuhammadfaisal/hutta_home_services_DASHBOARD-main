@@ -64,7 +64,7 @@ test('routes mount before auth and enforce send lifecycle without creating Payme
   assert.doesNotMatch(route, /require\('\.\.\/models\/Payment'\)|new Payment|Payment\.create/);
 });
 
-test('public quote endpoints are no-store and customer UI has no approval control', () => {
+test('public quote endpoints are no-store and retain the downloadable customer document', () => {
   const route = read('backend/routes/outgoingQuotes.js');
   const page = read('pages/customer-quote.html');
   const server = read('backend/server.js');
@@ -72,7 +72,7 @@ test('public quote endpoints are no-store and customer UI has no approval contro
   assert.match(route, /status: 'sent', validUntil: \{ \$gt: new Date\(\) \}/);
   assert.match(page, /Download PDF/);
   assert.match(server, /'customer-quote\.html'/);
-  assert.doesNotMatch(page, /Approve Quote|I agree|approval-checkbox/i);
+  assert.match(page, /quotePdfLink/);
 });
 
 test('Workflow Center includes Stage 3 editor, settings, delivery, and responsive assets', () => {

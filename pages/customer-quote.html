@@ -19,7 +19,41 @@
       <section class="quote-public-section"><h2>Scope of work</h2><p id="quoteScope" class="preserve"></p><div class="quote-job-meta"><span id="quoteDuration"></span><span id="quoteAvailability"></span><span id="quoteAccess"></span></div><p id="quoteConditions" class="preserve"></p></section>
       <section class="quote-total"><span>Total customer price</span><strong id="quoteTotal"></strong></section>
       <section class="quote-public-section"><h2>Terms and conditions</h2><p id="quoteTerms" class="preserve terms"></p><div class="quote-disclosure"><p><strong>Licensed contractor:</strong> <span id="quoteContractor"></span></p><p><strong>License type:</strong> <span id="quoteLicenseType"></span></p><p><strong>ROC number:</strong> <span id="quoteRoc"></span></p><p id="quoteLegal" class="preserve"></p></div></section>
-      <div class="quote-notice">This quote is not an invoice and does not confirm scheduling. Customer approval will be completed separately.</div>
+      <section id="quoteDecisionSection" class="quote-decision">
+        <div id="quoteDecisionPending">
+          <span class="decision-eyebrow">Customer decision</span>
+          <h2>Approve this quote or request changes</h2>
+          <p class="decision-help">Enter your full name. Approval is recorded against this exact quote revision.</p>
+          <form id="quoteDecisionForm" novalidate>
+            <label class="decision-field" for="quoteSignerName">Full name
+              <input id="quoteSignerName" name="typedName" maxlength="160" autocomplete="name" required>
+            </label>
+            <label class="decision-consent" for="quoteTermsAccepted">
+              <input id="quoteTermsAccepted" name="termsAccepted" type="checkbox">
+              <span id="quoteConsentText"></span>
+            </label>
+            <div class="decision-actions">
+              <button id="quoteApproveButton" class="decision-primary" type="button">Approve Quote</button>
+              <button id="quoteRequestChangesToggle" class="decision-secondary" type="button">Request Changes</button>
+            </div>
+            <div id="quoteChangesPanel" class="decision-changes" hidden>
+              <label class="decision-field" for="quoteChangeMessage">What should be changed?
+                <textarea id="quoteChangeMessage" minlength="10" maxlength="3000" rows="5" required></textarea>
+              </label>
+              <div class="decision-actions">
+                <button id="quoteSubmitChanges" class="decision-primary" type="button">Submit Change Request</button>
+                <button id="quoteCancelChanges" class="decision-secondary" type="button">Cancel</button>
+              </div>
+            </div>
+            <p id="quoteDecisionError" class="decision-error" role="alert" hidden></p>
+          </form>
+        </div>
+        <div id="quoteDecisionComplete" class="decision-complete" hidden>
+          <span id="quoteDecisionIcon" class="decision-complete-icon" aria-hidden="true">✓</span>
+          <div><h2 id="quoteDecisionTitle"></h2><p id="quoteDecisionSummary"></p></div>
+        </div>
+      </section>
+      <div class="quote-notice">This quote is not an invoice. Approval does not confirm scheduling.</div>
     </article>
   </main>
   <script src="../assets/js/customer-quote.js"></script>

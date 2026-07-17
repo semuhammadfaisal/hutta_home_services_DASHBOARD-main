@@ -58,6 +58,7 @@ const outgoingQuoteSchema = new mongoose.Schema({
   validUntil: { type: Date, required: true },
   publicTokenHash: { type: String, select: false },
   deliveryStatus: { type: String, enum: ['not_sent', 'pending', 'sent', 'retry_scheduled', 'permanently_failed'], default: 'not_sent' },
+  customerDecisionStatus: { type: String, enum: ['not_requested', 'pending', 'approved', 'changes_requested'], default: 'not_requested', index: true },
   sentAt: Date,
   sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   supersededAt: Date,
@@ -69,6 +70,7 @@ const outgoingQuoteSchema = new mongoose.Schema({
 
 outgoingQuoteSchema.index({ orderId: 1, revisionNumber: 1 }, { unique: true });
 outgoingQuoteSchema.index({ publicTokenHash: 1 }, { unique: true, sparse: true });
+outgoingQuoteSchema.index({ customerDecisionStatus: 1, sentAt: -1 });
 outgoingQuoteSchema.index(
   { orderId: 1 },
   { unique: true, partialFilterExpression: { status: 'draft' }, name: 'one_outgoing_draft_per_order' }

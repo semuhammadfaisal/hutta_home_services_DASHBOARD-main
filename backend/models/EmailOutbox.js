@@ -10,7 +10,11 @@ const emailOutboxSchema = new mongoose.Schema({
       'vendor_quote_submission_confirmation',
       'vendor_quote_staff_alert',
       'vendor_quote_revision_request',
-      'customer_outgoing_quote'
+      'customer_outgoing_quote',
+      'customer_quote_approval_confirmation',
+      'staff_quote_approval_alert',
+      'customer_quote_change_confirmation',
+      'staff_quote_change_alert'
     ],
     required: true
   },

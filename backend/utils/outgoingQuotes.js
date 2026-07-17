@@ -67,7 +67,7 @@ async function nextOutgoingQuoteReference(session) {
   return `OQ-${year}-${String(counter.value).padStart(6, '0')}`;
 }
 
-function publicQuote(quote) {
+function publicQuote(quote, decision = null, consentText = '') {
   return {
     quoteReference: quote.quoteReference,
     revisionNumber: quote.revisionNumber,
@@ -88,7 +88,10 @@ function publicQuote(quote) {
       legalDisclosure: quote.legalDisclosure
     },
     validUntil: quote.validUntil,
-    sentAt: quote.sentAt
+    sentAt: quote.sentAt,
+    customerDecisionStatus: quote.customerDecisionStatus || 'pending',
+    customerDecision: decision,
+    approvalConsentText: consentText
   };
 }
 

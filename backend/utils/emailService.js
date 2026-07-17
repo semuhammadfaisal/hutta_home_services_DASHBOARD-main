@@ -389,19 +389,67 @@ const sendVendorQuoteStaffAlertEmail = ({ recipients, quoteReference, requestRef
 };
 
 const sendCustomerOutgoingQuoteEmail = ({ recipients, token, customerName, quoteReference, requestReference, customerTotal, validUntil }) => {
-  const quoteUrl = buildPublicUrl('/pages/customer-quote.html', `token=${encodeURIComponent(token)}`);
+  const quoteUrl = buildPublicUrl(`/pages/customer-quote.html?token=${encodeURIComponent(token)}`);
   return deliverEmail({
     to: recipients,
     subject: `Your Hutta service quote — ${quoteReference}`,
-    text: `Hello ${customerName || 'Customer'},\n\nYour service quote ${quoteReference} for request ${requestReference} is ready. Total: $${Number(customerTotal || 0).toFixed(2)}. Valid through ${new Date(validUntil).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}.\n\nView and download your quote: ${quoteUrl}\n\nCustomer approval will be completed separately. This quote does not confirm scheduling.`,
+    text: `Hello ${customerName || 'Customer'},\n\nYour service quote ${quoteReference} for request ${requestReference} is ready. Total: $${Number(customerTotal || 0).toFixed(2)}. Valid through ${new Date(validUntil).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}.\n\nReview, approve, request changes, or download your quote: ${quoteUrl}\n\nApproval does not confirm scheduling.`,
     html: emailShell('Your Service Quote Is Ready', `
       <p>Hello ${escapeHtml(customerName || 'Customer')},</p>
       <p>Your Hutta Home Services quote is ready to review and download.</p>
       <div class="panel"><p><strong>Quote:</strong> ${escapeHtml(quoteReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Total:</strong> $${escapeHtml(Number(customerTotal || 0).toFixed(2))}</p><p><strong>Valid through:</strong> ${escapeHtml(new Date(validUntil).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' }))}</p></div>
       <p><a class="btn" href="${quoteUrl}">View Secure Quote</a></p>
-      <div class="notice"><p>Customer approval will be completed separately. This quote does not confirm scheduling.</p></div>
+      <div class="notice"><p>Use the secure quote page to approve or request changes. Approval does not confirm scheduling.</p></div>
       <p class="muted">This private link provides access to your quote. Please do not forward it.</p>
     `, { preheader: `${quoteReference} is ready to review.` })
+  });
+};
+
+const sendCustomerQuoteDecisionEmail = ({ recipients, token, decision, customerName, typedName, quoteReference, requestReference, revisionNumber, customerTotal, decisionAt, changeRequestMessage }) => {
+  const approved = decision === 'approved';
+  const quoteUrl = buildPublicUrl(`/pages/customer-quote.html?token=${encodeURIComponent(token)}`);
+  const timestamp = new Date(decisionAt).toLocaleString('en-US', { timeZone: 'America/Phoenix', dateStyle: 'long', timeStyle: 'short' });
+  const title = approved ? 'Quote Approval Confirmed' : 'Quote Change Request Received';
+  return deliverEmail({
+    to: recipients,
+    subject: approved ? `Approval confirmed — ${quoteReference}` : `Change request received — ${quoteReference}`,
+    text: approved
+      ? `Hello ${customerName || 'Customer'},\n\nWe recorded ${typedName}'s approval of ${quoteReference}, revision ${revisionNumber}, at ${timestamp} Arizona time. Approved total: $${Number(customerTotal || 0).toFixed(2)}.\n\nView and download the quote: ${quoteUrl}\n\nApproval does not confirm scheduling.`
+      : `Hello ${customerName || 'Customer'},\n\nWe recorded ${typedName}'s request for changes to ${quoteReference}, revision ${revisionNumber}, at ${timestamp} Arizona time.\n\nRequested changes: ${changeRequestMessage}\n\nOur team will prepare and send a new revision before approval can continue.`,
+    html: emailShell(title, `
+      <p>Hello ${escapeHtml(customerName || 'Customer')},</p>
+      <p>${approved ? 'Your quote approval has been recorded.' : 'Your request for quote changes has been recorded.'}</p>
+      <div class="panel">
+        <p><strong>Quote:</strong> ${escapeHtml(quoteReference)} · Revision ${escapeHtml(revisionNumber)}</p>
+        <p><strong>Request:</strong> ${escapeHtml(requestReference)}</p>
+        <p><strong>Name:</strong> ${escapeHtml(typedName)}</p>
+        <p><strong>Recorded:</strong> ${escapeHtml(timestamp)} Arizona time</p>
+        ${approved ? `<p><strong>Approved total:</strong> $${escapeHtml(Number(customerTotal || 0).toFixed(2))}</p>` : `<p><strong>Requested changes:</strong> ${escapeHtml(changeRequestMessage)}</p>`}
+      </div>
+      ${approved ? `<p><a class="btn" href="${quoteUrl}">View Approved Quote</a></p><div class="notice"><p>Approval does not confirm scheduling. Our team will contact you with scheduling details.</p></div>` : '<div class="notice"><p>Approval is closed for this revision. Our team will send a new revision for review.</p></div>'}
+    `, { preheader: approved ? `${quoteReference} approval is confirmed.` : `${quoteReference} change request was received.` })
+  });
+};
+
+const sendStaffQuoteDecisionAlertEmail = ({ recipients, decision, customerName, typedName, quoteReference, requestReference, revisionNumber, customerTotal, decisionAt, changeRequestMessage }) => {
+  const approved = decision === 'approved';
+  const workflowUrl = buildPublicUrl('/pages/admin-dashboard.html', 'customer-approvals');
+  const timestamp = new Date(decisionAt).toLocaleString('en-US', { timeZone: 'America/Phoenix', dateStyle: 'long', timeStyle: 'short' });
+  return deliverEmail({
+    to: recipients,
+    subject: approved ? `Customer approved ${quoteReference}` : `Customer requested changes to ${quoteReference}`,
+    text: `${customerName || 'Customer'} (${typedName}) ${approved ? 'approved' : 'requested changes to'} ${quoteReference}, revision ${revisionNumber}, at ${timestamp} Arizona time.${approved ? ` Total: $${Number(customerTotal || 0).toFixed(2)}.` : ` Requested changes: ${changeRequestMessage}`}\n\nOpen Customer Approvals: ${workflowUrl}`,
+    html: emailShell(approved ? 'Customer Approved Quote' : 'Customer Requested Quote Changes', `
+      <p><strong>${escapeHtml(customerName || 'Customer')}</strong> ${approved ? 'approved the customer quote.' : 'requested changes to the customer quote.'}</p>
+      <div class="panel">
+        <p><strong>Quote:</strong> ${escapeHtml(quoteReference)} · Revision ${escapeHtml(revisionNumber)}</p>
+        <p><strong>Request:</strong> ${escapeHtml(requestReference)}</p>
+        <p><strong>Entered name:</strong> ${escapeHtml(typedName)}</p>
+        <p><strong>Recorded:</strong> ${escapeHtml(timestamp)} Arizona time</p>
+        ${approved ? `<p><strong>Total:</strong> $${escapeHtml(Number(customerTotal || 0).toFixed(2))}</p>` : `<p><strong>Requested changes:</strong> ${escapeHtml(changeRequestMessage)}</p>`}
+      </div>
+      <p><a class="btn" href="${workflowUrl}">Open Customer Approvals</a></p>
+    `, { preheader: approved ? `${quoteReference} is approved.` : `${quoteReference} needs a revision.` })
   });
 };
 
@@ -420,5 +468,7 @@ module.exports = {
   sendVendorQuoteInvitationEmail,
   sendVendorQuoteSubmissionConfirmationEmail,
   sendVendorQuoteStaffAlertEmail,
-  sendCustomerOutgoingQuoteEmail
+  sendCustomerOutgoingQuoteEmail,
+  sendCustomerQuoteDecisionEmail,
+  sendStaffQuoteDecisionAlertEmail
 };

@@ -41,6 +41,7 @@
     <link rel="stylesheet" href="../assets/css/workflow-center.css">
     <link rel="stylesheet" href="../assets/css/incoming-quotes.css">
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css">
+    <link rel="stylesheet" href="../assets/css/customer-approvals.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -141,6 +142,13 @@
                     <i class="fas fa-file-signature"></i>
                     <span>Outgoing Quotes</span>
                     <span class="workflow-nav-badge" id="outgoingQuotesNavBadge" hidden>0</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#customer-approvals" data-section="customer-approvals">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Customer Approvals</span>
+                    <span class="workflow-nav-badge" id="customerApprovalsNavBadge" hidden>0</span>
                 </a>
             </li>
             <li class="sidebar-section-label" aria-hidden="true">Operations</li>
@@ -887,6 +895,24 @@
                 <div class="outgoing-panel-head"><div><p class="workflow-eyebrow">Customer quote workspace</p><h2 id="outgoingWorkspaceTitle">Order</h2><p id="outgoingWorkspaceSummary"></p></div><button type="button" class="btn-secondary" onclick="closeOutgoingQuoteWorkspace()">Close</button></div>
                 <div id="outgoingDraftArea"></div>
                 <section class="outgoing-panel"><h3>Revision history and delivery</h3><div id="outgoingHistoryList"></div></section>
+            </section>
+        </section>
+
+        <section id="customer-approvals" class="content-section customer-approvals-section">
+            <div class="page-header workflow-header">
+                <div><p class="workflow-eyebrow">Stage 4 &middot; Workflow Center</p><h1>Customer Approvals</h1><p>Track sent quotes, approvals, and customer change requests.</p></div>
+                <button type="button" class="btn-secondary" onclick="loadCustomerApprovals()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+            <div class="workflow-summary approval-summary" aria-label="Customer approval summary">
+                <div><strong id="approvalPendingCount">0</strong><span>Awaiting decision</span></div>
+                <div><strong id="approvalApprovedCount">0</strong><span>Approved</span></div>
+                <div><strong id="approvalChangesCount">0</strong><span>Changes requested</span></div>
+                <div><strong id="approvalEmailIssueCount">0</strong><span>Email issues</span></div>
+            </div>
+            <div id="customerApprovalList" class="approval-order-list" aria-live="polite"><div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading customer approvals&hellip;</p></div></div>
+            <section id="customerApprovalWorkspace" class="approval-workspace" hidden>
+                <div class="approval-workspace-head"><div><p class="workflow-eyebrow">Decision audit</p><h2 id="customerApprovalWorkspaceTitle">Customer decision</h2><p id="customerApprovalWorkspaceSummary"></p></div><button class="btn-secondary" type="button" onclick="closeCustomerApprovalWorkspace()">Close</button></div>
+                <div id="customerApprovalDetails"></div>
             </section>
         </section>
 
@@ -4363,6 +4389,7 @@
     <script src="../assets/js/dashboard-script.js"></script>
     <script src="../assets/js/incoming-quotes.js"></script>
     <script src="../assets/js/outgoing-quotes.js"></script>
+    <script src="../assets/js/customer-approvals.js"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>

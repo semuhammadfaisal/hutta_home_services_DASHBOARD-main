@@ -385,6 +385,15 @@ class APIService {
     async retryOutgoingQuoteEmail(messageId) { return this.request(`/outgoing-quotes/outbox/${messageId}/retry`, { method: 'POST', body: '{}' }); }
     async getOutgoingQuoteSettings() { return this.request('/outgoing-quotes/settings'); }
     async updateOutgoingQuoteSettings(payload) { return this.request('/outgoing-quotes/settings', { method: 'PUT', body: JSON.stringify(payload) }); }
+    async getCustomerApprovals() {
+        this.requestCache.delete('GET:/outgoing-quotes/approvals');
+        return this.request('/outgoing-quotes/approvals');
+    }
+    async getCustomerApproval(orderId) {
+        this.requestCache.delete(`GET:/outgoing-quotes/approvals/${orderId}`);
+        return this.request(`/outgoing-quotes/approvals/${orderId}`);
+    }
+    async retryCustomerApprovalEmail(messageId) { return this.request(`/outgoing-quotes/approvals/outbox/${messageId}/retry`, { method: 'POST', body: '{}' }); }
 
     async getPaymentsCollected() {
         // Always fresh - bypass cache

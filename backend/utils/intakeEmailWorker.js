@@ -10,6 +10,8 @@ const {
   sendVendorQuoteStaffAlertEmail,
   sendVendorQuoteSubmissionConfirmationEmail,
   sendCustomerOutgoingQuoteEmail,
+  sendCustomerQuoteDecisionEmail,
+  sendStaffQuoteDecisionAlertEmail,
   sendWebsiteOperationsAlertEmail,
   sendWebsiteRequestConfirmationEmail
 } = require('./emailService');
@@ -21,6 +23,17 @@ const LOCK_MS = 2 * 60 * 1000;
 const POLL_MS = Math.max(1000, parseInt(process.env.INTAKE_EMAIL_POLL_MS || '5000', 10));
 const WORKER_ID = `${os.hostname()}:${process.pid}`;
 const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 15 * 60_000, 60 * 60_000];
+const OUTGOING_TOKEN_TYPES = new Set([
+  'customer_outgoing_quote',
+  'customer_quote_approval_confirmation',
+  'customer_quote_change_confirmation'
+]);
+const STAGE4_TYPES = new Set([
+  'customer_quote_approval_confirmation',
+  'staff_quote_approval_alert',
+  'customer_quote_change_confirmation',
+  'staff_quote_change_alert'
+]);
 
 let timer = null;
 let polling = false;
@@ -117,7 +130,7 @@ async function alertPermanentFailure(message, category) {
   const users = await User.find({ isActive: true, role: { $in: ['admin', 'manager', 'account_rep'] } }).select('_id').lean();
   if (!users.length) return;
   const intake = isIntakeMessage(message.type);
-  const outgoing = message.type === 'customer_outgoing_quote';
+  const outgoing = message.type === 'customer_outgoing_quote' || STAGE4_TYPES.has(message.type);
   const kind = intake ? (message.type === 'website_customer_confirmation' ? 'customer confirmation' : 'operations alert') : message.type.replaceAll('_', ' ');
   await Notification.insertMany(users.map(user => ({
     userId: user._id,
@@ -125,7 +138,7 @@ async function alertPermanentFailure(message, category) {
     message: `${kind} for ${message.payload.requestReference || message.payload.quoteReference} failed after ${MAX_ATTEMPTS} attempts.`,
     type: 'error',
     priority: 'high',
-    actionUrl: intake ? '#workflow-center' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
+    actionUrl: intake ? '#workflow-center' : STAGE4_TYPES.has(message.type) ? '#customer-approvals' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
     metadata: { intakeSubmissionId: message.intakeSubmissionId, incomingQuoteId: message.incomingQuoteId, quoteInvitationId: message.quoteInvitationId, outgoingQuoteId: message.outgoingQuoteId, orderId: message.orderId, emailType: message.type, category }
   })));
 }
@@ -138,17 +151,21 @@ async function deliverMessage(message) {
     vendor_quote_revision_request: sendVendorQuoteInvitationEmail,
     vendor_quote_submission_confirmation: sendVendorQuoteSubmissionConfirmationEmail,
     vendor_quote_staff_alert: sendVendorQuoteStaffAlertEmail,
-    customer_outgoing_quote: sendCustomerOutgoingQuoteEmail
+    customer_outgoing_quote: sendCustomerOutgoingQuoteEmail,
+    customer_quote_approval_confirmation: sendCustomerQuoteDecisionEmail,
+    staff_quote_approval_alert: sendStaffQuoteDecisionAlertEmail,
+    customer_quote_change_confirmation: sendCustomerQuoteDecisionEmail,
+    staff_quote_change_alert: sendStaffQuoteDecisionAlertEmail
   };
   const sender = senders[message.type];
   if (!sender) throw new Error(`Unsupported email outbox type: ${message.type}`);
   try {
     const payload = { ...message.payload };
     if (payload.encryptedToken) {
-      payload.token = message.type === 'customer_outgoing_quote' ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
+      payload.token = OUTGOING_TOKEN_TYPES.has(message.type) ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
       delete payload.encryptedToken;
     }
-    if (message.type === 'customer_outgoing_quote') {
+    if (OUTGOING_TOKEN_TYPES.has(message.type)) {
       const activeQuote = await OutgoingQuote.findOne({
         _id: message.outgoingQuoteId,
         publicTokenHash: hashOutgoingToken(payload.token),

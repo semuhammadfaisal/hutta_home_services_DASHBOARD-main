@@ -26,9 +26,11 @@ const orderSchema = new mongoose.Schema({
   source: { type: String, enum: ['website', 'manual'], default: 'manual' },
   intakeSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IntakeSubmission' },
   requestReference: { type: String },
-  workflowStatus: { type: String, enum: ['request_received', 'quote_collection', 'vendor_selected', 'outgoing_quote_draft', 'quote_sent'], default: undefined },
+  workflowStatus: { type: String, enum: ['request_received', 'quote_collection', 'vendor_selected', 'outgoing_quote_draft', 'quote_sent', 'quote_changes_requested', 'customer_approved'], default: undefined },
   selectedIncomingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'IncomingQuote' },
   currentOutgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
+  approvedOutgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
+  customerApprovedAt: Date,
   pricingStatus: { type: String, enum: ['unquoted', 'quoted'], default: 'quoted' },
   missingData: {
     serviceCategory: { type: Boolean, default: false },
@@ -78,6 +80,7 @@ orderSchema.index({ intakeSubmissionId: 1 }, { unique: true, sparse: true });
 orderSchema.index({ workflowStatus: 1, createdAt: -1 });
 orderSchema.index({ selectedIncomingQuoteId: 1 }, { sparse: true });
 orderSchema.index({ currentOutgoingQuoteId: 1 }, { sparse: true });
+orderSchema.index({ approvedOutgoingQuoteId: 1 }, { sparse: true });
 orderSchema.index({ source: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);
