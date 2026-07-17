@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Huttas Forminator CRM Webhook
  * Description: Securely sends the Huttas Forminator request form to the Huttas CRM Stage 1 intake webhook.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: Hutta Home Services
  * License: GPL-2.0-or-later
  */
@@ -31,6 +31,9 @@ final class Huttas_Forminator_CRM_Webhook {
 		add_action( 'forminator_form_after_save_entry', array( __CLASS__, 'after_submission' ), 20, 2 );
 		add_action( 'forminator_form_after_handle_submit', array( __CLASS__, 'after_submission' ), 20, 2 );
 
+		// Always run on a successful response, including forms that do not store submissions.
+		add_filter( 'forminator_form_ajax_submit_response', array( __CLASS__, 'send_from_response' ), 5, 2 );
+		add_filter( 'forminator_form_submit_response', array( __CLASS__, 'send_from_response' ), 5, 2 );
 		add_filter( 'forminator_form_ajax_submit_response', array( __CLASS__, 'append_request_reference' ), 20, 2 );
 		add_filter( 'forminator_form_submit_response', array( __CLASS__, 'append_request_reference' ), 20, 2 );
 		add_action( self::RETRY_HOOK, array( __CLASS__, 'retry_submission' ), 10, 2 );
@@ -138,8 +141,12 @@ final class Huttas_Forminator_CRM_Webhook {
 			$entry_id = absint( $entry->entry_id );
 		}
 
+		self::$pending[ (int) $form_id ] = self::build_payload( $form_id, $fields, $entry_id );
+	}
+
+	private static function build_payload( $form_id, $fields, $entry_id = 0 ) {
 		$submission_key = $entry_id ? (string) $entry_id : wp_generate_uuid4();
-		self::$pending[ (int) $form_id ] = array(
+		return array(
 			'externalSubmissionId' => 'forminator-' . absint( $form_id ) . '-' . $submission_key,
 			'submittedAt'          => gmdate( 'c' ),
 			'name'                 => self::name_value( isset( $fields['name-1'] ) ? $fields['name-1'] : '' ),
@@ -148,6 +155,42 @@ final class Huttas_Forminator_CRM_Webhook {
 			'serviceDetails'       => self::scalar_value( isset( $fields['textarea-1'] ) ? $fields['textarea-1'] : '' ),
 			'marketingSmsConsent'  => self::consent_value( isset( $fields['consent-1'] ) ? $fields['consent-1'] : false ),
 		);
+	}
+
+	private static function current_request_payload( $form_id ) {
+		if ( ! empty( self::$pending[ $form_id ] ) ) {
+			return self::$pending[ $form_id ];
+		}
+
+		$fields = array();
+		if ( class_exists( 'Forminator_CForm_Front_Action' ) && ! empty( Forminator_CForm_Front_Action::$info['field_data_array'] ) ) {
+			foreach ( (array) Forminator_CForm_Front_Action::$info['field_data_array'] as $field ) {
+				if ( isset( $field['name'] ) ) {
+					$fields[ (string) $field['name'] ] = isset( $field['value'] ) ? $field['value'] : '';
+				}
+			}
+		}
+
+		// Fallback for Forminator configurations that do not populate the static field array.
+		foreach ( array( 'name-1', 'phone-1', 'email-1', 'textarea-1', 'consent-1' ) as $field_name ) {
+			if ( ! isset( $fields[ $field_name ] ) && isset( $_POST[ $field_name ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+				$fields[ $field_name ] = wp_unslash( $_POST[ $field_name ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			}
+		}
+
+		if ( empty( $fields['name-1'] ) || empty( $fields['phone-1'] ) || empty( $fields['email-1'] ) ) {
+			return array();
+		}
+
+		$entry_id = 0;
+		if ( function_exists( 'forminator_get_latest_entry_by_form_id' ) ) {
+			$entry = forminator_get_latest_entry_by_form_id( $form_id );
+			if ( is_object( $entry ) && isset( $entry->entry_id ) ) {
+				$entry_id = absint( $entry->entry_id );
+			}
+		}
+		self::$pending[ $form_id ] = self::build_payload( $form_id, $fields, $entry_id );
+		return self::$pending[ $form_id ];
 	}
 
 	private static function scalar_value( $value ) {
@@ -194,14 +237,30 @@ final class Huttas_Forminator_CRM_Webhook {
 
 	public static function after_submission( $form_id, $response ) {
 		$form_id = absint( $form_id );
-		if ( ! self::configured_for( $form_id ) || empty( self::$pending[ $form_id ] ) ) {
+		if ( ! self::configured_for( $form_id ) ) {
 			return;
 		}
 		if ( is_array( $response ) && isset( $response['success'] ) && ! $response['success'] ) {
 			return;
 		}
 
-		$payload = self::$pending[ $form_id ];
+		$payload = self::current_request_payload( $form_id );
+		self::dispatch_payload( $payload );
+	}
+
+	public static function send_from_response( $response, $form_id ) {
+		$form_id = absint( $form_id );
+		if ( ! self::configured_for( $form_id ) || ! is_array( $response ) || ( isset( $response['success'] ) && ! $response['success'] ) ) {
+			return $response;
+		}
+		self::dispatch_payload( self::current_request_payload( $form_id ) );
+		return $response;
+	}
+
+	private static function dispatch_payload( $payload ) {
+		if ( ! is_array( $payload ) || empty( $payload['externalSubmissionId'] ) ) {
+			return;
+		}
 		$key     = $payload['externalSubmissionId'];
 		if ( isset( self::$processed[ $key ] ) ) {
 			return;

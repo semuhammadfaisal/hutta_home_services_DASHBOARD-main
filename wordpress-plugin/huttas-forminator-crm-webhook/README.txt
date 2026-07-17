@@ -1,4 +1,4 @@
-Huttas Forminator CRM Webhook 2.0.0
+Huttas Forminator CRM Webhook 2.1.0
 ===================================
 
 Installation
@@ -23,7 +23,7 @@ consent-1  Marketing SMS consent
 Notes
 -----
 - Braces such as {name-1} are Forminator merge tags. The actual field IDs are used without braces.
-- Leave Forminator submission storage enabled.
+- Submission storage may be enabled or disabled; both configurations are supported.
 - AJAX and page-reload submission methods are both supported.
 - Failed CRM calls retry with the same external submission ID after approximately 1, 5, 15, and 60 minutes.
 - WordPress cron must be operational for delayed retries.
