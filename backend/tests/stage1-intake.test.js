@@ -39,6 +39,24 @@ test('Forminator mapping supports nested field arrays and body-fingerprint fallb
   assert.equal(first.externalSubmissionId, second.externalSubmissionId);
 });
 
+test('Forminator native underscore field IDs map to the Stage 1 contract', () => {
+  const body = {
+    name_1: 'Native Customer',
+    phone_1: '(480) 555-0199',
+    email_1: 'native@example.com',
+    textarea_1: 'Native webhook request',
+    consent_1: '1',
+    entry_time: '2026-07-17 06:25:00'
+  };
+  const mapped = mapForminatorPayload(body, Buffer.from(JSON.stringify(body)));
+  assert.equal(mapped.name, 'Native Customer');
+  assert.equal(mapped.phone, '(480) 555-0199');
+  assert.equal(mapped.email, 'native@example.com');
+  assert.equal(mapped.serviceDetails, 'Native webhook request');
+  assert.equal(mapped.marketingSmsConsent, true);
+  assert.equal(mapped.submittedAt, '2026-07-17 06:25:00');
+});
+
 test('Forminator webhook key uses constant-time equality semantics', () => {
   assert.equal(safeSecretEqual('separate-long-secret', 'separate-long-secret'), true);
   assert.equal(safeSecretEqual('wrong', 'separate-long-secret'), false);
@@ -46,8 +64,9 @@ test('Forminator webhook key uses constant-time equality semantics', () => {
 });
 
 test('Forminator connection probes are acknowledged without treating partial submissions as probes', () => {
-  assert.equal(isForminatorConnectionProbe(mapForminatorPayload({}, Buffer.from('{}'))), true);
-  assert.equal(isForminatorConnectionProbe(mapForminatorPayload({ 'name-1': 'Jane' })), false);
+  assert.equal(isForminatorConnectionProbe('true'), true);
+  assert.equal(isForminatorConnectionProbe('TRUE'), true);
+  assert.equal(isForminatorConnectionProbe(undefined), false);
 });
 
 test('website payload validation normalizes customer data and keeps consent separate', () => {

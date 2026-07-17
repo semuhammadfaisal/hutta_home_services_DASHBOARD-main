@@ -84,7 +84,7 @@ function mapForminatorPayload(body, rawBody = Buffer.alloc(0), now = new Date())
   const entryId = firstForminatorValue(body, ['entry_id', 'entryId', 'submission_id', 'submissionId']);
   const fingerprintSource = rawBody.length ? rawBody : Buffer.from(JSON.stringify(body || {}));
   const fingerprint = crypto.createHash('sha256').update(fingerprintSource).digest('hex').slice(0, 32);
-  const submittedAtValue = firstForminatorValue(body, ['submittedAt', 'submitted_at', 'date_created', 'submission_time']);
+  const submittedAtValue = firstForminatorValue(body, ['submittedAt', 'submitted_at', 'date_created', 'submission_time', 'entry-time', 'entry_time']);
   const submittedAt = submittedAtValue && !Number.isNaN(new Date(submittedAtValue).getTime())
     ? submittedAtValue
     : now.toISOString();
@@ -92,16 +92,18 @@ function mapForminatorPayload(body, rawBody = Buffer.alloc(0), now = new Date())
   return {
     externalSubmissionId: sanitizeText(`forminator-${formId}-${entryId || fingerprint}`, 128),
     submittedAt,
-    name: firstForminatorValue(body, ['name-1']),
-    phone: firstForminatorValue(body, ['phone-1']),
-    email: firstForminatorValue(body, ['email-1']),
-    serviceDetails: firstForminatorValue(body, ['textarea-1']),
-    marketingSmsConsent: formInputChecked(findForminatorField(body, 'consent-1'))
+    name: firstForminatorValue(body, ['name-1', 'name_1']),
+    phone: firstForminatorValue(body, ['phone-1', 'phone_1']),
+    email: firstForminatorValue(body, ['email-1', 'email_1']),
+    serviceDetails: firstForminatorValue(body, ['textarea-1', 'textarea_1']),
+    marketingSmsConsent: formInputChecked(
+      findForminatorField(body, 'consent-1') ?? findForminatorField(body, 'consent_1')
+    )
   };
 }
 
-function isForminatorConnectionProbe(mapped) {
-  return !mapped?.name && !mapped?.phone && !mapped?.email && !mapped?.serviceDetails;
+function isForminatorConnectionProbe(headerValue) {
+  return String(headerValue || '').trim().toLowerCase() === 'true';
 }
 
 function parseOperationsRecipients(value = process.env.INTAKE_NOTIFICATION_EMAILS) {

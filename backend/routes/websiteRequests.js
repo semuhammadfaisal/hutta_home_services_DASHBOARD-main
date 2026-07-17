@@ -61,7 +61,7 @@ router.post('/website-requests/forminator', limiter, async (req, res) => {
     }
 
     const mapped = mapForminatorPayload(req.body, rawBody);
-    if (isForminatorConnectionProbe(mapped)) {
+    if (isForminatorConnectionProbe(req.get('X-Hook-Test'))) {
       return res.status(200).json({ success: true, status: 'ready' });
     }
     const { payload, errors } = validatePayload(mapped);
