@@ -43,7 +43,7 @@
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
     <link rel="stylesheet" href="../assets/css/scheduling.css">
-    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260720-stage-header">
+    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260720-clean-stage-header">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -854,7 +854,6 @@
         <section id="workflow-center" class="content-section workflow-center-section workflow-stage-section" data-workflow-stage="1">
             <div class="page-header workflow-header">
                 <div>
-                    <p class="workflow-eyebrow">Stage 1 · Workflow Center</p>
                     <h1>Request Received</h1>
                     <p>Website requests awaiting intake review and missing job information.</p>
                 </div>
@@ -873,7 +872,7 @@
         </section>
 
         <section id="outgoing-quotes" class="content-section outgoing-quotes-section workflow-stage-section" data-workflow-stage="3">
-            <div class="page-header workflow-header"><div><p class="workflow-eyebrow">Stage 3 &middot; Workflow Center</p><h1>Outgoing Quotes</h1><p>Apply markup, prepare customer-facing terms, preview, and securely send quotes.</p></div><button type="button" class="btn-secondary" onclick="loadOutgoingQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+            <div class="page-header workflow-header"><div><h1>Outgoing Quotes</h1><p>Apply markup, prepare customer-facing terms, preview, and securely send quotes.</p></div><button type="button" class="btn-secondary" onclick="loadOutgoingQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
             <div class="workflow-summary"><div><strong id="outgoingReadyCount">0</strong><span>Ready to convert</span></div><div><strong id="outgoingDraftCount">0</strong><span>Draft quotes</span></div><div><strong id="outgoingSentCount">0</strong><span>Sent quotes</span></div></div>
             <section id="outgoingSettingsPanel" class="outgoing-panel outgoing-settings" hidden>
                 <div class="outgoing-panel-head"><div><h2>Outgoing Quote Settings</h2><p>Admin-managed defaults and approved terms.</p></div><button type="button" class="btn-secondary" onclick="toggleOutgoingSettings(false)">Close</button></div>
@@ -890,7 +889,7 @@
 
         <section id="customer-approvals" class="content-section customer-approvals-section workflow-stage-section" data-workflow-stage="4">
             <div class="page-header workflow-header">
-                <div><p class="workflow-eyebrow">Stage 4 &middot; Workflow Center</p><h1>Customer Approvals</h1><p>Track sent quotes, approvals, and customer change requests.</p></div>
+                <div><h1>Customer Approvals</h1><p>Track sent quotes, approvals, and customer change requests.</p></div>
                 <button type="button" class="btn-secondary" onclick="loadCustomerApprovals()"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
             <div class="workflow-summary approval-summary" aria-label="Customer approval summary">
@@ -907,7 +906,7 @@
         </section>
 
         <section id="scheduling" class="content-section scheduling-section workflow-stage-section" data-workflow-stage="5">
-            <div class="page-header workflow-header"><div><p class="workflow-eyebrow">Stage 5 &middot; Workflow Center</p><h1>Scheduling</h1><p>Propose, confirm, and audit vendor-approved job schedules.</p></div><button class="btn-secondary" onclick="loadScheduling()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+            <div class="page-header workflow-header"><div><h1>Scheduling</h1><p>Propose, confirm, and audit vendor-approved job schedules.</p></div><button class="btn-secondary" onclick="loadScheduling()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
             <div class="workflow-summary scheduling-summary"><div><strong id="scheduleReadyCount">0</strong><span>Ready to schedule</span></div><div><strong id="schedulePendingCount">0</strong><span>Awaiting vendor</span></div><div><strong id="scheduleChangesCount">0</strong><span>Changes requested</span></div><div><strong id="scheduleConfirmedCount">0</strong><span>Confirmed</span></div></div>
             <div id="schedulingOrderList" class="scheduling-list"><div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading schedules&hellip;</p></div></div>
             <section id="schedulingWorkspace" class="scheduling-workspace" hidden><div class="scheduling-head"><div><p class="workflow-eyebrow">Schedule workspace</p><h2 id="schedulingWorkspaceTitle"></h2><p id="schedulingWorkspaceSummary"></p></div><button class="btn-secondary" onclick="closeSchedulingWorkspace()">Close</button></div>
@@ -918,7 +917,7 @@
 
         <section id="incoming-quotes" class="content-section incoming-quotes-section workflow-stage-section" data-workflow-stage="2">
             <div class="page-header workflow-header">
-                <div><p class="workflow-eyebrow">Stage 2 &middot; Workflow Center</p><h1>Incoming Quotes</h1><p>Collect, compare, revise, and select vendor quotes for unquoted Orders.</p></div>
+                <div><h1>Incoming Quotes</h1><p>Collect, compare, revise, and select vendor quotes for unquoted Orders.</p></div>
                 <button type="button" class="btn-secondary" onclick="loadIncomingQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
             <div class="incoming-start-panel">
