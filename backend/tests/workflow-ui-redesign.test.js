@@ -1,0 +1,66 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+
+const root = path.resolve(__dirname, '..', '..');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+test('Workflow Center uses one sidebar entry and a unified six-view shell', () => {
+  const html = read('pages/admin-dashboard.html');
+  const hub = read('assets/js/workflow-hub.js');
+  assert.equal((html.match(/id="workflowCenterNav"/g) || []).length, 1);
+  assert.match(html, /id="workflow-overview"/);
+  assert.match(html, /data-workflow-stage="1"/);
+  assert.match(html, /data-workflow-stage="5"/);
+  assert.match(hub, /#workflow-center\/stage-/);
+  assert.match(hub, /Back to/);
+  assert.match(hub, /state\.scroll/);
+});
+
+test('read-only overview and journey APIs are authenticated and map every workflow state', () => {
+  const server = read('backend/server.js');
+  const route = read('backend/routes/workflowCenter.js');
+  assert.ok(server.indexOf("app.use('/api', authenticateToken)") < server.indexOf("app.use('/api/workflow-center'"));
+  assert.match(route, /router\.get\('\/overview', allowedRoles/);
+  assert.match(route, /router\.get\('\/orders\/:orderId\/journey', allowedRoles/);
+  assert.doesNotMatch(route, /router\.(post|put|patch|delete)/);
+  const { stageByStatus } = require('../routes/workflowCenter').__test;
+  assert.equal(stageByStatus.request_received, 1);
+  assert.equal(stageByStatus.quote_collection, 2);
+  assert.equal(stageByStatus.outgoing_quote_draft, 3);
+  assert.equal(stageByStatus.quote_changes_requested, 4);
+  assert.equal(stageByStatus.scheduled, 5);
+});
+
+test('internal redesign provides accessible dialogs, filters, readiness, timelines, and responsive states', () => {
+  const hub = read('assets/js/workflow-hub.js');
+  const css = read('assets/css/workflow-redesign.css');
+  const incoming = read('assets/js/incoming-quotes.js');
+  const outgoing = read('assets/js/outgoing-quotes.js');
+  assert.match(hub, /role="dialog" aria-modal="true"/);
+  assert.match(hub, /Discard unsaved changes/);
+  assert.match(hub, /Send readiness/);
+  assert.match(hub, /workflow-decision-timeline/);
+  assert.match(hub, /America\/Phoenix/);
+  assert.match(incoming, /WorkflowDialog/);
+  assert.match(outgoing, /WorkflowDialog/);
+  assert.doesNotMatch(`${incoming}\n${outgoing}`, /(^|[^.A-Za-z])(confirm|prompt)\(/m);
+  assert.match(css, /:focus-visible/);
+  assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /@media\(max-width:520px\)/);
+});
+
+test('public workflow pages share secure styling and vendor quote is a three-step review flow', () => {
+  const customer = read('pages/customer-quote.html');
+  const vendor = read('pages/vendor-quote.html');
+  const schedule = read('pages/vendor-schedule.html');
+  const vendorJs = read('assets/js/vendor-quote.js');
+  for (const html of [customer, vendor, schedule]) assert.match(html, /secure-workflow\.css/);
+  assert.equal((vendor.match(/class="quote-card secure-step" data-step="[123]"/g) || []).length, 3);
+  assert.match(vendor, /id="vendorQuoteReview"/);
+  assert.match(vendorJs, /validateStep/);
+  assert.match(vendorJs, /reviewMarkup/);
+  assert.doesNotMatch(customer, /vendorCost|markupAmount|internalNotes/);
+  assert.doesNotMatch(schedule, /vendorCost|markupAmount|internalNotes/);
+});

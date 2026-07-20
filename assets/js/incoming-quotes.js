@@ -154,9 +154,10 @@
   }
 
   async function selectIncomingQuote(quoteId, hasWarnings) {
-    const acknowledged = !hasWarnings || confirm('This vendor has missing, expiring, or expired compliance information. Acknowledge the warning and select this quote?');
+    const acknowledged = !hasWarnings || await (window.WorkflowDialog?.confirm?.({ title: 'Acknowledge compliance warning', message: 'This vendor has missing, expiring, or expired compliance information.', impact: 'Selection is allowed, but your acknowledgement will be recorded for this quote.', confirmLabel: 'Acknowledge and Continue' }) || Promise.resolve(false));
     if (!acknowledged) return;
-    if (!confirm('Select this vendor quote and close all other quotes for this Order?')) return;
+    const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Select winning vendor quote?', message: 'This quote will become the selected vendor cost for the Order.', impact: 'Other submitted quotes will be marked not selected and outstanding invitations will close.', confirmLabel: 'Select Winning Quote' }) || Promise.resolve(false));
+    if (!confirmed) return;
     try {
       await window.APIService.selectIncomingQuote(quoteId, hasWarnings ? true : false);
       toast('Vendor quote selected. The Order is ready for Stage 3.');
@@ -165,7 +166,7 @@
   }
 
   async function requestIncomingQuoteRevision(quoteId, email) {
-    const message = prompt('Enter revision instructions for the vendor:');
+    const message = window.WorkflowDialog ? await window.WorkflowDialog.prompt({ title: 'Request vendor revision', message: 'Explain exactly what the vendor should update.', impact: 'A new secure revision link will be generated; the submitted version remains in history.', placeholder: 'Revision instructions', confirmLabel: 'Send Revision Request' }) : null;
     if (message === null || !message.trim()) return;
     try {
       await window.APIService.requestIncomingQuoteRevision(quoteId, { email, message: message.trim() });
@@ -194,7 +195,8 @@
   }
 
   async function submitIncomingQuoteDraft(quoteId) {
-    if (!confirm('Submit this draft? Submitted quote versions cannot be edited.')) return;
+    const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Submit vendor quote?', message: 'Review the quote before submitting it.', impact: 'Submitted quote versions are immutable. Corrections require a new revision.', confirmLabel: 'Submit Quote' }) || Promise.resolve(false));
+    if (!confirmed) return;
     try {
       await window.APIService.submitIncomingQuote(quoteId);
       toast('Draft submitted.');
@@ -203,7 +205,8 @@
   }
 
   async function createStaffIncomingQuoteRevision(quoteId) {
-    if (!confirm('Create an internal revision? The current submitted version will remain in history and become superseded.')) return;
+    const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Create internal revision?', message: 'A new editable draft will be created from this submitted quote.', impact: 'The current submitted version remains in history and becomes superseded.', confirmLabel: 'Create Revision' }) || Promise.resolve(false));
+    if (!confirmed) return;
     try {
       const revision = await window.APIService.createStaffIncomingQuoteRevision(quoteId);
       await refreshWorkspace();
@@ -229,6 +232,8 @@
 
   $('incomingInvitationForm')?.addEventListener('submit', async event => {
     event.preventDefault();
+    const submitButton = event.submitter;
+    if (submitButton) submitButton.disabled = true;
     try {
       await window.APIService.sendIncomingQuoteInvitation(currentOrderId, { vendorId: $('incomingInviteVendor').value, email: $('incomingInviteEmail').value.trim(), personalMessage: $('incomingInviteMessage').value.trim() });
       event.currentTarget.reset();
@@ -236,10 +241,13 @@
       toast('Secure vendor quote invitation queued.');
       await refreshWorkspace();
     } catch (error) { toast(error.message, 'error'); }
+    finally { if (submitButton?.isConnected) submitButton.disabled = false; }
   });
 
   $('incomingStaffQuoteForm')?.addEventListener('submit', async event => {
     event.preventDefault();
+    const submitButton = event.submitter;
+    if (submitButton) submitButton.disabled = true;
     try {
       const shouldSubmit = event.submitter?.value !== 'draft';
       const payload = {
@@ -266,6 +274,7 @@
       toast(shouldSubmit ? 'Vendor quote recorded and submitted.' : 'Vendor quote draft saved.');
       await refreshWorkspace();
     } catch (error) { toast(error.message, 'error'); }
+    finally { if (submitButton?.isConnected) submitButton.disabled = false; }
   });
 
   window.loadIncomingQuotes = loadIncomingQuotes;

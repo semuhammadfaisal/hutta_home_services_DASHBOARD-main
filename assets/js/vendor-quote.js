@@ -2,6 +2,9 @@
   const $ = id => document.getElementById(id);
   const endpoint = '/api/incoming-quotes/public/form';
   let token = '';
+  let currentStep = 1;
+  let highestStep = 1;
+  const escapeHtml = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 
   function readToken() {
     const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -52,6 +55,39 @@
     $('accessNotes').placeholder = required ? 'Describe how access should be arranged' : 'Optional access information';
   }
 
+  function fieldsForStep(step) {
+    return [...document.querySelectorAll(`.secure-step[data-step="${step}"] input, .secure-step[data-step="${step}"] select, .secure-step[data-step="${step}"] textarea`)];
+  }
+
+  function validateStep(step) {
+    for (const field of fieldsForStep(step)) {
+      if (!field.checkValidity()) { field.reportValidity(); field.focus(); return false; }
+    }
+    return true;
+  }
+
+  function reviewMarkup() {
+    const value = name => document.querySelector(`[name="${name}"]`)?.value || 'Not provided';
+    const access = value('siteAccessRequired') === 'true' ? 'Arrangement required' : 'No arrangement needed';
+    $('vendorQuoteReview').innerHTML = `<div><span>Labor</span><strong>$${Number(value('laborAmount') || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Materials</span><strong>$${Number(value('materialsAmount') || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Total</span><strong>${escapeHtml($('quoteTotal').textContent)}</strong></div><div><span>Earliest date</span><strong>${escapeHtml(value('earliestAvailableDate'))}</strong></div><div><span>Duration</span><strong>${escapeHtml(value('durationValue'))} ${escapeHtml(value('durationUnit'))}</strong></div><div><span>Site access</span><strong>${escapeHtml(access)}</strong></div><div class="wide"><span>Scope of work</span><strong>${escapeHtml(value('scopeOfWork'))}</strong></div>`;
+  }
+
+  function showStep(next, validate = true) {
+    if (next > currentStep && validate && !validateStep(currentStep)) return;
+    currentStep = Math.max(1, Math.min(3, Number(next)));
+    highestStep = Math.max(highestStep, currentStep);
+    document.querySelectorAll('.secure-step').forEach(section => { section.hidden = Number(section.dataset.step) !== currentStep; });
+    document.querySelectorAll('.secure-progress-step').forEach(button => {
+      const step = Number(button.dataset.stepTarget);
+      button.toggleAttribute('aria-current', step === currentStep);
+      if (step === currentStep) button.setAttribute('aria-current', 'step');
+      button.classList.toggle('is-complete', step < currentStep);
+      button.disabled = step > highestStep;
+    });
+    if (currentStep === 3) reviewMarkup();
+    document.querySelector(`.secure-step[data-step="${currentStep}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async function submit(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -84,8 +120,11 @@
 
   document.querySelectorAll('[name="laborAmount"],[name="materialsAmount"]').forEach(input => input.addEventListener('input', updateTotal));
   $('siteAccessRequired').addEventListener('change', updateAccess);
+  document.querySelectorAll('[data-next-step]').forEach(button => button.addEventListener('click', () => showStep(button.dataset.nextStep)));
+  document.querySelectorAll('.secure-progress-step').forEach(button => button.addEventListener('click', () => { const next=Number(button.dataset.stepTarget); if(next<=highestStep)showStep(next,next>currentStep); }));
   $('vendorQuoteForm').addEventListener('submit', submit);
   updateAccess();
+  showStep(1, false);
   if (!readToken()) return showError('The secure quote token is missing. Open the complete link from your latest invitation email.');
   request().then(populate).catch(error => showError(error.message));
 })();

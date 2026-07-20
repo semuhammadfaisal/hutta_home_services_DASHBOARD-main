@@ -898,6 +898,16 @@ class APIService {
         });
     }
 
+    // Unified Workflow Center
+    async getWorkflowOverview() {
+        this.requestCache.delete('GET:/workflow-center/overview');
+        return this.request('/workflow-center/overview');
+    }
+
+    async getWorkflowJourney(orderId) {
+        return this.request(`/workflow-center/orders/${encodeURIComponent(orderId)}/journey`);
+    }
+
     // Employees
     async getEmployees() {
         return this.request('/employees');

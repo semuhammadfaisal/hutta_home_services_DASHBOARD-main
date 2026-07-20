@@ -43,6 +43,7 @@
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
     <link rel="stylesheet" href="../assets/css/scheduling.css">
+    <link rel="stylesheet" href="../assets/css/workflow-redesign.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -125,34 +126,17 @@
             </li>
             <li class="sidebar-section-label" aria-hidden="true">Workflow Center</li>
             <li class="menu-item">
-                <a href="#workflow-center" data-section="workflow-center">
-                    <i class="fas fa-inbox"></i>
-                    <span>Request Received</span>
-                    <span class="workflow-nav-badge" id="workflowNavBadge" hidden>0</span>
+                <a href="#workflow-center/overview" data-section="workflow-overview" id="workflowCenterNav">
+                    <i class="fas fa-route"></i>
+                    <span>Workflow Center</span>
+                    <span class="workflow-nav-badge" id="workflowHubNavBadge" hidden>0</span>
+                    <span id="workflowNavBadge" hidden>0</span>
+                    <span id="incomingQuotesNavBadge" hidden>0</span>
+                    <span id="outgoingQuotesNavBadge" hidden>0</span>
+                    <span id="customerApprovalsNavBadge" hidden>0</span>
+                    <span id="schedulingNavBadge" hidden>0</span>
                 </a>
             </li>
-            <li class="menu-item">
-                <a href="#incoming-quotes" data-section="incoming-quotes">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                    <span>Incoming Quotes</span>
-                    <span class="workflow-nav-badge" id="incomingQuotesNavBadge" hidden>0</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#outgoing-quotes" data-section="outgoing-quotes">
-                    <i class="fas fa-file-signature"></i>
-                    <span>Outgoing Quotes</span>
-                    <span class="workflow-nav-badge" id="outgoingQuotesNavBadge" hidden>0</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#customer-approvals" data-section="customer-approvals">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>Customer Approvals</span>
-                    <span class="workflow-nav-badge" id="customerApprovalsNavBadge" hidden>0</span>
-                </a>
-            </li>
-            <li class="menu-item"><a href="#scheduling" data-section="scheduling"><i class="fas fa-calendar-check"></i><span>Scheduling</span><span class="workflow-nav-badge" id="schedulingNavBadge" hidden>0</span></a></li>
             <li class="sidebar-section-label" aria-hidden="true">Operations</li>
             <li class="menu-item">
                 <a href="#orders" data-section="orders">
@@ -863,7 +847,11 @@
             </div>
         </section>
 
-        <section id="workflow-center" class="content-section workflow-center-section">
+        <section id="workflow-overview" class="content-section workflow-hub-section">
+            <div id="workflowOverviewMount" aria-live="polite"></div>
+        </section>
+
+        <section id="workflow-center" class="content-section workflow-center-section workflow-stage-section" data-workflow-stage="1">
             <div class="page-header workflow-header">
                 <div>
                     <p class="workflow-eyebrow">Stage 1 · Workflow Center</p>
@@ -884,7 +872,7 @@
             </div>
         </section>
 
-        <section id="outgoing-quotes" class="content-section outgoing-quotes-section">
+        <section id="outgoing-quotes" class="content-section outgoing-quotes-section workflow-stage-section" data-workflow-stage="3">
             <div class="page-header workflow-header"><div><p class="workflow-eyebrow">Stage 3 &middot; Workflow Center</p><h1>Outgoing Quotes</h1><p>Apply markup, prepare customer-facing terms, preview, and securely send quotes.</p></div><button type="button" class="btn-secondary" onclick="loadOutgoingQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
             <div class="workflow-summary"><div><strong id="outgoingReadyCount">0</strong><span>Ready to convert</span></div><div><strong id="outgoingDraftCount">0</strong><span>Draft quotes</span></div><div><strong id="outgoingSentCount">0</strong><span>Sent quotes</span></div></div>
             <section id="outgoingSettingsPanel" class="outgoing-panel outgoing-settings" hidden>
@@ -900,7 +888,7 @@
             </section>
         </section>
 
-        <section id="customer-approvals" class="content-section customer-approvals-section">
+        <section id="customer-approvals" class="content-section customer-approvals-section workflow-stage-section" data-workflow-stage="4">
             <div class="page-header workflow-header">
                 <div><p class="workflow-eyebrow">Stage 4 &middot; Workflow Center</p><h1>Customer Approvals</h1><p>Track sent quotes, approvals, and customer change requests.</p></div>
                 <button type="button" class="btn-secondary" onclick="loadCustomerApprovals()"><i class="fas fa-sync-alt"></i> Refresh</button>
@@ -918,7 +906,7 @@
             </section>
         </section>
 
-        <section id="scheduling" class="content-section scheduling-section">
+        <section id="scheduling" class="content-section scheduling-section workflow-stage-section" data-workflow-stage="5">
             <div class="page-header workflow-header"><div><p class="workflow-eyebrow">Stage 5 &middot; Workflow Center</p><h1>Scheduling</h1><p>Propose, confirm, and audit vendor-approved job schedules.</p></div><button class="btn-secondary" onclick="loadScheduling()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
             <div class="workflow-summary scheduling-summary"><div><strong id="scheduleReadyCount">0</strong><span>Ready to schedule</span></div><div><strong id="schedulePendingCount">0</strong><span>Awaiting vendor</span></div><div><strong id="scheduleChangesCount">0</strong><span>Changes requested</span></div><div><strong id="scheduleConfirmedCount">0</strong><span>Confirmed</span></div></div>
             <div id="schedulingOrderList" class="scheduling-list"><div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading schedules&hellip;</p></div></div>
@@ -928,7 +916,7 @@
             </section>
         </section>
 
-        <section id="incoming-quotes" class="content-section incoming-quotes-section">
+        <section id="incoming-quotes" class="content-section incoming-quotes-section workflow-stage-section" data-workflow-stage="2">
             <div class="page-header workflow-header">
                 <div><p class="workflow-eyebrow">Stage 2 &middot; Workflow Center</p><h1>Incoming Quotes</h1><p>Collect, compare, revise, and select vendor quotes for unquoted Orders.</p></div>
                 <button type="button" class="btn-secondary" onclick="loadIncomingQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button>
@@ -4403,6 +4391,7 @@
     <script src="../assets/js/outgoing-quotes.js"></script>
     <script src="../assets/js/customer-approvals.js"></script>
     <script src="../assets/js/scheduling.js"></script>
+    <script src="../assets/js/workflow-hub.js"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>

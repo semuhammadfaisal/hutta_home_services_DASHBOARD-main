@@ -157,6 +157,7 @@ try {
   app.use('/api/reports', checkRole(['admin']), require('./routes/reports'));
   app.use('/api/settings', checkRole(['admin']), require('./routes/settings'));
   app.use('/api/notifications', require('./routes/notifications'));
+  app.use('/api/workflow-center', require('./routes/workflowCenter'));
   app.use('/api/intakes', require('./routes/intakes'));
   app.use('/api/stages', require('./routes/stages'));
   app.use('/api/pipeline-records', require('./routes/pipelineRecords'));

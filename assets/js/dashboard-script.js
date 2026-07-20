@@ -9624,6 +9624,7 @@ function renderWorkflowCenter(intakes) {
             item.orderId?.missingData?.serviceAddress ? '<span class="workflow-badge warning"><i class="fas fa-map-marker-alt"></i> Missing service address</span>' : '',
             item.orderId?.missingData?.serviceCategory ? '<span class="workflow-badge warning"><i class="fas fa-tools"></i> Missing category</span>' : ''
         ].filter(Boolean).join('');
+        const stageTwoBlockers = [item.requiresReview ? 'Resolve customer review' : '', item.orderId?.missingData?.serviceAddress ? 'Add service address' : '', item.orderId?.missingData?.serviceCategory ? 'Add service category' : ''].filter(Boolean);
         return `<article class="workflow-request-card">
             <div class="workflow-card-head">
                 <div><span class="workflow-reference">${escapePaymentHtml(item.requestReference)}</span><h3>${escapePaymentHtml(customer.name || 'Customer')}</h3></div>
@@ -9643,6 +9644,7 @@ function renderWorkflowCenter(intakes) {
                 ${item.requiresReview ? `<button type="button" class="btn-secondary" onclick="resolveIntakeReview('${item._id}', '${escapePaymentHtml(item.customerMatchReason || '')}')"><i class="fas fa-check"></i> Resolve Review</button>` : ''}
                 ${customerFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_customer_confirmation')">Retry Customer Email</button>` : ''}
                 ${operationsFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_operations_alert')">Retry Operations Email</button>` : ''}
+                <button type="button" class="btn-secondary" onclick="startWorkflowQuoteCollection('${escapePaymentHtml(item.orderId?._id || item.orderId || '')}')" ${stageTwoBlockers.length ? `disabled title="${escapePaymentHtml(stageTwoBlockers.join(' · '))}"` : ''}><i class="fas fa-arrow-right"></i> ${stageTwoBlockers.length ? `Stage 2 blocked: ${escapePaymentHtml(stageTwoBlockers.join(', '))}` : 'Start Quote Collection'}</button>
             </div>
         </article>`;
     }).join('');
@@ -9687,9 +9689,9 @@ async function retryIntakeEmail(intakeId, type) {
     }
 }
 
-function openWorkflowOrder(orderId) {
+async function openWorkflowOrder(orderId) {
     if (!orderId) return;
-    showOrderDetail(orderId, false, false, true);
+    return showOrderDetail(orderId, false, false, true);
 }
 
 window.loadWorkflowCenter = loadWorkflowCenter;
