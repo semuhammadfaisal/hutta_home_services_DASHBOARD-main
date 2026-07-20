@@ -40,7 +40,7 @@
       badge.hidden = collecting.length === 0;
     }
     if (!orders.length) {
-      list.innerHTML = '<div class="workflow-empty"><i class="fas fa-file-invoice-dollar"></i><p>No Orders are collecting vendor quotes.</p></div>';
+      list.innerHTML = '<div class="workflow-empty workflow-empty-illustrated"><span class="workflow-empty-art"><i class="fas fa-file-invoice-dollar"></i></span><strong>No Orders are collecting vendor quotes.</strong><p>Start collecting quotes to see them here.</p></div>';
       return;
     }
     list.innerHTML = orders.map(order => `<article class="incoming-order-card">

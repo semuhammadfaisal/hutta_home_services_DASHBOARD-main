@@ -24,7 +24,7 @@
     badge.hidden = pending + changes === 0;
     const list = $('customerApprovalList');
     if (!approvals.length) {
-      list.innerHTML = '<div class="workflow-empty"><i class="fas fa-clipboard-check"></i><p>No customer quotes are awaiting or have recorded a decision.</p></div>';
+      list.innerHTML = '<div class="workflow-empty workflow-empty-illustrated"><span class="workflow-empty-art shield"><i class="fas fa-shield-alt"></i></span><strong>No customer quotes are awaiting a decision.</strong><p>Customer responses will appear here.</p></div>';
       return;
     }
     list.innerHTML = approvals.map(item => {

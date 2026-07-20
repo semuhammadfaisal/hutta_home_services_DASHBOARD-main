@@ -49,6 +49,10 @@ test('internal redesign provides accessible dialogs, filters, readiness, timelin
   assert.match(css, /:focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /@media\(max-width:520px\)/);
+  assert.match(css, /Reference-aligned Workflow Center/);
+  assert.match(css, /workflow-empty-art/);
+  assert.match(hub, /workflow-empty-illustrated/);
+  assert.match(hub, /\$\{tabs\(stage\)\}\$\{filterbar\(stage\)\}/);
 });
 
 test('workflow workspaces never request a journey without a linked Order ID', () => {

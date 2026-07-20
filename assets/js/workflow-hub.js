@@ -34,7 +34,7 @@
     </div>`;
   }
   function sharedChrome(stage) {
-    return `<div class="workflow-shared-chrome">${tabs(stage)}${stageStrip(stage)}${filterbar(stage)}</div>`;
+    return `<div class="workflow-shared-chrome">${tabs(stage)}${filterbar(stage)}</div>`;
   }
 
   function setSidebarActive() {
@@ -95,9 +95,9 @@
     mount.innerHTML = `<div class="workflow-hub-shell">${overviewHeader()}${tabs(0)}${stageStrip(0)}
       <div class="workflow-overview-grid">
         <section class="workflow-overview-panel"><div class="workflow-panel-head"><div><h2>Needs attention</h2><p>Blocked work and required next actions, prioritized for your team.</p></div><span class="workflow-attention-pill">${attention.length} shown</span></div>
-          <div>${attention.length ? attention.map(item => `<article class="workflow-queue-row"><div><span class="workflow-hub-eyebrow">${esc(item.requestReference || item.orderId)}</span><h3>${esc(item.customer?.name || 'Customer')}</h3><p>${esc(item.service || 'Service request')}</p></div><div><strong>Stage ${item.stage}</strong><small>${esc(statusText(item.workflowStatus))}</small></div><div class="workflow-row-reasons">${item.reasons.map(priorityChip).join('')}</div><button class="btn-primary" data-workflow-open="${esc(item._id)}" data-stage="${item.stage}">Continue</button></article>`).join('') : '<div class="workflow-empty"><i class="fas fa-check-circle"></i><p>No workflow items need attention.</p></div>'}</div>
+          <div>${attention.length ? attention.map(item => `<article class="workflow-queue-row"><div><span class="workflow-hub-eyebrow">${esc(item.requestReference || item.orderId)}</span><h3>${esc(item.customer?.name || 'Customer')}</h3><p>${esc(item.service || 'Service request')}</p></div><div><strong>Stage ${item.stage}</strong><small>${esc(statusText(item.workflowStatus))}</small></div><div class="workflow-row-reasons">${item.reasons.map(priorityChip).join('')}</div><button class="btn-primary" data-workflow-open="${esc(item._id)}" data-stage="${item.stage}">Continue</button></article>`).join('') : '<div class="workflow-empty workflow-empty-illustrated"><span class="workflow-empty-art success"><i class="fas fa-clipboard-check"></i></span><strong>No workflow items need attention.</strong><p>Great job! Everything is on track.</p></div>'}</div>
         </section>
-        <aside class="workflow-overview-panel"><div class="workflow-panel-head"><div><h2>Recently updated</h2><p>Latest activity across all stages.</p></div></div><div class="workflow-recent-list">${recent.length ? recent.map(item => `<button class="workflow-recent-item" data-workflow-open="${esc(item._id)}" data-stage="${item.stage}" type="button"><span><strong>${esc(item.customer?.name || item.requestReference || item.orderId)}</strong><span>Stage ${item.stage} · ${esc(item.service || '')}</span></span><small>${fmtDate(item.updatedAt)}</small></button>`).join('') : '<p>No workflow activity yet.</p>'}</div></aside>
+        <aside class="workflow-overview-panel"><div class="workflow-panel-head"><div><h2>Recently updated</h2><p>Latest activity across all stages.</p></div></div><div class="workflow-recent-list">${recent.length ? recent.map(item => `<button class="workflow-recent-item" data-workflow-open="${esc(item._id)}" data-stage="${item.stage}" type="button"><span><strong>${esc(item.customer?.name || item.requestReference || item.orderId)}</strong><span>Stage ${item.stage} · ${esc(item.service || '')}</span></span><small>${fmtDate(item.updatedAt)}</small></button>`).join('') : '<div class="workflow-empty workflow-empty-illustrated compact"><span class="workflow-empty-art"><i class="fas fa-calendar-check"></i></span><strong>No workflow activity yet.</strong><p>New activity will appear here.</p></div>'}</div></aside>
       </div></div>`;
     bindNavigation(mount);
   }

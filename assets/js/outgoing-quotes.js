@@ -16,7 +16,7 @@
     $('outgoingReadyCount').textContent = ready; $('outgoingDraftCount').textContent = drafts; $('outgoingSentCount').textContent = sent;
     const badge = $('outgoingQuotesNavBadge'); badge.textContent = ready + drafts; badge.hidden = ready + drafts === 0;
     const list = $('outgoingQuoteOrderList');
-    if (!orders.length) { list.innerHTML = '<div class="workflow-empty"><i class="fas fa-file-signature"></i><p>No Orders are ready for outgoing quotes.</p></div>'; return; }
+    if (!orders.length) { list.innerHTML = '<div class="workflow-empty workflow-empty-illustrated"><span class="workflow-empty-art plane"><i class="fas fa-paper-plane"></i></span><strong>No Orders are ready for outgoing quotes.</strong><p>Build and send quotes to see them here.</p></div>'; return; }
     list.innerHTML = orders.map(order => {
       const quote = order.outgoingQuote;
       const state = quote?.status || 'ready';
