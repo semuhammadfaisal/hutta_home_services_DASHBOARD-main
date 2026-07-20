@@ -905,6 +905,9 @@ class APIService {
     }
 
     async getWorkflowJourney(orderId) {
+        if (!String(orderId || '').trim()) {
+            throw new Error('Order ID is required to load the workflow journey');
+        }
         return this.request(`/workflow-center/orders/${encodeURIComponent(orderId)}/journey`);
     }
 

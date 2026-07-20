@@ -9612,6 +9612,7 @@ function renderWorkflowCenter(intakes) {
 
     list.innerHTML = rows.map(item => {
         const customer = item.normalizedCustomer || {};
+        const linkedOrderId = String(item.orderId?._id || item.orderId || '').trim();
         const received = item.receivedAt ? (tz() ? tz().formatDateTimeMDT?.(item.receivedAt) || tz().formatDateMDT(item.receivedAt) : new Date(item.receivedAt).toLocaleString()) : '-';
         const candidates = Array.isArray(item.matchingCustomerIds) ? item.matchingCustomerIds : [];
         const select = item.customerMatchReason === 'multiple_email_matches'
@@ -9639,12 +9640,12 @@ function renderWorkflowCenter(intakes) {
                 ${workflowDeliveryBadge('Operations email', item.operationsAlert)}
             </div>
             <div class="workflow-card-actions">
-                <button type="button" class="btn-primary" onclick="openWorkflowOrder('${escapePaymentHtml(item.orderId?._id || item.orderId || '')}')"><i class="fas fa-external-link-alt"></i> Open Order</button>
+                <button type="button" class="btn-primary" ${linkedOrderId ? `onclick="openWorkflowOrder('${escapePaymentHtml(linkedOrderId)}')"` : 'disabled title="This intake is not linked to an Order"'}><i class="fas fa-external-link-alt"></i> ${linkedOrderId ? 'Open Order' : 'Order unavailable'}</button>
                 ${select}
                 ${item.requiresReview ? `<button type="button" class="btn-secondary" onclick="resolveIntakeReview('${item._id}', '${escapePaymentHtml(item.customerMatchReason || '')}')"><i class="fas fa-check"></i> Resolve Review</button>` : ''}
                 ${customerFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_customer_confirmation')">Retry Customer Email</button>` : ''}
                 ${operationsFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_operations_alert')">Retry Operations Email</button>` : ''}
-                <button type="button" class="btn-secondary" onclick="startWorkflowQuoteCollection('${escapePaymentHtml(item.orderId?._id || item.orderId || '')}')" ${stageTwoBlockers.length ? `disabled title="${escapePaymentHtml(stageTwoBlockers.join(' · '))}"` : ''}><i class="fas fa-arrow-right"></i> ${stageTwoBlockers.length ? `Stage 2 blocked: ${escapePaymentHtml(stageTwoBlockers.join(', '))}` : 'Start Quote Collection'}</button>
+                <button type="button" class="btn-secondary" ${linkedOrderId ? `onclick="startWorkflowQuoteCollection('${escapePaymentHtml(linkedOrderId)}')"` : ''} ${stageTwoBlockers.length || !linkedOrderId ? `disabled title="${escapePaymentHtml(!linkedOrderId ? 'This intake is not linked to an Order' : stageTwoBlockers.join(' · '))}"` : ''}><i class="fas fa-arrow-right"></i> ${!linkedOrderId ? 'Stage 2 blocked: Order unavailable' : stageTwoBlockers.length ? `Stage 2 blocked: ${escapePaymentHtml(stageTwoBlockers.join(', '))}` : 'Start Quote Collection'}</button>
             </div>
         </article>`;
     }).join('');

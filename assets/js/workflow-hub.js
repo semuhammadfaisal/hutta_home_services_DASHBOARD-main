@@ -183,6 +183,11 @@
   }
 
   async function enterWorkspace(stage, orderId) {
+    orderId = String(orderId?._id || orderId || '').trim();
+    if (!orderId) {
+      window.showToast?.('This request is not linked to an Order. Refresh the request or review its intake record.', 'error');
+      return;
+    }
     const config = STAGES.find(item => item.stage === stage);
     const section = document.getElementById(config?.section);
     const workspace = document.getElementById(config?.workspace);
@@ -295,7 +300,14 @@
   function wrapWorkspaceOpeners() {
     STAGES.filter(item => item.open).forEach(config => {
       const original = window[config.open]; if (typeof original !== 'function' || original.__workflowWrapped) return;
-      const wrapped = async (...args) => { const result = await original(...args); await enterWorkspace(config.stage, args[0]); if (!state.routing) history.pushState({},'',routeHash(config.stage,args[0])); return result; };
+      const wrapped = async (...args) => {
+        const orderId = String(args[0]?._id || args[0] || '').trim();
+        const result = await original(...args);
+        if (!orderId) return result;
+        await enterWorkspace(config.stage, orderId);
+        if (!state.routing) history.pushState({}, '', routeHash(config.stage, orderId));
+        return result;
+      };
       wrapped.__workflowWrapped = true; window[config.open] = wrapped;
     });
   }

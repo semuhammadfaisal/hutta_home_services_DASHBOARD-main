@@ -51,6 +51,16 @@ test('internal redesign provides accessible dialogs, filters, readiness, timelin
   assert.match(css, /@media\(max-width:520px\)/);
 });
 
+test('workflow workspaces never request a journey without a linked Order ID', () => {
+  const hub = read('assets/js/workflow-hub.js');
+  const api = read('assets/js/api-service.js');
+  const dashboard = read('assets/js/dashboard-script.js');
+  assert.match(hub, /if \(!orderId\) return result/);
+  assert.match(api, /Order ID is required to load the workflow journey/);
+  assert.match(dashboard, /Order unavailable/);
+  assert.match(dashboard, /This intake is not linked to an Order/);
+});
+
 test('public workflow pages share secure styling and vendor quote is a three-step review flow', () => {
   const customer = read('pages/customer-quote.html');
   const vendor = read('pages/vendor-quote.html');
