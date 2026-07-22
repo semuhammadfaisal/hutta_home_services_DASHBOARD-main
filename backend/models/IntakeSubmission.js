@@ -44,6 +44,26 @@ const intakeSubmissionSchema = new mongoose.Schema({
   requiresReview: { type: Boolean, default: false },
   reviewResolvedAt: Date,
   reviewResolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  completionStatus: {
+    type: String,
+    enum: ['pending', 'processing', 'completed'],
+    default: 'pending'
+  },
+  completionTokenHash: { type: String, select: false },
+  completionTokenExpiresAt: Date,
+  completionStartedAt: Date,
+  completedAt: Date,
+  completionEmailCount: { type: Number, default: 0 },
+  completionSnapshot: {
+    serviceCategory: String,
+    serviceAddress: String,
+    serviceDetails: String,
+    propertyType: String,
+    preferredTiming: String,
+    accessInstructions: String,
+    submittedAt: Date,
+    documentCount: { type: Number, default: 0 }
+  },
   customerConfirmation: { type: deliveryStateSchema, default: () => ({}) },
   operationsAlert: { type: deliveryStateSchema, default: () => ({}) }
 }, { timestamps: true });
@@ -51,5 +71,7 @@ const intakeSubmissionSchema = new mongoose.Schema({
 intakeSubmissionSchema.index({ status: 1, receivedAt: -1 });
 intakeSubmissionSchema.index({ orderId: 1 });
 intakeSubmissionSchema.index({ 'normalizedCustomer.email': 1 });
+intakeSubmissionSchema.index({ completionTokenHash: 1 }, { unique: true, sparse: true });
+intakeSubmissionSchema.index({ completionStatus: 1, completionTokenExpiresAt: 1 });
 
 module.exports = mongoose.model('IntakeSubmission', intakeSubmissionSchema);

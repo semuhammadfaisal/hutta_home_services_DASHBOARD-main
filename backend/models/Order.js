@@ -48,6 +48,12 @@ const orderSchema = new mongoose.Schema({
     email: String,
     phone: String
   },
+  customerIntake: {
+    propertyType: String,
+    preferredTiming: String,
+    accessInstructions: String,
+    completedAt: Date
+  },
   vendorCost: { type: Number, default: 0 },
   processingFee: { type: Number, default: 0 },
   profit: { type: Number, default: 0 },

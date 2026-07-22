@@ -4,6 +4,7 @@ const checkRole = require('../middleware/rbac');
 const EmailOutbox = require('../models/EmailOutbox');
 const IntakeSubmission = require('../models/IntakeSubmission');
 const Order = require('../models/Order');
+const { INTAKE_COMPLETION_TTL_MS, encryptToken, generateToken, hashToken } = require('../utils/intakeCompletion');
 
 const router = express.Router();
 const allowedRoles = checkRole(['admin', 'manager', 'account_rep']);
@@ -47,6 +48,13 @@ router.put('/:id/resolve-review', allowedRoles, async (req, res) => {
     intake.status = 'completed';
     intake.reviewResolvedAt = new Date();
     intake.reviewResolvedBy = req.user.userId;
+    const order = await Order.findById(intake.orderId);
+    if (order && intake.completionStatus === 'completed' && !order.missingData?.serviceCategory && !order.missingData?.serviceAddress) {
+      order.workflowStatus = 'quote_collection';
+      order.pricingStatus = 'unquoted';
+      order.amount = null;
+      await order.save();
+    }
     await intake.save();
     res.json(intake);
   } catch (error) {
@@ -63,7 +71,7 @@ router.post('/:id/retry-email', allowedRoles, async (req, res) => {
     }
     const intake = await IntakeSubmission.findById(req.params.id);
     if (!intake) return res.status(404).json({ message: 'Website request not found' });
-    const outbox = await EmailOutbox.findOne({ intakeSubmissionId: intake._id, type });
+    const outbox = await EmailOutbox.findOne({ intakeSubmissionId: intake._id, type }).sort({ createdAt: -1 });
     if (!outbox) return res.status(404).json({ message: 'Email message not found' });
     if (outbox.status !== 'permanently_failed') {
       return res.status(409).json({ message: 'Only permanently failed email can be retried' });
@@ -84,6 +92,48 @@ router.post('/:id/retry-email', allowedRoles, async (req, res) => {
   } catch (error) {
     console.error('Retry intake email failed:', error?.name || 'unknown');
     res.status(500).json({ message: 'Unable to retry email' });
+  }
+});
+
+router.post('/:id/resend-completion', allowedRoles, async (req, res) => {
+  try {
+    const intake = await IntakeSubmission.findById(req.params.id).select('+completionTokenHash');
+    if (!intake) return res.status(404).json({ message: 'Website request not found' });
+    if (intake.completionStatus === 'completed') return res.status(409).json({ message: 'Customer details have already been completed' });
+    const order = await Order.findById(intake.orderId);
+    if (!order) return res.status(404).json({ message: 'Linked Order not found' });
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + INTAKE_COMPLETION_TTL_MS);
+    intake.completionTokenHash = hashToken(token);
+    intake.completionTokenExpiresAt = expiresAt;
+    intake.completionStatus = 'pending';
+    intake.completionStartedAt = undefined;
+    intake.completionEmailCount = Number(intake.completionEmailCount || 0) + 1;
+    intake.customerConfirmation.status = 'pending';
+    intake.customerConfirmation.attempts = 0;
+    intake.customerConfirmation.lastErrorCategory = null;
+    await intake.save();
+    await EmailOutbox.create({
+      type: 'website_customer_confirmation',
+      dedupeKey: `${intake.requestReference}:customer-confirmation:${intake.completionEmailCount}`,
+      recipients: [intake.normalizedCustomer.email],
+      payload: {
+        requestReference: intake.requestReference,
+        customerName: intake.normalizedCustomer.name,
+        email: intake.normalizedCustomer.email,
+        phone: intake.normalizedCustomer.phone,
+        serviceDetails: order.description || '',
+        orderId: order._id.toString(),
+        encryptedToken: encryptToken(token),
+        completionTokenExpiresAt: expiresAt
+      },
+      intakeSubmissionId: intake._id,
+      orderId: order._id
+    });
+    res.json({ success: true, status: 'pending', expiresAt });
+  } catch (error) {
+    console.error('Resend intake completion failed:', error?.name || 'unknown');
+    res.status(500).json({ message: 'Unable to resend completion link' });
   }
 });
 

@@ -898,6 +898,10 @@ class APIService {
         });
     }
 
+    async resendWebsiteIntakeCompletion(intakeId) {
+        return this.request(`/intakes/${intakeId}/resend-completion`, { method: 'POST' });
+    }
+
     // Unified Workflow Center
     async getWorkflowOverview() {
         this.requestCache.delete('GET:/workflow-center/overview');

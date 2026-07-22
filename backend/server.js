@@ -142,6 +142,7 @@ try {
   app.use('/api/outgoing-quotes', require('./routes/outgoingQuotes'));
   app.use('/api/scheduling', require('./routes/scheduling'));
   app.use('/api/integrations', require('./routes/websiteRequests'));
+  app.use('/api/intake-completion', require('./routes/intakeCompletion'));
 
   // Every API mounted after this line requires an active, approved session.
   app.use('/api', authenticateToken);
@@ -226,8 +227,9 @@ app.use('/components', express.static(path.join(__dirname, '../components'), sta
 app.use('/pages', (req, res, next) => {
   const fileName = path.posix.basename(req.path).toLowerCase();
   if (fileName === 'admin-dashboard.html') return serveDashboard(req, res, next);
-  const publicPages = new Set(['login.html', 'signup.html', 'forgot-password.html', 'reset-password.html', 'vendor-onboarding.html', 'vendor-quote.html', 'customer-quote.html', 'vendor-schedule.html']);
+  const publicPages = new Set(['login.html', 'signup.html', 'forgot-password.html', 'reset-password.html', 'vendor-onboarding.html', 'vendor-quote.html', 'customer-quote.html', 'vendor-schedule.html', 'complete-request.html']);
   if (fileName.endsWith('.html') && !publicPages.has(fileName)) return serveProtectedPage(req, res, next);
+  if (fileName === 'complete-request.html') res.set({ 'Cache-Control': 'no-store, max-age=0', Pragma: 'no-cache' });
   return next();
 }, express.static(path.join(__dirname, '../pages'), { ...staticOptions, index: false }));
 app.get('/sw.js', (_req, res) => res.sendFile(path.join(__dirname, '../sw.js')));

@@ -1,0 +1,5 @@
+.intake-shell { max-width: 980px; }
+.intake-shell input[type="text"], .intake-shell select, .intake-shell textarea { width: 100%; }
+.intake-shell .quote-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.intake-shell .submit-card button { min-height: 52px; }
+@media (max-width: 640px) { .intake-shell .quote-summary, .intake-shell .quote-grid { grid-template-columns: 1fr; } }

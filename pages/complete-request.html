@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Complete Service Request | Hutta Home Services</title>
+  <link rel="stylesheet" href="../assets/css/vendor-quote.css">
+  <link rel="stylesheet" href="../assets/css/secure-workflow.css">
+  <link rel="stylesheet" href="../assets/css/complete-request.css">
+</head>
+<body>
+  <main class="quote-shell intake-shell">
+    <header class="quote-header"><img src="../assets/images/logo.png" alt="Hutta Home Services"><div><p>Hutta Home Services</p><h1>Complete Your Service Request</h1></div><span>Secure private link</span></header>
+    <section id="intakeLoading" class="quote-state"><div class="spinner"></div><h2>Opening your request</h2><p>Validating your secure link&hellip;</p></section>
+    <section id="intakeError" class="quote-state hidden" role="alert"><div class="state-icon error">!</div><h2>Request unavailable</h2><p id="intakeErrorMessage"></p><p>Please contact Hutta Home Services if you need a new link.</p></section>
+    <section id="intakeSuccess" class="quote-state hidden"><div class="state-icon success">&#10003;</div><h2>Request details received</h2><p id="intakeSuccessMessage"></p><strong id="intakeSuccessReference"></strong></section>
+
+    <form id="intakeForm" class="hidden" novalidate>
+      <section class="quote-summary">
+        <div><span>Customer</span><strong id="intakeCustomer"></strong></div>
+        <div><span>Request</span><strong id="intakeReference"></strong></div>
+        <div><span>Email</span><strong id="intakeEmail"></strong></div>
+        <div><span>Phone</span><strong id="intakePhone"></strong></div>
+        <div class="wide"><span>Link expires</span><strong id="intakeExpiry"></strong></div>
+      </section>
+      <section class="quote-card">
+        <div class="card-heading"><span>1</span><div><h2>Job Details</h2><p>Tell us what service you need and where the work will take place.</p></div></div>
+        <div class="quote-grid">
+          <label><span>Service Category <em>Required</em></span><select name="serviceCategory" required><option value="">Select a service</option><option>Landscaping</option><option>Plumbing</option><option>Electrical</option><option>HVAC</option><option>Cleaning</option><option>Handyman</option><option>Painting</option><option>Roofing</option><option>Pest Control</option><option>Pool Service</option><option>Property Maintenance</option><option>Other</option></select></label>
+          <label><span>Property Type</span><select name="propertyType"><option value="">Select property type</option><option>Residential</option><option>Commercial</option><option>HOA / Community</option><option>Other</option></select></label>
+        </div>
+        <label class="wide"><span>Service Address <em>Required</em></span><input name="serviceAddress" type="text" maxlength="500" autocomplete="street-address" required placeholder="Street address, city, state, ZIP"></label>
+        <label class="wide"><span>Service Details <em>Required</em></span><textarea name="serviceDetails" rows="7" minlength="5" maxlength="5000" required placeholder="Describe the work, affected area, measurements, and anything else we should know."></textarea></label>
+      </section>
+      <section class="quote-card">
+        <div class="card-heading"><span>2</span><div><h2>Timing and Access</h2><p>Optional details help us obtain more accurate vendor quotes.</p></div></div>
+        <label class="wide"><span>Preferred Timing</span><textarea name="preferredTiming" rows="3" maxlength="500" placeholder="Preferred dates, urgency, or scheduling restrictions"></textarea></label>
+        <label class="wide"><span>Access Instructions</span><textarea name="accessInstructions" rows="4" maxlength="2000" placeholder="Gate code, parking, pets, tenant coordination, or contact-on-arrival instructions"></textarea></label>
+        <label class="file-field"><input name="documents" type="file" multiple accept=".pdf,.jpg,.jpeg,.png"><span>Add Photos or Documents</span><small>Optional. Up to 6 PDF, JPG, or PNG files; 10 MB maximum each.</small></label>
+      </section>
+      <section class="quote-card submit-card">
+        <label class="ack"><input id="intakeAccuracy" type="checkbox" required><span>I confirm these service request details are accurate and may be shared with vendors for quote collection.</span></label>
+        <div id="intakeSubmitError" class="submit-error hidden" role="alert"></div>
+        <button id="intakeSubmitButton" type="submit">Complete Request &amp; Continue</button>
+        <p>Submitting completes intake only. It does not approve pricing or confirm scheduling.</p>
+      </section>
+    </form>
+    <footer>Hutta Home Services &middot; Secure Service Request</footer>
+  </main>
+  <script src="../assets/js/complete-request.js"></script>
+</body>
+</html>

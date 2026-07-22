@@ -9,6 +9,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const memCache = require('./memoryCache');
 const { invalidateDashboardStatsCache } = require('./dashboardStatsCache');
+const { INTAKE_COMPLETION_TTL_MS, encryptToken, generateToken, hashToken } = require('./intakeCompletion');
 
 const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
 const MAX_BODY_BYTES = 32 * 1024;
@@ -189,6 +190,8 @@ async function processWebsiteRequest(payload) {
 
       const requestSequence = await nextCounter(`website-request:${new Date().getUTCFullYear()}`, session);
       const requestReference = `REQ-${new Date().getUTCFullYear()}-${String(requestSequence).padStart(6, '0')}`;
+      const completionToken = generateToken();
+      const completionTokenExpiresAt = new Date(Date.now() + INTAKE_COMPLETION_TTL_MS);
       const [intake] = await IntakeSubmission.create([{
         requestReference,
         externalSubmissionId: payload.externalSubmissionId,
@@ -202,7 +205,11 @@ async function processWebsiteRequest(payload) {
         },
         marketingSmsConsent: payload.marketingSmsConsent,
         marketingSmsConsentAt: payload.marketingSmsConsent ? new Date() : undefined,
-        status: 'processing'
+        status: 'processing',
+        completionStatus: 'pending',
+        completionTokenHash: hashToken(completionToken),
+        completionTokenExpiresAt,
+        completionEmailCount: 1
       }], { session });
 
       const escapedEmail = payload.email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -287,7 +294,9 @@ async function processWebsiteRequest(payload) {
         email: payload.email,
         phone: payload.phone,
         serviceDetails: payload.serviceDetails,
-        orderId: order._id.toString()
+        orderId: order._id.toString(),
+        encryptedToken: encryptToken(completionToken),
+        completionTokenExpiresAt
       };
       const outboxMessages = [{
         type: 'website_customer_confirmation',
@@ -299,11 +308,12 @@ async function processWebsiteRequest(payload) {
       }];
       const operationsRecipients = parseOperationsRecipients();
       if (operationsRecipients.length) {
+        const { encryptedToken: _privateCompletionToken, completionTokenExpiresAt: _privateCompletionExpiry, ...operationsPayload } = emailPayload;
         outboxMessages.push({
           type: 'website_operations_alert',
           dedupeKey: `${requestReference}:operations-alert`,
           recipients: operationsRecipients,
-          payload: emailPayload,
+          payload: operationsPayload,
           intakeSubmissionId: intake._id,
           orderId: order._id
         });

@@ -301,10 +301,13 @@ const sendStaffVendorReviewUpdateEmail = ({ emails, companyName, vendorId, vendo
   });
 };
 
-const sendWebsiteRequestConfirmationEmail = ({ recipients, requestReference, customerName, email, phone, serviceDetails }) => deliverEmail({
+const sendWebsiteRequestConfirmationEmail = ({ recipients, requestReference, customerName, email, phone, serviceDetails, token, completionTokenExpiresAt }) => {
+  const completionUrl = token ? buildPublicUrl('/pages/complete-request.html', `token=${encodeURIComponent(token)}`) : '';
+  const expiryText = completionTokenExpiresAt ? new Date(completionTokenExpiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }) : '';
+  return deliverEmail({
   to: recipients,
   subject: `We received your request — ${requestReference}`,
-  text: `Hello ${customerName},\n\nWe received your service request. Reference: ${requestReference}\nEmail: ${email}\nPhone: ${phone}\nService details: ${serviceDetails || 'Not provided'}\n\nOur team will contact you. This message confirms receipt and is not a quote or scheduling confirmation.`,
+  text: `Hello ${customerName},\n\nWe received your service request. Reference: ${requestReference}\nEmail: ${email}\nPhone: ${phone}\nService details: ${serviceDetails || 'Not provided'}\n\n${completionUrl ? `Complete your service request so we can begin collecting vendor quotes: ${completionUrl}\n${expiryText ? `This private link expires ${expiryText} Arizona time.\n` : ''}` : ''}\nThis message confirms receipt and is not a quote or scheduling confirmation.`,
   html: emailShell('Request Received', `
     <p>Hello ${escapeHtml(customerName)},</p>
     <p>Thank you for contacting Hutta Home Services. We received your request and our team will contact you.</p>
@@ -315,11 +318,13 @@ const sendWebsiteRequestConfirmationEmail = ({ recipients, requestReference, cus
       <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
       <p><strong>Service details:</strong><br>${escapeHtml(serviceDetails || 'Not provided')}</p>
     </div>
+    ${completionUrl ? `<p>Please complete the remaining job information so our team can begin collecting vendor quotes.</p><p><a class="btn" href="${completionUrl}">Complete Service Request</a></p><div class="notice"><p>This private link${expiryText ? ` expires ${escapeHtml(expiryText)} Arizona time and` : ''} should not be forwarded.</p></div>` : ''}
     <div class="notice">
       <p>This email confirms receipt only. It is not a quote or scheduling confirmation.</p>
     </div>
   `, { preheader: `Your service request ${requestReference} was received.` })
-});
+  });
+};
 
 const sendWebsiteOperationsAlertEmail = ({ recipients, requestReference, customerName, email, phone, serviceDetails }) => {
   const workflowUrl = buildPublicUrl('/pages/admin-dashboard.html', 'workflow-center');

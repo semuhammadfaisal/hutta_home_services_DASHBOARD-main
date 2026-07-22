@@ -9594,7 +9594,7 @@ function renderWorkflowCenter(intakes) {
     const list = document.getElementById('workflowRequestList');
     if (!list) return;
     const rows = Array.isArray(intakes) ? intakes : [];
-    const reviewCount = rows.filter(item => item.requiresReview || item.orderId?.missingData?.serviceCategory || item.orderId?.missingData?.serviceAddress).length;
+    const reviewCount = rows.filter(item => item.completionStatus !== 'completed' || item.requiresReview || item.orderId?.missingData?.serviceCategory || item.orderId?.missingData?.serviceAddress).length;
     const emailIssueCount = rows.filter(item => ['retry_scheduled', 'permanently_failed'].includes(item.customerConfirmation?.status) || ['retry_scheduled', 'permanently_failed'].includes(item.operationsAlert?.status)).length;
     document.getElementById('workflowTotalCount').textContent = rows.length.toLocaleString();
     document.getElementById('workflowReviewCount').textContent = reviewCount.toLocaleString();
@@ -9621,11 +9621,12 @@ function renderWorkflowCenter(intakes) {
         const reviewLabel = item.customerMatchReason === 'multiple_email_matches' ? 'Multiple email matches' : item.customerMatchReason === 'email_match_phone_mismatch' ? 'Phone differs from customer' : item.customerId ? 'Customer linked' : 'New customer';
         const customerFailed = item.customerConfirmation?.status === 'permanently_failed';
         const operationsFailed = item.operationsAlert?.status === 'permanently_failed';
+        const completionDone = item.completionStatus === 'completed';
         const missingBadges = [
             item.orderId?.missingData?.serviceAddress ? '<span class="workflow-badge warning"><i class="fas fa-map-marker-alt"></i> Missing service address</span>' : '',
             item.orderId?.missingData?.serviceCategory ? '<span class="workflow-badge warning"><i class="fas fa-tools"></i> Missing category</span>' : ''
         ].filter(Boolean).join('');
-        const stageTwoBlockers = [item.requiresReview ? 'Resolve customer review' : '', item.orderId?.missingData?.serviceAddress ? 'Add service address' : '', item.orderId?.missingData?.serviceCategory ? 'Add service category' : ''].filter(Boolean);
+        const stageTwoBlockers = [!completionDone ? 'Waiting for customer details' : '', item.requiresReview ? 'Resolve customer review' : '', item.orderId?.missingData?.serviceAddress ? 'Add service address' : '', item.orderId?.missingData?.serviceCategory ? 'Add service category' : ''].filter(Boolean);
         return `<article class="workflow-request-card">
             <div class="workflow-card-head">
                 <div><span class="workflow-reference">${escapePaymentHtml(item.requestReference)}</span><h3>${escapePaymentHtml(customer.name || 'Customer')}</h3></div>
@@ -9638,6 +9639,7 @@ function renderWorkflowCenter(intakes) {
                 <span class="workflow-badge ${item.requiresReview ? 'warning' : 'success'}"><i class="fas fa-user-check"></i> ${escapePaymentHtml(reviewLabel)}</span>
                 ${workflowDeliveryBadge('Customer email', item.customerConfirmation)}
                 ${workflowDeliveryBadge('Operations email', item.operationsAlert)}
+                <span class="workflow-badge ${completionDone ? 'success' : 'info'}"><i class="fas ${completionDone ? 'fa-check-circle' : 'fa-clipboard-list'}"></i> Customer details: ${completionDone ? 'completed' : 'pending'}</span>
             </div>
             <div class="workflow-card-actions">
                 <button type="button" class="btn-primary" ${linkedOrderId ? `onclick="openWorkflowOrder('${escapePaymentHtml(linkedOrderId)}')"` : 'disabled title="This intake is not linked to an Order"'}><i class="fas fa-external-link-alt"></i> ${linkedOrderId ? 'Open Order' : 'Order unavailable'}</button>
@@ -9645,6 +9647,7 @@ function renderWorkflowCenter(intakes) {
                 ${item.requiresReview ? `<button type="button" class="btn-secondary" onclick="resolveIntakeReview('${item._id}', '${escapePaymentHtml(item.customerMatchReason || '')}')"><i class="fas fa-check"></i> Resolve Review</button>` : ''}
                 ${customerFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_customer_confirmation')">Retry Customer Email</button>` : ''}
                 ${operationsFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_operations_alert')">Retry Operations Email</button>` : ''}
+                ${!completionDone ? `<button type="button" class="btn-secondary" onclick="resendIntakeCompletion('${item._id}')"><i class="fas fa-paper-plane"></i> Resend Completion Link</button>` : ''}
                 <button type="button" class="btn-secondary" ${linkedOrderId ? `onclick="startWorkflowQuoteCollection('${escapePaymentHtml(linkedOrderId)}')"` : ''} ${stageTwoBlockers.length || !linkedOrderId ? `disabled title="${escapePaymentHtml(!linkedOrderId ? 'This intake is not linked to an Order' : stageTwoBlockers.join(' · '))}"` : ''}><i class="fas fa-arrow-right"></i> ${!linkedOrderId ? 'Stage 2 blocked: Order unavailable' : stageTwoBlockers.length ? `Stage 2 blocked: ${escapePaymentHtml(stageTwoBlockers.join(', '))}` : 'Start Quote Collection'}</button>
             </div>
         </article>`;
@@ -9695,9 +9698,21 @@ async function openWorkflowOrder(orderId) {
     return showOrderDetail(orderId, false, false, true);
 }
 
+async function resendIntakeCompletion(intakeId) {
+    try {
+        await window.APIService.resendWebsiteIntakeCompletion(intakeId);
+        window.APIService.clearCache?.();
+        showToast('A new secure completion link was queued for the customer.', 'success');
+        await loadWorkflowCenter();
+    } catch (error) {
+        showToast(error.message || 'Unable to resend completion link', 'error');
+    }
+}
+
 window.loadWorkflowCenter = loadWorkflowCenter;
 window.resolveIntakeReview = resolveIntakeReview;
 window.retryIntakeEmail = retryIntakeEmail;
+window.resendIntakeCompletion = resendIntakeCompletion;
 window.openWorkflowOrder = openWorkflowOrder;
 
 async function loadOrdersSection() {

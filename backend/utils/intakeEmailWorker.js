@@ -24,6 +24,7 @@ const {
 const { decryptToken, hashToken } = require('./incomingQuotes');
 const { decryptToken: decryptOutgoingToken, hashToken: hashOutgoingToken } = require('./outgoingQuotes');
 const { decryptToken: decryptScheduleToken, hashToken: hashScheduleToken } = require('./scheduling');
+const { decryptToken: decryptIntakeToken, hashToken: hashIntakeToken } = require('./intakeCompletion');
 const { createVendorWorkOrderPdf } = require('./workOrderPdf');
 
 const MAX_ATTEMPTS = 5;
@@ -177,8 +178,20 @@ async function deliverMessage(message) {
   try {
     const payload = { ...message.payload };
     if (payload.encryptedToken) {
-      payload.token = message.type === 'vendor_schedule_proposal' ? decryptScheduleToken(payload.encryptedToken) : OUTGOING_TOKEN_TYPES.has(message.type) ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
+      payload.token = message.type === 'website_customer_confirmation' ? decryptIntakeToken(payload.encryptedToken) : message.type === 'vendor_schedule_proposal' ? decryptScheduleToken(payload.encryptedToken) : OUTGOING_TOKEN_TYPES.has(message.type) ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
       delete payload.encryptedToken;
+    }
+    if (message.type === 'website_customer_confirmation' && payload.token) {
+      const activeIntake = await IntakeSubmission.exists({
+        _id: message.intakeSubmissionId,
+        completionTokenHash: hashIntakeToken(payload.token),
+        completionStatus: 'pending',
+        completionTokenExpiresAt: { $gt: new Date() }
+      });
+      if (!activeIntake) {
+        await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: 'completion_link_inactive' } });
+        return;
+      }
     }
     if (message.type === 'vendor_schedule_proposal') {
       const activeSchedule = await JobSchedule.exists({ _id: message.jobScheduleId, publicTokenHash: hashScheduleToken(payload.token), status: 'pending_vendor', tokenExpiresAt: { $gt: new Date() } });
