@@ -58,3 +58,11 @@ test('intake and Order schemas retain completion and customer-supplied detail fi
   assert.match(order, /preferredTiming/);
   assert.match(order, /accessInstructions/);
 });
+
+test('completion migration creates only its own indexes and avoids legacy index conflicts', () => {
+  const migration = fs.readFileSync(path.join(root, 'backend', 'migrate-stage1-completion.js'), 'utf8');
+  assert.match(migration, /completionTokenHash_1/);
+  assert.match(migration, /completionStatus_1_completionTokenExpiresAt_1/);
+  assert.doesNotMatch(migration, /\.createIndexes\(\)/);
+  assert.doesNotMatch(migration, /Order\.createIndexes/);
+});

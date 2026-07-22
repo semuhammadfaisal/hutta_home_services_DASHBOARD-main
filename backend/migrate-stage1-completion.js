@@ -2,7 +2,6 @@ const path = require('path');
 const mongoose = require('mongoose');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const IntakeSubmission = require('./models/IntakeSubmission');
-const Order = require('./models/Order');
 
 const APPLY = process.argv.includes('--apply');
 
@@ -16,7 +15,18 @@ async function main() {
       { completionStatus: { $exists: false } },
       { $set: { completionStatus: 'pending', completionEmailCount: 0 } }
     );
-    await Promise.all([IntakeSubmission.createIndexes(), Order.createIndexes()]);
+    // Create only indexes owned by this migration. Rebuilding every model index
+    // can conflict with intentionally different legacy index definitions.
+    await Promise.all([
+      IntakeSubmission.collection.createIndex(
+        { completionTokenHash: 1 },
+        { unique: true, sparse: true, name: 'completionTokenHash_1' }
+      ),
+      IntakeSubmission.collection.createIndex(
+        { completionStatus: 1, completionTokenExpiresAt: 1 },
+        { name: 'completionStatus_1_completionTokenExpiresAt_1' }
+      )
+    ]);
   }
   console.log('Stage 1 customer completion migration complete. No Orders, Payments, quotes, or emails were created.');
   console.log(JSON.stringify(summary, null, 2));
