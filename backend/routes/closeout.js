@@ -115,7 +115,6 @@ async function ensureCompletion(orderId, options={}) {
   }); return result; } finally { await session.endSession(); }
 }
 async function completeJob({completion,source,notes,enteredName,beforeFiles,afterFiles,photoOverride,overrideReason,actor,ip,userAgent}) {
-  if(new Date(completion.scheduleSnapshot.scheduledStart)>new Date()) throw Object.assign(new Error('The job cannot be completed before the confirmed start time'),{status:409});
   if((!beforeFiles.length||!afterFiles.length)&&!(source==='staff'&&photoOverride&&overrideReason.length>=10)) throw Object.assign(new Error('At least one before and one after photo are required'),{status:400});
   const before=await storePhotos(beforeFiles,completion,'before',actor);let after=[];
   try{after=await storePhotos(afterFiles,completion,'after',actor);}catch(error){await deleteStored(before);throw error}
