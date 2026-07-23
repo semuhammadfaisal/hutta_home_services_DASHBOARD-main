@@ -232,11 +232,12 @@
 
   $('incomingInvitationForm')?.addEventListener('submit', async event => {
     event.preventDefault();
+    const form = event.currentTarget;
     const submitButton = event.submitter;
     if (submitButton) submitButton.disabled = true;
     try {
       const result = await window.APIService.sendIncomingQuoteInvitation(currentOrderId, { vendorId: $('incomingInviteVendor').value, email: $('incomingInviteEmail').value.trim(), personalMessage: $('incomingInviteMessage').value.trim() });
-      event.currentTarget.reset();
+      form.reset();
       $('incomingInviteVendor').innerHTML = vendorOptions();
       toast(result?.reusedInvitation ? 'Invitation sent again to this vendor using the active quote request.' : 'Secure vendor quote invitation queued.');
       await refreshWorkspace();
@@ -246,6 +247,7 @@
 
   $('incomingStaffQuoteForm')?.addEventListener('submit', async event => {
     event.preventDefault();
+    const form = event.currentTarget;
     const submitButton = event.submitter;
     if (submitButton) submitButton.disabled = true;
     try {
@@ -267,7 +269,7 @@
       const files = [...($('incomingStaffDocuments').files || [])];
       if (files.length && typeof window.uploadEntityAttachments === 'function') await window.uploadEntityAttachments('incoming-quote', quote._id, files);
       if (shouldSubmit) await window.APIService.submitIncomingQuote(quote._id);
-      event.currentTarget.reset();
+      form.reset();
       editingQuoteId = '';
       $('incomingStaffVendor').disabled = false;
       $('incomingStaffVendor').innerHTML = vendorOptions();

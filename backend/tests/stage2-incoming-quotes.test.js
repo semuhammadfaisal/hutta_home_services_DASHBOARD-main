@@ -78,3 +78,10 @@ test('an active vendor invitation can be sent again without creating a duplicate
   assert.match(ui, /Invitation sent again to this vendor using the active quote request/);
   assert.match(ui, /invite\.sendCount/);
 });
+
+test('Stage 2 forms retain their form reference across asynchronous submissions', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', '..', 'assets', 'js', 'incoming-quotes.js'), 'utf8');
+  assert.doesNotMatch(ui, /event\.currentTarget\.reset\(\)/);
+  assert.ok((ui.match(/const form = event\.currentTarget;/g) || []).length >= 2);
+  assert.ok((ui.match(/form\.reset\(\)/g) || []).length >= 2);
+});
