@@ -38,11 +38,14 @@ test('workflow transitions synchronize Pipeline and manual Pipeline dragging is 
   assert.match(intake, /synchronizeWorkflowOrder\(order, 'request_received'/);
 });
 
-test('migration supports dry-run, apply, conflict reporting, and unique-index replacement', () => {
+test('migration supports dry-run, safely archives backlink duplicates, and replaces the unique index', () => {
   const migration = read('backend/migrate-workflow-pipeline-sync.js');
   const backendPackage = JSON.parse(read('backend/package.json'));
   assert.match(migration, /process\.argv\.includes\('--apply'\)/);
-  assert.match(migration, /Duplicate Pipeline records must be resolved/);
+  assert.match(migration, /pipeline_record_duplicate_archives/);
+  assert.match(migration, /duplicate_order_backlink/);
+  assert.match(migration, /PipelineRecord\.deleteMany/);
+  assert.match(migration, /Multiple Pipeline records directly claim the same Order/);
   assert.match(migration, /dropIndex/);
   assert.equal(backendPackage.scripts['migrate:workflow-pipeline-sync'], 'node migrate-workflow-pipeline-sync.js');
   assert.equal(backendPackage.scripts['migrate:workflow-pipeline-sync:apply'], 'node migrate-workflow-pipeline-sync.js --apply');

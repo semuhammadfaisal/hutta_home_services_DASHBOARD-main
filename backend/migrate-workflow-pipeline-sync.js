@@ -63,6 +63,77 @@ async function applyStageKeys(plan) {
   }
 }
 
+async function resolveBacklinkConflicts(conflicts) {
+  const archive = mongoose.connection.collection('pipeline_record_duplicate_archives');
+  let resolved = 0;
+
+  for (const conflict of conflicts) {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const order = await Order.findById(conflict._id).session(session);
+        if (!order?.pipelineRecordId) throw new Error(`Order ${conflict.orderId || conflict._id} no longer has a Pipeline backlink`);
+
+        const records = await PipelineRecord.find({ _id: { $in: conflict.records } })
+          .sort({ updatedAt: -1 })
+          .session(session);
+        const canonical = records.find(record => String(record._id) === String(order.pipelineRecordId));
+        if (!canonical) throw new Error(`The canonical Pipeline record for ${order.orderId} is missing`);
+
+        const redundant = records.filter(record => String(record._id) !== String(canonical._id));
+        if (!redundant.length) return;
+
+        const fillable = ['customerName', 'email', 'phone', 'priority', 'budget', 'startDate', 'address', 'description', 'notes'];
+        for (const duplicate of redundant) {
+          for (const field of fillable) {
+            if ((canonical[field] === undefined || canonical[field] === null || canonical[field] === '') &&
+                duplicate[field] !== undefined && duplicate[field] !== null && duplicate[field] !== '') {
+              canonical[field] = duplicate[field];
+            }
+          }
+        }
+        if (!canonical.notesHistory) canonical.notesHistory = [];
+        const noteIds = new Set(canonical.notesHistory.map(note => String(note._id || JSON.stringify(note))));
+        for (const duplicate of redundant) {
+          for (const note of duplicate.notesHistory || []) {
+            const key = String(note._id || JSON.stringify(note));
+            if (!noteIds.has(key)) {
+              canonical.notesHistory.push(note);
+              noteIds.add(key);
+            }
+          }
+        }
+
+        await archive.insertMany(redundant.map(record => ({
+          originalRecordId: record._id,
+          orderId: order._id,
+          orderReference: order.orderId,
+          canonicalRecordId: canonical._id,
+          archivedAt: new Date(),
+          reason: 'duplicate_order_backlink',
+          originalRecord: record.toObject()
+        })), { session });
+
+        await PipelineRecord.deleteMany({ _id: { $in: redundant.map(record => record._id) } }, { session });
+        canonical.orderId = order._id;
+        canonical.orderIdDisplay = canonical.orderIdDisplay || order.orderId;
+        canonical.stageSource = canonical.stageSource || 'manual';
+        canonical.stageSyncedAt = new Date();
+        await canonical.save({ session });
+
+        const stage = await Stage.findById(canonical.stageId).session(session);
+        order.pipelineRecordId = canonical._id;
+        if (stage?.name) order.pipelineStage = stage.name;
+        await order.save({ session });
+        resolved += redundant.length;
+      });
+    } finally {
+      await session.endSession();
+    }
+  }
+  return resolved;
+}
+
 async function ensureUniqueOrderIndex() {
   const indexes = await PipelineRecord.collection.indexes();
   const orderIndex = indexes.find(index => index.key?.orderId === 1 && Object.keys(index.key).length === 1);
@@ -98,7 +169,13 @@ async function run() {
   }, null, 2));
 
   if (!apply) return;
-  if (duplicateRecords.length) throw new Error('Duplicate Pipeline records must be resolved before applying the unique Order index');
+  const directDuplicates = duplicateRecords.filter(item => item.source !== 'order_backlink');
+  if (directDuplicates.length) throw new Error('Multiple Pipeline records directly claim the same Order; review the dry-run report before applying');
+
+  const backlinkConflicts = duplicateRecords.filter(item => item.source === 'order_backlink');
+  const archivedDuplicates = await resolveBacklinkConflicts(backlinkConflicts);
+  const remainingDuplicates = await duplicates();
+  if (remainingDuplicates.length) throw new Error('Duplicate Pipeline records remain after safe backlink reconciliation');
 
   await applyStageKeys(stageAssignments);
   await ensureUniqueOrderIndex();
@@ -116,7 +193,7 @@ async function run() {
     }
   }
 
-  console.log(JSON.stringify({ applied: true, synchronized, skipped }, null, 2));
+  console.log(JSON.stringify({ applied: true, archivedDuplicates, synchronized, skipped }, null, 2));
 }
 
 run()
