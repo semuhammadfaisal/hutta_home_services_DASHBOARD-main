@@ -26,7 +26,7 @@ const orderSchema = new mongoose.Schema({
   source: { type: String, enum: ['website', 'manual'], default: 'manual' },
   intakeSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IntakeSubmission' },
   requestReference: { type: String },
-  workflowStatus: { type: String, enum: ['request_received', 'quote_collection', 'vendor_selected', 'outgoing_quote_draft', 'quote_sent', 'quote_changes_requested', 'customer_approved', 'schedule_pending_vendor', 'schedule_changes_requested', 'scheduled'], default: undefined },
+  workflowStatus: { type: String, enum: ['request_received', 'quote_collection', 'vendor_selected', 'outgoing_quote_draft', 'quote_sent', 'quote_changes_requested', 'customer_approved', 'schedule_pending_vendor', 'schedule_changes_requested', 'scheduled', 'completed', 'closeout_issue_reported'], default: undefined },
   selectedIncomingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'IncomingQuote' },
   currentOutgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
   approvedOutgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
@@ -37,6 +37,13 @@ const orderSchema = new mongoose.Schema({
   scheduledEnd: Date,
   scheduledTimezone: { type: String, enum: ['America/Phoenix'] },
   scheduleConfirmedAt: Date,
+  jobCompletionId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobCompletion' },
+  customerInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerInvoice' },
+  satisfactionDecisionId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerSatisfactionDecision' },
+  completedAt: Date,
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  satisfactionStatus: { type: String, enum: ['not_requested', 'pending', 'satisfied', 'issue_reported', 'issue_resolved'], default: 'not_requested' },
+  satisfactionFollowupSentAt: Date,
   pricingStatus: { type: String, enum: ['unquoted', 'quoted'], default: 'quoted' },
   missingData: {
     serviceCategory: { type: Boolean, default: false },
@@ -95,6 +102,9 @@ orderSchema.index({ currentOutgoingQuoteId: 1 }, { sparse: true });
 orderSchema.index({ approvedOutgoingQuoteId: 1 }, { sparse: true });
 orderSchema.index({ currentJobScheduleId: 1 }, { sparse: true });
 orderSchema.index({ confirmedJobScheduleId: 1 }, { sparse: true });
+orderSchema.index({ jobCompletionId: 1 }, { unique: true, sparse: true });
+orderSchema.index({ customerInvoiceId: 1 }, { unique: true, sparse: true });
+orderSchema.index({ satisfactionDecisionId: 1 }, { unique: true, sparse: true });
 orderSchema.index({ scheduledStart: 1 });
 orderSchema.index({ source: 1, createdAt: -1 });
 

@@ -23,6 +23,10 @@ services:
         sync: false
       - key: INTAKE_NOTIFICATION_EMAILS
         sync: false
+      - key: CLOSEOUT_NOTIFICATION_EMAILS
+        value: sales@huttas.com
+      - key: CLOSEOUT_TOKEN_SECRET
+        sync: false
       - key: INTAKE_EMAIL_WORKER_ENABLED
         value: true
       - key: TAX_ID_ENCRYPTION_KEY

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <title>Complete Job | Hutta Home Services</title>
+    <link rel="icon" href="../favicon.ico">
+    <link rel="stylesheet" href="../assets/css/secure-workflow.css">
+    <link rel="stylesheet" href="../assets/css/vendor-completion.css">
+</head>
+<body>
+    <header class="secure-header">
+        <img src="../assets/images/logo.png" alt="Hutta Home Services">
+        <span class="secure-session">Secure vendor completion</span>
+    </header>
+    <main class="completion-shell">
+        <section id="completionLoading" class="completion-state">
+            <span class="completion-spinner" aria-hidden="true"></span>
+            <h1>Loading work order</h1>
+            <p>Please wait while we verify your secure completion link.</p>
+        </section>
+        <section id="completionError" class="completion-state completion-error" hidden>
+            <h1>Completion link unavailable</h1>
+            <p id="completionErrorMessage"></p>
+        </section>
+        <article id="completionDocument" class="completion-document" hidden>
+            <div class="completion-title">
+                <div>
+                    <span>Job completion</span>
+                    <h1 id="completionReference"></h1>
+                    <p id="workOrderReference"></p>
+                </div>
+                <strong>Ready for completion</strong>
+            </div>
+            <div class="completion-summary">
+                <section>
+                    <span>Customer and location</span>
+                    <strong id="completionCustomer"></strong>
+                    <p id="completionAddress"></p>
+                </section>
+                <section>
+                    <span>Confirmed Arizona schedule</span>
+                    <strong id="completionSchedule"></strong>
+                    <p>America/Phoenix</p>
+                </section>
+            </div>
+            <section class="completion-detail">
+                <h2>Approved scope</h2>
+                <p id="completionService"></p>
+                <p id="completionScope" class="preserve"></p>
+            </section>
+            <section class="completion-detail">
+                <h2>Access instructions</h2>
+                <p id="completionAccess" class="preserve"></p>
+            </section>
+            <form id="vendorCompletionForm" class="completion-form">
+                <div class="completion-form-heading">
+                    <span>Required evidence</span>
+                    <h2>Submit completion details</h2>
+                    <p>Add at least one before photo and one after photo. You may add up to 10 in each group.</p>
+                </div>
+                <label class="completion-upload">
+                    <span>Before photos <em>Required</em></span>
+                    <input id="beforePhotos" name="beforePhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                    <small>JPG, PNG, or WebP. Maximum 10 photos.</small>
+                    <span id="beforePhotoCount" class="completion-file-count">No photos selected</span>
+                </label>
+                <label class="completion-upload">
+                    <span>After photos <em>Required</em></span>
+                    <input id="afterPhotos" name="afterPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                    <small>JPG, PNG, or WebP. Maximum 10 photos.</small>
+                    <span id="afterPhotoCount" class="completion-file-count">No photos selected</span>
+                </label>
+                <label>
+                    <span>Completion notes</span>
+                    <textarea id="completionNotes" name="completionNotes" rows="5" maxlength="5000" placeholder="Describe the completed work and any important handoff details."></textarea>
+                </label>
+                <label>
+                    <span>Vendor full name <em>Required</em></span>
+                    <input id="vendorEnteredName" name="vendorEnteredName" maxlength="160" autocomplete="name" required>
+                </label>
+                <label class="completion-confirm">
+                    <input id="completionConfirm" type="checkbox" required>
+                    <span>I confirm that the work described above is complete and the uploaded photos accurately represent the job.</span>
+                </label>
+                <p id="completionFormError" class="completion-inline-error" role="alert" hidden></p>
+                <button id="submitCompletion" class="completion-primary" type="submit">Mark Job Complete</button>
+            </form>
+        </article>
+        <section id="completionSuccess" class="completion-state completion-success" hidden>
+            <span class="completion-success-icon" aria-hidden="true">✓</span>
+            <h1>Job marked complete</h1>
+            <p>Your completion details and photos were received. Hutta Home Services has been notified.</p>
+            <dl>
+                <div><dt>Completion</dt><dd id="successCompletionReference"></dd></div>
+                <div><dt>Invoice</dt><dd id="successInvoiceNumber"></dd></div>
+                <div><dt>Recorded</dt><dd id="successCompletedAt"></dd></div>
+            </dl>
+        </section>
+    </main>
+    <script src="../assets/js/vendor-completion.js"></script>
+</body>
+</html>

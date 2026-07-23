@@ -1,10 +1,16 @@
 const os = require('os');
+const mongoose = require('mongoose');
+const { GridFSBucket } = require('mongodb');
 const EmailOutbox = require('../models/EmailOutbox');
 const IntakeSubmission = require('../models/IntakeSubmission');
 const Notification = require('../models/Notification');
 const QuoteInvitation = require('../models/QuoteInvitation');
 const OutgoingQuote = require('../models/OutgoingQuote');
 const JobSchedule = require('../models/JobSchedule');
+const JobCompletion = require('../models/JobCompletion');
+const CustomerInvoice = require('../models/CustomerInvoice');
+const CustomerSatisfactionDecision = require('../models/CustomerSatisfactionDecision');
+const Order = require('../models/Order');
 const VendorWorkOrder = require('../models/VendorWorkOrder');
 const User = require('../models/User');
 const {
@@ -18,6 +24,11 @@ const {
   sendCustomerScheduleEmail,
   sendVendorScheduleDecisionEmail,
   sendStaffScheduleAlertEmail,
+  sendVendorCompletionLinkEmail,
+  sendVendorCompletionConfirmationEmail,
+  sendCustomerCompletionSatisfactionEmail,
+  sendCustomerSatisfactionResultEmail,
+  sendStaffCloseoutEmail,
   sendWebsiteOperationsAlertEmail,
   sendWebsiteRequestConfirmationEmail
 } = require('./emailService');
@@ -25,7 +36,9 @@ const { decryptToken, hashToken } = require('./incomingQuotes');
 const { decryptToken: decryptOutgoingToken, hashToken: hashOutgoingToken } = require('./outgoingQuotes');
 const { decryptToken: decryptScheduleToken, hashToken: hashScheduleToken } = require('./scheduling');
 const { decryptToken: decryptIntakeToken, hashToken: hashIntakeToken } = require('./intakeCompletion');
+const { decryptToken: decryptCloseoutToken, hashToken: hashCloseoutToken } = require('./closeout');
 const { createVendorWorkOrderPdf } = require('./workOrderPdf');
+const { createCustomerInvoicePdf } = require('./invoicePdf');
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MS = 2 * 60 * 1000;
@@ -44,9 +57,25 @@ const STAGE4_TYPES = new Set([
   'staff_quote_change_alert'
 ]);
 const STAGE5_TYPES = new Set(['vendor_schedule_proposal', 'vendor_schedule_accepted_confirmation', 'customer_schedule_confirmation', 'staff_schedule_accepted_alert', 'vendor_schedule_change_confirmation', 'staff_schedule_change_alert']);
+const CLOSEOUT_TYPES = new Set(['vendor_completion_link','vendor_completion_confirmation','customer_completion_satisfaction','customer_satisfaction_followup','customer_satisfaction_confirmation','customer_issue_confirmation','staff_completion_alert','staff_satisfaction_alert','staff_closeout_issue_alert','staff_closeout_issue_resolved']);
 
 let timer = null;
 let polling = false;
+let lastOrphanCleanupAt = 0;
+
+async function cleanupCloseoutOrphans() {
+  if (!mongoose.connection.db || Date.now() - lastOrphanCleanupAt < 60 * 60 * 1000) return;
+  lastOrphanCleanupAt = Date.now();
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const files = await mongoose.connection.db.collection('uploads.files').find({
+    'metadata.jobCompletionId': { $exists: true },
+    'metadata.linkStatus': 'pending',
+    uploadDate: { $lt: cutoff }
+  }).project({ _id: 1 }).limit(50).toArray();
+  if (!files.length) return;
+  const bucket = new GridFSBucket(mongoose.connection.db, { bucketName: 'uploads' });
+  await Promise.allSettled(files.map(file => bucket.delete(file._id)));
+}
 
 function deliveryField(type) {
   return type === 'website_customer_confirmation' ? 'customerConfirmation' : 'operationsAlert';
@@ -144,12 +173,12 @@ async function alertPermanentFailure(message, category) {
   const kind = intake ? (message.type === 'website_customer_confirmation' ? 'customer confirmation' : 'operations alert') : message.type.replaceAll('_', ' ');
   await Notification.insertMany(users.map(user => ({
     userId: user._id,
-    title: intake ? 'Website request email failed' : STAGE5_TYPES.has(message.type) ? 'Scheduling email failed' : outgoing ? 'Customer quote email failed' : 'Vendor quote email failed',
+    title: intake ? 'Website request email failed' : CLOSEOUT_TYPES.has(message.type) ? 'Closeout email failed' : STAGE5_TYPES.has(message.type) ? 'Scheduling email failed' : outgoing ? 'Customer quote email failed' : 'Vendor quote email failed',
     message: `${kind} for ${message.payload.requestReference || message.payload.quoteReference} failed after ${MAX_ATTEMPTS} attempts.`,
     type: 'error',
     priority: 'high',
-    actionUrl: intake ? '#workflow-center' : STAGE5_TYPES.has(message.type) ? '#scheduling' : STAGE4_TYPES.has(message.type) ? '#customer-approvals' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
-    metadata: { intakeSubmissionId: message.intakeSubmissionId, incomingQuoteId: message.incomingQuoteId, quoteInvitationId: message.quoteInvitationId, outgoingQuoteId: message.outgoingQuoteId, jobScheduleId: message.jobScheduleId, vendorWorkOrderId: message.vendorWorkOrderId, orderId: message.orderId, emailType: message.type, category }
+    actionUrl: intake ? '#workflow-center' : CLOSEOUT_TYPES.has(message.type) ? '#workflow-center/stage-6' : STAGE5_TYPES.has(message.type) ? '#scheduling' : STAGE4_TYPES.has(message.type) ? '#customer-approvals' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
+    metadata: { intakeSubmissionId: message.intakeSubmissionId, incomingQuoteId: message.incomingQuoteId, quoteInvitationId: message.quoteInvitationId, outgoingQuoteId: message.outgoingQuoteId, jobScheduleId: message.jobScheduleId, vendorWorkOrderId: message.vendorWorkOrderId, jobCompletionId: message.jobCompletionId, customerInvoiceId: message.customerInvoiceId, satisfactionDecisionId: message.satisfactionDecisionId, orderId: message.orderId, emailType: message.type, category }
   })));
 }
 
@@ -172,11 +201,29 @@ async function deliverMessage(message) {
     staff_schedule_accepted_alert: sendStaffScheduleAlertEmail,
     vendor_schedule_change_confirmation: sendVendorScheduleDecisionEmail,
     staff_schedule_change_alert: sendStaffScheduleAlertEmail
+    ,vendor_completion_link: sendVendorCompletionLinkEmail
+    ,vendor_completion_confirmation: sendVendorCompletionConfirmationEmail
+    ,customer_completion_satisfaction: sendCustomerCompletionSatisfactionEmail
+    ,customer_satisfaction_followup: sendCustomerCompletionSatisfactionEmail
+    ,customer_satisfaction_confirmation: sendCustomerSatisfactionResultEmail
+    ,customer_issue_confirmation: sendCustomerSatisfactionResultEmail
+    ,staff_completion_alert: sendStaffCloseoutEmail
+    ,staff_satisfaction_alert: sendStaffCloseoutEmail
+    ,staff_closeout_issue_alert: sendStaffCloseoutEmail
+    ,staff_closeout_issue_resolved: sendStaffCloseoutEmail
   };
   const sender = senders[message.type];
   if (!sender) throw new Error(`Unsupported email outbox type: ${message.type}`);
   try {
     const payload = { ...message.payload };
+    if (payload.encryptedCompletionToken) {
+      payload.completionToken = decryptCloseoutToken(payload.encryptedCompletionToken);
+      delete payload.encryptedCompletionToken;
+    }
+    if (payload.encryptedSatisfactionToken) {
+      payload.satisfactionToken = decryptCloseoutToken(payload.encryptedSatisfactionToken);
+      delete payload.encryptedSatisfactionToken;
+    }
     if (payload.encryptedToken) {
       payload.token = message.type === 'website_customer_confirmation' ? decryptIntakeToken(payload.encryptedToken) : message.type === 'vendor_schedule_proposal' ? decryptScheduleToken(payload.encryptedToken) : OUTGOING_TOKEN_TYPES.has(message.type) ? decryptOutgoingToken(payload.encryptedToken) : decryptToken(payload.encryptedToken);
       delete payload.encryptedToken;
@@ -203,6 +250,22 @@ async function deliverMessage(message) {
       const pdf = await createVendorWorkOrderPdf(workOrder);
       payload.attachments = [{ filename: `${workOrder.workOrderReference}.pdf`, content: pdf }];
       payload.decision = 'accepted';
+    }
+    if (message.type === 'vendor_completion_link') {
+      const active = await JobCompletion.exists({ _id: message.jobCompletionId, publicTokenHash: hashCloseoutToken(payload.completionToken), status: 'pending', tokenExpiresAt: { $gt: new Date() } });
+      if (!active) { await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: 'completion_link_inactive' } }); return; }
+    }
+    if (['customer_completion_satisfaction', 'customer_satisfaction_followup'].includes(message.type)) {
+      const active = await JobCompletion.exists({ _id: message.jobCompletionId, satisfactionTokenHash: hashCloseoutToken(payload.satisfactionToken), status: 'completed', satisfactionTokenExpiresAt: { $gt: new Date() } });
+      const decided = await CustomerSatisfactionDecision.exists({ jobCompletionId: message.jobCompletionId });
+      if (!active || decided) { await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: decided ? 'satisfaction_already_recorded' : 'satisfaction_link_inactive' } }); return; }
+      if (message.type === 'customer_satisfaction_followup') payload.followup = true;
+    }
+    if (message.type === 'customer_completion_satisfaction' && message.customerInvoiceId) {
+      const invoice = await CustomerInvoice.findById(message.customerInvoiceId).lean();
+      if (!invoice) throw new Error('Customer invoice is missing');
+      payload.attachments = [{ filename: `${invoice.invoiceNumber}.pdf`, content: await createCustomerInvoicePdf(invoice) }];
+      await CustomerInvoice.updateOne({ _id: invoice._id }, { $set: { pdfGeneratedAt: new Date() } });
     }
     if (message.type === 'vendor_schedule_change_confirmation') payload.decision = 'changes_requested';
     if (message.type === 'staff_schedule_accepted_alert') payload.decision = 'accepted';
@@ -248,6 +311,7 @@ async function deliverMessage(message) {
     const delivery = { status: 'sent', attempts: message.attempts, lastAttemptAt: now, sentAt: now, lastErrorCategory: null, provider: result?.provider, providerMessageId: result?.messageId };
     await markIntakeDelivery(message, delivery);
     await markQuoteDelivery(message, delivery);
+    if (message.type === 'customer_satisfaction_followup') await Order.updateOne({ _id: message.orderId }, { $set: { satisfactionFollowupSentAt: now } });
   } catch (error) {
     const category = errorCategory(error);
     const permanent = message.attempts >= MAX_ATTEMPTS;
@@ -278,6 +342,7 @@ async function pollOnce() {
   if (polling) return;
   polling = true;
   try {
+    await cleanupCloseoutOrphans();
     await recoverExhaustedMessages();
     let processed = 0;
     while (processed < 10) {
@@ -312,5 +377,5 @@ module.exports = {
   pollOnce,
   startIntakeEmailWorker,
   stopIntakeEmailWorker,
-  _test: { errorCategory }
+  _test: { errorCategory, cleanupCloseoutOrphans }
 };

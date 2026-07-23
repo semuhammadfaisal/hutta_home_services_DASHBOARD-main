@@ -17,6 +17,11 @@ const milestoneSchema = new mongoose.Schema({
 const paymentSchema = new mongoose.Schema({
   paymentId: { type: String, required: true, unique: true },
   invoiceNumber: { type: String },
+  source: { type: String, enum: ['manual', 'stage6_invoice'], default: 'manual' },
+  customerInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerInvoice' },
+  jobCompletionId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobCompletion' },
+  outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
+  invoiceIssuedAt: Date,
   order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
   project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
@@ -72,5 +77,8 @@ paymentSchema.index({ paymentDate: -1 });
 paymentSchema.index({ createdAt: -1 });
 paymentSchema.index({ employeePaymentStatus: 1 });
 paymentSchema.index({ vendorPaymentStatus: 1 });
+paymentSchema.index({ customerInvoiceId: 1 }, { unique: true, sparse: true });
+paymentSchema.index({ jobCompletionId: 1 }, { unique: true, sparse: true });
+paymentSchema.index({ order: 1 }, { unique: true, partialFilterExpression: { source: 'stage6_invoice' }, name: 'one_stage6_invoice_payment_per_order' });
 
 module.exports = mongoose.model('Payment', paymentSchema);

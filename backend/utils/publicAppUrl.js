@@ -28,9 +28,8 @@ function getPublicAppUrl() {
     throw new Error('PUBLIC_APP_URL/FRONTEND_URL must be a valid absolute URL');
   }
 
-  const production = process.env.NODE_ENV === 'production';
-  if (production && (parsed.protocol !== 'https:' || isPrivateHostname(parsed.hostname))) {
-    throw new Error('Production PUBLIC_APP_URL/FRONTEND_URL must use public HTTPS and cannot point to localhost or a private network');
+  if (parsed.protocol !== 'https:' || isPrivateHostname(parsed.hostname)) {
+    throw new Error('PUBLIC_APP_URL/FRONTEND_URL must use public HTTPS and cannot point to localhost or a private network');
   }
   if (parsed.username || parsed.password || parsed.search || parsed.hash) {
     throw new Error('PUBLIC_APP_URL/FRONTEND_URL must contain only the dashboard origin');

@@ -4,9 +4,10 @@
     { stage: 2, section: 'incoming-quotes', short: 'Vendor Quotes', title: 'Incoming Quotes', load: 'loadIncomingQuotes', open: 'openIncomingQuoteWorkspace', close: 'closeIncomingQuoteWorkspace', workspace: 'incomingQuoteWorkspace' },
     { stage: 3, section: 'outgoing-quotes', short: 'Customer Quote', title: 'Outgoing Quotes', load: 'loadOutgoingQuotes', open: 'openOutgoingQuoteWorkspace', close: 'closeOutgoingQuoteWorkspace', workspace: 'outgoingQuoteWorkspace' },
     { stage: 4, section: 'customer-approvals', short: 'Approval', title: 'Customer Approvals', load: 'loadCustomerApprovals', open: 'openCustomerApproval', close: 'closeCustomerApprovalWorkspace', workspace: 'customerApprovalWorkspace' },
-    { stage: 5, section: 'scheduling', short: 'Schedule', title: 'Scheduling', load: 'loadScheduling', open: 'openSchedulingWorkspace', close: 'closeSchedulingWorkspace', workspace: 'schedulingWorkspace' }
+    { stage: 5, section: 'scheduling', short: 'Schedule', title: 'Scheduling', load: 'loadScheduling', open: 'openSchedulingWorkspace', close: 'closeSchedulingWorkspace', workspace: 'schedulingWorkspace' },
+    { stage: 6, section: 'closeout', short: 'Closeout', title: 'Completion & Closeout', load: 'loadCloseout', open: 'openCloseoutWorkspace', close: 'closeCloseoutWorkspace', workspace: 'closeoutWorkspace' }
   ];
-  const listIds = { 1: 'workflowRequestList', 2: 'incomingQuoteOrderList', 3: 'outgoingQuoteOrderList', 4: 'customerApprovalList', 5: 'schedulingOrderList' };
+  const listIds = { 1: 'workflowRequestList', 2: 'incomingQuoteOrderList', 3: 'outgoingQuoteOrderList', 4: 'customerApprovalList', 5: 'schedulingOrderList', 6: 'closeoutOrderList' };
   const state = { overview: null, activeStage: 0, currentOrderId: '', filters: {}, scroll: {}, dirty: false, routing: false };
   const esc = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   const fmtDate = value => value ? new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -20,7 +21,7 @@
     </nav>`;
   }
   function stageStrip(active = 0) {
-    return `<div class="workflow-stage-strip" aria-label="Five-stage workflow">
+    return `<div class="workflow-stage-strip" aria-label="Six-stage workflow">
       ${STAGES.map(item => { const count = countsFor(item.stage); return `<button class="workflow-stage-step ${active === item.stage ? 'is-active' : ''} ${count.attention ? 'has-attention' : ''}" data-workflow-view="stage-${item.stage}"><span class="dot">${item.stage}</span><strong>${esc(item.short)}</strong><small>${count.total} total${count.attention ? ` · ${count.attention} attention` : ''}</small></button>`; }).join('')}
     </div>`;
   }
@@ -84,7 +85,7 @@
 
   function overviewHeader() {
     const attention = state.overview?.actionRequiredTotal || 0;
-    return `<header class="workflow-hub-header"><div><span class="workflow-hub-eyebrow">Operations control center</span><h1>Workflow Center</h1><p>Move every request from intake to a vendor-confirmed schedule with one clear next action.</p></div><div class="workflow-hub-actions"><span class="workflow-attention-pill"><i class="fas fa-bell"></i>${attention} need attention</span><span class="workflow-updated">Updated ${fmtDate(state.overview?.refreshedAt)}</span><button class="btn-secondary" type="button" data-workflow-refresh><i class="fas fa-sync-alt"></i> Refresh</button></div></header>`;
+    return `<header class="workflow-hub-header"><div><span class="workflow-hub-eyebrow">Operations control center</span><h1>Workflow Center</h1><p>Move every request from intake through completion, invoicing, and customer closeout with one clear next action.</p></div><div class="workflow-hub-actions"><span class="workflow-attention-pill"><i class="fas fa-bell"></i>${attention} need attention</span><span class="workflow-updated">Updated ${fmtDate(state.overview?.refreshedAt)}</span><button class="btn-secondary" type="button" data-workflow-refresh><i class="fas fa-sync-alt"></i> Refresh</button></div></header>`;
   }
 
   function renderOverview() {
@@ -329,7 +330,7 @@
     const hash = location.hash;
     const modern = hash.match(/^#workflow-center\/(?:stage-(\d)(?:\/order\/([^/]+))?|overview)$/);
     if (modern) return { stage: Number(modern[1] || 0), orderId: modern[2] ? decodeURIComponent(modern[2]) : '' };
-    const legacy = { '#workflow-center':1,'#incoming-quotes':2,'#outgoing-quotes':3,'#customer-approvals':4,'#scheduling':5 };
+    const legacy = { '#workflow-center':1,'#incoming-quotes':2,'#outgoing-quotes':3,'#customer-approvals':4,'#scheduling':5,'#closeout':6 };
     return legacy[hash] ? { stage:legacy[hash],orderId:'' } : null;
   }
 

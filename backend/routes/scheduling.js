@@ -5,6 +5,7 @@ const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const EmailOutbox = require('../models/EmailOutbox');
 const JobSchedule = require('../models/JobSchedule');
+const JobCompletion = require('../models/JobCompletion');
 const Notification = require('../models/Notification');
 const Order = require('../models/Order');
 const OutgoingQuote = require('../models/OutgoingQuote');
@@ -17,6 +18,7 @@ const { vendorPrimaryEmail, vendorPrimaryPhone } = require('../utils/incomingQuo
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const memCache = require('../utils/memoryCache');
 const { TIMEZONE, TOKEN_TTL_MS, MAX_DECISION_BODY_BYTES, cleanText, generateToken, hashToken, encryptToken, nextScheduleReference, nextWorkOrderReference, parseProposal, parseDecision, scheduleSnapshotHash, workOrderSnapshotHash, publicSchedule } = require('../utils/scheduling');
+const { COMPLETION_TOKEN_TTL_MS, generateToken: generateCompletionToken, hashToken: hashCompletionToken, encryptToken: encryptCompletionToken, nextCompletionReference } = require('../utils/closeout');
 
 const router = express.Router();
 const staffRoles = checkRole(['admin', 'manager', 'account_rep']);
@@ -34,7 +36,7 @@ async function conflicts(vendorId, start, end, excludeOrderId, session) {
 function proposalOutbox(schedule, token) {
   return { type: 'vendor_schedule_proposal', dedupeKey: `${schedule._id}:vendor_schedule_proposal`, recipients: [schedule.vendorSnapshot.email], payload: { encryptedToken: encryptToken(token), vendorName: schedule.vendorSnapshot.name, customerName: schedule.customerSnapshot.name, scheduleReference: schedule.scheduleReference, requestReference: schedule.jobSnapshot.requestReference, service: schedule.jobSnapshot.service, proposedStart: schedule.proposedStart, proposedEnd: schedule.proposedEnd, timezone: TIMEZONE }, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id };
 }
-function decisionOutbox(schedule, decision, workOrder) {
+function decisionOutbox(schedule, decision, workOrder, completionToken) {
   const accepted = decision.decision === 'accepted';
   const base = { decision: decision.decision, typedName: decision.typedName, changeRequestMessage: decision.changeRequestMessage, scheduleReference: schedule.scheduleReference, revisionNumber: schedule.revisionNumber, requestReference: schedule.jobSnapshot.requestReference, orderReference: schedule.jobSnapshot.orderReference, customerName: schedule.customerSnapshot.name, vendorName: schedule.vendorSnapshot.name, service: schedule.jobSnapshot.service, address: schedule.customerSnapshot.address, proposedStart: schedule.proposedStart, proposedEnd: schedule.proposedEnd, timezone: TIMEZONE, accessInstructions: schedule.accessInstructions, decisionAt: decision.decisionAt };
   if (!accepted) return [
@@ -43,7 +45,7 @@ function decisionOutbox(schedule, decision, workOrder) {
   ];
   return [
     { type: 'customer_schedule_confirmation', dedupeKey: `${schedule._id}:customer_schedule_confirmation`, recipients: [schedule.customerSnapshot.email], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
-    { type: 'vendor_schedule_accepted_confirmation', dedupeKey: `${schedule._id}:vendor_schedule_accepted_confirmation`, recipients: [schedule.vendorSnapshot.email], payload: { ...base, vendorWorkOrderId: String(workOrder._id) }, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
+    { type: 'vendor_schedule_accepted_confirmation', dedupeKey: `${schedule._id}:vendor_schedule_accepted_confirmation`, recipients: [schedule.vendorSnapshot.email], payload: { ...base, vendorWorkOrderId: String(workOrder._id), encryptedCompletionToken: encryptCompletionToken(completionToken) }, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
     { type: 'staff_schedule_accepted_alert', dedupeKey: `${schedule._id}:staff_schedule_accepted_alert`, recipients: ['sales@huttas.com'], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id }
   ];
 }
@@ -76,18 +78,35 @@ router.post('/public/decision', publicLimiter, async (req, res, next) => {
       if (wanted === 'accepted') schedule.acceptedAt = decisionAt; else schedule.changesRequestedAt = decisionAt;
       schedule.history.push({ action: wanted, message: wanted === 'changes_requested' ? payload.changeRequestMessage : `Accepted by ${payload.typedName}` });
       await schedule.save({ session });
-      let workOrder = null;
+      let workOrder = null, completionToken = null;
       if (wanted === 'accepted') {
         if (order.confirmedJobScheduleId && String(order.confirmedJobScheduleId) !== String(schedule._id)) await JobSchedule.updateOne({ _id: order.confirmedJobScheduleId, status: 'accepted' }, { $set: { status: 'superseded', supersededAt: decisionAt } }, { session });
         const workOrderReference = await nextWorkOrderReference(session);
         const workData = { workOrderReference, orderId: order._id, jobScheduleId: schedule._id, outgoingQuoteId: schedule.outgoingQuoteId, vendorId: schedule.vendorId, revisionNumber: schedule.revisionNumber, customerSnapshot: schedule.customerSnapshot.toObject?.() || schedule.customerSnapshot, vendorSnapshot: schedule.vendorSnapshot.toObject?.() || schedule.vendorSnapshot, jobSnapshot: schedule.jobSnapshot.toObject?.() || schedule.jobSnapshot, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, timezone: TIMEZONE, accessInstructions: schedule.accessInstructions, generatedAt: decisionAt };
         workData.snapshotHash = workOrderSnapshotHash(workData); [workOrder] = await VendorWorkOrder.create([workData], { session });
+        completionToken = generateCompletionToken();
+        let completion = await JobCompletion.findOne({ orderId: order._id }).session(session).select('+publicTokenHash');
+        const completionData = {
+          jobScheduleId: schedule._id, outgoingQuoteId: schedule.outgoingQuoteId, vendorWorkOrderId: workOrder._id,
+          customerId: order.customerId, vendorId: schedule.vendorId, status: 'pending',
+          customerSnapshot: workData.customerSnapshot, vendorSnapshot: workData.vendorSnapshot,
+          scheduleSnapshot: { scheduleReference: schedule.scheduleReference, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, timezone: schedule.timezone, accessInstructions: schedule.accessInstructions },
+          jobSnapshot: workData.jobSnapshot, approvedTotal: order.amount,
+          publicTokenHash: hashCompletionToken(completionToken), tokenExpiresAt: new Date(new Date(schedule.proposedEnd).getTime() + COMPLETION_TOKEN_TTL_MS), tokenSentAt: decisionAt
+        };
+        if (!completion) {
+          const completionReference = await nextCompletionReference(session);
+          [completion] = await JobCompletion.create([{ completionReference, orderId: order._id, ...completionData, history: [{ action: 'completion_link_created', actorType: 'system' }] }], { session });
+        } else {
+          if (completion.status !== 'pending') throw Object.assign(new Error('A completed job cannot be rescheduled'), { status: 409 });
+          Object.assign(completion, completionData); completion.history.push({ action: 'completion_link_rotated_for_reschedule', actorType: 'system' }); await completion.save({ session });
+        }
         Object.assign(order, { workflowStatus: 'scheduled', confirmedJobScheduleId: schedule._id, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, scheduledTimezone: TIMEZONE, scheduleConfirmedAt: decisionAt, scheduleDate: schedule.proposedStart });
       } else order.workflowStatus = 'schedule_changes_requested';
       await order.save({ session });
       const users = await User.find({ isActive: true, role: { $in: ['admin', 'manager', 'account_rep'] } }).select('_id').session(session).lean();
       if (users.length) await Notification.insertMany(users.map(user => ({ userId: user._id, title: wanted === 'accepted' ? 'Vendor accepted schedule' : 'Vendor requested schedule changes', message: `${schedule.vendorSnapshot.name} ${wanted === 'accepted' ? 'accepted' : 'requested changes to'} ${schedule.scheduleReference}.`, type: wanted === 'accepted' ? 'success' : 'warning', priority: 'high', actionUrl: '#scheduling', metadata: { orderId: order._id, jobScheduleId: schedule._id, decision: wanted } })), { session });
-      await EmailOutbox.insertMany(decisionOutbox(schedule, decision, workOrder), { session });
+      await EmailOutbox.insertMany(decisionOutbox(schedule, decision, workOrder, completionToken), { session });
       result = { success: true, status: wanted, decisionAt, duplicate: false };
     });
     invalidate(); res.status(result.duplicate ? 200 : 201).json(result);

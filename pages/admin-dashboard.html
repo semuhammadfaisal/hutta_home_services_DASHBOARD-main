@@ -43,7 +43,8 @@
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
     <link rel="stylesheet" href="../assets/css/scheduling.css">
-    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260720-reference-ui">
+    <link rel="stylesheet" href="../assets/css/closeout.css">
+    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-stage6-closeout">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -912,6 +913,52 @@
             <section id="schedulingWorkspace" class="scheduling-workspace" hidden><div class="scheduling-head"><div><p class="workflow-eyebrow">Schedule workspace</p><h2 id="schedulingWorkspaceTitle"></h2><p id="schedulingWorkspaceSummary"></p></div><button class="btn-secondary" onclick="closeSchedulingWorkspace()">Close</button></div>
                 <form id="scheduleProposalForm" class="scheduling-panel schedule-grid"><h3 class="full">Send vendor schedule proposal</h3><label>Arizona start<input id="scheduleStartInput" type="datetime-local" required></label><label>Arizona end<input id="scheduleEndInput" type="datetime-local" required></label><label class="full">Access instructions<textarea id="scheduleAccessInput" rows="3" maxlength="5000"></textarea></label><label class="full">Internal notes <small>Never sent externally</small><textarea id="scheduleInternalNotes" rows="3" maxlength="5000"></textarea></label><label id="scheduleConflictAckLabel" class="full conflict-ack" hidden><input id="scheduleConflictAck" type="checkbox"> I reviewed the vendor overlap and authorize this proposal.</label><div id="scheduleConflictBox" class="full schedule-conflict" hidden></div><div class="full"><button class="btn-primary" type="submit">Send Secure Proposal</button></div></form>
                 <section class="scheduling-panel"><h3>Schedule revisions and decisions</h3><div id="scheduleHistory"></div></section><section class="scheduling-panel"><h3>Email delivery</h3><div id="scheduleEmails"></div></section>
+            </section>
+        </section>
+
+        <section id="closeout" class="content-section closeout-section workflow-stage-section" data-workflow-stage="6">
+            <div class="page-header workflow-header">
+                <div><h1>Completion &amp; Closeout</h1><p>Collect completion evidence, generate invoices, and resolve customer feedback.</p></div>
+                <button class="btn-secondary" type="button" onclick="loadCloseout()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+            <div class="workflow-summary closeout-summary" aria-label="Completion and closeout summary">
+                <div><strong id="closeoutReadyCount">0</strong><span>Ready for completion</span></div>
+                <div><strong id="closeoutFeedbackCount">0</strong><span>Awaiting feedback</span></div>
+                <div><strong id="closeoutIssueCount">0</strong><span>Issues reported</span></div>
+                <div><strong id="closeoutCompletedCount">0</strong><span>Completed</span></div>
+            </div>
+            <div id="closeoutOrderList" class="closeout-order-list" aria-live="polite">
+                <div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading completion records&hellip;</p></div>
+            </div>
+            <section id="closeoutWorkspace" class="closeout-workspace" hidden>
+                <div class="closeout-workspace-head">
+                    <div><h2 id="closeoutWorkspaceTitle">Completion workspace</h2><p id="closeoutWorkspaceSummary"></p></div>
+                    <button class="btn-secondary" type="button" onclick="closeCloseoutWorkspace()">Close</button>
+                </div>
+                <div id="closeoutWorkspaceAlert" class="closeout-alert" hidden></div>
+                <div class="closeout-grid">
+                    <div class="closeout-main">
+                        <section class="closeout-panel">
+                            <div class="closeout-panel-head"><div><h3>Vendor completion link</h3><p id="closeoutLinkStatus">No link has been sent.</p></div><div id="closeoutLinkActions" class="closeout-actions"></div></div>
+                        </section>
+                        <form id="closeoutStaffForm" class="closeout-panel closeout-form">
+                            <div><h3>Mark complete on behalf of vendor</h3><p>Upload the required evidence or record an authorized photo override.</p></div>
+                            <label>Before photos<input id="closeoutBeforePhotos" name="beforePhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPG, PNG, or WebP; maximum 10.</small></label>
+                            <label>After photos<input id="closeoutAfterPhotos" name="afterPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPG, PNG, or WebP; maximum 10.</small></label>
+                            <label class="full">Completion notes<textarea id="closeoutCompletionNotes" name="completionNotes" rows="4" maxlength="5000"></textarea></label>
+                            <label class="full closeout-check"><input id="closeoutPhotoOverride" name="photoOverride" type="checkbox" value="true"><span>Authorize completion without both photo categories</span></label>
+                            <label id="closeoutOverrideReasonLabel" class="full" hidden>Override reason<textarea id="closeoutOverrideReason" name="photoOverrideReason" rows="3" minlength="10" maxlength="2000"></textarea></label>
+                            <div class="full"><button id="closeoutCompleteButton" class="btn-primary" type="submit">Mark Job Complete</button></div>
+                        </form>
+                        <section id="closeoutPhotosPanel" class="closeout-panel" hidden><h3>Before and after photos</h3><div id="closeoutPhotos" class="closeout-photo-groups"></div></section>
+                        <section id="closeoutSatisfactionPanel" class="closeout-panel" hidden><h3>Customer satisfaction</h3><div id="closeoutSatisfaction"></div></section>
+                    </div>
+                    <aside class="closeout-aside">
+                        <section class="closeout-panel"><h3>Job summary</h3><div id="closeoutJobSummary"></div></section>
+                        <section id="closeoutInvoicePanel" class="closeout-panel" hidden><h3>Invoice and Payment</h3><div id="closeoutInvoice"></div></section>
+                        <section class="closeout-panel"><h3>Email delivery</h3><div id="closeoutEmails"></div></section>
+                    </aside>
+                </div>
             </section>
         </section>
 
@@ -4370,7 +4417,7 @@
     </div>
 
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20260723-stage5-scheduling"></script>
+    <script src="../assets/js/api-service.js?v=20260723-stage6-closeout"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
     <script src="../assets/js/custom-fields.js"></script>
@@ -4390,7 +4437,8 @@
     <script src="../assets/js/outgoing-quotes.js"></script>
     <script src="../assets/js/customer-approvals.js"></script>
     <script src="../assets/js/scheduling.js?v=20260723-stage5-client-instance"></script>
-    <script src="../assets/js/workflow-hub.js?v=20260720-workflow-order-guard"></script>
+    <script src="../assets/js/closeout.js?v=20260723-stage6-closeout"></script>
+    <script src="../assets/js/workflow-hub.js?v=20260723-stage6-closeout"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>

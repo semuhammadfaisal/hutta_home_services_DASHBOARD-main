@@ -73,14 +73,14 @@ test('public tokens stay out of URL paths and are read from the request header',
   assert.doesNotMatch(clientSource, /\?token=/);
 });
 
-test('production public links use HTTPS and reject localhost or private origins', () => {
+test('public links always use HTTPS and reject localhost or private origins', () => {
   const previous = {
     NODE_ENV: process.env.NODE_ENV,
     PUBLIC_APP_URL: process.env.PUBLIC_APP_URL,
     FRONTEND_URL: process.env.FRONTEND_URL
   };
   try {
-    process.env.NODE_ENV = 'production';
+    process.env.NODE_ENV = 'development';
     process.env.PUBLIC_APP_URL = 'http://localhost:5500';
     delete process.env.FRONTEND_URL;
     assert.throws(() => getPublicAppUrl(), /public HTTPS/);

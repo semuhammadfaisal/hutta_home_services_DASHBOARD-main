@@ -173,6 +173,33 @@ class APIService {
         return requestPromise;
     }
 
+    async requestForm(endpoint, formData, method = 'POST') {
+        const headers = {};
+        if (Date.now() - window.AuthSession.lastUserActivityAt < 60 * 1000) {
+            headers['X-Session-Activity'] = 'active';
+        }
+        if (window.AuthSession.csrfToken) headers['X-CSRF-Token'] = window.AuthSession.csrfToken;
+        const response = await fetch(`${this.baseURL}${endpoint}`, {
+            method,
+            credentials: 'include',
+            headers,
+            body: formData
+        });
+        const contentType = response.headers.get('content-type') || '';
+        const data = contentType.includes('application/json')
+            ? await response.json()
+            : { message: await response.text() };
+        if (!response.ok) {
+            if (response.status === 401) this.handleUnauthorized();
+            const error = new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+            error.status = response.status;
+            error.data = data;
+            throw error;
+        }
+        this.clearCache();
+        return data;
+    }
+
     clearCache() {
         this.requestCache.clear();
         sessionStorage.removeItem('dashboardCache');
@@ -913,6 +940,46 @@ class APIService {
             throw new Error('Order ID is required to load the workflow journey');
         }
         return this.request(`/workflow-center/orders/${encodeURIComponent(orderId)}/journey`);
+    }
+
+    // Stage 6 — Completion and Closeout
+    async getCloseoutOrders() {
+        return this.request('/closeout/orders');
+    }
+
+    async getCloseoutOrder(orderId) {
+        return this.request(`/closeout/orders/${encodeURIComponent(orderId)}`);
+    }
+
+    async createCompletionLink(orderId) {
+        return this.request(`/closeout/orders/${encodeURIComponent(orderId)}/completion-link`, { method: 'POST' });
+    }
+
+    async resendCompletionLink(orderId) {
+        return this.request(`/closeout/orders/${encodeURIComponent(orderId)}/completion-link/resend`, { method: 'POST' });
+    }
+
+    async rotateCompletionLink(orderId) {
+        return this.request(`/closeout/orders/${encodeURIComponent(orderId)}/completion-link/rotate`, { method: 'POST' });
+    }
+
+    async revokeCompletionLink(orderId) {
+        return this.request(`/closeout/orders/${encodeURIComponent(orderId)}/completion-link/revoke`, { method: 'POST' });
+    }
+
+    async completeCloseoutOrder(orderId, formData) {
+        return this.requestForm(`/closeout/orders/${encodeURIComponent(orderId)}/complete`, formData);
+    }
+
+    async resolveCloseoutIssue(decisionId, resolutionNote) {
+        return this.request(`/closeout/satisfaction/${encodeURIComponent(decisionId)}/resolve`, {
+            method: 'POST',
+            body: JSON.stringify({ resolutionNote })
+        });
+    }
+
+    async retryCloseoutEmail(messageId) {
+        return this.request(`/closeout/outbox/${encodeURIComponent(messageId)}/retry`, { method: 'POST' });
     }
 
     // Employees

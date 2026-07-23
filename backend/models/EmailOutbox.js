@@ -21,6 +21,16 @@ const emailOutboxSchema = new mongoose.Schema({
       'staff_schedule_accepted_alert',
       'vendor_schedule_change_confirmation',
       'staff_schedule_change_alert'
+      ,'vendor_completion_confirmation'
+      ,'vendor_completion_link'
+      ,'customer_completion_satisfaction'
+      ,'customer_satisfaction_followup'
+      ,'customer_satisfaction_confirmation'
+      ,'customer_issue_confirmation'
+      ,'staff_completion_alert'
+      ,'staff_satisfaction_alert'
+      ,'staff_closeout_issue_alert'
+      ,'staff_closeout_issue_resolved'
     ],
     required: true
   },
@@ -34,6 +44,9 @@ const emailOutboxSchema = new mongoose.Schema({
   outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
   jobScheduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobSchedule' },
   vendorWorkOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorWorkOrder' },
+  jobCompletionId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobCompletion' },
+  customerInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerInvoice' },
+  satisfactionDecisionId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerSatisfactionDecision' },
   status: {
     type: String,
     enum: ['pending', 'processing', 'sent', 'retry_scheduled', 'permanently_failed', 'cancelled'],
@@ -56,5 +69,7 @@ emailOutboxSchema.index({ incomingQuoteId: 1, type: 1 });
 emailOutboxSchema.index({ quoteInvitationId: 1, type: 1 });
 emailOutboxSchema.index({ outgoingQuoteId: 1, type: 1 });
 emailOutboxSchema.index({ jobScheduleId: 1, type: 1 });
+emailOutboxSchema.index({ jobCompletionId: 1, type: 1 });
+emailOutboxSchema.index({ customerInvoiceId: 1, type: 1 });
 
 module.exports = mongoose.model('EmailOutbox', emailOutboxSchema);

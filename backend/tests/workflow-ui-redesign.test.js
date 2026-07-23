@@ -13,6 +13,7 @@ test('Workflow Center uses one sidebar entry and a unified six-view shell', () =
   assert.match(html, /id="workflow-overview"/);
   assert.match(html, /data-workflow-stage="1"/);
   assert.match(html, /data-workflow-stage="5"/);
+  assert.match(html, /data-workflow-stage="6"/);
   assert.match(hub, /#workflow-center\/stage-/);
   assert.match(hub, /Back to/);
   assert.match(hub, /state\.scroll/);
@@ -30,7 +31,9 @@ test('read-only overview and journey APIs are authenticated and map every workfl
   assert.equal(stageByStatus.quote_collection, 2);
   assert.equal(stageByStatus.outgoing_quote_draft, 3);
   assert.equal(stageByStatus.quote_changes_requested, 4);
-  assert.equal(stageByStatus.scheduled, 5);
+  assert.equal(stageByStatus.scheduled, 6);
+  assert.equal(stageByStatus.completed, 6);
+  assert.equal(stageByStatus.closeout_issue_reported, 6);
 });
 
 test('internal redesign provides accessible dialogs, filters, readiness, timelines, and responsive states', () => {
@@ -69,8 +72,10 @@ test('public workflow pages share secure styling and vendor quote is a three-ste
   const customer = read('pages/customer-quote.html');
   const vendor = read('pages/vendor-quote.html');
   const schedule = read('pages/vendor-schedule.html');
+  const completion = read('pages/vendor-completion.html');
+  const satisfaction = read('pages/customer-satisfaction.html');
   const vendorJs = read('assets/js/vendor-quote.js');
-  for (const html of [customer, vendor, schedule]) assert.match(html, /secure-workflow\.css/);
+  for (const html of [customer, vendor, schedule, completion, satisfaction]) assert.match(html, /secure-workflow\.css/);
   assert.equal((vendor.match(/class="quote-card secure-step" data-step="[123]"/g) || []).length, 3);
   assert.match(vendor, /id="vendorQuoteReview"/);
   assert.match(vendorJs, /validateStep/);

@@ -5,6 +5,7 @@ const EmailOutbox = require('../models/EmailOutbox');
 const IncomingQuote = require('../models/IncomingQuote');
 const IntakeSubmission = require('../models/IntakeSubmission');
 const JobSchedule = require('../models/JobSchedule');
+const JobCompletion = require('../models/JobCompletion');
 const Order = require('../models/Order');
 const OutgoingQuote = require('../models/OutgoingQuote');
 
@@ -21,7 +22,9 @@ const stageByStatus = {
   customer_approved: 5,
   schedule_pending_vendor: 5,
   schedule_changes_requested: 5,
-  scheduled: 5
+  scheduled: 6,
+  completed: 6,
+  closeout_issue_reported: 6
 };
 
 const attentionLabel = {
@@ -30,7 +33,9 @@ const attentionLabel = {
   outgoing_quote_draft: 'Complete and send quote',
   quote_changes_requested: 'Customer requested quote changes',
   customer_approved: 'Propose vendor schedule',
-  schedule_changes_requested: 'Vendor requested schedule changes'
+  schedule_changes_requested: 'Vendor requested schedule changes',
+  scheduled: 'Submit job completion',
+  closeout_issue_reported: 'Resolve customer closeout issue'
 };
 
 function stageFor(order) {
@@ -76,7 +81,7 @@ router.get('/overview', allowedRoles, async (_req, res, next) => {
     const failedEmailOrderIds = new Set(failedEmails.map(String));
     const complianceOrderIds = new Set(complianceQuotes.map(String));
     const items = orders.map(order => summary(order, failedEmailOrderIds, complianceOrderIds));
-    const counts = [1, 2, 3, 4, 5].map(stage => ({
+    const counts = [1, 2, 3, 4, 5, 6].map(stage => ({
       stage,
       total: items.filter(item => item.stage === stage).length,
       attention: items.filter(item => item.stage === stage && item.actionRequired).length
@@ -107,16 +112,17 @@ router.get('/orders/:orderId/journey', allowedRoles, async (req, res, next) => {
       .populate('vendor', 'name')
       .lean();
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    const [intake, incoming, outgoing, schedule] = await Promise.all([
+    const [intake, incoming, outgoing, schedule, completion] = await Promise.all([
       IntakeSubmission.findOne({ orderId: order._id }).select('requestReference status receivedAt requiresReview').lean(),
       IncomingQuote.findOne({ orderId: order._id, status: 'selected' }).select('quoteReference status selectedAt updatedAt').lean(),
       OutgoingQuote.findOne({ orderId: order._id }).sort({ revisionNumber: -1 }).select('quoteReference status customerDecisionStatus sentAt updatedAt').lean(),
-      JobSchedule.findOne({ orderId: order._id }).sort({ revisionNumber: -1 }).select('scheduleReference status sentAt acceptedAt updatedAt').lean()
+      JobSchedule.findOne({ orderId: order._id }).sort({ revisionNumber: -1 }).select('scheduleReference status sentAt acceptedAt updatedAt').lean(),
+      JobCompletion.findOne({ orderId: order._id }).select('completionReference status completedAt satisfactionDecisionId updatedAt').lean()
     ]);
     const currentStage = stageFor(order);
-    const references = [intake?.requestReference, incoming?.quoteReference, outgoing?.quoteReference, outgoing?.quoteReference, schedule?.scheduleReference];
-    const timestamps = [intake?.receivedAt || order.createdAt, incoming?.selectedAt || incoming?.updatedAt, outgoing?.sentAt || outgoing?.updatedAt, outgoing?.sentAt || outgoing?.updatedAt, schedule?.acceptedAt || schedule?.sentAt || schedule?.updatedAt];
-    const stages = [1, 2, 3, 4, 5].map(stage => ({
+    const references = [intake?.requestReference, incoming?.quoteReference, outgoing?.quoteReference, outgoing?.quoteReference, schedule?.scheduleReference, completion?.completionReference];
+    const timestamps = [intake?.receivedAt || order.createdAt, incoming?.selectedAt || incoming?.updatedAt, outgoing?.sentAt || outgoing?.updatedAt, outgoing?.sentAt || outgoing?.updatedAt, schedule?.acceptedAt || schedule?.sentAt || schedule?.updatedAt, completion?.completedAt || completion?.updatedAt];
+    const stages = [1, 2, 3, 4, 5, 6].map(stage => ({
       stage,
       state: stage < currentStage ? 'completed' : stage === currentStage ? 'current' : 'upcoming',
       reference: references[stage - 1] || null,
@@ -125,6 +131,8 @@ router.get('/orders/:orderId/journey', allowedRoles, async (req, res, next) => {
     if ((order.missingData?.serviceAddress || order.missingData?.serviceCategory || order.requiresIntakeReview) && currentStage === 1) stages[0].state = 'attention';
     if (order.workflowStatus === 'quote_changes_requested') stages[3].state = 'attention';
     if (order.workflowStatus === 'schedule_changes_requested') stages[4].state = 'attention';
+    if (order.workflowStatus === 'completed') stages[5].state = 'completed';
+    if (order.workflowStatus === 'closeout_issue_reported') stages[5].state = 'attention';
     res.json({ order, currentStage, stages });
   } catch (error) { next(error); }
 });

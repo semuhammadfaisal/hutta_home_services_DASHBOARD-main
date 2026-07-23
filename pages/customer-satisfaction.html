@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <title>Service Satisfaction | Hutta Home Services</title>
+    <link rel="icon" href="../favicon.ico">
+    <link rel="stylesheet" href="../assets/css/secure-workflow.css">
+    <link rel="stylesheet" href="../assets/css/vendor-completion.css">
+</head>
+<body>
+    <header class="secure-header">
+        <img src="../assets/images/logo.png" alt="Hutta Home Services">
+        <span class="secure-session">Secure customer feedback</span>
+    </header>
+    <main class="completion-shell satisfaction-shell">
+        <section id="satisfactionLoading" class="completion-state"><span class="completion-spinner"></span><h1>Loading service details</h1></section>
+        <section id="satisfactionError" class="completion-state completion-error" hidden><h1>Feedback link unavailable</h1><p id="satisfactionErrorMessage"></p></section>
+        <article id="satisfactionDocument" class="completion-document satisfaction-document" hidden>
+            <div class="completion-title">
+                <div><span>Completion recorded</span><h1 id="satisfactionReference"></h1><p id="satisfactionCompletedAt"></p></div>
+                <strong>Feedback requested</strong>
+            </div>
+            <section class="completion-detail">
+                <h2 id="satisfactionGreeting">How did we do?</h2>
+                <p>Your service, <strong id="satisfactionService"></strong>, has been marked complete. Please let us know whether everything is satisfactory.</p>
+            </section>
+            <section id="satisfactionPending" class="satisfaction-actions">
+                <button id="satisfiedButton" class="completion-primary" type="button">I’m Satisfied</button>
+                <button id="showIssueButton" class="completion-secondary" type="button">Report an Issue</button>
+                <div id="issuePanel" hidden>
+                    <label>
+                        <span>Tell us what needs attention <em>Required</em></span>
+                        <textarea id="issueMessage" minlength="10" maxlength="3000" rows="6" placeholder="Please provide enough detail for our team to help."></textarea>
+                    </label>
+                    <div class="satisfaction-button-row">
+                        <button id="submitIssueButton" class="completion-primary" type="button">Submit Issue</button>
+                        <button id="cancelIssueButton" class="completion-secondary" type="button">Cancel</button>
+                    </div>
+                </div>
+                <p id="satisfactionFormError" class="completion-inline-error" role="alert" hidden></p>
+            </section>
+            <section id="satisfactionComplete" class="completion-success satisfaction-result" hidden>
+                <span class="completion-success-icon" aria-hidden="true">✓</span>
+                <h2 id="satisfactionResultTitle"></h2>
+                <p id="satisfactionResultMessage"></p>
+                <p id="satisfactionDecisionAt"></p>
+            </section>
+        </article>
+    </main>
+    <script src="../assets/js/customer-satisfaction.js"></script>
+</body>
+</html>

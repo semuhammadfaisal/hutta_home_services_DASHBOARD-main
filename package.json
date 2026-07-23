@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
+    "migrate:stage6-closeout": "node backend/migrate-stage6-closeout.js",
+    "migrate:stage6-closeout:apply": "node backend/migrate-stage6-closeout.js --apply",
     "postinstall": "cd backend && npm install"
   },
   "dependencies": {
