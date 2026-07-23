@@ -59,7 +59,7 @@ test('routes mount before auth and enforce send lifecycle without creating Payme
   const route = read('backend/routes/outgoingQuotes.js');
   assert.ok(server.indexOf("app.use('/api/outgoing-quotes'") < server.indexOf("app.use('/api', authenticateToken)"));
   assert.match(route, /router\.use\(authenticateToken, staffRoles\)/);
-  assert.match(route, /order\.workflowStatus = 'quote_sent'/);
+  assert.match(route, /synchronizeWorkflowOrder\(order, 'quote_sent'/);
   assert.match(route, /order\.pricingStatus = 'quoted'/);
   assert.doesNotMatch(route, /require\('\.\.\/models\/Payment'\)|new Payment|Payment\.create/);
 });

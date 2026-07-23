@@ -15,3 +15,156 @@ body>main>article .times{margin-top:18px}body>main>article .decision{position:st
 @media(max-width:850px){.quote-public-document{display:block}.quote-decision{position:static}.quote-public-title,.quote-notice,.quote-public-grid,.quote-public-section,.quote-total{grid-column:auto}.secure-progress{overflow-x:auto;grid-template-columns:repeat(3,180px)}}
 @media(max-width:640px){.quote-public-header::after{content:"● Secure"}.quote-header{display:grid!important;grid-template-columns:auto 1fr}.quote-header>span{grid-column:1/-1;width:100%;justify-content:center;margin:0!important;min-height:30px}.secure-review{grid-template-columns:1fr}.secure-review .wide{grid-column:auto}.secure-wizard-actions{position:sticky;bottom:8px;padding:8px;background:rgba(255,255,255,.96);border:1px solid var(--secure-border);border-radius:12px;z-index:4}.secure-wizard-actions button{flex:1}.quote-decision{padding-bottom:24px!important}.decision-actions,.actions{position:sticky;bottom:8px;background:rgba(255,255,255,.96);padding:8px;border:1px solid var(--secure-border);border-radius:12px;z-index:5}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* Shared secure workflow v2 */
+html{color-scheme:light}
+body{min-height:100vh;margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.quote-shell,.quote-public-shell,body>main,.completion-shell{width:min(1120px,calc(100% - 32px));margin-left:auto;margin-right:auto}
+.quote-header,.quote-public-header,.secure-header,body>header{
+  position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:18px;
+  width:100%;padding:14px max(20px,calc((100vw - 1120px)/2));background:#fff;
+}
+.quote-header img,.quote-public-header img,.secure-header img,body>header img{width:108px;max-height:48px;object-fit:contain}
+.quote-header h1{font-size:20px;letter-spacing:-.02em}.quote-header p{font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.quote-header>span,.quote-public-header>span,.secure-session,body>header>span{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:6px 11px;
+  border-radius:999px;background:#eaf8f0;color:var(--secure-success);font-size:11px;font-weight:850;
+}
+.quote-public-header::after{display:none}
+.quote-header>span::before,.quote-public-header>span::before,.secure-session::before,body>header>span::before{content:"●";font-size:8px}
+.quote-state,.quote-public-state,.completion-state,body>main>.state{
+  width:min(640px,100%);margin:46px auto;padding:42px 28px;border:1px solid var(--secure-border);
+  border-radius:18px;background:#fff;text-align:center;box-shadow:var(--secure-shadow);
+}
+.quote-state h2,.quote-public-state h1,.completion-state h1,body>main>.state h1{margin:14px 0 7px;font-size:24px;letter-spacing:-.025em}
+.quote-state p,.quote-public-state p,.completion-state p,body>main>.state p{color:var(--secure-muted);line-height:1.55}
+.state-icon,.completion-success-icon{box-shadow:0 7px 18px rgba(31,98,67,.18)}
+.state-icon.error{box-shadow:0 7px 18px rgba(180,35,24,.15)}
+
+.quote-summary{
+  overflow:hidden;border:1px solid var(--secure-border)!important;border-radius:14px!important;
+  background:#fff!important;box-shadow:0 6px 22px rgba(31,62,99,.055)!important;
+}
+.quote-summary>div{min-height:72px;padding:14px 16px!important;border-color:#e8eef5!important}
+.quote-summary span{color:var(--secure-muted)!important;font-size:9px!important;font-weight:850!important;letter-spacing:.06em;text-transform:uppercase}
+.quote-summary strong{margin-top:5px;font-size:13px!important;overflow-wrap:anywhere}
+.quote-card,.quote-public-section,.quote-decision,.completion-form,.completion-detail{
+  border-radius:14px!important;
+}
+.quote-card{padding:22px!important;border:1px solid var(--secure-border)!important;background:#fff!important;box-shadow:0 7px 24px rgba(31,62,99,.055)!important}
+.card-heading{margin-bottom:18px!important}.card-heading>span{width:32px!important;height:32px!important;font-size:12px!important}
+.card-heading h2{font-size:18px!important}.card-heading p{font-size:12px!important}
+.quote-card label>span,.decision-field,.completion-form label{font-size:12px}
+input,select,textarea{min-height:44px;border-color:#b9c9da!important;border-radius:9px!important}
+textarea{line-height:1.5}
+.file-field,.completion-upload{border-width:1px!important;background:#fbfdff!important}
+.file-field:hover,.completion-upload:hover{border-color:var(--secure-blue)!important;background:#f5faff!important}
+.submit-card{border-color:#b9d7f5!important;background:#f8fbff!important}
+.submit-card>button,.decision-primary,.actions button:not(.secondary),.completion-primary{background:var(--secure-blue)!important;box-shadow:0 6px 16px rgba(7,94,184,.16)}
+.submit-error,.decision-error,.completion-inline-error{border:1px solid #f3c1bc!important;background:#fff2f0!important;color:var(--secure-danger)!important}
+.quote-shell>footer{padding:26px 0 38px;color:#7a899d;font-size:10px;text-align:center}
+
+.secure-progress{position:sticky;top:8px;z-index:8;backdrop-filter:blur(8px)}
+.secure-progress-step{min-height:48px}
+.secure-progress-step:not([aria-current="step"]).is-complete::after{content:"Complete";margin-left:auto;color:var(--secure-success);font-size:9px;font-weight:850}
+.secure-wizard-actions{position:sticky;bottom:8px;z-index:7;padding:8px;border:1px solid var(--secure-border);border-radius:11px;background:rgba(255,255,255,.97);box-shadow:0 8px 22px rgba(31,62,99,.1);backdrop-filter:blur(8px)}
+
+.quote-public-title{align-items:flex-start}
+.quote-public-title>div>span,.decision-eyebrow{color:var(--secure-blue)!important;font-size:9px!important;font-weight:850!important;letter-spacing:.09em;text-transform:uppercase}
+.quote-public-section h2,.quote-public-grid h2{font-size:10px!important;letter-spacing:.07em;text-transform:uppercase}
+.quote-decision{top:14px!important;border:1px solid #bad8f5!important;background:#fbfdff!important}
+.decision-consent{border-radius:9px;background:#f1f6fb}
+.decision-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.decision-actions button{width:100%;margin:0!important}
+.quote-notice{border-radius:9px!important}
+
+body>main>article{overflow:visible!important}
+body>main>article>.title{align-items:flex-start}
+body>main>article>.times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+body>main>article>.times>div{border:1px solid #bedcff!important;border-radius:12px!important;background:#eef7ff!important}
+body>main>article>.decision{border:1px solid #bad8f5!important;border-radius:14px!important}
+body>main>article>.decision .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+body>main>article>.decision .actions button{width:100%;margin:0}
+
+.satisfaction-actions{padding:18px;border:1px solid #c6dff6;border-radius:13px;background:#f8fbff}
+.satisfaction-actions>button{min-height:50px}
+.satisfaction-actions>#issuePanel{padding-top:14px;border-top:1px solid #dbe6f0}
+
+@media(max-width:720px){
+  .quote-shell,.quote-public-shell,body>main,.completion-shell{width:min(100% - 20px,1120px)}
+  .quote-header,.quote-public-header,.secure-header,body>header{padding:11px 14px}
+  .quote-header img,.quote-public-header img,.secure-header img,body>header img{width:92px}
+  .quote-header>div{display:none}
+  .quote-header>span,.quote-public-header>span,.secure-session,body>header>span{min-height:30px;font-size:10px}
+  .quote-state,.quote-public-state,.completion-state,body>main>.state{margin:20px auto;padding:30px 20px}
+  .quote-card{padding:17px!important}
+  .secure-progress{grid-template-columns:repeat(3,minmax(150px,1fr));overflow-x:auto}
+  .decision-actions,body>main>article>.decision .actions{grid-template-columns:1fr}
+  body>main>article>.times{grid-template-columns:1fr}
+}
+@media(max-width:440px){
+  .quote-header>span,.quote-public-header>span,.secure-session,body>header>span{font-size:0}
+  .quote-header>span::after,.quote-public-header>span::after,.secure-session::after,body>header>span::after{content:"Secure";font-size:10px}
+  .quote-summary{grid-template-columns:1fr!important}
+  .quote-summary>.wide{grid-column:auto!important}
+  .secure-progress{margin-left:-4px;margin-right:-4px}
+}
+
+/* Public-page layout integrity for long references, labels, and action text. */
+.secure-public-header,
+.secure-public-shell,
+.secure-quote-shell,
+.secure-quote-document,
+.secure-decision-panel,
+.schedule-card,
+.completion-card,
+.satisfaction-card,
+.request-card,
+.secure-state{
+  min-width:0;
+  max-width:100%;
+}
+.secure-public-header>*,
+.secure-quote-shell>*,
+.secure-quote-document>*,
+.secure-decision-panel>*,
+.schedule-card>*,
+.completion-card>*,
+.satisfaction-card>*,
+.request-card>*{min-width:0}
+.secure-public-shell h1,
+.secure-public-shell h2,
+.secure-public-shell h3,
+.secure-reference,
+.secure-status,
+.secure-alert,
+.secure-state p{
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+.quote-action-bar,
+.schedule-actions,
+.completion-submit-actions,
+.secure-actions{
+  min-width:0;
+  max-width:100%;
+  flex-wrap:wrap;
+}
+.quote-action-bar button,
+.schedule-actions button,
+.completion-submit-actions button,
+.secure-actions button,
+.secure-actions a{
+  max-width:100%;
+  min-height:44px;
+}
+@media(max-width:560px){
+  .quote-action-bar button,
+  .schedule-actions button,
+  .completion-submit-actions button,
+  .secure-actions button,
+  .secure-actions a{
+    flex:1 1 100%;
+    width:100%;
+  }
+}

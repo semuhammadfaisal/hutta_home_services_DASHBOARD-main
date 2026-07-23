@@ -123,7 +123,6 @@ router.put('/:id', async (req, res) => {
         if (!record) {
             return res.status(404).json({ message: 'Record not found' });
         }
-
         console.log('Updating pipeline record:', req.params.id);
         
         if (req.body.customerName) record.customerName = req.body.customerName;
@@ -196,6 +195,17 @@ router.patch('/:id/stage', async (req, res) => {
         if (!record) {
             return res.status(404).json({ message: 'Record not found' });
         }
+        if (record.orderId) {
+            const Order = require('../models/Order');
+            const linkedOrder = await Order.findById(record.orderId).select('workflowStatus');
+            if (linkedOrder?.workflowStatus) {
+                return res.status(409).json({
+                    message: 'Workflow-managed Orders must be advanced through Workflow Center.',
+                    workflowStatus: linkedOrder.workflowStatus,
+                    orderId: String(linkedOrder._id)
+                });
+            }
+        }
         
         console.log('Found record:', {
             id: record._id,
@@ -212,6 +222,8 @@ router.patch('/:id/stage', async (req, res) => {
         console.log('New stage name:', newStageName);
 
         record.stageId = req.body.stageId;
+        record.stageSource = 'manual';
+        record.stageSyncedAt = new Date();
         const updatedRecord = await record.save();
         
         // Update the linked order's pipelineStage field for immediate KPI updates

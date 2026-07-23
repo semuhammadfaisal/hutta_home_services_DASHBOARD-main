@@ -10,6 +10,7 @@ const User = require('../models/User');
 const memCache = require('./memoryCache');
 const { invalidateDashboardStatsCache } = require('./dashboardStatsCache');
 const { INTAKE_COMPLETION_TTL_MS, encryptToken, generateToken, hashToken } = require('./intakeCompletion');
+const { synchronizeWorkflowOrder } = require('./workflowSync');
 
 const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
 const MAX_BODY_BYTES = 32 * 1024;
@@ -271,6 +272,7 @@ async function processWebsiteRequest(payload) {
         requiresIntakeReview: requiresReview,
         submittedContact: { name: payload.name, email: payload.email, phone: payload.phone }
       }], { session });
+      await synchronizeWorkflowOrder(order, 'request_received', { session });
 
       const staff = await User.find({
         isActive: true,

@@ -8,10 +8,27 @@
     { stage: 6, section: 'closeout', short: 'Closeout', title: 'Completion & Closeout', load: 'loadCloseout', open: 'openCloseoutWorkspace', close: 'closeCloseoutWorkspace', workspace: 'closeoutWorkspace' }
   ];
   const listIds = { 1: 'workflowRequestList', 2: 'incomingQuoteOrderList', 3: 'outgoingQuoteOrderList', 4: 'customerApprovalList', 5: 'schedulingOrderList', 6: 'closeoutOrderList' };
-  const state = { overview: null, activeStage: 0, currentOrderId: '', filters: {}, scroll: {}, dirty: false, routing: false };
+  const STORAGE_KEY = 'huttas.workflow-center.ui.v2';
+  const restored = (() => {
+    try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); }
+    catch (_) { return {}; }
+  })();
+  const state = {
+    overview: null,
+    activeStage: 0,
+    currentOrderId: '',
+    filters: restored.filters || {},
+    scroll: restored.scroll || {},
+    dirty: false,
+    routing: false
+  };
   const esc = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   const fmtDate = value => value ? new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
   const statusText = value => String(value || '').replaceAll('_', ' ');
+  const persist = () => {
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ filters: state.filters, scroll: state.scroll })); }
+    catch (_) {}
+  };
 
   function countsFor(stage) { return state.overview?.counts?.find(item => item.stage === stage) || { total: 0, attention: 0 }; }
   function tabs(active = 0) {
@@ -28,10 +45,12 @@
   function filterbar(stage) {
     const saved = state.filters[stage] || {};
     return `<div class="workflow-filterbar" data-stage-filter="${stage}">
-      <label class="workflow-search"><i class="fas fa-search" aria-hidden="true"></i><span class="sr-only">Search this stage</span><input type="search" value="${esc(saved.search || '')}" placeholder="Search reference, customer, vendor, service…"></label>
-      <select aria-label="Filter by attention"><option value="all">All work</option><option value="attention" ${saved.attention === 'attention' ? 'selected' : ''}>Needs attention</option><option value="clear" ${saved.attention === 'clear' ? 'selected' : ''}>No warnings</option></select>
-      <select aria-label="Filter by issue"><option value="all">All issues</option><option value="email">Email problems</option><option value="compliance">Compliance</option><option value="missing">Missing information</option><option value="changes">Changes requested</option></select>
-      <input type="date" aria-label="Updated on or after" value="${esc(saved.date || '')}">
+      <label class="workflow-search"><i class="fas fa-search" aria-hidden="true"></i><span class="sr-only">Search this stage</span><input data-filter="search" type="search" value="${esc(saved.search || '')}" placeholder="Search reference, customer, vendor, email, phone, service…"></label>
+      <select data-filter="attention" aria-label="Filter by attention"><option value="all">All work</option><option value="attention" ${saved.attention === 'attention' ? 'selected' : ''}>Needs attention</option><option value="clear" ${saved.attention === 'clear' ? 'selected' : ''}>No warnings</option></select>
+      <select data-filter="issue" aria-label="Filter by issue"><option value="all">All issues</option><option value="email" ${saved.issue === 'email' ? 'selected' : ''}>Email problems</option><option value="compliance" ${saved.issue === 'compliance' ? 'selected' : ''}>Compliance</option><option value="missing" ${saved.issue === 'missing' ? 'selected' : ''}>Missing information</option><option value="changes" ${saved.issue === 'changes' ? 'selected' : ''}>Changes requested</option></select>
+      <select data-filter="status" aria-label="Filter by workflow state"><option value="all">All states</option><option value="active" ${saved.status === 'active' ? 'selected' : ''}>Active</option><option value="waiting" ${saved.status === 'waiting' ? 'selected' : ''}>Waiting</option><option value="failed" ${saved.status === 'failed' ? 'selected' : ''}>Blocked / failed</option><option value="completed" ${saved.status === 'completed' ? 'selected' : ''}>Completed</option><option value="historical" ${saved.status === 'historical' ? 'selected' : ''}>Historical</option></select>
+      <input data-filter="date" type="date" aria-label="Updated on or after" value="${esc(saved.date || '')}">
+      <button class="workflow-filter-clear" type="button" data-filter-clear aria-label="Clear stage filters"><i class="fas fa-times" aria-hidden="true"></i><span>Clear</span></button>
     </div>`;
   }
   function sharedChrome(stage) {
@@ -57,7 +76,10 @@
     }
     state.routing = true;
     try {
-      if (state.activeStage && !state.currentOrderId) state.scroll[state.activeStage] = window.scrollY;
+      if (state.activeStage && !state.currentOrderId) {
+        state.scroll[state.activeStage] = window.scrollY;
+        persist();
+      }
       state.activeStage = Number(stage || 0);
       state.currentOrderId = orderId || '';
       setSidebarActive();
@@ -91,7 +113,16 @@
   function renderOverview() {
     const mount = document.getElementById('workflowOverviewMount');
     if (!mount || !state.overview) return;
-    const attention = state.overview.attention || [];
+    const attentionPriority = reason => /changes requested/i.test(reason) ? 1
+      : /blocked|compliance/i.test(reason) ? 2
+      : /failed|email/i.test(reason) ? 3
+      : /missing/i.test(reason) ? 4
+      : /expir/i.test(reason) ? 5 : 6;
+    const attention = [...(state.overview.attention || [])].sort((a, b) => {
+      const aPriority = Math.min(...(a.reasons || ['waiting']).map(attentionPriority));
+      const bPriority = Math.min(...(b.reasons || ['waiting']).map(attentionPriority));
+      return aPriority - bPriority || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+    });
     const recent = state.overview.recent || [];
     mount.innerHTML = `<div class="workflow-hub-shell">${overviewHeader()}${tabs(0)}${stageStrip(0)}
       <div class="workflow-overview-grid">
@@ -142,6 +173,24 @@
       let chrome = section.querySelector(':scope > .workflow-shared-chrome');
       if (!chrome) { chrome = document.createElement('div'); chrome.innerHTML = sharedChrome(config.stage); section.prepend(chrome.firstElementChild); }
       else chrome.outerHTML = sharedChrome(config.stage);
+      const header = section.querySelector(':scope > .workflow-header');
+      const refresh = header?.querySelector('.workflow-stage-header-actions button,:scope > button');
+      if (header && refresh) {
+        let actions = header.querySelector('.workflow-stage-header-actions');
+        if (!actions) {
+          actions = document.createElement('div');
+          actions.className = 'workflow-stage-header-actions';
+          refresh.before(actions);
+          actions.append(refresh);
+        }
+        const count = countsFor(config.stage);
+        actions.querySelector('.workflow-stage-attention')?.remove();
+        if (count.attention) {
+          actions.insertAdjacentHTML('afterbegin', `<span class="workflow-stage-attention"><i class="fas fa-exclamation-circle" aria-hidden="true"></i>${count.attention} need attention</span>`);
+        }
+        actions.querySelector('.workflow-stage-refreshed')?.remove();
+        actions.insertAdjacentHTML('afterbegin', `<span class="workflow-stage-refreshed">Updated ${fmtDate(state.overview?.refreshedAt)}</span>`);
+      }
       bindNavigation(section);
       bindFilters(section, config.stage);
     });
@@ -151,12 +200,18 @@
     const bar = section.querySelector(`[data-stage-filter="${stage}"]`);
     if (!bar || bar.dataset.bound) return;
     bar.dataset.bound = 'true';
-    const controls = bar.querySelectorAll('input,select');
+    const controls = bar.querySelectorAll('[data-filter]');
     controls.forEach(control => control.addEventListener(control.type === 'search' ? 'input' : 'change', () => {
-      const values = [...controls].map(item => item.value);
-      state.filters[stage] = { search: values[0], attention: values[1], issue: values[2], date: values[3] };
+      state.filters[stage] = [...controls].reduce((result, item) => ({ ...result, [item.dataset.filter]: item.value }), {});
+      persist();
       applyFilters(stage);
     }));
+    bar.querySelector('[data-filter-clear]')?.addEventListener('click', () => {
+      controls.forEach(control => { control.value = control.dataset.filter === 'date' || control.dataset.filter === 'search' ? '' : 'all'; });
+      state.filters[stage] = {};
+      persist();
+      applyFilters(stage);
+    });
     applyFilters(stage);
   }
 
@@ -172,9 +227,17 @@
       const matchesAttention = !filter.attention || filter.attention === 'all' || (filter.attention === 'attention' ? hasAttention : !hasAttention);
       const issueTerms = { email: /email.*(failed|issue)|delivery issue/i, compliance: /compliance/i, missing: /missing/i, changes: /changes requested/i };
       const matchesIssue = !filter.issue || filter.issue === 'all' || issueTerms[filter.issue]?.test(text);
+      const statusTerms = {
+        active: /active|draft|ready|collecting|current|received/i,
+        waiting: /awaiting|pending|sent|waiting/i,
+        failed: /blocked|failed|expired|issue reported|changes requested/i,
+        completed: /completed|approved|confirmed|satisfied|selected/i,
+        historical: /superseded|voided|revoked|not selected|withdrawn/i
+      };
+      const matchesStatus = !filter.status || filter.status === 'all' || statusTerms[filter.status]?.test(text);
       const time = card.querySelector('time')?.dateTime || card.querySelector('time')?.textContent;
       const matchesDate = !filter.date || !time || new Date(time) >= new Date(`${filter.date}T00:00:00`);
-      card.hidden = !(matchesSearch && matchesAttention && matchesIssue && matchesDate);
+      card.hidden = !(matchesSearch && matchesAttention && matchesIssue && matchesStatus && matchesDate);
     });
   }
 
@@ -257,16 +320,29 @@
     const vendor = quote.vendorSnapshot || {};
     const futureOrMissing = value => !value || new Date(value) > new Date();
     const checks = [
-      ['Customer email', () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('oqCustomerEmail'))],
-      ['Approved terms', () => !!field('oqTerms')], ['Licensed contractor', () => !!field('oqContractor')],
-      ['Contractor license', () => !!field('oqLicenseNumber')], ['License type', () => !!field('oqLicenseType')],
-      ['ROC number', () => !!field('oqRoc')], ['COI on file', () => vendor.coiOnFile === true],
-      ['Insurance current', () => !!vendor.insuranceExpirationDate && new Date(vendor.insuranceExpirationDate) > new Date()],
-      ['ROC license current', () => futureOrMissing(vendor.rocLicenseExpirationDate)],
-      ['Future quote expiration', () => new Date(field('oqValidUntil')) > new Date()]
+      ['Customer email','oqCustomerEmail',() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('oqCustomerEmail'))],
+      ['Approved terms','oqTerms',() => !!field('oqTerms')], ['Licensed contractor','oqContractor',() => !!field('oqContractor')],
+      ['Contractor license','oqLicenseNumber',() => !!field('oqLicenseNumber')], ['License type','oqLicenseType',() => !!field('oqLicenseType')],
+      ['ROC number','oqRoc',() => !!field('oqRoc')], ['COI on file','',() => vendor.coiOnFile === true],
+      ['Insurance current','',() => !!vendor.insuranceExpirationDate && new Date(vendor.insuranceExpirationDate) > new Date()],
+      ['ROC license current','',() => futureOrMissing(vendor.rocLicenseExpirationDate)],
+      ['Future quote expiration','oqValidUntil',() => new Date(field('oqValidUntil')) > new Date()]
     ];
     const side = document.createElement('aside'); side.className = 'outgoing-panel outgoing-readiness'; layout.appendChild(side);
-    const refresh = () => { const results = checks.map(([label,test]) => [label,test()]); side.innerHTML = `<span class="workflow-hub-eyebrow">Send readiness</span><h3>${results.every(item => item[1]) ? 'Ready to send' : 'Action required'}</h3><ul class="workflow-readiness-list">${results.map(([label,ready]) => `<li class="${ready?'ready':'blocked'}"><i class="fas fa-${ready?'check-circle':'exclamation-circle'}"></i>${esc(label)}</li>`).join('')}</ul><p class="workflow-updated">All compliance checks are revalidated securely when sending.</p>`; const send = form.querySelector('button[onclick^="sendOutgoingQuote"]'); if (send) { send.disabled = !results.every(item => item[1]); send.title = send.disabled ? 'Complete every readiness item before sending' : ''; } };
+    const refresh = () => {
+      const results = checks.map(([label,target,test]) => [label,target,test()]);
+      side.innerHTML = `<span class="workflow-hub-eyebrow">Send readiness</span><h3>${results.every(item => item[2]) ? 'Ready to send' : 'Action required'}</h3><ul class="workflow-readiness-list">${results.map(([label,target,ready]) => `<li class="${ready?'ready':'blocked'}"><i class="fas fa-${ready?'check-circle':'exclamation-circle'}"></i><span>${esc(label)}</span>${!ready&&target?`<button type="button" data-readiness-target="${esc(target)}">Fix</button>`:''}</li>`).join('')}</ul><p class="workflow-updated">Compliance checks are revalidated securely when sending.</p>`;
+      side.querySelectorAll('[data-readiness-target]').forEach(button => button.onclick = () => {
+        const target = document.getElementById(button.dataset.readinessTarget);
+        target?.scrollIntoView({ behavior:'smooth', block:'center' });
+        target?.focus();
+      });
+      const send = form.querySelector('button[onclick^="sendOutgoingQuote"]');
+      if (send) {
+        send.disabled = !results.every(item => item[2]);
+        send.title = send.disabled ? 'Complete every readiness item before sending' : '';
+      }
+    };
     form.addEventListener('input', refresh); form.addEventListener('change', refresh); refresh();
   }
 
@@ -289,11 +365,34 @@
     ['scheduleStartInput','scheduleEndInput'].forEach(id => document.getElementById(id)?.addEventListener('change',render)); render();
   }
 
+  function setupCloseout(workspace) {
+    const form = document.getElementById('closeoutStaffForm');
+    if (!form) return;
+    const schedule = document.getElementById('closeoutJobSummary');
+    if (schedule) schedule.closest('.closeout-panel')?.classList.add('workflow-context-panel');
+    document.getElementById('closeoutInvoicePanel')?.classList.add('workflow-accounting-panel');
+    document.getElementById('closeoutSatisfactionPanel')?.classList.add('workflow-timeline-panel');
+    const submit = document.getElementById('closeoutCompleteButton');
+    submit?.closest('.full')?.classList.add('workflow-sticky-actions');
+  }
+
+  function setupWorkspaceShell(stage, workspace) {
+    workspace.classList.add('workflow-unified-workspace');
+    const heading = workspace.querySelector('.incoming-workspace-head,.outgoing-panel-head,.approval-workspace-head,.scheduling-head,.closeout-workspace-head');
+    heading?.classList.add('workflow-local-heading');
+    if (stage === 2) workspace.querySelector('.incoming-form-actions')?.classList.add('workflow-sticky-actions');
+    if (stage === 3) workspace.querySelector('#outgoingDraftForm > .outgoing-actions')?.classList.add('workflow-sticky-actions');
+    if (stage === 4) workspace.querySelector('.approval-actions')?.classList.add('workflow-sticky-actions');
+    if (stage === 5) workspace.querySelector('#scheduleProposalForm > .full:last-child')?.classList.add('workflow-sticky-actions');
+  }
+
   function setupStageEnhancements(stage, workspace) {
+    setupWorkspaceShell(stage, workspace);
     if (stage === 2) setupIncomingTabs(workspace);
     if (stage === 3) setupOutgoing(workspace);
     if (stage === 4) setupApproval(workspace);
     if (stage === 5) setupScheduling(workspace);
+    if (stage === 6) setupCloseout(workspace);
     workspace.querySelectorAll('input,textarea,select').forEach(control => control.addEventListener('input', () => { state.dirty = true; }, { once: true }));
     workspace.querySelectorAll('form').forEach(form => form.addEventListener('submit', () => { state.dirty = false; }));
   }
@@ -334,7 +433,63 @@
     return legacy[hash] ? { stage:legacy[hash],orderId:'' } : null;
   }
 
+  function bindButtonEffects() {
+    if (document.documentElement.dataset.workflowButtonEffects === 'true') return;
+    document.documentElement.dataset.workflowButtonEffects = 'true';
+    const selector = [
+      '.workflow-hub-section button',
+      '.workflow-stage-section button',
+      '.workflow-stage-section a.btn-primary',
+      '.workflow-stage-section a.btn-secondary',
+      '.workflow-dialog button',
+      '.outgoing-settings button'
+    ].join(',');
+    const decorate = root => {
+      if (root?.matches?.(selector)) root.classList.add('workflow-clickable');
+      root?.querySelectorAll?.(selector).forEach(control => control.classList.add('workflow-clickable'));
+    };
+    decorate(document);
+    new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) decorate(node);
+      }));
+    }).observe(document.body, { childList: true, subtree: true });
+    const findControl = target => target?.closest?.(selector);
+    const release = control => control?.classList.remove('is-workflow-pressed');
+    const press = (control, event) => {
+      if (!control || control.disabled || control.getAttribute('aria-disabled') === 'true') return;
+      control.classList.add('is-workflow-pressed');
+      control.querySelector(':scope > .workflow-click-ripple')?.remove();
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const bounds = control.getBoundingClientRect();
+      const diameter = Math.max(bounds.width, bounds.height) * 1.65;
+      const pointerX = Number.isFinite(event?.clientX) && event.clientX > 0 ? event.clientX - bounds.left : bounds.width / 2;
+      const pointerY = Number.isFinite(event?.clientY) && event.clientY > 0 ? event.clientY - bounds.top : bounds.height / 2;
+      const ripple = document.createElement('span');
+      ripple.className = 'workflow-click-ripple';
+      ripple.setAttribute('aria-hidden', 'true');
+      ripple.style.width = `${diameter}px`;
+      ripple.style.height = `${diameter}px`;
+      ripple.style.left = `${pointerX - diameter / 2}px`;
+      ripple.style.top = `${pointerY - diameter / 2}px`;
+      control.append(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+    };
+    document.addEventListener('pointerdown', event => press(findControl(event.target), event));
+    document.addEventListener('pointerup', event => release(findControl(event.target)));
+    document.addEventListener('pointercancel', event => release(findControl(event.target)));
+    document.addEventListener('keydown', event => {
+      if (!['Enter', ' '].includes(event.key) || event.repeat) return;
+      press(findControl(event.target));
+    });
+    document.addEventListener('keyup', event => {
+      if (['Enter', ' '].includes(event.key)) release(findControl(event.target));
+    });
+    document.addEventListener('focusout', event => release(findControl(event.target)));
+  }
+
   async function boot() {
+    bindButtonEffects();
     createDialog();
     await window.AuthReady?.catch(() => null);
     for (let index=0; index<80 && !window.dashboard; index++) await new Promise(resolve => setTimeout(resolve,50));
@@ -345,6 +500,26 @@
     Object.values(listIds).forEach(id => { const list=document.getElementById(id); if(list)observer.observe(list,{childList:true,subtree:true}); });
     window.addEventListener('hashchange', () => { const route=parseHash(); if(route)showView(route.stage,route.orderId,{fromHash:true}); });
     window.addEventListener('beforeunload', event => { if(state.dirty){event.preventDefault();event.returnValue='';} });
+    document.addEventListener('submit', event => {
+      const form = event.target.closest('.workflow-stage-section form');
+      const submitter = event.submitter;
+      if (!form || !submitter || submitter.dataset.submitting === 'true') return;
+      submitter.dataset.submitting = 'true';
+      submitter.setAttribute('aria-busy', 'true');
+      const observer = new MutationObserver(() => {
+        if (!submitter.disabled) {
+          submitter.dataset.submitting = 'false';
+          submitter.removeAttribute('aria-busy');
+          observer.disconnect();
+        }
+      });
+      observer.observe(submitter, { attributes: true, attributeFilter: ['disabled'] });
+      setTimeout(() => {
+        submitter.dataset.submitting = 'false';
+        submitter.removeAttribute('aria-busy');
+        observer.disconnect();
+      }, 15000);
+    }, true);
     const route = parseHash(); if (route) await showView(route.stage,route.orderId,{fromHash:true});
   }
   window.startWorkflowQuoteCollection = async orderId => {

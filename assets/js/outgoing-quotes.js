@@ -2,6 +2,7 @@
   let orders = [];
   let workspace = null;
   let currentOrderId = '';
+  let settingsPreviousFocus = null;
   const $ = id => document.getElementById(id);
   const escapeHtml = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   const money = value => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -20,8 +21,12 @@
     list.innerHTML = orders.map(order => {
       const quote = order.outgoingQuote;
       const state = quote?.status || 'ready';
-      return `<article class="outgoing-order-card"><header><div><span class="workflow-reference">${escapeHtml(order.requestReference || order.orderId)}</span><h3>${escapeHtml(order.customer?.name || 'Customer')}</h3></div><span class="outgoing-state ${state === 'sent' ? 'sent' : ''}">${escapeHtml(state)}</span></header><p>${escapeHtml(order.service)} · ${escapeHtml(order.vendor?.name || 'Selected vendor')}</p><div class="outgoing-meta"><div><strong>${quote ? escapeHtml(quote.quoteReference) : 'Not converted'}</strong><span>Outgoing quote</span></div><div><strong>${quote ? money(quote.customerTotal) : 'Unquoted'}</strong><span>Customer total</span></div><div><strong>${money(order.vendorCost)}</strong><span>Vendor cost</span></div><div><strong>${quote ? date(quote.validUntil) : '—'}</strong><span>Valid until</span></div></div><footer><span class="outgoing-state">${escapeHtml(String(order.workflowStatus || '').replaceAll('_', ' '))}</span><button class="btn-primary" type="button" onclick="openOutgoingQuoteWorkspace('${escapeHtml(order._id)}')">${quote ? 'Open Workspace' : 'Prepare Quote'}</button></footer></article>`;
+      return `<article class="outgoing-order-card"><header><div><span class="workflow-reference">${escapeHtml(order.requestReference || order.orderId)}</span><h3>${escapeHtml(order.customer?.name || 'Customer')}</h3></div><span class="outgoing-state ${state === 'sent' ? 'sent' : ''}">${escapeHtml(state)}</span></header><p>${escapeHtml(order.service)} · ${escapeHtml(order.vendor?.name || 'Selected vendor')}</p><div class="outgoing-meta"><div><strong>${quote ? escapeHtml(quote.quoteReference) : 'Not converted'}</strong><span>Outgoing quote</span></div><div><strong>${quote ? money(quote.customerTotal) : 'Unquoted'}</strong><span>Customer total</span></div><div><strong>${money(order.vendorCost)}</strong><span>Vendor cost</span></div><div><strong>${quote ? date(quote.validUntil) : '—'}</strong><span>Valid until</span></div></div><footer><span class="outgoing-state">${escapeHtml(String(order.workflowStatus || '').replaceAll('_', ' '))}</span><button class="btn-primary" type="button" data-outgoing-open="${escapeHtml(order._id)}">${quote ? 'Open Workspace' : 'Prepare Quote'}</button></footer></article>`;
     }).join('');
+    list.onclick = event => {
+      const button = event.target.closest('[data-outgoing-open]');
+      if (button) openOutgoingQuoteWorkspace(button.dataset.outgoingOpen);
+    };
   }
 
   async function loadOutgoingQuotes() {
@@ -73,9 +78,29 @@
   async function retryOutgoingQuoteEmail(id) { try { await window.APIService.retryOutgoingQuoteEmail(id); toast('Email retry queued.'); await refresh(); } catch (error) { toast(error.message, 'error'); } }
 
   async function toggleOutgoingSettings(show) {
-    $('outgoingSettingsPanel').hidden = !show; if (!show) return;
+    const panel = $('outgoingSettingsPanel');
+    panel.hidden = !show;
+    document.body.style.overflow = show ? 'hidden' : '';
+    if (!show) {
+      settingsPreviousFocus?.focus?.();
+      return;
+    }
+    settingsPreviousFocus = document.activeElement;
+    requestAnimationFrame(() => panel.querySelector('button,input,select,textarea')?.focus());
     try { const config = await window.APIService.getOutgoingQuoteSettings(); $('outgoingDefaultMarkupType').value = config.defaultMarkupType; $('outgoingDefaultMarkupValue').value = config.defaultMarkupValue; $('outgoingDefaultValidityDays').value = config.defaultValidityDays; $('outgoingCompanyName').value = config.company?.name || ''; $('outgoingCompanyAddress').value = config.company?.address || ''; $('outgoingCompanyPhone').value = config.company?.phone || ''; $('outgoingCompanyEmail').value = config.company?.email || ''; $('outgoingCompanyWebsite').value = config.company?.website || ''; $('outgoingDefaultTerms').value = config.termsAndConditions || ''; } catch (error) { toast(error.message, 'error'); }
   }
+  $('outgoingSettingsPanel')?.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      toggleOutgoingSettings(false);
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...event.currentTarget.querySelectorAll('button,input,select,textarea,a[href]')].filter(node => !node.disabled && !node.hidden);
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
   $('outgoingSettingsForm')?.addEventListener('submit', async event => { event.preventDefault(); try { await window.APIService.updateOutgoingQuoteSettings({ defaultMarkupType: $('outgoingDefaultMarkupType').value, defaultMarkupValue: Number($('outgoingDefaultMarkupValue').value), defaultValidityDays: Number($('outgoingDefaultValidityDays').value), company: { name: $('outgoingCompanyName').value, address: $('outgoingCompanyAddress').value, phone: $('outgoingCompanyPhone').value, email: $('outgoingCompanyEmail').value, website: $('outgoingCompanyWebsite').value }, termsAndConditions: $('outgoingDefaultTerms').value }); toast('Outgoing quote settings saved.'); toggleOutgoingSettings(false); } catch (error) { toast(error.message, 'error'); } });
 
   Object.assign(window, { loadOutgoingQuotes, openOutgoingQuoteWorkspace, closeOutgoingQuoteWorkspace, convertOutgoingQuote, sendOutgoingQuote, reviseOutgoingQuote, resendOutgoingQuote, voidOutgoingQuote, retryOutgoingQuoteEmail, toggleOutgoingSettings });

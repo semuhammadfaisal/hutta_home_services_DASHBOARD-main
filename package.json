@@ -8,6 +8,8 @@
     "dev": "nodemon backend/server.js",
     "migrate:stage6-closeout": "node backend/migrate-stage6-closeout.js",
     "migrate:stage6-closeout:apply": "node backend/migrate-stage6-closeout.js --apply",
+    "migrate:workflow-pipeline-sync": "node backend/migrate-workflow-pipeline-sync.js",
+    "migrate:workflow-pipeline-sync:apply": "node backend/migrate-workflow-pipeline-sync.js --apply",
     "postinstall": "cd backend && npm install"
   },
   "dependencies": {

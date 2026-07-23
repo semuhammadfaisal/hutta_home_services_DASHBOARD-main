@@ -19,6 +19,7 @@ const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache'
 const memCache = require('../utils/memoryCache');
 const { TIMEZONE, TOKEN_TTL_MS, MAX_DECISION_BODY_BYTES, cleanText, generateToken, hashToken, encryptToken, nextScheduleReference, nextWorkOrderReference, parseProposal, parseDecision, scheduleSnapshotHash, workOrderSnapshotHash, publicSchedule } = require('../utils/scheduling');
 const { COMPLETION_TOKEN_TTL_MS, generateToken: generateCompletionToken, hashToken: hashCompletionToken, encryptToken: encryptCompletionToken, nextCompletionReference } = require('../utils/closeout');
+const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 
 const router = express.Router();
 const staffRoles = checkRole(['admin', 'manager', 'account_rep']);
@@ -101,13 +102,13 @@ router.post('/public/decision', publicLimiter, async (req, res, next) => {
           if (completion.status !== 'pending') throw Object.assign(new Error('A completed job cannot be rescheduled'), { status: 409 });
           Object.assign(completion, completionData); completion.history.push({ action: 'completion_link_rotated_for_reschedule', actorType: 'system' }); await completion.save({ session });
         }
-        Object.assign(order, { workflowStatus: 'scheduled', confirmedJobScheduleId: schedule._id, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, scheduledTimezone: TIMEZONE, scheduleConfirmedAt: decisionAt, scheduleDate: schedule.proposedStart });
-      } else order.workflowStatus = 'schedule_changes_requested';
-      await order.save({ session });
+        Object.assign(order, { confirmedJobScheduleId: schedule._id, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, scheduledTimezone: TIMEZONE, scheduleConfirmedAt: decisionAt, scheduleDate: schedule.proposedStart });
+      }
+      const sync = await synchronizeWorkflowOrder(order, wanted === 'accepted' ? 'scheduled' : 'schedule_changes_requested', { session });
       const users = await User.find({ isActive: true, role: { $in: ['admin', 'manager', 'account_rep'] } }).select('_id').session(session).lean();
       if (users.length) await Notification.insertMany(users.map(user => ({ userId: user._id, title: wanted === 'accepted' ? 'Vendor accepted schedule' : 'Vendor requested schedule changes', message: `${schedule.vendorSnapshot.name} ${wanted === 'accepted' ? 'accepted' : 'requested changes to'} ${schedule.scheduleReference}.`, type: wanted === 'accepted' ? 'success' : 'warning', priority: 'high', actionUrl: '#scheduling', metadata: { orderId: order._id, jobScheduleId: schedule._id, decision: wanted } })), { session });
       await EmailOutbox.insertMany(decisionOutbox(schedule, decision, workOrder, completionToken), { session });
-      result = { success: true, status: wanted, decisionAt, duplicate: false };
+      result = { success: true, status: wanted, decisionAt, duplicate: false, sync };
     });
     invalidate(); res.status(result.duplicate ? 200 : 201).json(result);
   } catch (error) {
@@ -135,10 +136,30 @@ router.post('/orders/:orderId/proposals', async (req, res, next) => {
     const overlap = await conflicts(vendor._id, payload.proposedStart, payload.proposedEnd, order._id, session); if (overlap.length && !payload.conflictAcknowledged) throw Object.assign(new Error('Vendor schedule conflict acknowledgement is required'), { status: 409, conflicts: overlap });
     const latest = await JobSchedule.findOne({ orderId: order._id }).sort({ revisionNumber: -1 }).session(session); const reference = await nextScheduleReference(session); const token = generateToken(); const expires = new Date(Math.min(Date.now() + TOKEN_TTL_MS, payload.proposedStart.getTime()));
     [created] = await JobSchedule.create([{ scheduleReference: reference, orderId: order._id, outgoingQuoteId: quote._id, customerId: order.customerId, vendorId: vendor._id, revisionNumber: (latest?.revisionNumber || 0) + 1, previousVersionId: latest?._id, proposedStart: payload.proposedStart, proposedEnd: payload.proposedEnd, timezone: TIMEZONE, accessInstructions: payload.accessInstructions, internalNotes: payload.internalNotes, conflictAcknowledged: payload.conflictAcknowledged, conflictSnapshot: overlap, customerSnapshot: { name: quote.customerSnapshot.name, email: quote.customerSnapshot.email, phone: quote.customerSnapshot.phone, address: quote.customerSnapshot.address }, vendorSnapshot: { name: vendor.name, email: vendorEmail, phone: vendorPrimaryPhone(vendor) }, jobSnapshot: { requestReference: order.requestReference, orderReference: order.orderId, service: quote.jobSnapshot.service || order.service, description: quote.jobSnapshot.description || order.description, scopeOfWork: quote.scopeOfWork }, publicTokenHash: hashToken(token), tokenExpiresAt: expires, sentAt: new Date(), sentBy: actorId(req), history: [{ action: 'proposal_sent', actorId: actorId(req), actorEmail: req.user.email }] }], { session });
-    order.currentJobScheduleId = created._id; order.workflowStatus = 'schedule_pending_vendor'; await order.save({ session }); await EmailOutbox.create([proposalOutbox(created, token)], { session });
+    order.currentJobScheduleId = created._id; const sync = await synchronizeWorkflowOrder(order, 'schedule_pending_vendor', { session }); await EmailOutbox.create([proposalOutbox(created, token)], { session });
+    created = { ...created.toObject(), sync };
   }); invalidate(); res.status(201).json(created); } catch (error) { if (error.conflicts) return res.status(error.status).json({ message: error.message, conflicts: error.conflicts }); next(error); } finally { await session.endSession(); }
 });
-router.post('/:scheduleId/revoke', async (req, res, next) => { try { const schedule = await JobSchedule.findOne({ _id: req.params.scheduleId, status: 'pending_vendor' }); if (!schedule) return res.status(409).json({ message: 'Only a pending proposal can be revoked' }); schedule.status = 'revoked'; schedule.revokedAt = new Date(); schedule.revokedBy = actorId(req); schedule.publicTokenHash = undefined; await schedule.save(); const order = await Order.findById(schedule.orderId); if (order && String(order.currentJobScheduleId) === String(schedule._id)) { order.currentJobScheduleId = order.confirmedJobScheduleId; order.workflowStatus = order.confirmedJobScheduleId ? 'scheduled' : 'customer_approved'; await order.save(); } invalidate(); res.json(schedule); } catch (error) { next(error); } });
+router.post('/:scheduleId/revoke', async (req, res, next) => {
+  const session = await mongoose.startSession();
+  try {
+    let result;
+    await session.withTransaction(async () => {
+      const schedule = await JobSchedule.findOne({ _id: req.params.scheduleId, status: 'pending_vendor' }).session(session);
+      if (!schedule) throw Object.assign(new Error('Only a pending proposal can be revoked'), { status: 409 });
+      schedule.status = 'revoked'; schedule.revokedAt = new Date(); schedule.revokedBy = actorId(req); schedule.publicTokenHash = undefined;
+      await schedule.save({ session });
+      const order = await Order.findById(schedule.orderId).session(session);
+      let sync;
+      if (order && String(order.currentJobScheduleId) === String(schedule._id)) {
+        order.currentJobScheduleId = order.confirmedJobScheduleId;
+        sync = await synchronizeWorkflowOrder(order, order.confirmedJobScheduleId ? 'scheduled' : 'customer_approved', { session });
+      }
+      result = { ...schedule.toObject(), sync };
+    });
+    invalidate(); res.json(result);
+  } catch (error) { next(error); } finally { await session.endSession(); }
+});
 router.get('/work-orders/:id/pdf', async (req, res, next) => { try { const workOrder = await VendorWorkOrder.findById(req.params.id).lean(); if (!workOrder) return res.status(404).json({ message: 'Work order not found' }); const pdf = await createVendorWorkOrderPdf(workOrder); res.set('Content-Type', 'application/pdf'); res.set('Content-Disposition', `inline; filename="${workOrder.workOrderReference}.pdf"`); res.send(pdf); } catch (error) { next(error); } });
 router.post('/outbox/:id/retry', async (req, res, next) => { try { const message = await EmailOutbox.findOne({ _id: req.params.id, type: { $in: STAGE5_TYPES }, status: 'permanently_failed' }); if (!message) return res.status(409).json({ message: 'Only a permanently failed scheduling email can be retried' }); Object.assign(message, { status: 'pending', attempts: 0, nextAttemptAt: new Date(), lockedUntil: undefined, lockedBy: undefined, lastErrorCategory: undefined }); await message.save(); res.json({ success: true }); } catch (error) { next(error); } });
 

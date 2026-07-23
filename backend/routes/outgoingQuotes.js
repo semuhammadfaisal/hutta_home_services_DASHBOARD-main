@@ -15,6 +15,7 @@ const User = require('../models/User');
 const { createOutgoingQuotePdf } = require('../utils/quotePdf');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const memCache = require('../utils/memoryCache');
+const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 const {
   calculatePricing, cleanText, encryptToken, generateToken, hashToken,
   legalDisclosure, nextOutgoingQuoteReference, publicQuote
@@ -177,15 +178,13 @@ router.post('/public/decision', decisionLimiter, async (req, res, next) => {
       await quote.save({ session });
 
       if (wantedDecision === 'approved') {
-        order.workflowStatus = 'customer_approved';
         order.approvedOutgoingQuoteId = quote._id;
         order.customerApprovedAt = decisionAt;
       } else {
-        order.workflowStatus = 'quote_changes_requested';
         order.approvedOutgoingQuoteId = undefined;
         order.customerApprovedAt = undefined;
       }
-      await order.save({ session });
+      const sync = await synchronizeWorkflowOrder(order, wantedDecision === 'approved' ? 'customer_approved' : 'quote_changes_requested', { session });
 
       const staff = await User.find({ isActive: true, role: { $in: ['admin', 'manager', 'account_rep'] } }).select('_id').session(session).lean();
       if (staff.length) await Notification.insertMany(staff.map(user => ({
@@ -201,7 +200,7 @@ router.post('/public/decision', decisionLimiter, async (req, res, next) => {
       })), { session });
 
       await EmailOutbox.insertMany(decisionOutboxMessages(quote, order, decision, token), { session });
-      result = { success: true, status: wantedDecision, quoteReference: quote.quoteReference, decisionAt, duplicate: false };
+      result = { success: true, status: wantedDecision, quoteReference: quote.quoteReference, decisionAt, duplicate: false, sync };
     });
     invalidateCaches();
     return res.status(result.duplicate ? 200 : 201).json(result);
@@ -361,9 +360,9 @@ router.post('/orders/:orderId/convert', async (req, res, next) => {
         validUntil: new Date(Date.now() + config.defaultValidityDays * 86400000),
         history: [{ action: 'created', actorId: actorId(req), actorEmail: req.user.email }]
       }], { session });
-      order.workflowStatus = 'outgoing_quote_draft';
       order.amount = null; order.pricingStatus = 'unquoted';
-      await order.save({ session });
+      const sync = await synchronizeWorkflowOrder(order, 'outgoing_quote_draft', { session });
+      result = { ...result.toObject(), sync };
     });
     invalidateCaches();
     res.status(201).json(result);
@@ -448,9 +447,9 @@ router.post('/:quoteId/send', async (req, res, next) => {
       }
       await quote.save({ session });
       await EmailOutbox.create([outgoingOutbox(quote, token)], { session });
-      order.currentOutgoingQuoteId = quote._id; order.workflowStatus = 'quote_sent'; order.amount = quote.customerTotal; order.pricingStatus = 'quoted'; order.profit = quote.customerTotal - Number(order.vendorCost || 0) - Number(order.processingFee || 0);
-      await order.save({ session });
-      sent = quote;
+      order.currentOutgoingQuoteId = quote._id; order.amount = quote.customerTotal; order.pricingStatus = 'quoted'; order.profit = quote.customerTotal - Number(order.vendorCost || 0) - Number(order.processingFee || 0);
+      const sync = await synchronizeWorkflowOrder(order, 'quote_sent', { session });
+      sent = { ...quote.toObject(), sync };
     });
     invalidateCaches(); res.json(sent);
   } catch (error) { next(error); } finally { await session.endSession(); }
@@ -478,6 +477,11 @@ router.post('/:quoteId/revise', async (req, res, next) => {
       const reference = await nextOutgoingQuoteReference(session);
       const data = { ...source, _id: undefined, quoteReference: reference, revisionNumber: source.revisionNumber + 1, previousVersionId: source._id, status: 'draft', deliveryStatus: 'not_sent', customerDecisionStatus: 'not_requested', sentAt: undefined, sentBy: undefined, publicTokenHash: undefined, createdAt: undefined, updatedAt: undefined, history: [{ action: 'revision_created', actorId: actorId(req), actorEmail: req.user.email }] };
       [draft] = await OutgoingQuote.create([data], { session });
+      const order = await Order.findById(source.orderId).session(session);
+      if (order) {
+        const sync = await synchronizeWorkflowOrder(order, 'outgoing_quote_draft', { session });
+        draft = { ...draft.toObject(), sync };
+      }
     });
     res.status(201).json(draft);
   } catch (error) { next(error); } finally { await session.endSession(); }
@@ -495,9 +499,13 @@ router.post('/:quoteId/void', async (req, res, next) => {
       quote.history.push({ action: 'voided', actorId: actorId(req), actorEmail: req.user.email, message: cleanText(req.body.reason, 1000) });
       await quote.save({ session });
       if (quote.status === 'voided' && (!order.currentOutgoingQuoteId || String(order.currentOutgoingQuoteId) === String(quote._id))) {
-        order.currentOutgoingQuoteId = undefined; order.workflowStatus = 'vendor_selected'; order.amount = null; order.pricingStatus = 'unquoted'; order.profit = 0; await order.save({ session });
-      } else if (order.workflowStatus === 'outgoing_quote_draft') { order.workflowStatus = 'vendor_selected'; await order.save({ session }); }
-      result = quote;
+        order.currentOutgoingQuoteId = undefined; order.amount = null; order.pricingStatus = 'unquoted'; order.profit = 0;
+        const sync = await synchronizeWorkflowOrder(order, 'vendor_selected', { session });
+        result = { ...quote.toObject(), sync };
+      } else if (order.workflowStatus === 'outgoing_quote_draft') {
+        const sync = await synchronizeWorkflowOrder(order, 'vendor_selected', { session });
+        result = { ...quote.toObject(), sync };
+      } else result = quote;
     });
     invalidateCaches(); res.json(result);
   } catch (error) { next(error); } finally { await session.endSession(); }

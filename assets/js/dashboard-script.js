@@ -1641,6 +1641,8 @@ class DashboardManager {
             const customerEmail = order.customer?.email || '';
             const statusDisplay = getOrderVisibleStatus(order) || 'new';
             const statusClass = getOrderStatusBadgeClass(order);
+            const workflowDisplay = order.workflowStatus ? formatOrderFilterLabel(order.workflowStatus) : '';
+            const broadStatusDisplay = formatOrderFilterLabel(order.status || 'new');
 
             return `
             <tr onclick="viewOrder('${order._id || order.id}')">
@@ -1666,7 +1668,12 @@ class DashboardManager {
                 </td>
                 <td><span class="service-badge" title="${order.service || ''}">${order.service || 'N/A'}</span></td>
                 <td><span class="order-vendor">${order.vendor?.name || 'N/A'}</span></td>
-                <td><span class="order-status-badge ${statusClass}">${this.formatStatus(statusDisplay)}</span></td>
+                <td>
+                    <div class="order-status-stack">
+                        <span class="order-status-badge ${statusClass}">${workflowDisplay || this.formatStatus(statusDisplay)}</span>
+                        ${workflowDisplay ? `<small>${broadStatusDisplay}</small>` : ''}
+                    </div>
+                </td>
                 <td><span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span></td>
                 <td><span class="order-date-cell">${order.startDate ? this.formatDate(order.startDate) : 'N/A'}</span></td>
                 <td><span class="order-date-cell">${(order.scheduleDate || order.startDate) ? this.formatDate(order.scheduleDate || order.startDate) : 'N/A'}</span></td>
@@ -9104,14 +9111,14 @@ async function showCustomerProfile(customerId) {
             ordersBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No orders found</td></tr>';
         } else {
             ordersBody.innerHTML = profileData.orders.map(order => {
-                const statusDisplay = order.pipelineStage || (order.status || 'new').replace('-', ' ');
+                const statusDisplay = order.workflowStatus ? formatOrderFilterLabel(order.workflowStatus) : (order.pipelineStage || (order.status || 'new').replace('-', ' '));
                 const statusClass = getOrderStatusBadgeClass(order);
                 return `
                 <tr>
                     <td><strong>${order.workOrderNumber || '-'}</strong></td>
                     <td>${order.orderId}</td>
                     <td>${order.service}</td>
-                    <td><span class="order-status-badge ${statusClass}">${statusDisplay}</span></td>
+                    <td><div class="order-status-stack"><span class="order-status-badge ${statusClass}">${statusDisplay}</span>${order.workflowStatus ? `<small>${formatOrderFilterLabel(order.status || 'new')}</small>` : ''}</div></td>
                     <td>${order.pricingStatus === 'unquoted' ? 'Unquoted' : `$${Number(order.amount || 0).toLocaleString()}`}</td>
                     <td>${formatDisplayDate(order.createdAt)}</td>
                 </tr>
@@ -9627,31 +9634,60 @@ function renderWorkflowCenter(intakes) {
             item.orderId?.missingData?.serviceCategory ? '<span class="workflow-badge warning"><i class="fas fa-tools"></i> Missing category</span>' : ''
         ].filter(Boolean).join('');
         const stageTwoBlockers = [!completionDone ? 'Waiting for customer details' : '', item.requiresReview ? 'Resolve customer review' : '', item.orderId?.missingData?.serviceAddress ? 'Add service address' : '', item.orderId?.missingData?.serviceCategory ? 'Add service category' : ''].filter(Boolean);
-        return `<article class="workflow-request-card">
+        const blockerMessage = !linkedOrderId ? 'This intake is not linked to an Order' : stageTwoBlockers.join(' · ');
+        const primaryAction = stageTwoBlockers.length || !linkedOrderId
+            ? `<button type="button" class="btn-primary" ${linkedOrderId ? `data-workflow-order="${escapePaymentHtml(linkedOrderId)}"` : 'disabled'} title="${escapePaymentHtml(blockerMessage)}"><i class="fas fa-clipboard-check"></i> ${linkedOrderId ? 'Complete Missing Information' : 'Order unavailable'}</button>`
+            : `<button type="button" class="btn-primary" data-stage-two="${escapePaymentHtml(linkedOrderId)}"><i class="fas fa-arrow-right"></i> Start Quote Collection</button>`;
+        return `<article class="workflow-request-card" data-workflow-state="${completionDone ? 'completed' : 'waiting'}">
             <div class="workflow-card-head">
                 <div><span class="workflow-reference">${escapePaymentHtml(item.requestReference)}</span><h3>${escapePaymentHtml(customer.name || 'Customer')}</h3></div>
-                <time class="workflow-received">${escapePaymentHtml(received)}</time>
+                <time class="workflow-received" datetime="${escapePaymentHtml(item.receivedAt || '')}">${escapePaymentHtml(received)}</time>
             </div>
-            <div class="workflow-contact"><span><i class="fas fa-envelope"></i> ${escapePaymentHtml(customer.email || '-')}</span><span><i class="fas fa-phone"></i> ${escapePaymentHtml(customer.phone || '-')}</span></div>
-            <div class="workflow-details">${escapePaymentHtml(item.formSnapshot?.serviceDetails || 'No service details provided.')}</div>
-            <div class="workflow-badges">
-                ${missingBadges || '<span class="workflow-badge success"><i class="fas fa-check-circle"></i> Job information complete</span>'}
-                <span class="workflow-badge ${item.requiresReview ? 'warning' : 'success'}"><i class="fas fa-user-check"></i> ${escapePaymentHtml(reviewLabel)}</span>
-                ${workflowDeliveryBadge('Customer email', item.customerConfirmation)}
-                ${workflowDeliveryBadge('Operations email', item.operationsAlert)}
-                <span class="workflow-badge ${completionDone ? 'success' : 'info'}"><i class="fas ${completionDone ? 'fa-check-circle' : 'fa-clipboard-list'}"></i> Customer details: ${completionDone ? 'completed' : 'pending'}</span>
+            <div class="workflow-intake-layout">
+                <div class="workflow-intake-main">
+                    <div class="workflow-contact"><span><i class="fas fa-envelope"></i> ${escapePaymentHtml(customer.email || '-')}</span><span><i class="fas fa-phone"></i> ${escapePaymentHtml(customer.phone || '-')}</span></div>
+                    <details class="workflow-details-disclosure">
+                        <summary>Customer service details</summary>
+                        <div class="workflow-details">${escapePaymentHtml(item.formSnapshot?.serviceDetails || 'No service details provided.')}</div>
+                    </details>
+                    <div class="workflow-intake-checklist">
+                        <h4>Intake checklist</h4>
+                        <span class="workflow-intake-check ${item.orderId?.missingData?.serviceCategory ? 'is-missing' : ''}"><i class="fas ${item.orderId?.missingData?.serviceCategory ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>${item.orderId?.missingData?.serviceCategory ? 'Service category is required' : 'Service category completed'}</span>
+                        <span class="workflow-intake-check ${item.orderId?.missingData?.serviceAddress ? 'is-missing' : ''}"><i class="fas ${item.orderId?.missingData?.serviceAddress ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>${item.orderId?.missingData?.serviceAddress ? 'Service address is required' : 'Service address completed'}</span>
+                        <span class="workflow-intake-check ${item.requiresReview ? 'is-missing' : ''}"><i class="fas ${item.requiresReview ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>${item.requiresReview ? 'Customer match needs review' : 'Customer match resolved'}</span>
+                    </div>
+                </div>
+                <aside class="workflow-intake-health">
+                    <h4>Intake health</h4>
+                    <div class="workflow-badges">
+                        <span class="workflow-badge ${item.requiresReview ? 'warning' : 'success'}"><i class="fas fa-user-check"></i> ${escapePaymentHtml(reviewLabel)}</span>
+                        ${workflowDeliveryBadge('Customer email', item.customerConfirmation)}
+                        ${workflowDeliveryBadge('Operations email', item.operationsAlert)}
+                        <span class="workflow-badge ${completionDone ? 'success' : 'info'}"><i class="fas ${completionDone ? 'fa-check-circle' : 'fa-clipboard-list'}"></i> Completion link: ${completionDone ? 'completed' : item.customerConfirmation?.status === 'sent' ? 'delivered' : 'pending'}</span>
+                    </div>
+                    ${stageTwoBlockers.length || !linkedOrderId ? `<div class="workflow-stage-blocker"><i class="fas fa-lock"></i><span>Stage 2 blocked: ${escapePaymentHtml(blockerMessage)}</span></div>` : '<div class="workflow-stage-blocker is-ready"><i class="fas fa-check-circle"></i><span>Ready to start vendor quote collection.</span></div>'}
+                </aside>
             </div>
             <div class="workflow-card-actions">
-                <button type="button" class="btn-primary" ${linkedOrderId ? `onclick="openWorkflowOrder('${escapePaymentHtml(linkedOrderId)}')"` : 'disabled title="This intake is not linked to an Order"'}><i class="fas fa-external-link-alt"></i> ${linkedOrderId ? 'Open Order' : 'Order unavailable'}</button>
+                ${primaryAction}
+                ${linkedOrderId && !stageTwoBlockers.length ? `<button type="button" class="btn-secondary" data-workflow-order="${escapePaymentHtml(linkedOrderId)}"><i class="fas fa-external-link-alt"></i> Review Order</button>` : ''}
                 ${select}
-                ${item.requiresReview ? `<button type="button" class="btn-secondary" onclick="resolveIntakeReview('${item._id}', '${escapePaymentHtml(item.customerMatchReason || '')}')"><i class="fas fa-check"></i> Resolve Review</button>` : ''}
-                ${customerFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_customer_confirmation')">Retry Customer Email</button>` : ''}
-                ${operationsFailed ? `<button type="button" class="btn-secondary" onclick="retryIntakeEmail('${item._id}', 'website_operations_alert')">Retry Operations Email</button>` : ''}
-                ${!completionDone ? `<button type="button" class="btn-secondary" onclick="resendIntakeCompletion('${item._id}')"><i class="fas fa-paper-plane"></i> Resend Completion Link</button>` : ''}
-                <button type="button" class="btn-secondary" ${linkedOrderId ? `onclick="startWorkflowQuoteCollection('${escapePaymentHtml(linkedOrderId)}')"` : ''} ${stageTwoBlockers.length || !linkedOrderId ? `disabled title="${escapePaymentHtml(!linkedOrderId ? 'This intake is not linked to an Order' : stageTwoBlockers.join(' · '))}"` : ''}><i class="fas fa-arrow-right"></i> ${!linkedOrderId ? 'Stage 2 blocked: Order unavailable' : stageTwoBlockers.length ? `Stage 2 blocked: ${escapePaymentHtml(stageTwoBlockers.join(', '))}` : 'Start Quote Collection'}</button>
+                ${item.requiresReview ? `<button type="button" class="btn-secondary" data-intake-review="${item._id}" data-review-reason="${escapePaymentHtml(item.customerMatchReason || '')}"><i class="fas fa-check"></i> Resolve Customer Match</button>` : ''}
+                ${customerFailed ? `<button type="button" class="btn-secondary" data-intake-email="${item._id}" data-email-type="website_customer_confirmation">Retry Customer Email</button>` : ''}
+                ${operationsFailed ? `<button type="button" class="btn-secondary" data-intake-email="${item._id}" data-email-type="website_operations_alert">Retry Operations Email</button>` : ''}
+                ${!completionDone ? `<button type="button" class="btn-secondary" data-intake-resend="${item._id}"><i class="fas fa-paper-plane"></i> Resend Completion Link</button>` : ''}
             </div>
         </article>`;
     }).join('');
+    list.onclick = event => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        if (button.dataset.workflowOrder) openWorkflowOrder(button.dataset.workflowOrder);
+        else if (button.dataset.stageTwo) startWorkflowQuoteCollection(button.dataset.stageTwo);
+        else if (button.dataset.intakeReview) resolveIntakeReview(button.dataset.intakeReview, button.dataset.reviewReason || '');
+        else if (button.dataset.intakeEmail) retryIntakeEmail(button.dataset.intakeEmail, button.dataset.emailType);
+        else if (button.dataset.intakeResend) resendIntakeCompletion(button.dataset.intakeResend);
+    };
 }
 
 async function loadWorkflowCenter() {
@@ -10997,6 +11033,35 @@ window.saveProfile = saveProfile;
 window.uploadAvatar = uploadAvatar;
 window.showSettings = showSettings;
 
+let workflowStatusRefreshTimer = null;
+window.addEventListener('order:status-changed', event => {
+    const sync = event.detail || {};
+    document.querySelectorAll(`[data-order-id="${CSS.escape(String(sync.orderId || ''))}"]`).forEach(element => {
+        element.dataset.workflowStatus = sync.workflowStatus || '';
+        element.dataset.orderStatus = sync.orderStatus || '';
+        element.dataset.pipelineStage = sync.pipelineStage || '';
+    });
 
+    clearTimeout(workflowStatusRefreshTimer);
+    workflowStatusRefreshTimer = setTimeout(async () => {
+        window.APIService?.clearCache?.();
+        const activeId = document.querySelector('.content-section.active')?.id || '';
+        if (activeId === 'workflow-overview' || activeId === 'workflow-center') await window.loadWorkflowCenter?.();
+        else if (activeId === 'orders') await loadOrdersSection();
+        else if (activeId === 'pipeline') await loadPipelineSection();
+        else if (activeId === 'calendar') await window.loadCalendarSection?.();
+        else if (activeId === 'payments') await loadPaymentsSection();
+        else if (activeId === 'reports') await loadReportsSection();
+        else if (activeId === 'incoming-quotes') await window.loadIncomingQuotes?.();
+        else if (activeId === 'outgoing-quotes') await window.loadOutgoingQuotes?.();
+        else if (activeId === 'customer-approvals') await window.loadCustomerApprovals?.();
+        else if (activeId === 'scheduling') await window.loadScheduling?.();
+        else if (activeId === 'closeout') await window.loadCloseout?.();
+
+        if (window.dashboard?.renderDashboard && activeId !== 'dashboard') {
+            window.dashboard.forceFreshDashboardStats = true;
+        }
+    }, 150);
+});
 
 

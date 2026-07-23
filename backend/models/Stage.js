@@ -14,6 +14,10 @@ const stageSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    systemKey: {
+        type: String,
+        trim: true
+    },
     isNoBid: {
         type: Boolean,
         default: false
@@ -24,5 +28,6 @@ const stageSchema = new mongoose.Schema({
 
 // Index for faster queries
 stageSchema.index({ position: 1 });
+stageSchema.index({ systemKey: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Stage', stageSchema);

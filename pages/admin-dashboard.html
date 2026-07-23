@@ -44,7 +44,7 @@
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
     <link rel="stylesheet" href="../assets/css/scheduling.css">
     <link rel="stylesheet" href="../assets/css/closeout.css">
-    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-stage6-closeout">
+    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-workflow-interactions">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -875,8 +875,8 @@
         <section id="outgoing-quotes" class="content-section outgoing-quotes-section workflow-stage-section" data-workflow-stage="3">
             <div class="page-header workflow-header"><div><h1>Outgoing Quotes</h1><p>Apply markup, prepare customer-facing terms, preview, and securely send quotes.</p></div><button type="button" class="btn-secondary" onclick="loadOutgoingQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
             <div class="workflow-summary"><div><strong id="outgoingReadyCount">0</strong><span>Ready to convert</span></div><div><strong id="outgoingDraftCount">0</strong><span>Draft quotes</span></div><div><strong id="outgoingSentCount">0</strong><span>Sent quotes</span></div></div>
-            <section id="outgoingSettingsPanel" class="outgoing-panel outgoing-settings" hidden>
-                <div class="outgoing-panel-head"><div><h2>Outgoing Quote Settings</h2><p>Admin-managed defaults and approved terms.</p></div><button type="button" class="btn-secondary" onclick="toggleOutgoingSettings(false)">Close</button></div>
+            <section id="outgoingSettingsPanel" class="outgoing-panel outgoing-settings" role="dialog" aria-modal="true" aria-labelledby="outgoingSettingsTitle" hidden>
+                <div class="outgoing-panel-head"><div><h2 id="outgoingSettingsTitle">Outgoing Quote Settings</h2><p>Admin-managed defaults and approved terms.</p></div><button type="button" class="btn-secondary" onclick="toggleOutgoingSettings(false)">Close</button></div>
                 <form id="outgoingSettingsForm" class="outgoing-form-grid"><label>Default markup type<select id="outgoingDefaultMarkupType"><option value="percentage">Percentage</option><option value="fixed">Fixed amount</option></select></label><label>Default markup value<input id="outgoingDefaultMarkupValue" type="number" min="0" step="0.01"></label><label>Validity days<input id="outgoingDefaultValidityDays" type="number" min="1" max="365"></label><label>Company name<input id="outgoingCompanyName" maxlength="300"></label><label class="full">Company address<input id="outgoingCompanyAddress" maxlength="500"></label><label>Company phone<input id="outgoingCompanyPhone" maxlength="100"></label><label>Company email<input id="outgoingCompanyEmail" type="email" maxlength="300"></label><label>Website<input id="outgoingCompanyWebsite" maxlength="300"></label><label class="full">Approved terms and conditions<textarea id="outgoingDefaultTerms" rows="9" maxlength="30000" required></textarea></label><div class="full outgoing-actions"><button class="btn-primary" type="submit">Save Quote Settings</button></div></form>
             </section>
             <div class="outgoing-toolbar"><button id="outgoingSettingsButton" class="btn-secondary" type="button" onclick="toggleOutgoingSettings(true)"><i class="fas fa-cog"></i> Quote Settings</button></div>
@@ -4432,13 +4432,13 @@
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260720-workflow-order-guard"></script>
-    <script src="../assets/js/incoming-quotes.js"></script>
-    <script src="../assets/js/outgoing-quotes.js"></script>
-    <script src="../assets/js/customer-approvals.js"></script>
-    <script src="../assets/js/scheduling.js?v=20260723-stage5-client-instance"></script>
-    <script src="../assets/js/closeout.js?v=20260723-stage6-closeout"></script>
-    <script src="../assets/js/workflow-hub.js?v=20260723-stage6-closeout"></script>
+    <script src="../assets/js/dashboard-script.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/incoming-quotes.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/outgoing-quotes.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/scheduling.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/closeout.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/workflow-hub.js?v=20260723-workflow-interactions"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>

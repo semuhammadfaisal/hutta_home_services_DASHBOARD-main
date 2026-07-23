@@ -8,6 +8,55 @@
     const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
     const status = value => String(value || '').replaceAll('_', ' ');
     const documentUrl = photo => photo?.url || '#';
+    const previewUrls = new Set();
+
+    function clearPreviewUrls() {
+        previewUrls.forEach(url => URL.revokeObjectURL(url));
+        previewUrls.clear();
+    }
+
+    function setupUploadPreview(inputId, label) {
+        const input = $(inputId);
+        if (!input) return;
+        let mount = input.parentElement.querySelector('.closeout-upload-preview');
+        let summary = input.parentElement.querySelector('.closeout-upload-summary');
+        if (!summary) {
+            summary = document.createElement('div');
+            summary.className = 'closeout-upload-summary';
+            input.after(summary);
+        }
+        if (!mount) {
+            mount = document.createElement('div');
+            mount.className = 'closeout-upload-preview';
+            summary.after(mount);
+        }
+        const render = () => {
+            [...mount.querySelectorAll('img')].forEach(image => {
+                if (image.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(image.src);
+                    previewUrls.delete(image.src);
+                }
+            });
+            const files = [...input.files];
+            summary.innerHTML = `<span>${files.length} of 10 ${esc(label.toLowerCase())} selected</span><span>${files.reduce((total, file) => total + file.size, 0) ? `${(files.reduce((total, file) => total + file.size, 0) / 1048576).toFixed(1)} MB` : 'No files'}</span>`;
+            mount.innerHTML = files.map((file, index) => {
+                const url = URL.createObjectURL(file);
+                previewUrls.add(url);
+                return `<article><img src="${esc(url)}" alt="${esc(label)} preview ${index + 1}"><span>${esc(file.name)}</span><button type="button" data-remove-upload="${index}" aria-label="Remove ${esc(file.name)}"><i class="fas fa-times"></i></button></article>`;
+            }).join('');
+            mount.querySelectorAll('[data-remove-upload]').forEach(button => {
+                button.onclick = () => {
+                    const transfer = new DataTransfer();
+                    files.filter((_, index) => index !== Number(button.dataset.removeUpload)).forEach(file => transfer.items.add(file));
+                    input.files = transfer.files;
+                    render();
+                };
+            });
+        };
+        input.addEventListener('change', render);
+        render();
+        return render;
+    }
 
     function completionState(order) {
         if (order.workflowStatus === 'closeout_issue_reported') return 'Issue reported';
@@ -126,7 +175,8 @@
             ['Service address', esc(order.customer?.address || completion?.customerSnapshot?.address || '—')],
             ['Approved scope', esc(completion?.jobSnapshot?.scopeOfWork || order.description || '—')],
             ['Confirmed start', date(order.scheduledStart)],
-            ['Confirmed end', date(order.scheduledEnd)]
+            ['Confirmed end', date(order.scheduledEnd)],
+            ['Actual completion', completion?.completedAt ? `${date(completion.completedAt)}${order.scheduledStart && new Date(completion.completedAt) < new Date(order.scheduledStart) ? ' · completed early' : ''}` : 'Not completed']
         ]);
         const form = $('closeoutStaffForm');
         form.hidden = completion?.status === 'completed';
@@ -180,6 +230,9 @@
         $('closeoutWorkspace').hidden = true;
         $('closeoutOrderList').hidden = false;
         $('closeoutStaffForm').reset();
+        clearPreviewUrls();
+        renderBeforeUploads?.();
+        renderAfterUploads?.();
         $('closeoutOverrideReasonLabel').hidden = true;
     }
 
@@ -238,6 +291,8 @@
         $('closeoutOverrideReasonLabel').hidden = !event.currentTarget.checked;
         $('closeoutOverrideReason').required = event.currentTarget.checked;
     });
+    const renderBeforeUploads = setupUploadPreview('closeoutBeforePhotos', 'Before photos');
+    const renderAfterUploads = setupUploadPreview('closeoutAfterPhotos', 'After photos');
     $('closeoutStaffForm')?.addEventListener('submit', async event => {
         event.preventDefault();
         const before = [...$('closeoutBeforePhotos').files];
@@ -262,17 +317,39 @@
         const formData = new FormData(event.currentTarget);
         formData.set('photoOverride', String(override));
         const button = $('closeoutCompleteButton');
+        let progress = event.currentTarget.querySelector('.closeout-progress');
+        if (!progress) {
+            progress = document.createElement('div');
+            progress.className = 'closeout-progress full';
+            progress.setAttribute('role', 'progressbar');
+            progress.setAttribute('aria-label', 'Completion upload progress');
+            progress.innerHTML = '<span></span>';
+            button.closest('.full').before(progress);
+        }
+        progress.hidden = false;
+        progress.setAttribute('aria-valuenow', '25');
+        progress.querySelector('span').style.width = '25%';
         button.disabled = true;
+        button.textContent = 'Uploading and completing…';
         try {
+            progress.setAttribute('aria-valuenow', '65');
+            progress.querySelector('span').style.width = '65%';
             await window.APIService.completeCloseoutOrder(activeOrderId, formData);
+            progress.setAttribute('aria-valuenow', '100');
+            progress.querySelector('span').style.width = '100%';
             window.showToast?.('Job completed. Invoice and pending Payment created.');
             event.currentTarget.reset();
+            clearPreviewUrls();
+            renderBeforeUploads?.();
+            renderAfterUploads?.();
             await refreshWorkspace();
             await loadCloseout();
         } catch (error) {
             window.showToast?.(error.message, 'error');
         } finally {
             button.disabled = false;
+            button.textContent = 'Mark Job Complete';
+            setTimeout(() => { progress.hidden = true; progress.querySelector('span').style.width = '0'; }, 600);
         }
     });
 

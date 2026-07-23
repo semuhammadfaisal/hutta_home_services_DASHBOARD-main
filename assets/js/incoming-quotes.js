@@ -21,6 +21,30 @@
     return `<option value="">Select vendor</option>${vendors.map(vendor => `<option value="${escapeHtml(vendor._id)}" ${String(vendor._id) === String(selected) ? 'selected' : ''}>${escapeHtml(vendor.name)} · ${escapeHtml(vendor.category || 'Uncategorized')} · ${escapeHtml(vendor.compliance?.status || 'missing')}</option>`).join('')}`;
   }
 
+  function renderVendorCompliance(selectId) {
+    const select = $(selectId);
+    const label = select?.closest('label');
+    if (!select || !label) return;
+    let panel = label.querySelector('.incoming-vendor-compliance');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.className = 'incoming-vendor-compliance';
+      label.append(panel);
+    }
+    const vendor = vendors.find(item => String(item._id) === String(select.value));
+    if (!vendor) {
+      panel.hidden = true;
+      panel.innerHTML = '';
+      return;
+    }
+    const compliance = vendor.compliance || {};
+    const warnings = compliance.warnings || [];
+    panel.hidden = false;
+    panel.innerHTML = `<div><span>Vendor compliance</span><strong class="incoming-compliance ${escapeHtml(compliance.status || 'missing')}">${escapeHtml(compliance.status || 'missing')}</strong></div>
+      <dl><div><dt>License</dt><dd>${escapeHtml(vendor.contractorLicenseNumber || 'Missing')}</dd></div><div><dt>ROC</dt><dd>${escapeHtml(vendor.rocNumber || 'Missing')}</dd></div><div><dt>COI</dt><dd>${vendor.coiOnFile ? 'On file' : 'Missing'}</dd></div><div><dt>Insurance</dt><dd>${date(vendor.insuranceExpirationDate)}</dd></div></dl>
+      ${warnings.length ? `<p><i class="fas fa-exclamation-triangle"></i>${escapeHtml(warnings.join(' · '))}</p>` : '<p class="is-clear"><i class="fas fa-check-circle"></i>Compliance information is current.</p>'}`;
+  }
+
   function renderEligible(eligible) {
     const select = $('incomingEligibleOrder');
     if (!select) return;
@@ -47,8 +71,12 @@
       <header><div><span class="workflow-reference">${escapeHtml(order.requestReference || order.orderId)}</span><h3>${escapeHtml(order.customer?.name || 'Customer')}</h3></div><span class="incoming-state ${order.workflowStatus === 'vendor_selected' ? 'selected' : ''}">${escapeHtml(order.workflowStatus.replaceAll('_', ' '))}</span></header>
       <p>${escapeHtml(order.service)} · ${escapeHtml(order.customer?.address || 'No address')}</p>
       <div class="incoming-order-meta"><div><strong>${Number(order.quoteCount || 0)}</strong><span>Submitted quotes</span></div><div><strong>${Number(order.awaitingVendorCount || 0)}</strong><span>Awaiting vendors</span></div><div><strong>${order.lowestQuote == null ? '—' : money(order.lowestQuote)}</strong><span>Lowest quote</span></div><div><strong>${date(order.earliestAvailability)}</strong><span>Earliest date</span></div></div>
-      <footer><span class="${order.complianceWarningCount ? 'workflow-badge warning' : 'workflow-badge success'}">${Number(order.complianceWarningCount || 0)} compliance warning${Number(order.complianceWarningCount || 0) === 1 ? '' : 's'}</span><button type="button" class="btn-primary" onclick="openIncomingQuoteWorkspace('${escapeHtml(order._id)}')">Open Workspace</button></footer>
+      <footer><span class="${order.complianceWarningCount ? 'workflow-badge warning' : 'workflow-badge success'}">${Number(order.complianceWarningCount || 0)} compliance warning${Number(order.complianceWarningCount || 0) === 1 ? '' : 's'}</span><button type="button" class="btn-primary" data-incoming-open="${escapeHtml(order._id)}">Open Workspace</button></footer>
     </article>`).join('');
+    list.onclick = event => {
+      const button = event.target.closest('[data-incoming-open]');
+      if (button) openIncomingQuoteWorkspace(button.dataset.incomingOpen);
+    };
   }
 
   async function loadIncomingQuotes() {
@@ -91,6 +119,8 @@
     $('incomingWorkspaceSummary').textContent = `${order.service} · ${order.customer?.address || 'No address'} · ${order.workflowStatus.replaceAll('_', ' ')}`;
     $('incomingInviteVendor').innerHTML = vendorOptions();
     $('incomingStaffVendor').innerHTML = vendorOptions();
+    renderVendorCompliance('incomingInviteVendor');
+    renderVendorCompliance('incomingStaffVendor');
     const body = $('incomingComparisonBody');
     if (!quotes.length) {
       body.innerHTML = '<tr><td colspan="11" class="incoming-empty-cell">No vendor quotes have been added yet.</td></tr>';
@@ -239,11 +269,14 @@
       const result = await window.APIService.sendIncomingQuoteInvitation(currentOrderId, { vendorId: $('incomingInviteVendor').value, email: $('incomingInviteEmail').value.trim(), personalMessage: $('incomingInviteMessage').value.trim() });
       form.reset();
       $('incomingInviteVendor').innerHTML = vendorOptions();
+      renderVendorCompliance('incomingInviteVendor');
       toast(result?.reusedInvitation ? 'Invitation sent again to this vendor using the active quote request.' : 'Secure vendor quote invitation queued.');
       await refreshWorkspace();
     } catch (error) { toast(error.message, 'error'); }
     finally { if (submitButton?.isConnected) submitButton.disabled = false; }
   });
+  $('incomingInviteVendor')?.addEventListener('change', () => renderVendorCompliance('incomingInviteVendor'));
+  $('incomingStaffVendor')?.addEventListener('change', () => renderVendorCompliance('incomingStaffVendor'));
 
   $('incomingStaffQuoteForm')?.addEventListener('submit', async event => {
     event.preventDefault();
@@ -273,6 +306,7 @@
       editingQuoteId = '';
       $('incomingStaffVendor').disabled = false;
       $('incomingStaffVendor').innerHTML = vendorOptions();
+      renderVendorCompliance('incomingStaffVendor');
       toast(shouldSubmit ? 'Vendor quote recorded and submitted.' : 'Vendor quote draft saved.');
       await refreshWorkspace();
     } catch (error) { toast(error.message, 'error'); }

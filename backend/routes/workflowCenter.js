@@ -8,9 +8,11 @@ const JobSchedule = require('../models/JobSchedule');
 const JobCompletion = require('../models/JobCompletion');
 const Order = require('../models/Order');
 const OutgoingQuote = require('../models/OutgoingQuote');
+const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 
 const router = express.Router();
 const allowedRoles = checkRole(['admin', 'manager', 'account_rep']);
+const adminOnly = checkRole(['admin']);
 
 const stageByStatus = {
   request_received: 1,
@@ -135,6 +137,25 @@ router.get('/orders/:orderId/journey', allowedRoles, async (req, res, next) => {
     if (order.workflowStatus === 'closeout_issue_reported') stages[5].state = 'attention';
     res.json({ order, currentStage, stages });
   } catch (error) { next(error); }
+});
+
+router.post('/reconcile/:orderId', adminOnly, async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.orderId)) return res.status(400).json({ message: 'Invalid Order ID' });
+  const session = await mongoose.startSession();
+  try {
+    let sync;
+    await session.withTransaction(async () => {
+      const order = await Order.findById(req.params.orderId).session(session);
+      if (!order) throw Object.assign(new Error('Order not found'), { status: 404 });
+      if (!order.workflowStatus) throw Object.assign(new Error('This manual Order is not managed by Workflow Center'), { status: 409 });
+      sync = await synchronizeWorkflowOrder(order, order.workflowStatus, { session });
+    });
+    res.json({ success: true, sync });
+  } catch (error) {
+    next(error);
+  } finally {
+    await session.endSession();
+  }
 });
 
 module.exports = router;

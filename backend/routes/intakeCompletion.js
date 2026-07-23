@@ -7,6 +7,7 @@ const { GridFSBucket } = require('mongodb');
 const IntakeSubmission = require('../models/IntakeSubmission');
 const Notification = require('../models/Notification');
 const Order = require('../models/Order');
+const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 const User = require('../models/User');
 const memCache = require('../utils/memoryCache');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
@@ -165,11 +166,10 @@ router.post('/public/complete', publicLimiter, noStore, publicIntake, uploadMidd
         currentOrder.description = payload.serviceDetails;
         currentOrder.customerIntake = { propertyType: payload.propertyType, preferredTiming: payload.preferredTiming, accessInstructions: payload.accessInstructions, completedAt: now };
         currentOrder.missingData = { serviceCategory: false, serviceAddress: false };
-        currentOrder.workflowStatus = requiresReview ? 'request_received' : 'quote_collection';
         currentOrder.pricingStatus = 'unquoted';
         currentOrder.amount = null;
         currentOrder.documents.push(...attachments);
-        await currentOrder.save({ session });
+        const sync = await synchronizeWorkflowOrder(currentOrder, requiresReview ? 'request_received' : 'quote_collection', { session });
 
         currentIntake.completionStatus = 'completed';
         currentIntake.completedAt = now;
@@ -187,7 +187,7 @@ router.post('/public/complete', publicLimiter, noStore, publicIntake, uploadMidd
           actionUrl: requiresReview ? '#workflow-center/stage-1' : '#workflow-center/stage-2',
           metadata: { intakeSubmissionId: currentIntake._id, orderId: currentOrder._id, requestReference: currentIntake.requestReference }
         })), { session });
-        result = { success: true, duplicate: false, requestReference: currentIntake.requestReference, status: requiresReview ? 'review_required' : 'quote_collection', completedAt: now };
+        result = { success: true, duplicate: false, requestReference: currentIntake.requestReference, status: requiresReview ? 'review_required' : 'quote_collection', completedAt: now, sync };
       });
     } finally {
       await session.endSession();

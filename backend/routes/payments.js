@@ -1,10 +1,12 @@
 const express = require('express');
 const Payment = require('../models/Payment');
+const mongoose = require('mongoose');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const router = express.Router();
+const { synchronizePaymentStage } = require('../utils/workflowSync');
 
 function normalizeMilestones(milestones = [], paymentAmount = 0) {
   if (!Array.isArray(milestones)) return [];
@@ -185,59 +187,44 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 
 // Update payment
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  const session = await mongoose.startSession();
   try {
     console.log('Update payment request from user:', req.user);
-    
-    const oldPayment = await Payment.findById(req.params.id);
-    if (!oldPayment) {
-      return res.status(404).json({ message: 'Payment not found' });
-    }
+    let paymentId;
+    let sync;
+    await session.withTransaction(async () => {
+      const oldPayment = await Payment.findById(req.params.id).session(session);
+      if (!oldPayment) throw Object.assign(new Error('Payment not found'), { status: 404 });
+      const updatePayload = buildPaymentPayload(req.body, oldPayment);
+      const payment = await Payment.findByIdAndUpdate(req.params.id, updatePayload, { new: true, session });
+      paymentId = payment._id;
 
-    const updatePayload = buildPaymentPayload(req.body, oldPayment);
-    const payment = await Payment.findByIdAndUpdate(
-      req.params.id, 
-      updatePayload,
-      { new: true }
-    )
-    .populate('customer', 'name email')
-    .populate('order', 'orderId service pipelineStage')
-    .populate('project', 'projectId name')
-    .populate('processedBy', 'firstName lastName');
-    
-    // If payment status changed to 'received' or 'completed', update pipeline stage
-    if ((updatePayload.status === 'received' || updatePayload.status === 'completed') && 
-        oldPayment.status !== 'received' && oldPayment.status !== 'completed') {
-      
-      if (payment.order) {
+      if ((updatePayload.status === 'received' || updatePayload.status === 'completed') &&
+          oldPayment.status !== 'received' && oldPayment.status !== 'completed' &&
+          payment.order) {
         const Order = require('../models/Order');
-        const PipelineRecord = require('../models/PipelineRecord');
-        const Stage = require('../models/Stage');
-        
-        // Find 'Paid' stage
-        const paidStage = await Stage.findOne({ name: 'Paid' });
-        
-        if (paidStage && payment.order.pipelineRecordId) {
-          // Update pipeline record to 'Paid' stage
-          await PipelineRecord.findByIdAndUpdate(payment.order.pipelineRecordId, {
-            stageId: paidStage._id
-          });
-          
-          // Update order's pipelineStage field
-          await Order.findByIdAndUpdate(payment.order._id, {
-            pipelineStage: 'Paid'
-          });
-          
+        const order = await Order.findById(payment.order).session(session);
+        if (order?.workflowStatus) {
+          sync = await synchronizePaymentStage(order, { session });
           console.log(`Payment ${payment.paymentId} received - moved order to Paid stage`);
         }
       }
-    }
+    });
+
+    const payment = await Payment.findById(paymentId)
+      .populate('customer', 'name email')
+      .populate('order', 'orderId service pipelineStage workflowStatus status')
+      .populate('project', 'projectId name')
+      .populate('processedBy', 'firstName lastName');
     
     console.log('Payment updated successfully');
     invalidateDashboardStatsCache();
-    res.json(payment);
+    res.json(sync ? { ...payment.toObject(), sync } : payment);
   } catch (error) {
     console.error('Update payment error:', error);
     res.status(error.status || 500).json({ message: error.message || 'Server error', error: error.message });
+  } finally {
+    await session.endSession();
   }
 });
 

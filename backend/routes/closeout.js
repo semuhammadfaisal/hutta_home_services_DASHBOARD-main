@@ -21,6 +21,7 @@ const VendorWorkOrder = require('../models/VendorWorkOrder');
 const { createCustomerInvoicePdf } = require('../utils/invoicePdf');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const memCache = require('../utils/memoryCache');
+const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 const {
   COMPLETION_TOKEN_TTL_MS, SATISFACTION_TOKEN_TTL_MS, FOLLOWUP_DELAY_MS,
   MAX_FILES_PER_CATEGORY, MAX_FILE_BYTES, MAX_PUBLIC_BODY_BYTES, cleanText, generateToken, hashToken,
@@ -132,7 +133,7 @@ async function completeJob({completion,source,notes,enteredName,beforeFiles,afte
     invoiceData.snapshotHash=invoiceSnapshotHash(invoiceData);const [invoice]=await CustomerInvoice.create([invoiceData],{session});
     const [payment]=await Payment.create([{paymentId:paymentReference,invoiceNumber,order:order._id,customer:order.customerId,amount:quote.customerTotal,status:'pending',dueDate:now,description:`Invoice ${invoiceNumber} for ${order.service}`,source:'stage6_invoice',customerInvoiceId:invoice._id,jobCompletionId:current._id,outgoingQuoteId:quote._id,invoiceIssuedAt:now}],{session});
     invoice.paymentId=payment._id;await invoice.save({session});current.customerInvoiceId=invoice._id;current.history.push({action:'completed',actorType:source,actorId:source==='staff'?actor.id:undefined,actorEmail:actor.email,message:notes});await current.save({session});
-    order.status='completed';order.workflowStatus='completed';order.jobCompletionId=current._id;order.customerInvoiceId=invoice._id;order.completedAt=now;order.completedBy=source==='staff'?actor.id:undefined;order.satisfactionStatus='pending';order.documents.push(...all);await order.save({session});
+    order.jobCompletionId=current._id;order.customerInvoiceId=invoice._id;order.completedAt=now;order.completedBy=source==='staff'?actor.id:undefined;order.satisfactionStatus='pending';order.documents.push(...all);const sync=await synchronizeWorkflowOrder(order,'completed',{session});
     const base={completionReference:current.completionReference,invoiceNumber,requestReference:order.requestReference,orderReference:order.orderId,customerName:quote.customerSnapshot.name,vendorName:current.vendorSnapshot.name,service:order.service,completedAt:now,amount:quote.customerTotal};
     await EmailOutbox.insertMany([
       {type:'vendor_completion_confirmation',dedupeKey:`${current._id}:vendor_completion_confirmation`,recipients:[current.vendorSnapshot.email],payload:base,orderId:order._id,outgoingQuoteId:quote._id,jobCompletionId:current._id,customerInvoiceId:invoice._id},
@@ -141,14 +142,73 @@ async function completeJob({completion,source,notes,enteredName,beforeFiles,afte
       {type:'staff_completion_alert',dedupeKey:`${current._id}:staff_completion_alert`,recipients:staffEmails(),payload:base,orderId:order._id,outgoingQuoteId:quote._id,jobCompletionId:current._id,customerInvoiceId:invoice._id}
     ],{session});
     await notifyStaff(session,'Job completed',`${current.completionReference} was completed and ${invoiceNumber} was generated.`,'success',order._id,{jobCompletionId:current._id,customerInvoiceId:invoice._id});
-    result={completion:current,invoice,payment};
+    result={completion:current,invoice,payment,sync};
   });await markStoredLinked(all);invalidate();return result;}catch(error){await deleteStored(all);throw error}finally{await session.endSession()}
 }
 
 router.get('/public/completion',publicLimiter,async(req,res,next)=>{try{noStore(res);const token=req.get('x-vendor-completion-token')||'';const completion=await JobCompletion.findOne({publicTokenHash:hashToken(token),status:'pending',tokenExpiresAt:{$gt:new Date()}}).select('+publicTokenHash').lean();if(!completion)return res.status(410).json({message:'This completion link is invalid, expired, revoked, or already used'});res.json({completionReference:completion.completionReference,customer:{name:completion.customerSnapshot.name,address:completion.customerSnapshot.address},vendor:{name:completion.vendorSnapshot.name},schedule:completion.scheduleSnapshot,job:completion.jobSnapshot});}catch(error){next(error)}});
 router.post('/public/completion',publicLimiter,uploadMiddleware,async(req,res,next)=>{const token=req.get('x-vendor-completion-token')||'';try{const completion=await JobCompletion.findOne({publicTokenHash:hashToken(token),status:'pending',tokenExpiresAt:{$gt:new Date()}}).select('+publicTokenHash +satisfactionTokenHash');if(!completion)return res.status(410).json({message:'This completion link is invalid, expired, revoked, or already used'});const enteredName=cleanText(req.body.vendorEnteredName,160);if(enteredName.length<2)return res.status(400).json({message:'Vendor full name is required'});const result=await completeJob({completion,source:'vendor',notes:cleanText(req.body.completionNotes),enteredName,beforeFiles:req.files?.beforePhotos||[],afterFiles:req.files?.afterPhotos||[],photoOverride:false,overrideReason:'',actor:{id:`vendor:${completion.vendorId}`,email:completion.vendorSnapshot.email},ip:cleanText(req.ip,128),userAgent:cleanText(req.get('user-agent'),1000)});noStore(res);res.status(201).json({success:true,completionReference:result.completion.completionReference,invoiceNumber:result.invoice.invoiceNumber,completedAt:result.completion.completedAt});}catch(error){next(error)}});
 router.get('/public/satisfaction',publicLimiter,async(req,res,next)=>{try{noStore(res);const token=req.get('x-customer-satisfaction-token')||'';const completion=await JobCompletion.findOne({satisfactionTokenHash:hashToken(token),status:'completed',satisfactionTokenExpiresAt:{$gt:new Date()}}).select('+satisfactionTokenHash').lean();if(!completion)return res.status(410).json({message:'This satisfaction link is invalid or expired'});const decision=await CustomerSatisfactionDecision.findOne({jobCompletionId:completion._id}).lean();res.json({completionReference:completion.completionReference,customerName:completion.customerSnapshot.name,service:completion.jobSnapshot.service,completedAt:completion.completedAt,decision:decision?{decision:decision.decision,issueMessage:decision.issueMessage,decisionAt:decision.decisionAt}:null});}catch(error){next(error)}});
-router.post('/public/satisfaction',publicLimiter,async(req,res,next)=>{noStore(res);const token=req.get('x-customer-satisfaction-token')||'';const {payload,errors}=parseSatisfaction(req.body);if(errors.length)return res.status(400).json({message:errors.join('. ')});const session=await mongoose.startSession();try{let result;await session.withTransaction(async()=>{const completion=await JobCompletion.findOne({satisfactionTokenHash:hashToken(token),status:'completed',satisfactionTokenExpiresAt:{$gt:new Date()}}).session(session).select('+satisfactionTokenHash');if(!completion)throw Object.assign(new Error('This satisfaction link is invalid or expired'),{status:410});const existing=await CustomerSatisfactionDecision.findOne({jobCompletionId:completion._id}).session(session);if(existing){result={success:true,decision:existing.decision,decisionAt:existing.decisionAt,duplicate:true};return}const invoice=await CustomerInvoice.findById(completion.customerInvoiceId).session(session);const order=await Order.findById(completion.orderId).session(session);if(!invoice||!order)throw new Error('Closeout records are incomplete');const now=new Date();const [decision]=await CustomerSatisfactionDecision.create([{jobCompletionId:completion._id,orderId:order._id,customerInvoiceId:invoice._id,customerId:order.customerId,decision:payload.decision,issueMessage:payload.decision==='issue_reported'?payload.issueMessage:undefined,decisionAt:now,completionSnapshotHash:completion.completionSnapshotHash,invoiceSnapshotHash:invoice.snapshotHash,ipAddress:cleanText(req.ip,128),userAgent:cleanText(req.get('user-agent'),1000)}],{session});completion.satisfactionDecisionId=decision._id;completion.satisfactionTokenHash=undefined;await completion.save({session});order.satisfactionDecisionId=decision._id;order.satisfactionStatus=payload.decision;order.workflowStatus=payload.decision==='issue_reported'?'closeout_issue_reported':'completed';await order.save({session});await EmailOutbox.updateMany({jobCompletionId:completion._id,type:'customer_satisfaction_followup',status:{$in:['pending','retry_scheduled']}},{$set:{status:'cancelled'}},{session});const base={completionReference:completion.completionReference,invoiceNumber:invoice.invoiceNumber,requestReference:completion.jobSnapshot.requestReference,customerName:completion.customerSnapshot.name,service:completion.jobSnapshot.service,decision:payload.decision,issueMessage:payload.issueMessage,decisionAt:now};await EmailOutbox.insertMany([{type:payload.decision==='issue_reported'?'customer_issue_confirmation':'customer_satisfaction_confirmation',dedupeKey:`${completion._id}:customer:${payload.decision}`,recipients:[completion.customerSnapshot.email],payload:base,orderId:order._id,jobCompletionId:completion._id,customerInvoiceId:invoice._id,satisfactionDecisionId:decision._id},{type:payload.decision==='issue_reported'?'staff_closeout_issue_alert':'staff_satisfaction_alert',dedupeKey:`${completion._id}:staff:${payload.decision}`,recipients:staffEmails(),payload:base,orderId:order._id,jobCompletionId:completion._id,customerInvoiceId:invoice._id,satisfactionDecisionId:decision._id}],{session});await notifyStaff(session,payload.decision==='issue_reported'?'Customer reported a closeout issue':'Customer is satisfied',payload.decision==='issue_reported'?payload.issueMessage:`${completion.completionReference} was marked satisfied.`,payload.decision==='issue_reported'?'error':'success',order._id,{jobCompletionId:completion._id,satisfactionDecisionId:decision._id});result={success:true,decision:payload.decision,decisionAt:now,duplicate:false};});invalidate();res.status(result.duplicate?200:201).json(result);}catch(error){if(error?.code===11000)return res.status(409).json({message:'A satisfaction response was already recorded'});next(error)}finally{await session.endSession()}});
+router.post('/public/satisfaction',publicLimiter,async(req,res,next)=>{
+  noStore(res);
+  const token=req.get('x-customer-satisfaction-token')||'';
+  const {payload,errors}=parseSatisfaction(req.body);
+  if(errors.length)return res.status(400).json({message:errors.join('. ')});
+  const session=await mongoose.startSession();
+  try{
+    let result;
+    await session.withTransaction(async()=>{
+      const completion=await JobCompletion.findOne({satisfactionTokenHash:hashToken(token),status:'completed',satisfactionTokenExpiresAt:{$gt:new Date()}}).session(session).select('+satisfactionTokenHash');
+      if(!completion)throw Object.assign(new Error('This satisfaction link is invalid or expired'),{status:410});
+      const existing=await CustomerSatisfactionDecision.findOne({jobCompletionId:completion._id}).session(session);
+      if(existing){result={success:true,decision:existing.decision,decisionAt:existing.decisionAt,duplicate:true};return}
+      const invoice=await CustomerInvoice.findById(completion.customerInvoiceId).session(session);
+      const order=await Order.findById(completion.orderId).session(session);
+      if(!invoice||!order)throw new Error('Closeout records are incomplete');
+      const now=new Date();
+      const [decision]=await CustomerSatisfactionDecision.create([{
+        jobCompletionId:completion._id,orderId:order._id,customerInvoiceId:invoice._id,customerId:order.customerId,
+        decision:payload.decision,issueMessage:payload.decision==='issue_reported'?payload.issueMessage:undefined,
+        decisionAt:now,completionSnapshotHash:completion.completionSnapshotHash,invoiceSnapshotHash:invoice.snapshotHash,
+        ipAddress:cleanText(req.ip,128),userAgent:cleanText(req.get('user-agent'),1000)
+      }],{session});
+      completion.satisfactionDecisionId=decision._id;
+      completion.satisfactionTokenHash=undefined;
+      await completion.save({session});
+      order.satisfactionDecisionId=decision._id;
+      order.satisfactionStatus=payload.decision;
+      const sync=await synchronizeWorkflowOrder(order,payload.decision==='issue_reported'?'closeout_issue_reported':'completed',{session});
+      await EmailOutbox.updateMany(
+        {jobCompletionId:completion._id,type:'customer_satisfaction_followup',status:{$in:['pending','retry_scheduled']}},
+        {$set:{status:'cancelled'}},
+        {session}
+      );
+      const base={
+        completionReference:completion.completionReference,invoiceNumber:invoice.invoiceNumber,
+        requestReference:completion.jobSnapshot.requestReference,customerName:completion.customerSnapshot.name,
+        service:completion.jobSnapshot.service,decision:payload.decision,issueMessage:payload.issueMessage,decisionAt:now
+      };
+      await EmailOutbox.insertMany([
+        {type:payload.decision==='issue_reported'?'customer_issue_confirmation':'customer_satisfaction_confirmation',dedupeKey:`${completion._id}:customer:${payload.decision}`,recipients:[completion.customerSnapshot.email],payload:base,orderId:order._id,jobCompletionId:completion._id,customerInvoiceId:invoice._id,satisfactionDecisionId:decision._id},
+        {type:payload.decision==='issue_reported'?'staff_closeout_issue_alert':'staff_satisfaction_alert',dedupeKey:`${completion._id}:staff:${payload.decision}`,recipients:staffEmails(),payload:base,orderId:order._id,jobCompletionId:completion._id,customerInvoiceId:invoice._id,satisfactionDecisionId:decision._id}
+      ],{session});
+      await notifyStaff(
+        session,
+        payload.decision==='issue_reported'?'Customer reported a closeout issue':'Customer is satisfied',
+        payload.decision==='issue_reported'?payload.issueMessage:`${completion.completionReference} was marked satisfied.`,
+        payload.decision==='issue_reported'?'error':'success',
+        order._id,
+        {jobCompletionId:completion._id,satisfactionDecisionId:decision._id}
+      );
+      result={success:true,decision:payload.decision,decisionAt:now,duplicate:false,sync};
+    });
+    invalidate();
+    res.status(result.duplicate?200:201).json(result);
+  }catch(error){
+    if(error?.code===11000)return res.status(409).json({message:'A satisfaction response was already recorded'});
+    next(error);
+  }finally{await session.endSession()}
+});
 
 router.use(authenticateToken,staffRoles);
 router.get('/orders',async(_req,res,next)=>{try{const orders=await Order.find({workflowStatus:{$in:['scheduled','completed','closeout_issue_reported']}}).populate('vendor','name email').sort({updatedAt:-1}).lean();const completions=await JobCompletion.find({orderId:{$in:orders.map(o=>o._id)}}).lean();const byOrder=new Map(completions.map(c=>[String(c.orderId),safeCompletion(c)]));res.json(orders.map(order=>({...order,completion:byOrder.get(String(order._id))||null})));}catch(error){next(error)}});
@@ -157,24 +217,27 @@ router.post('/orders/:orderId/completion-link',async(req,res,next)=>{try{const {
 router.post('/orders/:orderId/completion-link/resend',async(req,res,next)=>{try{const completion=await JobCompletion.findOne({orderId:req.params.orderId,status:'pending'}).select('+publicTokenHash');if(!completion)return res.status(409).json({message:'No active completion link exists'});const {completion:rotated,token}=await ensureCompletion(req.params.orderId,{rotate:true,actorId:actorId(req),actorEmail:req.user.email});await EmailOutbox.create(completionLinkOutbox(rotated,token));res.json(safeCompletion(rotated));}catch(error){next(error)}});
 router.post('/orders/:orderId/completion-link/rotate',async(req,res,next)=>{try{const {completion,token}=await ensureCompletion(req.params.orderId,{rotate:true,actorId:actorId(req),actorEmail:req.user.email});await EmailOutbox.create(completionLinkOutbox(completion,token));res.json(safeCompletion(completion));}catch(error){next(error)}});
 router.post('/orders/:orderId/completion-link/revoke',async(req,res,next)=>{try{const completion=await JobCompletion.findOne({orderId:req.params.orderId,status:'pending'}).select('+publicTokenHash');if(!completion)return res.status(409).json({message:'No pending completion link exists'});completion.publicTokenHash=undefined;completion.tokenRevokedAt=new Date();completion.history.push({action:'completion_link_revoked',actorType:'staff',actorId:actorId(req),actorEmail:req.user.email});await completion.save();res.json(safeCompletion(completion));}catch(error){next(error)}});
-router.post('/orders/:orderId/complete',uploadMiddleware,async(req,res,next)=>{try{let completion=await JobCompletion.findOne({orderId:req.params.orderId,status:'pending'}).select('+publicTokenHash +satisfactionTokenHash');if(!completion){const created=await ensureCompletion(req.params.orderId,{actorId:actorId(req),actorEmail:req.user.email});completion=created.completion}const result=await completeJob({completion,source:'staff',notes:cleanText(req.body.completionNotes),enteredName:'',beforeFiles:req.files?.beforePhotos||[],afterFiles:req.files?.afterPhotos||[],photoOverride:String(req.body.photoOverride)==='true',overrideReason:cleanText(req.body.photoOverrideReason,2000),actor:{id:actorId(req),email:req.user.email}});res.status(201).json({completion:safeCompletion(result.completion),invoice:result.invoice,payment:result.payment});}catch(error){next(error)}});
+router.post('/orders/:orderId/complete',uploadMiddleware,async(req,res,next)=>{try{let completion=await JobCompletion.findOne({orderId:req.params.orderId,status:'pending'}).select('+publicTokenHash +satisfactionTokenHash');if(!completion){const created=await ensureCompletion(req.params.orderId,{actorId:actorId(req),actorEmail:req.user.email});completion=created.completion}const result=await completeJob({completion,source:'staff',notes:cleanText(req.body.completionNotes),enteredName:'',beforeFiles:req.files?.beforePhotos||[],afterFiles:req.files?.afterPhotos||[],photoOverride:String(req.body.photoOverride)==='true',overrideReason:cleanText(req.body.photoOverrideReason,2000),actor:{id:actorId(req),email:req.user.email}});res.status(201).json({completion:safeCompletion(result.completion),invoice:result.invoice,payment:result.payment,sync:result.sync});}catch(error){next(error)}});
 router.get('/invoices/:invoiceId/pdf',async(req,res,next)=>{try{const invoice=await CustomerInvoice.findById(req.params.invoiceId).lean();if(!invoice)return res.status(404).json({message:'Invoice not found'});const pdf=await createCustomerInvoicePdf(invoice);await CustomerInvoice.updateOne({_id:invoice._id},{$set:{pdfGeneratedAt:new Date()}});res.set({'Content-Type':'application/pdf','Content-Disposition':`inline; filename="${invoice.invoiceNumber}.pdf"`,'Cache-Control':'private, no-store'});res.send(pdf);}catch(error){next(error)}});
 router.post('/satisfaction/:decisionId/resolve',async(req,res,next)=>{
   const note=cleanText(req.body.resolutionNote,3000);if(note.length<10)return res.status(400).json({message:'Resolution note must contain at least 10 characters'});
   const session=await mongoose.startSession();
   try{
     let resolved;
+    let sync;
     await session.withTransaction(async()=>{
       const decision=await CustomerSatisfactionDecision.findOne({_id:req.params.decisionId,decision:'issue_reported',resolvedAt:{$exists:false}}).session(session);
       if(!decision)throw Object.assign(new Error('Only an unresolved reported issue can be resolved'),{status:409});
       decision.resolvedAt=new Date();decision.resolvedBy=actorId(req);decision.resolutionNote=note;await decision.save({session});
-      const order=await Order.findByIdAndUpdate(decision.orderId,{workflowStatus:'completed',satisfactionStatus:'issue_resolved'},{new:true,session});
+      const order=await Order.findById(decision.orderId).session(session);
       if(!order)throw new Error('The closeout Order is missing');
+      order.satisfactionStatus='issue_resolved';
+      sync=await synchronizeWorkflowOrder(order,'completed',{session});
       await EmailOutbox.create([{type:'staff_closeout_issue_resolved',dedupeKey:`${decision._id}:resolved`,recipients:staffEmails(),payload:{completionReference:order.requestReference,requestReference:order.requestReference,resolutionNote:note},orderId:order._id,jobCompletionId:decision.jobCompletionId,customerInvoiceId:decision.customerInvoiceId,satisfactionDecisionId:decision._id}],{session});
       await notifyStaff(session,'Closeout issue resolved',`${order.requestReference||order.orderId} was resolved: ${note}`,'success',order._id,{jobCompletionId:decision.jobCompletionId,satisfactionDecisionId:decision._id});
       resolved=decision;
     });
-    invalidate();res.json(resolved);
+    invalidate();res.json({...resolved.toObject(),sync});
   }catch(error){next(error)}finally{await session.endSession()}
 });
 router.post('/outbox/:messageId/retry',async(req,res,next)=>{try{const message=await EmailOutbox.findOne({_id:req.params.messageId,type:{$in:CLOSEOUT_TYPES},status:'permanently_failed'});if(!message)return res.status(409).json({message:'Only a permanently failed closeout email can be retried'});Object.assign(message,{status:'pending',attempts:0,nextAttemptAt:new Date(),lockedUntil:undefined,lockedBy:undefined,lastErrorCategory:undefined});await message.save();res.json({success:true});}catch(error){next(error)}});

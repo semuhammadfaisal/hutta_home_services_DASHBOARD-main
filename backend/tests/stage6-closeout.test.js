@@ -110,7 +110,7 @@ test('completion transaction is mounted publicly before auth and creates one inv
   assert.match(route, /CustomerInvoice\.create/);
   assert.match(route, /Payment\.create/);
   assert.match(route, /source:'stage6_invoice'/);
-  assert.match(route, /workflowStatus='completed'/);
+  assert.match(route, /synchronizeWorkflowOrder\(order,'completed'/);
   assert.doesNotMatch(route, /cannot be completed before the confirmed start time/i);
   assert.match(route, /nextAttemptAt:new Date\(now\.getTime\(\)\+FOLLOWUP_DELAY_MS\)/);
   assert.match(route, /customer_satisfaction_followup/);

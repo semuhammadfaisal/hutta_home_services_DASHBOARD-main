@@ -5,6 +5,7 @@ const EmailOutbox = require('../models/EmailOutbox');
 const IntakeSubmission = require('../models/IntakeSubmission');
 const Order = require('../models/Order');
 const { INTAKE_COMPLETION_TTL_MS, encryptToken, generateToken, hashToken } = require('../utils/intakeCompletion');
+const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 
 const router = express.Router();
 const allowedRoles = checkRole(['admin', 'manager', 'account_rep']);
@@ -28,38 +29,50 @@ router.get('/', allowedRoles, async (req, res) => {
 });
 
 router.put('/:id/resolve-review', allowedRoles, async (req, res) => {
+  const session = await mongoose.startSession();
   try {
-    const intake = await IntakeSubmission.findById(req.params.id);
-    if (!intake) return res.status(404).json({ message: 'Website request not found' });
-    if (!intake.requiresReview) return res.json(intake);
+    let result;
+    let sync;
+    await session.withTransaction(async () => {
+      const intake = await IntakeSubmission.findById(req.params.id).session(session);
+      if (!intake) throw Object.assign(new Error('Website request not found'), { status: 404 });
+      if (!intake.requiresReview) { result = intake; return; }
 
-    if (intake.customerMatchReason === 'multiple_email_matches') {
-      const customerId = String(req.body.customerId || '');
-      if (!mongoose.Types.ObjectId.isValid(customerId) || !intake.matchingCustomerIds.some(id => id.toString() === customerId)) {
-        return res.status(400).json({ message: 'Select one of the matching customers' });
+      let customerId;
+      if (intake.customerMatchReason === 'multiple_email_matches') {
+        customerId = String(req.body.customerId || '');
+        if (!mongoose.Types.ObjectId.isValid(customerId) || !intake.matchingCustomerIds.some(id => id.toString() === customerId)) {
+          throw Object.assign(new Error('Select one of the matching customers'), { status: 400 });
+        }
+        intake.customerId = customerId;
       }
-      intake.customerId = customerId;
-      await Order.updateOne({ _id: intake.orderId }, { $set: { customerId, requiresIntakeReview: false } });
-    } else {
-      await Order.updateOne({ _id: intake.orderId }, { $set: { requiresIntakeReview: false } });
-    }
 
-    intake.requiresReview = false;
-    intake.status = 'completed';
-    intake.reviewResolvedAt = new Date();
-    intake.reviewResolvedBy = req.user.userId;
-    const order = await Order.findById(intake.orderId);
-    if (order && intake.completionStatus === 'completed' && !order.missingData?.serviceCategory && !order.missingData?.serviceAddress) {
-      order.workflowStatus = 'quote_collection';
-      order.pricingStatus = 'unquoted';
-      order.amount = null;
-      await order.save();
-    }
-    await intake.save();
-    res.json(intake);
+      const order = await Order.findById(intake.orderId).session(session);
+      if (order) {
+        if (customerId) order.customerId = customerId;
+        order.requiresIntakeReview = false;
+        if (intake.completionStatus === 'completed' && !order.missingData?.serviceCategory && !order.missingData?.serviceAddress) {
+          order.pricingStatus = 'unquoted';
+          order.amount = null;
+          sync = await synchronizeWorkflowOrder(order, 'quote_collection', { session });
+        } else {
+          await order.save({ session });
+        }
+      }
+
+      intake.requiresReview = false;
+      intake.status = 'completed';
+      intake.reviewResolvedAt = new Date();
+      intake.reviewResolvedBy = req.user.userId;
+      await intake.save({ session });
+      result = intake;
+    });
+    res.json(sync ? { ...result.toObject(), sync } : result);
   } catch (error) {
     console.error('Resolve intake review failed:', error?.name || 'unknown');
-    res.status(500).json({ message: 'Unable to resolve review' });
+    res.status(error.status || 500).json({ message: error.message || 'Unable to resolve review' });
+  } finally {
+    await session.endSession();
   }
 });
 

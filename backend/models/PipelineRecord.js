@@ -36,12 +36,21 @@ const pipelineRecordSchema = new mongoose.Schema({
     notes: String
     ,
     notesHistory: { type: [noteSchema], default: [] }
+    ,
+    stageSource: {
+        type: String,
+        enum: ['manual', 'workflow', 'payment'],
+        default: 'manual'
+    },
+    stageSyncedAt: Date,
+    workflowStatus: String,
+    orderStatus: String
 }, {
     timestamps: true
 });
 
 pipelineRecordSchema.index({ stageId: 1 });
-pipelineRecordSchema.index({ orderId: 1 });
+pipelineRecordSchema.index({ orderId: 1 }, { unique: true, sparse: true });
 pipelineRecordSchema.index({ stageId: 1, orderId: 1 });
 pipelineRecordSchema.index({ createdAt: -1 });
 pipelineRecordSchema.index({ orderIdDisplay: 1 });

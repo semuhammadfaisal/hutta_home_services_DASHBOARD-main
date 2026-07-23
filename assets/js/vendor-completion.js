@@ -3,6 +3,7 @@
     const fragment = new URLSearchParams(location.hash.replace(/^#/, ''));
     const token = fragment.get('token') || '';
     history.replaceState(null, '', `${location.pathname}${location.search}`);
+    const previewUrls = new Set();
     const phoenix = value => value
         ? new Date(value).toLocaleString('en-US', { timeZone: 'America/Phoenix', dateStyle: 'medium', timeStyle: 'short' })
         : 'Not provided';
@@ -14,12 +15,37 @@
         $('completionError').hidden = false;
     }
 
-    function fileSummary(input, output) {
+    function fileSummary(input, output, label) {
         const files = [...input.files];
         output.textContent = files.length
             ? `${files.length} photo${files.length === 1 ? '' : 's'} selected`
             : 'No photos selected';
         if (files.length > 10) output.textContent = 'Maximum 10 photos allowed';
+        let preview = input.closest('.completion-upload')?.querySelector('.completion-preview-grid');
+        if (!preview) {
+            preview = document.createElement('div');
+            preview.className = 'completion-preview-grid';
+            input.closest('.completion-upload')?.append(preview);
+        }
+        [...preview.querySelectorAll('img')].forEach(image => {
+            if (image.src.startsWith('blob:')) {
+                URL.revokeObjectURL(image.src);
+                previewUrls.delete(image.src);
+            }
+        });
+        preview.innerHTML = files.map((file, index) => {
+            const url = URL.createObjectURL(file);
+            previewUrls.add(url);
+            return `<article><img src="${url}" alt="${label} preview ${index + 1}"><span>${file.name.replace(/[<>&"']/g, '')}</span><button type="button" data-remove="${index}" aria-label="Remove ${file.name.replace(/[<>&"']/g, '')}">×</button></article>`;
+        }).join('');
+        preview.querySelectorAll('[data-remove]').forEach(button => {
+            button.onclick = () => {
+                const transfer = new DataTransfer();
+                files.filter((_, index) => index !== Number(button.dataset.remove)).forEach(file => transfer.items.add(file));
+                input.files = transfer.files;
+                fileSummary(input, output, label);
+            };
+        });
     }
 
     async function load() {
@@ -50,8 +76,8 @@
         }
     }
 
-    $('beforePhotos').addEventListener('change', event => fileSummary(event.currentTarget, $('beforePhotoCount')));
-    $('afterPhotos').addEventListener('change', event => fileSummary(event.currentTarget, $('afterPhotoCount')));
+    $('beforePhotos').addEventListener('change', event => fileSummary(event.currentTarget, $('beforePhotoCount'), 'Before photo'));
+    $('afterPhotos').addEventListener('change', event => fileSummary(event.currentTarget, $('afterPhotoCount'), 'After photo'));
     $('vendorCompletionForm').addEventListener('submit', async event => {
         event.preventDefault();
         const before = [...$('beforePhotos').files];
@@ -80,9 +106,24 @@
         formData.append('completionNotes', $('completionNotes').value.trim());
         formData.append('vendorEnteredName', enteredName);
         const button = $('submitCompletion');
+        let progress = $('vendorCompletionForm').querySelector('.completion-upload-progress');
+        if (!progress) {
+            progress = document.createElement('div');
+            progress.className = 'completion-upload-progress';
+            progress.setAttribute('role', 'progressbar');
+            progress.setAttribute('aria-label', 'Photo upload and completion progress');
+            progress.innerHTML = '<span></span><small>Preparing secure upload…</small>';
+            button.before(progress);
+        }
+        progress.hidden = false;
+        progress.setAttribute('aria-valuenow', '25');
+        progress.querySelector('span').style.width = '25%';
         button.disabled = true;
         button.textContent = 'Submitting completion…';
         try {
+            progress.setAttribute('aria-valuenow', '65');
+            progress.querySelector('span').style.width = '65%';
+            progress.querySelector('small').textContent = 'Uploading completion evidence…';
             const response = await fetch('/api/closeout/public/completion', {
                 method: 'POST',
                 credentials: 'omit',
@@ -92,6 +133,8 @@
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Unable to submit completion.');
+            progress.setAttribute('aria-valuenow', '100');
+            progress.querySelector('span').style.width = '100%';
             $('completionDocument').hidden = true;
             $('successCompletionReference').textContent = data.completionReference;
             $('successInvoiceNumber').textContent = data.invoiceNumber;
@@ -103,6 +146,8 @@
             error.hidden = false;
             button.disabled = false;
             button.textContent = 'Mark Job Complete';
+            progress.hidden = true;
+            progress.querySelector('span').style.width = '0';
         }
     });
     load();

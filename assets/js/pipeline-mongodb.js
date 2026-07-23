@@ -781,6 +781,11 @@ document.addEventListener('click', (event) => {
 function pipelineStagesContainerDragStart(e) {
     const card = e.target.closest('.record-card, .new-order-card');
     if (!card) return;
+    if (card.dataset.workflowManaged === 'true') {
+        e.preventDefault();
+        window.showToast?.('Advance this Order through Workflow Center.', 'warning');
+        return;
+    }
     
     if (e.target.closest('button, .record-actions, .icon-btn, input, textarea, select, a')) {
         e.preventDefault();
@@ -1208,15 +1213,17 @@ function renderRecords(stageId) {
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         const displayTitle = record.orderIdDisplay || record.customerName;
         const isPicked = pickedPipelineItem?.type === 'record' && pickedPipelineItem.id === record._id;
+        const workflowManaged = record.stageSource === 'workflow' || record.stageSource === 'payment';
+        const workflowLabel = String(record.workflowStatus || '').replaceAll('_', ' ');
         return `
-        <div class="record-card ${isPicked ? 'picked-up' : ''}" data-record-id="${record._id}">
+        <div class="record-card ${isPicked ? 'picked-up' : ''}" data-record-id="${record._id}" data-workflow-managed="${workflowManaged ? 'true' : 'false'}">
             <div class="record-header">
                 <div class="record-title">${displayTitle}</div>
                 <div class="record-actions">
                     ${isPicked ? `
                         <button class="icon-btn record-cancel-pickup-btn cancel-picked-btn" data-record-id="${record._id}" title="Cancel pickup"><i class="fas fa-times"></i></button>
                     ` : ''}
-                    ${pickedPipelineItem ? '' : `
+                    ${pickedPipelineItem || workflowManaged ? '' : `
                         <button class="icon-btn record-pickup-btn" data-record-id="${record._id}" title="Pick up card"><i class="fas fa-hand-paper"></i></button>
                     `}
                     <button class="icon-btn record-view-btn" data-record-id="${record._id}" title="View Details"><i class="fas fa-eye"></i></button>
@@ -1225,6 +1232,7 @@ function renderRecords(stageId) {
                 </div>
             </div>
             ${record.customerName ? `<div class="record-info"><i class="fas fa-user"></i> ${record.customerName}</div>` : ''}
+            ${workflowManaged && workflowLabel ? `<div class="record-info"><span class="status-badge status-active"><i class="fas fa-route" aria-hidden="true"></i> ${workflowLabel}</span></div>` : ''}
             ${record.email ? `<div class="record-info"><i class="fas fa-envelope"></i> ${record.email}</div>` : ''}
             ${record.phone ? `<div class="record-info"><i class="fas fa-phone"></i> ${record.phone}</div>` : ''}
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}

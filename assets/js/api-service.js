@@ -148,6 +148,9 @@ class APIService {
                     // Clear cache on mutations
                     this.clearCache();
                 }
+                if (data?.sync) {
+                    window.dispatchEvent(new CustomEvent('order:status-changed', { detail: data.sync }));
+                }
                 
                 return data;
             } catch (error) {
@@ -197,6 +200,9 @@ class APIService {
             throw error;
         }
         this.clearCache();
+        if (data?.sync) {
+            window.dispatchEvent(new CustomEvent('order:status-changed', { detail: data.sync }));
+        }
         return data;
     }
 
@@ -940,6 +946,11 @@ class APIService {
             throw new Error('Order ID is required to load the workflow journey');
         }
         return this.request(`/workflow-center/orders/${encodeURIComponent(orderId)}/journey`);
+    }
+
+    async reconcileWorkflowOrder(orderId) {
+        if (!String(orderId || '').trim()) throw new Error('Order ID is required to reconcile workflow status');
+        return this.request(`/workflow-center/reconcile/${encodeURIComponent(orderId)}`, { method: 'POST' });
     }
 
     // Stage 6 — Completion and Closeout

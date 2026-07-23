@@ -273,6 +273,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
+      autoIndex: false,
       serverSelectionTimeoutMS: 5000,
       maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10', 10),
       minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE || '0', 10)

@@ -50,8 +50,7 @@ test('public decision route precedes CRM authentication and atomically records d
   assert.match(route, /session\.withTransaction/);
   assert.match(route, /currentOutgoingQuoteId: quote\._id/);
   assert.match(route, /workflowStatus: 'quote_sent'/);
-  assert.match(route, /order\.workflowStatus = 'customer_approved'/);
-  assert.match(route, /order\.workflowStatus = 'quote_changes_requested'/);
+  assert.match(route, /synchronizeWorkflowOrder\(order, wantedDecision === 'approved' \? 'customer_approved' : 'quote_changes_requested'/);
   assert.match(route, /status: 409/);
   assert.doesNotMatch(route, /require\('\.\.\/models\/(Payment|Invoice|Schedule)'\)|Payment\.create|Invoice\.create/);
 });

@@ -34,7 +34,7 @@ test('public completion route is mounted before authenticated API boundary', () 
 
 test('completion route advances only eligible requests and never creates vendor invitations', () => {
   const route = fs.readFileSync(path.join(root, 'backend', 'routes', 'intakeCompletion.js'), 'utf8');
-  assert.match(route, /currentOrder\.workflowStatus = requiresReview \? 'request_received' : 'quote_collection'/);
+  assert.match(route, /synchronizeWorkflowOrder\(currentOrder, requiresReview \? 'request_received' : 'quote_collection'/);
   assert.match(route, /currentOrder\.pricingStatus = 'unquoted'/);
   assert.match(route, /currentOrder\.amount = null/);
   assert.doesNotMatch(route, /QuoteInvitation|IncomingQuote/);

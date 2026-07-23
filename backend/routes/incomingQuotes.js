@@ -16,6 +16,7 @@ const Vendor = require('../models/Vendor');
 const { buildPublicUrl } = require('../utils/publicAppUrl');
 const memCache = require('../utils/memoryCache');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
+const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 const {
   QUOTE_INVITE_TTL_MS,
   cleanText,
@@ -114,11 +115,10 @@ async function ensureQuoteStage(order, session) {
     throw error;
   }
   if (order.workflowStatus !== 'quote_collection') {
-    order.workflowStatus = 'quote_collection';
     order.pricingStatus = 'unquoted';
     order.amount = null;
-    await order.save({ session });
   }
+  return synchronizeWorkflowOrder(order, 'quote_collection', { session });
 }
 
 async function staffRecipients(session) {
@@ -447,9 +447,9 @@ router.post('/orders/:orderId/start', async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.orderId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    await ensureQuoteStage(order);
+    const sync = await ensureQuoteStage(order);
     invalidateQuoteCaches();
-    res.json(order);
+    res.json({ ...order.toObject(), sync });
   } catch (error) {
     next(error);
   }
@@ -496,7 +496,7 @@ router.post('/orders/:orderId/quotes', async (req, res, next) => {
     const [order, vendor] = await Promise.all([Order.findById(req.params.orderId), activeVendor(req.body.vendorId)]);
     if (!order) return res.status(404).json({ message: 'Order not found' });
     if (!vendor) return res.status(400).json({ message: 'Select an active approved vendor' });
-    await ensureQuoteStage(order);
+    const sync = await ensureQuoteStage(order);
     const existing = await IncomingQuote.findOne({ orderId: order._id, vendorId: vendor._id, status: { $nin: ['withdrawn', 'not_selected'] } });
     if (existing) return res.status(409).json({ message: 'This vendor already has an active quote chain for the Order' });
     const quote = await createDraft({ order, vendor, source: 'staff', req });
@@ -528,7 +528,7 @@ router.patch('/quotes/:quoteId', async (req, res, next) => {
     Object.assign(quote, payload, { total: payload.laborAmount + payload.materialsAmount });
     quote.history.push({ action: 'draft_updated', actorType: 'staff', actorId: actorId(req), actorEmail: req.user.email });
     await quote.save();
-    res.json(quote);
+    res.json({ ...quote.toObject(), sync });
   } catch (error) {
     next(error);
   }
@@ -554,7 +554,7 @@ router.post('/orders/:orderId/invitations', async (req, res, next) => {
     const [order, vendor] = await Promise.all([Order.findById(req.params.orderId), activeVendor(req.body.vendorId)]);
     if (!order) return res.status(404).json({ message: 'Order not found' });
     if (!vendor) return res.status(400).json({ message: 'Select an active approved vendor' });
-    await ensureQuoteStage(order);
+    const sync = await ensureQuoteStage(order);
     const email = cleanText(req.body.email || vendorPrimaryEmail(vendor), 320).toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ message: 'A valid vendor email is required' });
@@ -563,13 +563,13 @@ router.post('/orders/:orderId/invitations', async (req, res, next) => {
     const activeInvite = await QuoteInvitation.findOne({ orderId: order._id, vendorId: vendor._id, status: { $in: ['sent', 'delivery_failed', 'processing'] } }).sort({ createdAt: -1 }).select('+tokenHash');
     if (activeInvite) {
       const result = await sendAdditionalInvitation({ invitation: activeInvite, order, vendor, email, personalMessage, req });
-      return res.json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote: result.quote, reusedInvitation: true });
+      return res.json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote: result.quote, reusedInvitation: true, sync });
     }
     const existing = await IncomingQuote.findOne({ orderId: order._id, vendorId: vendor._id, status: { $nin: ['withdrawn', 'not_selected', 'superseded'] } });
     if (existing) return res.status(409).json({ message: 'This vendor already has an active quote; request a revision instead' });
     const quote = await createDraft({ order, vendor, source: 'vendor', req });
     const result = await queueInvitation({ order, vendor, quote, invitedBy: actorId(req), invitedByEmail: req.user.email, email, personalMessage });
-    res.status(201).json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote, reusedInvitation: false });
+    res.status(201).json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote, reusedInvitation: false, sync });
   } catch (error) {
     next(error);
   }
@@ -735,14 +735,13 @@ router.post('/quotes/:quoteId/select', async (req, res, next) => {
       order.vendorCost = quote.total;
       order.profit = 0;
       order.selectedIncomingQuoteId = quote._id;
-      order.workflowStatus = 'vendor_selected';
       order.pricingStatus = 'unquoted';
       order.amount = null;
-      await order.save({ session });
-      selected = quote;
+      const sync = await synchronizeWorkflowOrder(order, 'vendor_selected', { session });
+      selected = { quote, sync };
     });
     invalidateQuoteCaches();
-    res.json(selected);
+    res.json(selected.quote ? { ...selected.quote.toObject(), sync: selected.sync } : selected);
   } catch (error) {
     next(error);
   } finally {
