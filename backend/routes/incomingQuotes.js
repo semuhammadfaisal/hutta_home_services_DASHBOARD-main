@@ -164,6 +164,61 @@ async function queueInvitation({ order, vendor, quote, invitedBy, invitedByEmail
   return { invitation, inviteUrl: quoteUrl(token) };
 }
 
+async function sendAdditionalInvitation({ invitation, order, vendor, email, personalMessage, req }) {
+  if (invitation.status === 'processing') {
+    throw Object.assign(new Error('The vendor is currently submitting this quote'), { status: 409 });
+  }
+  const quote = await IncomingQuote.findOne({ _id: invitation.quoteId, status: 'draft' });
+  if (!quote) {
+    throw Object.assign(new Error('This vendor quote is no longer awaiting submission; request a revision instead'), { status: 409 });
+  }
+
+  const latestMessage = await EmailOutbox.findOne({
+    quoteInvitationId: invitation._id,
+    type: { $in: ['vendor_quote_invitation', 'vendor_quote_revision_request'] },
+    'payload.encryptedToken': { $exists: true }
+  }).sort({ createdAt: -1 }).lean();
+  let token = '';
+  try {
+    token = latestMessage?.payload?.encryptedToken ? decryptToken(latestMessage.payload.encryptedToken) : '';
+  } catch (_error) {
+    token = '';
+  }
+
+  const rotated = !token || hashToken(token) !== invitation.tokenHash;
+  if (rotated) token = generateToken();
+  const updated = await QuoteInvitation.findOneAndUpdate({
+    _id: invitation._id,
+    status: { $in: ['sent', 'delivery_failed'] }
+  }, {
+    $set: {
+      ...(rotated ? { tokenHash: hashToken(token) } : {}),
+      email,
+      personalMessage,
+      invitedBy: actorId(req),
+      invitedByEmail: req.user.email,
+      expiresAt: new Date(Date.now() + QUOTE_INVITE_TTL_MS),
+      status: 'sent',
+      sentAt: new Date(),
+      lastDeliveryError: null
+    },
+    $inc: { sendCount: 1 }
+  }, { new: true }).select('+tokenHash');
+  if (!updated) {
+    throw Object.assign(new Error('This invitation changed while it was being sent. Refresh and try again.'), { status: 409 });
+  }
+
+  if (rotated) {
+    await EmailOutbox.updateMany({
+      quoteInvitationId: updated._id,
+      type: { $in: ['vendor_quote_invitation', 'vendor_quote_revision_request'] },
+      status: { $in: ['pending', 'retry_scheduled', 'permanently_failed'] }
+    }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null } });
+  }
+  await EmailOutbox.create(invitationOutbox(updated, quote, order, vendor, token, quote.revisionNumber > 1 ? 'vendor_quote_revision_request' : 'vendor_quote_invitation'));
+  return { invitation: updated, quote, inviteUrl: quoteUrl(token) };
+}
+
 function fileSignatureValid(file) {
   const extension = String(file.originalname || '').split('.').pop().toLowerCase();
   const buffer = file.buffer || Buffer.alloc(0);
@@ -500,18 +555,21 @@ router.post('/orders/:orderId/invitations', async (req, res, next) => {
     if (!order) return res.status(404).json({ message: 'Order not found' });
     if (!vendor) return res.status(400).json({ message: 'Select an active approved vendor' });
     await ensureQuoteStage(order);
-    const activeInvite = await QuoteInvitation.findOne({ orderId: order._id, vendorId: vendor._id, status: { $in: ['sent', 'delivery_failed', 'processing'] }, expiresAt: { $gt: new Date() } });
-    if (activeInvite) return res.status(409).json({ message: 'This vendor already has an active quote invitation' });
+    const email = cleanText(req.body.email || vendorPrimaryEmail(vendor), 320).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: 'A valid vendor email is required' });
+    }
+    const personalMessage = cleanText(req.body.personalMessage, 2000);
+    const activeInvite = await QuoteInvitation.findOne({ orderId: order._id, vendorId: vendor._id, status: { $in: ['sent', 'delivery_failed', 'processing'] } }).sort({ createdAt: -1 }).select('+tokenHash');
+    if (activeInvite) {
+      const result = await sendAdditionalInvitation({ invitation: activeInvite, order, vendor, email, personalMessage, req });
+      return res.json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote: result.quote, reusedInvitation: true });
+    }
     const existing = await IncomingQuote.findOne({ orderId: order._id, vendorId: vendor._id, status: { $nin: ['withdrawn', 'not_selected', 'superseded'] } });
     if (existing) return res.status(409).json({ message: 'This vendor already has an active quote; request a revision instead' });
     const quote = await createDraft({ order, vendor, source: 'vendor', req });
-    const email = cleanText(req.body.email || vendorPrimaryEmail(vendor), 320).toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      await quote.deleteOne();
-      return res.status(400).json({ message: 'A valid vendor email is required' });
-    }
-    const result = await queueInvitation({ order, vendor, quote, invitedBy: actorId(req), invitedByEmail: req.user.email, email, personalMessage: cleanText(req.body.personalMessage, 2000) });
-    res.status(201).json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote });
+    const result = await queueInvitation({ order, vendor, quote, invitedBy: actorId(req), invitedByEmail: req.user.email, email, personalMessage });
+    res.status(201).json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote, reusedInvitation: false });
   } catch (error) {
     next(error);
   }

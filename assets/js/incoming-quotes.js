@@ -113,7 +113,7 @@
       }).join('');
     }
     const inviteList = $('incomingInvitationList');
-    inviteList.innerHTML = invitations.length ? invitations.map(invite => `<div class="incoming-invitation-row"><div><strong>${escapeHtml(invite.vendorId?.name || invite.email)}</strong><small>${escapeHtml(invite.email)} · expires ${date(invite.expiresAt)}</small></div><span class="incoming-state">${escapeHtml(invite.displayStatus || invite.status)}</span><div class="incoming-quote-actions">${['sent', 'delivery_failed', 'expired'].includes(invite.displayStatus || invite.status) ? `<button class="incoming-mini-btn" onclick="resendIncomingQuoteInvitation('${escapeHtml(invite._id)}')">Resend</button><button class="incoming-mini-btn" onclick="rotateIncomingQuoteInvitation('${escapeHtml(invite._id)}')">Rotate Link</button>` : ''}${!['submitted', 'revoked'].includes(invite.status) ? `<button class="incoming-mini-btn" onclick="revokeIncomingQuoteInvitation('${escapeHtml(invite._id)}')">Revoke</button>` : ''}</div></div>`).join('') : '<p>No vendor invitations for this Order.</p>';
+    inviteList.innerHTML = invitations.length ? invitations.map(invite => `<div class="incoming-invitation-row"><div><strong>${escapeHtml(invite.vendorId?.name || invite.email)}</strong><small>${escapeHtml(invite.email)} · sent ${Number(invite.sendCount || 1)} time${Number(invite.sendCount || 1) === 1 ? '' : 's'} · expires ${date(invite.expiresAt)}</small></div><span class="incoming-state">${escapeHtml(invite.displayStatus || invite.status)}</span><div class="incoming-quote-actions">${['sent', 'delivery_failed', 'expired'].includes(invite.displayStatus || invite.status) ? `<button class="incoming-mini-btn" onclick="resendIncomingQuoteInvitation('${escapeHtml(invite._id)}')">Resend</button><button class="incoming-mini-btn" onclick="rotateIncomingQuoteInvitation('${escapeHtml(invite._id)}')">Rotate Link</button>` : ''}${!['submitted', 'revoked'].includes(invite.status) ? `<button class="incoming-mini-btn" onclick="revokeIncomingQuoteInvitation('${escapeHtml(invite._id)}')">Revoke</button>` : ''}</div></div>`).join('') : '<p>No vendor invitations for this Order.</p>';
     const deliveryList = $('incomingEmailDeliveryList');
     deliveryList.innerHTML = emailMessages.length ? emailMessages.map(message => `<div class="incoming-invitation-row"><div><strong>${escapeHtml(message.type.replaceAll('_', ' '))}</strong><small>${escapeHtml((message.recipients || []).join(', '))} · ${Number(message.attempts || 0)} attempt${Number(message.attempts || 0) === 1 ? '' : 's'}</small></div><span class="incoming-state">${escapeHtml(message.status.replaceAll('_', ' '))}</span><div>${message.status === 'permanently_failed' ? `<button class="incoming-mini-btn" onclick="retryIncomingQuoteEmail('${escapeHtml(message._id)}')">Retry</button>` : ''}</div></div>`).join('') : '<p>No quote emails have been queued for this Order.</p>';
   }
@@ -235,10 +235,10 @@
     const submitButton = event.submitter;
     if (submitButton) submitButton.disabled = true;
     try {
-      await window.APIService.sendIncomingQuoteInvitation(currentOrderId, { vendorId: $('incomingInviteVendor').value, email: $('incomingInviteEmail').value.trim(), personalMessage: $('incomingInviteMessage').value.trim() });
+      const result = await window.APIService.sendIncomingQuoteInvitation(currentOrderId, { vendorId: $('incomingInviteVendor').value, email: $('incomingInviteEmail').value.trim(), personalMessage: $('incomingInviteMessage').value.trim() });
       event.currentTarget.reset();
       $('incomingInviteVendor').innerHTML = vendorOptions();
-      toast('Secure vendor quote invitation queued.');
+      toast(result?.reusedInvitation ? 'Invitation sent again to this vendor using the active quote request.' : 'Secure vendor quote invitation queued.');
       await refreshWorkspace();
     } catch (error) { toast(error.message, 'error'); }
     finally { if (submitButton?.isConnected) submitButton.disabled = false; }

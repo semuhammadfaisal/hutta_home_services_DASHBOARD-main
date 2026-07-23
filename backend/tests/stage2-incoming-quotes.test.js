@@ -67,3 +67,14 @@ test('public quote page and route withhold customer contact and internal selecti
   assert.match(html, /id="incoming-quotes"/);
   assert.match(html, />Incoming Quotes</);
 });
+
+test('an active vendor invitation can be sent again without creating a duplicate quote chain', () => {
+  const route = fs.readFileSync(path.join(__dirname, '..', 'routes', 'incomingQuotes.js'), 'utf8');
+  const ui = fs.readFileSync(path.join(__dirname, '..', '..', 'assets', 'js', 'incoming-quotes.js'), 'utf8');
+  assert.match(route, /sendAdditionalInvitation/);
+  assert.match(route, /reusedInvitation: true/);
+  assert.match(route, /\$inc: \{ sendCount: 1 \}/);
+  assert.doesNotMatch(route, /This vendor already has an active quote invitation/);
+  assert.match(ui, /Invitation sent again to this vendor using the active quote request/);
+  assert.match(ui, /invite\.sendCount/);
+});
