@@ -67,7 +67,7 @@
             if (!response.ok) throw new Error(data.message || 'Unable to load service details.');
             $('satisfactionReference').textContent = data.completionReference;
             $('satisfactionCompletedAt').textContent = data.completedAt ? `Completed ${date(data.completedAt)}` : '';
-            $('satisfactionGreeting').textContent = `How did we do, ${data.customerName || 'customer'}?`;
+            $('satisfactionGreeting').textContent = 'Was everything completed to your satisfaction?';
             $('satisfactionService').textContent = data.service || 'your service';
             $('satisfactionLoading').hidden = true;
             $('satisfactionDocument').hidden = false;
