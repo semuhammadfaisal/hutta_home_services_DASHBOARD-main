@@ -43,9 +43,9 @@
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20260725-sent-summary">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
     <link rel="stylesheet" href="../assets/css/scheduling.css?v=20260725-scheduling-workspace-v2">
-    <link rel="stylesheet" href="../assets/css/closeout.css">
     <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-workflow-interactions">
     <link rel="stylesheet" href="../assets/css/workflow-reference.css?v=20260725-quote-compliance">
+    <link rel="stylesheet" href="../assets/css/closeout.css?v=20260725-closeout-workspace">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -966,32 +966,51 @@
                 <div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading completion records&hellip;</p></div>
             </div>
             <section id="closeoutWorkspace" class="closeout-workspace" hidden>
+                <button type="button" class="closeout-back-link" onclick="closeCloseoutWorkspace()"><i class="fas fa-arrow-left"></i> Back to Completion &amp; Closeout</button>
                 <div class="closeout-workspace-head">
-                    <div><h2 id="closeoutWorkspaceTitle">Completion workspace</h2><p id="closeoutWorkspaceSummary"></p></div>
-                    <button class="btn-secondary" type="button" onclick="closeCloseoutWorkspace()">Close</button>
+                    <span class="closeout-workspace-icon"><i class="fas fa-clipboard-check"></i></span>
+                    <div><small>Completion and closeout workspace</small><h2 id="closeoutWorkspaceTitle">Completion workspace</h2><p id="closeoutWorkspaceSummary"></p></div>
+                    <span class="closeout-stage-label">Stage 6</span>
                 </div>
                 <div id="closeoutWorkspaceAlert" class="closeout-alert" hidden></div>
                 <div class="closeout-grid">
                     <div class="closeout-main">
-                        <section class="closeout-panel">
-                            <div class="closeout-panel-head"><div><h3>Vendor completion link</h3><p id="closeoutLinkStatus">No link has been sent.</p></div><div id="closeoutLinkActions" class="closeout-actions"></div></div>
+                        <section class="closeout-panel closeout-link-panel">
+                            <div class="closeout-panel-head">
+                                <div class="closeout-panel-title"><span><i class="fas fa-link"></i></span><div><small>Vendor handoff</small><h3>Secure completion link</h3><p id="closeoutLinkStatus">No link has been sent.</p></div></div>
+                                <div id="closeoutLinkActions" class="closeout-actions"></div>
+                            </div>
                         </section>
                         <form id="closeoutStaffForm" class="closeout-panel closeout-form">
-                            <div><h3>Mark complete on behalf of vendor</h3><p>Upload the required evidence or record an authorized photo override.</p></div>
-                            <label>Before photos<input id="closeoutBeforePhotos" name="beforePhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPG, PNG, or WebP; maximum 10.</small></label>
-                            <label>After photos<input id="closeoutAfterPhotos" name="afterPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPG, PNG, or WebP; maximum 10.</small></label>
-                            <label class="full">Completion notes<textarea id="closeoutCompletionNotes" name="completionNotes" rows="4" maxlength="5000"></textarea></label>
-                            <label class="full closeout-check"><input id="closeoutPhotoOverride" name="photoOverride" type="checkbox" value="true"><span>Authorize completion without both photo categories</span></label>
-                            <label id="closeoutOverrideReasonLabel" class="full" hidden>Override reason<textarea id="closeoutOverrideReason" name="photoOverrideReason" rows="3" minlength="10" maxlength="2000"></textarea></label>
-                            <div class="full"><button id="closeoutCompleteButton" class="btn-primary" type="submit">Mark Job Complete</button></div>
+                            <div class="closeout-form-heading full"><span><i class="fas fa-user-check"></i></span><div><small>Staff completion</small><h3>Mark complete on behalf of vendor</h3><p>Submit the same required evidence and completion record as the vendor.</p></div></div>
+                            <div class="closeout-evidence-grid full">
+                                <label class="closeout-upload-card">
+                                    <span class="closeout-upload-heading"><i class="fas fa-camera"></i><strong>Before photos</strong><em>Required</em></span>
+                                    <span>Document the job area before the completed work.</span>
+                                    <input id="closeoutBeforePhotos" name="beforePhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                                    <small>JPG, PNG, or WebP &middot; Maximum 10</small>
+                                </label>
+                                <label class="closeout-upload-card after">
+                                    <span class="closeout-upload-heading"><i class="fas fa-camera-retro"></i><strong>After photos</strong><em>Required</em></span>
+                                    <span>Document the finished result clearly.</span>
+                                    <input id="closeoutAfterPhotos" name="afterPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                                    <small>JPG, PNG, or WebP &middot; Maximum 10</small>
+                                </label>
+                            </div>
+                            <label class="full closeout-notes-field"><span>Completion notes <small>Optional</small></span><textarea id="closeoutCompletionNotes" name="completionNotes" rows="4" maxlength="5000" placeholder="Completed work, handoff details, or anything the customer should know"></textarea></label>
+                            <div class="full closeout-override-block">
+                                <label class="closeout-check"><input id="closeoutPhotoOverride" name="photoOverride" type="checkbox" value="true"><span><strong>Staff photo override</strong>Authorize completion without both photo categories.</span></label>
+                                <label id="closeoutOverrideReasonLabel" class="closeout-override-reason" hidden><span>Override reason <em>Required</em></span><textarea id="closeoutOverrideReason" name="photoOverrideReason" rows="3" minlength="10" maxlength="2000" placeholder="Explain why the required evidence is unavailable"></textarea></label>
+                            </div>
+                            <div class="full closeout-submit-bar"><div><strong>Completion creates accounting records</strong><small>The invoice and pending Payment are generated immediately.</small></div><button id="closeoutCompleteButton" class="btn-primary" type="submit"><i class="fas fa-check"></i> Mark Job Complete</button></div>
                         </form>
-                        <section id="closeoutPhotosPanel" class="closeout-panel" hidden><h3>Before and after photos</h3><div id="closeoutPhotos" class="closeout-photo-groups"></div></section>
-                        <section id="closeoutSatisfactionPanel" class="closeout-panel" hidden><h3>Customer satisfaction</h3><div id="closeoutSatisfaction"></div></section>
+                        <section id="closeoutPhotosPanel" class="closeout-panel closeout-evidence-panel" hidden><div class="closeout-panel-title"><span><i class="fas fa-images"></i></span><div><small>Completion evidence</small><h3>Before and after photos</h3></div></div><div id="closeoutPhotos" class="closeout-photo-groups"></div></section>
+                        <section id="closeoutSatisfactionPanel" class="closeout-panel closeout-feedback-panel" hidden><div class="closeout-panel-title"><span><i class="fas fa-comments"></i></span><div><small>Customer response</small><h3>Satisfaction and issue timeline</h3></div></div><div id="closeoutSatisfaction"></div></section>
                     </div>
                     <aside class="closeout-aside">
-                        <section class="closeout-panel"><h3>Job summary</h3><div id="closeoutJobSummary"></div></section>
-                        <section id="closeoutInvoicePanel" class="closeout-panel" hidden><h3>Invoice and Payment</h3><div id="closeoutInvoice"></div></section>
-                        <section class="closeout-panel"><h3>Email delivery</h3><div id="closeoutEmails"></div></section>
+                        <section class="closeout-panel closeout-summary-panel"><div class="closeout-panel-title"><span><i class="fas fa-briefcase"></i></span><div><small>Order context</small><h3>Job summary</h3></div></div><div id="closeoutJobSummary"></div></section>
+                        <section id="closeoutInvoicePanel" class="closeout-panel closeout-invoice-panel" hidden><div class="closeout-panel-title"><span><i class="fas fa-file-invoice-dollar"></i></span><div><small>Accounting</small><h3>Invoice and Payment</h3></div></div><div id="closeoutInvoice"></div></section>
+                        <section class="closeout-panel closeout-email-panel"><div class="closeout-panel-title"><span><i class="fas fa-envelope"></i></span><div><small>Notifications</small><h3>Email delivery</h3></div></div><div id="closeoutEmails"></div></section>
                     </aside>
                 </div>
             </section>
@@ -4479,7 +4498,7 @@
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
-    <script src="../assets/js/closeout.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/closeout.js?v=20260725-closeout-workspace"></script>
     <script src="../assets/js/workflow-hub.js?v=20260725-quote-workspace"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>

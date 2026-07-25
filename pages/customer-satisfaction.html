@@ -4,52 +4,104 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex,nofollow,noarchive">
+    <meta name="referrer" content="no-referrer">
     <title>Service Satisfaction | Hutta Home Services</title>
     <link rel="icon" href="../favicon.ico">
     <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix">
-    <link rel="stylesheet" href="../assets/css/vendor-completion.css?v=20260723-workflow-v2">
     <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
+    <link rel="stylesheet" href="../assets/css/vendor-completion.css?v=20260725-customer-satisfaction-redesign">
 </head>
-<body>
-    <header class="secure-header">
+<body class="satisfaction-page">
+    <header class="secure-header satisfaction-public-header">
         <img src="../assets/images/logo.png" alt="Hutta Home Services">
         <span class="secure-session">Secure customer feedback</span>
     </header>
-    <main class="completion-shell satisfaction-shell">
-        <section id="satisfactionLoading" class="completion-state"><span class="completion-spinner"></span><h1>Loading service details</h1></section>
-        <section id="satisfactionError" class="completion-state completion-error" hidden><h1>Feedback link unavailable</h1><p id="satisfactionErrorMessage"></p></section>
-        <article id="satisfactionDocument" class="completion-document satisfaction-document" hidden>
-            <div class="completion-title">
-                <div><span>Completion recorded</span><h1 id="satisfactionReference"></h1><p id="satisfactionCompletedAt"></p></div>
-                <strong>Feedback requested</strong>
-            </div>
-            <section class="completion-detail">
-                <h2 id="satisfactionGreeting">How did we do?</h2>
-                <p>Your service, <strong id="satisfactionService"></strong>, has been marked complete. Please let us know whether everything is satisfactory.</p>
-            </section>
-            <section id="satisfactionPending" class="satisfaction-actions">
-                <button id="satisfiedButton" class="completion-primary" type="button">I’m Satisfied</button>
-                <button id="showIssueButton" class="completion-secondary" type="button">Report an Issue</button>
-                <div id="issuePanel" hidden>
-                    <label>
-                        <span>Tell us what needs attention <em>Required</em></span>
-                        <textarea id="issueMessage" minlength="10" maxlength="3000" rows="6" placeholder="Please provide enough detail for our team to help."></textarea>
-                    </label>
-                    <div class="satisfaction-button-row">
-                        <button id="submitIssueButton" class="completion-primary" type="button">Submit Issue</button>
-                        <button id="cancelIssueButton" class="completion-secondary" type="button">Cancel</button>
+
+    <main class="completion-shell satisfaction-shell satisfaction-public-shell">
+        <section id="satisfactionLoading" class="completion-state satisfaction-state" aria-live="polite">
+            <span class="completion-spinner" aria-hidden="true"></span>
+            <h1>Loading service details</h1>
+            <p>Retrieving your secure completion record.</p>
+        </section>
+
+        <section id="satisfactionError" class="completion-state completion-error satisfaction-state" hidden role="alert">
+            <span class="satisfaction-error-icon" aria-hidden="true">!</span>
+            <h1>Feedback link unavailable</h1>
+            <p id="satisfactionErrorMessage"></p>
+            <small>Please contact Hutta Home Services if you need assistance.</small>
+        </section>
+
+        <article id="satisfactionDocument" class="completion-document satisfaction-document satisfaction-public-document" hidden>
+            <header class="satisfaction-hero">
+                <div class="satisfaction-hero-identity">
+                    <span class="satisfaction-hero-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="10"/></svg></span>
+                    <div>
+                        <span class="satisfaction-eyebrow">Service completed</span>
+                        <h1 id="satisfactionReference"></h1>
+                        <p id="satisfactionCompletedAt"></p>
                     </div>
                 </div>
-                <p id="satisfactionFormError" class="completion-inline-error" role="alert" hidden></p>
+                <strong class="satisfaction-status">Feedback requested</strong>
+            </header>
+
+            <section class="satisfaction-service-card">
+                <span class="satisfaction-service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5 5L4 17v3h3l5.7-5.7a4 4 0 0 0 5-5l-2.4 2.4-3-3 2.4-2.4Z"/></svg></span>
+                <div><span>Completed service</span><strong id="satisfactionService"></strong><p>Your feedback goes directly to the Hutta Home Services team.</p></div>
             </section>
-            <section id="satisfactionComplete" class="completion-success satisfaction-result" hidden>
-                <span class="completion-success-icon" aria-hidden="true">✓</span>
+
+            <section id="satisfactionPending" class="satisfaction-decision">
+                <div class="satisfaction-question">
+                    <span>One quick question</span>
+                    <h2 id="satisfactionGreeting">How did we do?</h2>
+                    <p>Let us know whether the completed work meets your expectations.</p>
+                </div>
+
+                <div id="satisfactionChoices" class="satisfaction-choice-grid">
+                    <button id="satisfiedButton" class="satisfaction-choice satisfaction-choice-positive" type="button">
+                        <span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="10"/></svg></span>
+                        <span class="choice-copy"><strong>I’m Satisfied</strong><small>The completed service meets my expectations.</small></span>
+                        <svg class="choice-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+                    </button>
+
+                    <button id="showIssueButton" class="satisfaction-choice satisfaction-choice-issue" type="button" aria-expanded="false" aria-controls="issuePanel">
+                        <span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg></span>
+                        <span class="choice-copy"><strong>Report an Issue</strong><small>Something needs attention or follow-up.</small></span>
+                        <svg class="choice-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+                    </button>
+                </div>
+
+                <div id="issuePanel" class="satisfaction-issue-panel" hidden>
+                    <button id="cancelIssueButton" class="issue-back" type="button"><span aria-hidden="true">←</span> Back to choices</button>
+                    <div class="issue-heading">
+                        <span class="issue-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg></span>
+                        <div><span>Tell us what happened</span><h3>What needs attention?</h3><p>Provide enough detail for our team to understand and follow up.</p></div>
+                    </div>
+                    <label for="issueMessage">
+                        <span>Issue details <em>Required</em></span>
+                        <textarea id="issueMessage" minlength="10" maxlength="3000" rows="6" placeholder="Describe the concern, unfinished work, or follow-up you need"></textarea>
+                        <small>Minimum 10 characters</small>
+                    </label>
+                    <button id="submitIssueButton" class="satisfaction-submit-issue" type="button">Submit Issue <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+                </div>
+
+                <p id="satisfactionFormError" class="completion-inline-error satisfaction-form-error" role="alert" hidden></p>
+                <div class="satisfaction-trust">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 3 8.2 7 10 4-1.8 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg>
+                    <span>Your response is securely recorded and can only be submitted once.</span>
+                </div>
+            </section>
+
+            <section id="satisfactionComplete" class="satisfaction-result" hidden aria-live="polite">
+                <span id="satisfactionResultIcon" class="satisfaction-result-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
+                <span class="satisfaction-result-eyebrow">Response recorded</span>
                 <h2 id="satisfactionResultTitle"></h2>
                 <p id="satisfactionResultMessage"></p>
-                <p id="satisfactionDecisionAt"></p>
+                <time id="satisfactionDecisionAt"></time>
             </section>
+
+            <footer class="satisfaction-footer"><span>Hutta Home Services</span><span>Thank you for helping us improve.</span></footer>
         </article>
     </main>
-    <script src="../assets/js/customer-satisfaction.js"></script>
+    <script src="../assets/js/customer-satisfaction.js?v=20260725-customer-satisfaction-redesign"></script>
 </body>
 </html>

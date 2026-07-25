@@ -66,6 +66,15 @@
         return order.completion?.tokenSentAt ? 'Awaiting vendor completion' : 'Ready for completion';
     }
 
+    function statePresentation(order) {
+        if (order.workflowStatus === 'closeout_issue_reported') return { tone: 'error', icon: 'fa-exclamation-triangle', action: 'Resolve Issue' };
+        if (order.satisfactionStatus === 'pending') return { tone: 'warning', icon: 'fa-comment-dots', action: 'Review Feedback' };
+        if (['satisfied', 'issue_resolved'].includes(order.satisfactionStatus)) return { tone: 'success', icon: 'fa-check-circle', action: 'View Closeout' };
+        if (order.workflowStatus === 'completed') return { tone: 'success', icon: 'fa-check-circle', action: 'View Closeout' };
+        if (order.completion?.tokenSentAt) return { tone: 'warning', icon: 'fa-clock', action: 'Manage Completion' };
+        return { tone: 'active', icon: 'fa-clipboard-check', action: 'Complete Closeout' };
+    }
+
     function renderOrders() {
         const ready = orders.filter(order => order.workflowStatus === 'scheduled').length;
         const feedback = orders.filter(order => order.satisfactionStatus === 'pending').length;
@@ -80,23 +89,30 @@
             list.innerHTML = '<div class="workflow-empty"><i class="fas fa-clipboard-check"></i><p>No scheduled or completed Orders are available for closeout.</p></div>';
             return;
         }
-        list.innerHTML = orders.map(order => `
-            <article class="closeout-order-card">
-                <div>
-                    <span class="closeout-reference">${esc(order.requestReference || order.orderId)}</span>
-                    <h3>${esc(order.customer?.name || 'Customer')}</h3>
-                    <p>${esc(order.service || 'Service')}</p>
+        list.innerHTML = orders.map(order => {
+            const presentation = statePresentation(order);
+            return `
+            <article class="closeout-order-card ${presentation.tone}">
+                <div class="closeout-card-identity">
+                    <span class="closeout-card-icon"><i class="fas ${presentation.icon}"></i></span>
+                    <div>
+                        <span class="closeout-reference">${esc(order.requestReference || order.orderId)}</span>
+                        <h3>${esc(order.customer?.name || 'Customer')}</h3>
+                        <p>${esc(order.service || 'Service')}</p>
+                    </div>
                 </div>
                 <div class="closeout-card-state">
-                    <span class="workflow-chip ${order.workflowStatus === 'closeout_issue_reported' ? 'error' : order.workflowStatus === 'scheduled' ? 'warning' : 'success'}">${esc(completionState(order))}</span>
+                    <small>Current closeout state</small>
+                    <span class="workflow-chip ${presentation.tone === 'active' ? '' : presentation.tone}">${esc(completionState(order))}</span>
                     <small>${order.completion?.completionReference ? esc(order.completion.completionReference) : 'Completion not yet recorded'}</small>
                 </div>
                 <div class="closeout-card-meta">
-                    <span><i class="fas fa-user-hard-hat"></i> ${esc(order.vendor?.name || 'Vendor')}</span>
-                    <time datetime="${esc(order.updatedAt || '')}"><i class="fas fa-clock"></i> ${date(order.updatedAt)}</time>
+                    <span><small>Vendor</small><strong>${esc(order.vendor?.name || 'Vendor')}</strong></span>
+                    <time datetime="${esc(order.updatedAt || '')}"><small>Last updated</small><strong>${date(order.updatedAt)}</strong></time>
                 </div>
-                <button class="btn-primary" type="button" data-closeout-open="${esc(order._id)}">${order.workflowStatus === 'scheduled' ? 'Complete Closeout' : 'View Closeout'}</button>
-            </article>`).join('');
+                <button class="btn-primary closeout-card-action" type="button" data-closeout-open="${esc(order._id)}">${presentation.action} <i class="fas fa-arrow-right"></i></button>
+            </article>`;
+        }).join('');
         list.querySelectorAll('[data-closeout-open]').forEach(button => {
             button.onclick = () => openCloseoutWorkspace(button.dataset.closeoutOpen);
         });
@@ -136,7 +152,7 @@
     function renderEmails(messages) {
         const target = $('closeoutEmails');
         if (!messages.length) {
-            target.innerHTML = '<p>No closeout emails have been queued.</p>';
+            target.innerHTML = '<div class="closeout-empty-mini"><i class="far fa-envelope"></i><strong>No email activity yet</strong><p>Closeout messages will appear here after completion.</p></div>';
             return;
         }
         target.innerHTML = messages.map(message => `
@@ -162,6 +178,7 @@
         const { order, completion, invoice, decision } = data;
         $('closeoutWorkspaceTitle').textContent = `${order.requestReference || order.orderId} · ${order.customer?.name || 'Customer'}`;
         $('closeoutWorkspaceSummary').textContent = `${order.service || 'Service'} · ${completionState(order)}`;
+        $('closeoutWorkspace').dataset.closeoutState = order.workflowStatus || '';
         $('closeoutLinkStatus').textContent = completion?.tokenRevokedAt
             ? `Secure link revoked ${date(completion.tokenRevokedAt)}`
             : completion?.tokenSentAt

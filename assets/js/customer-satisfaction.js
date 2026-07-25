@@ -9,6 +9,10 @@
         $('satisfactionPending').hidden = true;
         $('satisfactionComplete').hidden = false;
         const issue = decision === 'issue_reported';
+        $('satisfactionComplete').classList.toggle('is-issue', issue);
+        $('satisfactionResultIcon').innerHTML = issue
+            ? '<svg viewBox="0 0 24 24"><path d="M12 7v6M12 17h.01"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>';
         $('satisfactionResultTitle').textContent = issue ? 'Your issue was reported' : 'Thank you for your feedback';
         $('satisfactionResultMessage').textContent = issue
             ? 'Our team has been notified and will review the details you provided.'
@@ -25,7 +29,10 @@
             error.hidden = false;
             return;
         }
+        const activeButton = action === 'satisfied' ? $('satisfiedButton') : $('submitIssueButton');
+        const originalLabel = activeButton.innerHTML;
         document.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        activeButton.textContent = 'Recording response…';
         try {
             const response = await fetch('/api/closeout/public/satisfaction', {
                 method: 'POST',
@@ -44,6 +51,7 @@
             error.textContent = requestError.message;
             error.hidden = false;
             document.querySelectorAll('button').forEach(button => { button.disabled = false; });
+            activeButton.innerHTML = originalLabel;
         }
     }
 
@@ -72,8 +80,19 @@
     }
 
     $('satisfiedButton').onclick = () => submit('satisfied');
-    $('showIssueButton').onclick = () => { $('issuePanel').hidden = false; $('issueMessage').focus(); };
-    $('cancelIssueButton').onclick = () => { $('issuePanel').hidden = true; $('issueMessage').value = ''; };
+    $('showIssueButton').onclick = () => {
+        $('satisfactionChoices').hidden = true;
+        $('issuePanel').hidden = false;
+        $('showIssueButton').setAttribute('aria-expanded', 'true');
+        $('issueMessage').focus();
+    };
+    $('cancelIssueButton').onclick = () => {
+        $('issuePanel').hidden = true;
+        $('satisfactionChoices').hidden = false;
+        $('showIssueButton').setAttribute('aria-expanded', 'false');
+        $('issueMessage').value = '';
+        $('showIssueButton').focus();
+    };
     $('submitIssueButton').onclick = () => submit('report_issue');
     load();
 })();
