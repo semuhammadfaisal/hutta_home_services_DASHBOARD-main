@@ -46,6 +46,10 @@
                 fileSummary(input, output, label);
             };
         });
+        const selectionIsValid = files.length > 0 && files.length <= 10;
+        input.closest('.completion-evidence-card')?.classList.toggle('has-files', selectionIsValid);
+        const step = input.id === 'beforePhotos' ? $('beforeStep') : $('afterStep');
+        step?.classList.toggle('is-complete', selectionIsValid);
     }
 
     async function load() {
@@ -78,6 +82,12 @@
 
     $('beforePhotos').addEventListener('change', event => fileSummary(event.currentTarget, $('beforePhotoCount'), 'Before photo'));
     $('afterPhotos').addEventListener('change', event => fileSummary(event.currentTarget, $('afterPhotoCount'), 'After photo'));
+    const refreshConfirmationStep = () => {
+        const ready = $('vendorEnteredName').value.trim().length >= 2 && $('completionConfirm').checked;
+        $('detailsStep')?.classList.toggle('is-complete', ready);
+    };
+    $('vendorEnteredName').addEventListener('input', refreshConfirmationStep);
+    $('completionConfirm').addEventListener('change', refreshConfirmationStep);
     $('vendorCompletionForm').addEventListener('submit', async event => {
         event.preventDefault();
         const before = [...$('beforePhotos').files];

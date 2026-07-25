@@ -4,93 +4,185 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex,nofollow,noarchive">
+    <meta name="referrer" content="no-referrer">
     <title>Complete Job | Hutta Home Services</title>
     <link rel="icon" href="../favicon.ico">
     <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix">
-    <link rel="stylesheet" href="../assets/css/vendor-completion.css?v=20260723-workflow-v2">
     <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
+    <link rel="stylesheet" href="../assets/css/vendor-completion.css?v=20260725-vendor-completion-redesign">
 </head>
-<body>
-    <header class="secure-header">
+<body class="vendor-completion-page">
+    <header class="secure-header completion-public-header">
         <img src="../assets/images/logo.png" alt="Hutta Home Services">
         <span class="secure-session">Secure vendor completion</span>
     </header>
-    <main class="completion-shell">
-        <section id="completionLoading" class="completion-state">
+
+    <main class="completion-shell vendor-completion-shell">
+        <section id="completionLoading" class="completion-state completion-public-state" aria-live="polite">
             <span class="completion-spinner" aria-hidden="true"></span>
             <h1>Loading work order</h1>
             <p>Please wait while we verify your secure completion link.</p>
         </section>
-        <section id="completionError" class="completion-state completion-error" hidden>
+
+        <section id="completionError" class="completion-state completion-error completion-public-state" hidden role="alert">
+            <span class="completion-error-icon" aria-hidden="true">!</span>
             <h1>Completion link unavailable</h1>
             <p id="completionErrorMessage"></p>
+            <small>Please contact Hutta Home Services if you need a new completion link.</small>
         </section>
-        <article id="completionDocument" class="completion-document" hidden>
-            <div class="completion-title">
-                <div>
-                    <span>Job completion</span>
-                    <h1 id="completionReference"></h1>
-                    <p id="workOrderReference"></p>
+
+        <article id="completionDocument" class="completion-document vendor-completion-document" hidden>
+            <header class="completion-hero">
+                <div class="completion-hero-identity">
+                    <span class="completion-hero-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M9 11.5 11 14l4-5M7 3h10v3H7zM6 5H5a2 2 0 0 0-2 2v13h18V7a2 2 0 0 0-2-2h-1"/></svg>
+                    </span>
+                    <div>
+                        <span class="completion-eyebrow">Job completion</span>
+                        <h1 id="completionReference"></h1>
+                        <p id="workOrderReference"></p>
+                    </div>
                 </div>
-                <strong>Ready for completion</strong>
-            </div>
-            <div class="completion-summary">
-                <section>
-                    <span>Customer and location</span>
-                    <strong id="completionCustomer"></strong>
-                    <p id="completionAddress"></p>
-                </section>
-                <section>
-                    <span>Confirmed Arizona schedule</span>
-                    <strong id="completionSchedule"></strong>
-                    <p>America/Phoenix</p>
-                </section>
-            </div>
-            <section class="completion-detail">
-                <h2>Approved scope</h2>
-                <p id="completionService"></p>
-                <p id="completionScope" class="preserve"></p>
-            </section>
-            <section class="completion-detail">
-                <h2>Access instructions</h2>
-                <p id="completionAccess" class="preserve"></p>
-            </section>
-            <form id="vendorCompletionForm" class="completion-form">
-                <div class="completion-form-heading">
-                    <span>Required evidence</span>
-                    <h2>Submit completion details</h2>
-                    <p>Add at least one before photo and one after photo. You may add up to 10 in each group.</p>
+                <strong class="completion-status">Ready for completion</strong>
+            </header>
+
+            <section class="completion-job-summary" aria-label="Work order summary">
+                <div class="completion-summary-card">
+                    <span class="summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 21s7-5.1 7-12A7 7 0 1 0 5 9c0 6.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg>
+                    </span>
+                    <div>
+                        <span>Customer and location</span>
+                        <strong id="completionCustomer"></strong>
+                        <p id="completionAddress"></p>
+                    </div>
                 </div>
-                <label class="completion-upload">
-                    <span>Before photos <em>Required</em></span>
-                    <input id="beforePhotos" name="beforePhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
-                    <small>JPG, PNG, or WebP. Maximum 10 photos.</small>
-                    <span id="beforePhotoCount" class="completion-file-count">No photos selected</span>
-                </label>
-                <label class="completion-upload">
-                    <span>After photos <em>Required</em></span>
-                    <input id="afterPhotos" name="afterPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
-                    <small>JPG, PNG, or WebP. Maximum 10 photos.</small>
-                    <span id="afterPhotoCount" class="completion-file-count">No photos selected</span>
-                </label>
-                <label>
-                    <span>Completion notes</span>
-                    <textarea id="completionNotes" name="completionNotes" rows="5" maxlength="5000" placeholder="Describe the completed work and any important handoff details."></textarea>
-                </label>
-                <label>
-                    <span>Vendor full name <em>Required</em></span>
-                    <input id="vendorEnteredName" name="vendorEnteredName" maxlength="160" autocomplete="name" required>
-                </label>
-                <label class="completion-confirm">
-                    <input id="completionConfirm" type="checkbox" required>
-                    <span>I confirm that the work described above is complete and the uploaded photos accurately represent the job.</span>
-                </label>
-                <p id="completionFormError" class="completion-inline-error" role="alert" hidden></p>
-                <button id="submitCompletion" class="completion-primary" type="submit">Mark Job Complete</button>
-            </form>
+                <div class="completion-summary-card">
+                    <span class="summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+                    </span>
+                    <div>
+                        <span>Confirmed schedule</span>
+                        <strong id="completionSchedule"></strong>
+                        <p>America/Phoenix · Arizona time</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="completion-layout">
+                <aside class="completion-context">
+                    <section class="completion-context-card">
+                        <div class="context-heading">
+                            <span class="context-number">1</span>
+                            <div><span>Review the work</span><h2>Approved scope</h2></div>
+                        </div>
+                        <strong id="completionService" class="completion-service"></strong>
+                        <p id="completionScope" class="completion-copy preserve"></p>
+                    </section>
+
+                    <section class="completion-context-card">
+                        <div class="context-heading">
+                            <span class="context-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M4 20V8l8-5 8 5v12M9 20v-7h6v7"/></svg>
+                            </span>
+                            <div><span>Arrival details</span><h2>Access instructions</h2></div>
+                        </div>
+                        <p id="completionAccess" class="completion-copy preserve"></p>
+                    </section>
+
+                    <section class="completion-help-card">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 3 8.2 7 10 4-1.8 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg>
+                        <div>
+                            <strong>Secure evidence upload</strong>
+                            <p>Photos and completion details are attached directly to this work order.</p>
+                        </div>
+                    </section>
+                </aside>
+
+                <form id="vendorCompletionForm" class="completion-form vendor-completion-form">
+                    <div class="completion-form-heading">
+                        <span>Close out the job</span>
+                        <h2>Submit completion details</h2>
+                        <p>Add clear before and after evidence, then confirm the work is complete.</p>
+                    </div>
+
+                    <ol class="completion-progress" aria-label="Completion requirements">
+                        <li id="beforeStep"><span>1</span><strong>Before photos</strong></li>
+                        <li id="afterStep"><span>2</span><strong>After photos</strong></li>
+                        <li id="detailsStep"><span>3</span><strong>Confirmation</strong></li>
+                    </ol>
+
+                    <div class="completion-evidence-grid">
+                        <label class="completion-upload completion-evidence-card" for="beforePhotos">
+                            <span class="evidence-heading">
+                                <span class="evidence-icon evidence-before" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3"/></svg>
+                                </span>
+                                <span><strong>Before photos</strong><em>Required</em></span>
+                            </span>
+                            <span class="evidence-copy">Show the job area before completed work.</span>
+                            <input id="beforePhotos" name="beforePhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                            <span class="evidence-picker">Choose before photos</span>
+                            <small>JPG, PNG, or WebP · Maximum 10 photos</small>
+                            <span id="beforePhotoCount" class="completion-file-count">No photos selected</span>
+                        </label>
+
+                        <label class="completion-upload completion-evidence-card" for="afterPhotos">
+                            <span class="evidence-heading">
+                                <span class="evidence-icon evidence-after" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3"/><path d="m16 4 1 1 2-2"/></svg>
+                                </span>
+                                <span><strong>After photos</strong><em>Required</em></span>
+                            </span>
+                            <span class="evidence-copy">Show the completed result clearly.</span>
+                            <input id="afterPhotos" name="afterPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                            <span class="evidence-picker">Choose after photos</span>
+                            <small>JPG, PNG, or WebP · Maximum 10 photos</small>
+                            <span id="afterPhotoCount" class="completion-file-count">No photos selected</span>
+                        </label>
+                    </div>
+
+                    <section class="completion-details-card">
+                        <div class="completion-field-grid">
+                            <label class="completion-field completion-notes-field">
+                                <span>Completion notes <small>Optional</small></span>
+                                <textarea id="completionNotes" name="completionNotes" rows="5" maxlength="5000" placeholder="Describe the completed work and any important handoff details."></textarea>
+                            </label>
+                            <label class="completion-field">
+                                <span>Vendor full name <em>Required</em></span>
+                                <input id="vendorEnteredName" name="vendorEnteredName" maxlength="160" autocomplete="name" placeholder="Enter your full name" required>
+                            </label>
+                        </div>
+
+                        <label class="completion-confirm">
+                            <input id="completionConfirm" type="checkbox" required>
+                            <span>I confirm that the work described above is complete and the uploaded photos accurately represent the job.</span>
+                        </label>
+                    </section>
+
+                    <p id="completionFormError" class="completion-inline-error" role="alert" hidden></p>
+                    <div class="completion-submit-bar">
+                        <div>
+                            <strong>Ready to submit?</strong>
+                            <span>This action records the job as complete.</span>
+                        </div>
+                        <button id="submitCompletion" class="completion-primary" type="submit">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+                            Mark Job Complete
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <footer class="completion-document-footer">
+                <span>Hutta Home Services</span>
+                <span>Questions? Reply to your work-order email for assistance.</span>
+            </footer>
         </article>
-        <section id="completionSuccess" class="completion-state completion-success" hidden>
+
+        <section id="completionSuccess" class="completion-state completion-success completion-public-state" hidden aria-live="polite">
             <span class="completion-success-icon" aria-hidden="true">✓</span>
+            <span class="completion-success-eyebrow">Completion recorded</span>
             <h1>Job marked complete</h1>
             <p>Your completion details and photos were received. Hutta Home Services has been notified.</p>
             <dl>
@@ -100,6 +192,6 @@
             </dl>
         </section>
     </main>
-    <script src="../assets/js/vendor-completion.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/vendor-completion.js?v=20260725-vendor-completion-redesign"></script>
 </body>
 </html>
