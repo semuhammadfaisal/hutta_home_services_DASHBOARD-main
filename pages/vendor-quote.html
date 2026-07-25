@@ -9,51 +9,101 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/vendor-quote.css">
   <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix">
   <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
+  <link rel="stylesheet" href="../assets/css/vendor-quote.css?v=20260725-vendor-quote-redesign">
 </head>
 <body>
   <main class="quote-shell">
-    <header class="quote-header"><img src="../assets/images/logo.png" alt="Hutta Home Services"><div><p>Hutta Home Services</p><h1>Secure Vendor Quote</h1></div><span>Private one-time link</span></header>
+    <header class="quote-header">
+      <div class="quote-brand" aria-label="Hutta Home Services">
+        <img src="../assets/images/logo.png" alt="Hutta Home Services">
+      </div>
+      <div class="quote-header-copy"><p>Vendor portal</p><h1>Submit Your Quote</h1></div>
+      <span class="secure-session"><span aria-hidden="true">&#128274;</span> Secure one-time link</span>
+    </header>
     <section id="quoteLoading" class="quote-state"><div class="spinner"></div><h2>Opening quote request</h2><p>Validating your secure invitation&hellip;</p></section>
     <section id="quoteError" class="quote-state hidden" role="alert"><div class="state-icon error">!</div><h2>Quote request unavailable</h2><p id="quoteErrorMessage"></p></section>
     <section id="quoteSuccess" class="quote-state hidden"><div class="state-icon success">&#10003;</div><h2>Quote submitted</h2><p>Your quote was received securely. Hutta Home Services will contact you if a revision is needed.</p><strong id="quoteSuccessReference"></strong></section>
 
     <form id="vendorQuoteForm" class="hidden" novalidate>
-      <section class="quote-summary">
-        <div><span>Vendor</span><strong id="quoteVendor"></strong></div><div><span>Request</span><strong id="quoteRequest"></strong></div><div><span>Quote</span><strong id="quoteReference"></strong></div><div><span>Link expires</span><strong id="quoteExpiry"></strong></div>
-        <div class="wide"><span>Service</span><strong id="quoteService"></strong></div><div class="wide"><span>Service address</span><strong id="quoteAddress"></strong></div><div class="wide"><span>Customer-provided details</span><p id="quoteDetails"></p></div>
+      <section class="quote-intro">
+        <div>
+          <span class="quote-kicker">Quote request</span>
+          <h2 id="quoteService"></h2>
+          <p>Provide job-specific scope, pricing, timing, and conditions. Your company information is already on file.</p>
+        </div>
+        <div class="quote-intro-meta">
+          <span>Quote reference</span>
+          <strong id="quoteReference"></strong>
+        </div>
       </section>
       <nav class="secure-progress" aria-label="Quote submission progress">
-        <button type="button" class="secure-progress-step" data-step-target="1" aria-current="step"><span>1</span><strong>Scope & Pricing</strong></button>
-        <button type="button" class="secure-progress-step" data-step-target="2"><span>2</span><strong>Timing & Access</strong></button>
-        <button type="button" class="secure-progress-step" data-step-target="3"><span>3</span><strong>Documents & Review</strong></button>
+        <button type="button" class="secure-progress-step" data-step-target="1" aria-current="step"><span>1</span><span class="step-copy"><small>Step 1</small><strong>Scope &amp; Pricing</strong></span></button>
+        <button type="button" class="secure-progress-step" data-step-target="2"><span>2</span><span class="step-copy"><small>Step 2</small><strong>Timing &amp; Access</strong></span></button>
+        <button type="button" class="secure-progress-step" data-step-target="3"><span>3</span><span class="step-copy"><small>Step 3</small><strong>Review &amp; Submit</strong></span></button>
       </nav>
-      <section class="quote-card secure-step" data-step="1">
-        <div class="card-heading"><span>1</span><div><h2>Scope and Pricing</h2><p>Describe exactly what your company will provide.</p></div></div>
-        <label class="wide"><span>Scope of Work <em>Required</em></span><textarea name="scopeOfWork" rows="7" maxlength="10000" required></textarea></label>
-        <div class="quote-grid"><label><span>Labor Amount <em>Required</em></span><input name="laborAmount" type="number" min="0" step="0.01" required></label><label><span>Materials Amount <em>Required</em></span><input name="materialsAmount" type="number" min="0" step="0.01" required></label></div>
-        <div class="quote-total"><span>Calculated quote total</span><strong id="quoteTotal">$0.00</strong></div>
-        <div class="secure-wizard-actions"><button type="button" class="secure-next" data-next-step="2">Continue to Timing</button></div>
-      </section>
-      <section class="quote-card secure-step" data-step="2" hidden>
-        <div class="card-heading"><span>2</span><div><h2>Timing and Access</h2><p>Tell us when and how the work can be completed.</p></div></div>
-        <div class="quote-grid"><label><span>Estimated Duration <em>Required</em></span><input name="durationValue" type="number" min="0.1" step="0.1" required></label><label><span>Duration Unit <em>Required</em></span><select name="durationUnit" required><option value="hours">Hours</option><option value="days" selected>Days</option><option value="weeks">Weeks</option></select></label><label><span>Earliest Available Date <em>Required</em></span><input name="earliestAvailableDate" type="date" required></label><label><span>Does site access need arranging? <em>Required</em></span><select name="siteAccessRequired" id="siteAccessRequired" required><option value="false">No</option><option value="true">Yes</option></select></label></div>
-        <label class="wide"><span>Access Notes</span><textarea name="accessNotes" id="accessNotes" rows="3" maxlength="3000" placeholder="Required when access must be arranged"></textarea></label>
-        <label class="wide"><span>Exclusions or Conditions</span><textarea name="exclusionsConditions" rows="5" maxlength="10000" placeholder="List exclusions, assumptions, permits, or other conditions"></textarea></label>
-        <div class="secure-wizard-actions"><button type="button" class="secure-back" data-next-step="1">Back</button><button type="button" class="secure-next" data-next-step="3">Review Quote</button></div>
-      </section>
-      <section class="quote-card secure-step" data-step="3" hidden>
-        <div class="card-heading"><span>3</span><div><h2>Supporting Documents</h2><p>Optional quote documents, photos, or specifications.</p></div></div>
-        <label class="file-field"><input name="documents" type="file" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><span>Choose up to 10 files</span><small>PDF, Word, TXT, JPG, or PNG; 50 MB maximum per file.</small></label>
-        <h3>Review before submitting</h3><div id="vendorQuoteReview" class="secure-review"></div>
-        <div class="secure-wizard-actions"><button type="button" class="secure-back" data-next-step="2">Back</button></div>
-      </section>
-      <section class="quote-card submit-card secure-step" data-step="3" hidden><label class="ack"><input type="checkbox" required><span>I certify that this quote is accurate and that I am authorized to submit it for the vendor shown above.</span></label><div id="quoteSubmitError" class="submit-error hidden" role="alert"></div><button id="quoteSubmitButton" type="submit">Submit Quote Securely</button><p>Submitted versions are retained and cannot be overwritten. Hutta must request a new revision if changes are needed.</p></section>
+      <div class="quote-workspace">
+        <aside class="job-brief" aria-label="Job request summary">
+          <div class="job-brief-heading"><span aria-hidden="true">&#128196;</span><div><small>Job brief</small><strong id="quoteRequest"></strong></div></div>
+          <dl>
+            <div><dt>Vendor</dt><dd id="quoteVendor"></dd></div>
+            <div><dt>Service address</dt><dd id="quoteAddress"></dd></div>
+            <div><dt>Link expires</dt><dd id="quoteExpiry"></dd></div>
+          </dl>
+          <div class="customer-details"><span>Customer request</span><p id="quoteDetails"></p></div>
+          <p class="privacy-note"><span aria-hidden="true">&#128274;</span> Customer contact information is kept private during quoting.</p>
+        </aside>
+
+        <div class="quote-step-area">
+          <section class="quote-card secure-step" data-step="1">
+            <div class="card-heading"><span>1</span><div><h2>Scope and Pricing</h2><p>Describe the work and separate labor from materials.</p></div></div>
+            <label class="wide"><span>Scope of Work <em>Required</em></span><textarea name="scopeOfWork" rows="7" maxlength="10000" required placeholder="Describe the work, deliverables, and job-specific responsibilities included in this quote."></textarea><small>Be specific so the Huttas team can compare quotes accurately.</small></label>
+            <div class="quote-grid pricing-grid">
+              <label><span>Labor Amount <em>Required</em></span><span class="money-input"><b>$</b><input name="laborAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></span></label>
+              <label><span>Materials Amount <em>Required</em></span><span class="money-input"><b>$</b><input name="materialsAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></span></label>
+            </div>
+            <div class="quote-total"><span><small>Calculated automatically</small>Quote total</span><strong id="quoteTotal">$0.00</strong></div>
+            <div class="secure-wizard-actions"><span>Step 1 of 3</span><button type="button" class="secure-next" data-next-step="2">Continue <span aria-hidden="true">&rarr;</span></button></div>
+          </section>
+
+          <section class="quote-card secure-step" data-step="2" hidden>
+            <div class="card-heading"><span>2</span><div><h2>Timing and Access</h2><p>Tell us when the work can begin and what access is required.</p></div></div>
+            <div class="quote-grid">
+              <label><span>Estimated Duration <em>Required</em></span><input name="durationValue" type="number" min="0.1" step="0.1" inputmode="decimal" placeholder="e.g. 3" required></label>
+              <label><span>Duration Unit <em>Required</em></span><select name="durationUnit" required><option value="hours">Hours</option><option value="days" selected>Days</option><option value="weeks">Weeks</option></select></label>
+              <label><span>Earliest Available Date <em>Required</em></span><input name="earliestAvailableDate" type="date" required></label>
+              <label><span>Site Access <em>Required</em></span><select name="siteAccessRequired" id="siteAccessRequired" required><option value="false">No arrangement needed</option><option value="true">Access must be arranged</option></select></label>
+            </div>
+            <label class="wide"><span>Access Notes</span><textarea name="accessNotes" id="accessNotes" rows="3" maxlength="3000" placeholder="Optional access information"></textarea></label>
+            <label class="wide"><span>Exclusions or Conditions</span><textarea name="exclusionsConditions" rows="5" maxlength="10000" placeholder="List exclusions, assumptions, permit costs, payment conditions, or other limitations."></textarea></label>
+            <div class="secure-wizard-actions"><button type="button" class="secure-back" data-next-step="1"><span aria-hidden="true">&larr;</span> Back</button><span>Step 2 of 3</span><button type="button" class="secure-next" data-next-step="3">Review Quote <span aria-hidden="true">&rarr;</span></button></div>
+          </section>
+
+          <section class="quote-card secure-step" data-step="3" hidden>
+            <div class="card-heading"><span>3</span><div><h2>Review and Submit</h2><p>Attach optional documents and confirm your final quote.</p></div></div>
+            <div class="upload-section">
+              <div><h3>Supporting Documents <span>Optional</span></h3><p>Add quote documents, photos, or specifications.</p></div>
+              <label class="file-field">
+                <input name="documents" id="quoteDocuments" type="file" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                <span class="upload-icon" aria-hidden="true">&#8682;</span>
+                <strong>Choose files to upload</strong>
+                <small>PDF, Word, TXT, JPG, or PNG &middot; Up to 10 files &middot; 50 MB each</small>
+                <b id="quoteFileCount" aria-live="polite">No files selected</b>
+              </label>
+            </div>
+            <div class="review-heading"><div><h3>Quote Summary</h3><p>Check these details before submitting.</p></div><button type="button" data-next-step="1">Edit pricing</button></div>
+            <div id="vendorQuoteReview" class="secure-review"></div>
+            <label class="ack"><input type="checkbox" required><span><strong>Submission certification</strong>I certify that this quote is accurate and that I am authorized to submit it for the vendor shown above.</span></label>
+            <div id="quoteSubmitError" class="submit-error hidden" role="alert"></div>
+            <div class="secure-wizard-actions final-actions"><button type="button" class="secure-back" data-next-step="2"><span aria-hidden="true">&larr;</span> Back</button><span>Step 3 of 3</span><button id="quoteSubmitButton" type="submit">Submit Quote Securely <span aria-hidden="true">&#128274;</span></button></div>
+            <p class="immutable-note">Submitted versions are retained and cannot be overwritten. Hutta must request a new revision if changes are needed.</p>
+          </section>
+        </div>
+      </div>
     </form>
-    <footer>Hutta Home Services &middot; Secure Vendor Quote Collection</footer>
+    <footer><span>&copy; Hutta Home Services</span><span>Secure Vendor Quote Collection</span></footer>
   </main>
-  <script src="../assets/js/vendor-quote.js"></script>
+  <script src="../assets/js/vendor-quote.js?v=20260725-vendor-quote-redesign"></script>
 </body>
 </html>

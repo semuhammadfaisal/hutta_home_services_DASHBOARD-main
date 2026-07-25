@@ -2,6 +2,7 @@
   const $ = id => document.getElementById(id);
   const viewEndpoint = '/api/intake-completion/public/view';
   const completeEndpoint = '/api/intake-completion/public/complete';
+  const requiredFieldNames = ['serviceCategory', 'serviceAddress', 'serviceDetails'];
   let token = '';
 
   function readToken() {
@@ -53,11 +54,38 @@
     document.title = `${payload.requestReference} | Complete Service Request`;
     $('intakeLoading').classList.add('hidden');
     form.classList.remove('hidden');
+    updateProgress();
   }
 
   function showSubmitError(message) {
     $('intakeSubmitError').textContent = message;
     $('intakeSubmitError').classList.remove('hidden');
+  }
+
+  function updateProgress() {
+    const form = $('intakeForm');
+    if (!form || !$('intakeProgressLabel') || !$('intakeProgressBar')) return;
+    const completedFields = requiredFieldNames.filter(name => {
+      const field = form.elements[name];
+      return field && field.value.trim() && field.checkValidity();
+    }).length;
+    const completed = completedFields + ($('intakeAccuracy')?.checked ? 1 : 0);
+    $('intakeProgressLabel').textContent = `${completed} of 4 complete`;
+    $('intakeProgressBar').style.width = `${completed * 25}%`;
+  }
+
+  function updateFileStatus() {
+    const form = $('intakeForm');
+    const status = $('intakeFileStatus');
+    if (!form || !status) return;
+    const files = [...form.elements.documents.files];
+    if (!files.length) {
+      status.textContent = 'No files selected';
+      return;
+    }
+    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+    const totalMb = (totalBytes / (1024 * 1024)).toFixed(totalBytes >= 1024 * 1024 ? 1 : 2);
+    status.textContent = `${files.length} ${files.length === 1 ? 'file' : 'files'} selected · ${totalMb} MB total`;
   }
 
   async function submit(event) {
@@ -84,7 +112,13 @@
 
   async function init() {
     if (!readToken()) return showError('A secure completion token is required.');
-    $('intakeForm').addEventListener('submit', submit);
+    const form = $('intakeForm');
+    form.addEventListener('submit', submit);
+    form.addEventListener('input', updateProgress);
+    form.addEventListener('change', event => {
+      updateProgress();
+      if (event.target.name === 'documents') updateFileStatus();
+    });
     try { populate(await request(viewEndpoint)); } catch (error) { showError(error.message); }
   }
   init();

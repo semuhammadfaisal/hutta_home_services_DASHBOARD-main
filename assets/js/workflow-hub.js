@@ -19,28 +19,37 @@
     currentOrderId: '',
     filters: restored.filters || {},
     scroll: restored.scroll || {},
+    overviewAttention: restored.overviewAttention || 'all',
+    loadingOverview: false,
     dirty: false,
     routing: false
   };
   const esc = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   const fmtDate = value => value ? new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+  const relativeTime = value => {
+    const time = new Date(value).getTime();
+    if (!Number.isFinite(time)) return 'just now';
+    const seconds = Math.max(0, Math.round((Date.now() - time) / 1000));
+    if (seconds < 45) return 'just now';
+    if (seconds < 3600) { const count = Math.floor(seconds / 60); return `${count} minute${count === 1 ? '' : 's'} ago`; }
+    if (seconds < 86400) { const count = Math.floor(seconds / 3600); return `${count} hour${count === 1 ? '' : 's'} ago`; }
+    if (seconds < 604800) { const count = Math.floor(seconds / 86400); return `${count} day${count === 1 ? '' : 's'} ago`; }
+    return fmtDate(value);
+  };
   const statusText = value => String(value || '').replaceAll('_', ' ');
   const persist = () => {
-    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ filters: state.filters, scroll: state.scroll })); }
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ filters: state.filters, scroll: state.scroll, overviewAttention: state.overviewAttention })); }
     catch (_) {}
   };
 
   function countsFor(stage) { return state.overview?.counts?.find(item => item.stage === stage) || { total: 0, attention: 0 }; }
   function tabs(active = 0) {
-    return `<nav class="workflow-tabs" aria-label="Workflow stages" role="tablist">
-      <button class="workflow-tab" data-workflow-view="overview" role="tab" aria-selected="${active === 0}"><span>All work</span><strong>Overview</strong></button>
-      ${STAGES.map(item => `<button class="workflow-tab" data-workflow-view="stage-${item.stage}" role="tab" aria-selected="${active === item.stage}"><span>Stage ${item.stage}<em class="workflow-tab-count">${countsFor(item.stage).total}</em></span><strong>${esc(item.short)}</strong></button>`).join('')}
+    const icons = ['fa-border-all', 'fa-file-alt', 'fa-users', 'fa-file-invoice-dollar', 'fa-user-check', 'fa-calendar-alt', 'fa-check-circle'];
+    const allTotal = STAGES.reduce((total, item) => total + countsFor(item.stage).total, 0);
+    return `<nav class="workflow-tabs workflow-reference-tabs" aria-label="Workflow stages" role="tablist">
+      <button class="workflow-tab" data-workflow-view="overview" role="tab" aria-selected="${active === 0}"><i class="fas ${icons[0]}" aria-hidden="true"></i><span><strong>All Work</strong></span><em class="workflow-tab-count">${allTotal}</em></button>
+      ${STAGES.map((item, index) => { const count = countsFor(item.stage); return `<button class="workflow-tab" data-workflow-view="stage-${item.stage}" role="tab" aria-selected="${active === item.stage}"><i class="fas ${icons[index + 1]}" aria-hidden="true"></i><span><strong>${esc(item.short)}</strong>${count.attention ? `<small>${count.attention} attention</small>` : ''}</span><em class="workflow-tab-count">${count.total}</em></button>`; }).join('')}
     </nav>`;
-  }
-  function stageStrip(active = 0) {
-    return `<div class="workflow-stage-strip" aria-label="Six-stage workflow">
-      ${STAGES.map(item => { const count = countsFor(item.stage); return `<button class="workflow-stage-step ${active === item.stage ? 'is-active' : ''} ${count.attention ? 'has-attention' : ''}" data-workflow-view="stage-${item.stage}"><span class="dot">${item.stage}</span><strong>${esc(item.short)}</strong><small>${count.total} total${count.attention ? ` · ${count.attention} attention` : ''}</small></button>`; }).join('')}
-    </div>`;
   }
   function filterbar(stage) {
     const saved = state.filters[stage] || {};
@@ -100,45 +109,60 @@
     } finally { state.routing = false; }
   }
 
-  function priorityChip(reason) {
-    const tone = /failed/i.test(reason) ? 'error' : /missing|changes|compliance/i.test(reason) ? 'warning' : 'info';
-    return `<span class="workflow-chip ${tone}">${esc(reason)}</span>`;
+  function overviewHeader() {
+    return `<header class="workflow-hub-header workflow-reference-header"><div><h1>Workflow Center</h1><p>Manage requests, quotes, approvals, scheduling, and closeout from one place.</p></div><div class="workflow-hub-actions"><span class="workflow-updated">Updated <time data-relative-time="${esc(state.overview?.refreshedAt || '')}">${relativeTime(state.overview?.refreshedAt)}</time></span><button class="btn-secondary" type="button" data-workflow-refresh><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div></header>`;
   }
 
-  function overviewHeader() {
-    const attention = state.overview?.actionRequiredTotal || 0;
-    return `<header class="workflow-hub-header"><div><span class="workflow-hub-eyebrow">Operations control center</span><h1>Workflow Center</h1><p>Move every request from intake through completion, invoicing, and customer closeout with one clear next action.</p></div><div class="workflow-hub-actions"><span class="workflow-attention-pill"><i class="fas fa-bell"></i>${attention} need attention</span><span class="workflow-updated">Updated ${fmtDate(state.overview?.refreshedAt)}</span><button class="btn-secondary" type="button" data-workflow-refresh><i class="fas fa-sync-alt"></i> Refresh</button></div></header>`;
+  const metricIcons = {
+    open_requests: 'fa-file-alt',
+    waiting_vendors: 'fa-users',
+    awaiting_approval: 'fa-user-clock',
+    scheduled_this_week: 'fa-calendar-alt',
+    ready_to_close: 'fa-check-circle'
+  };
+  const metricClearLabels = {
+    open_requests: 'No blockers',
+    waiting_vendors: 'No overdue requests',
+    awaiting_approval: 'No overdue quotes',
+    scheduled_this_week: 'Current Phoenix week',
+    ready_to_close: 'No overdue feedback'
+  };
+
+  function metricCards() {
+    return `<section class="workflow-kpi-grid" aria-label="Workflow performance">${(state.overview?.metrics || []).map(metric => `<button type="button" class="workflow-kpi-card tone-${esc(metric.tone || 'info')}" data-workflow-view="stage-${Number(metric.targetStage || 1)}"><span class="workflow-kpi-icon"><i class="fas ${metricIcons[metric.key] || 'fa-chart-line'}" aria-hidden="true"></i></span><span class="workflow-kpi-copy"><span>${esc(metric.label)}</span><strong>${Number(metric.total || 0).toLocaleString()}</strong>${metric.supportingCount ? `<small><i class="fas fa-exclamation-circle" aria-hidden="true"></i>${Number(metric.supportingCount).toLocaleString()} ${esc(metric.supportingLabel)}</small>` : `<small class="is-clear"><i class="fas fa-check-circle" aria-hidden="true"></i>${esc(metricClearLabels[metric.key] || 'Up to date')}</small>`}</span></button>`).join('')}</section>`;
+  }
+
+  function employeeMarkup(item) {
+    if (!item.employee) return '<span class="workflow-assignee is-unassigned"><span class="workflow-avatar">?</span><span>Unassigned</span></span>';
+    const initials = String(item.employee.name || 'Team').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
+    return `<span class="workflow-assignee">${item.employee.avatar ? `<img class="workflow-avatar" src="${esc(item.employee.avatar)}" alt="">` : `<span class="workflow-avatar">${esc(initials)}</span>`}<span>${esc(item.employee.name)}</span></span>`;
   }
 
   function renderOverview() {
     const mount = document.getElementById('workflowOverviewMount');
     if (!mount || !state.overview) return;
-    const attentionPriority = reason => /changes requested/i.test(reason) ? 1
-      : /blocked|compliance/i.test(reason) ? 2
-      : /failed|email/i.test(reason) ? 3
-      : /missing/i.test(reason) ? 4
-      : /expir/i.test(reason) ? 5 : 6;
-    const attention = [...(state.overview.attention || [])].sort((a, b) => {
-      const aPriority = Math.min(...(a.reasons || ['waiting']).map(attentionPriority));
-      const bPriority = Math.min(...(b.reasons || ['waiting']).map(attentionPriority));
-      return aPriority - bPriority || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
-    });
-    const recent = state.overview.recent || [];
-    mount.innerHTML = `<div class="workflow-hub-shell">${overviewHeader()}${tabs(0)}${stageStrip(0)}
+    const attention = state.overview.attention || [];
+    const recent = state.overview.recentActivity || [];
+    const filterLabels = { all: 'All', overdue: 'Overdue', blocked: 'Blocked', unassigned: 'Unassigned' };
+    mount.innerHTML = `<div class="workflow-hub-shell workflow-reference-shell">${overviewHeader()}${metricCards()}${tabs(0)}
       <div class="workflow-overview-grid">
-        <section class="workflow-overview-panel"><div class="workflow-panel-head"><div><h2>Needs attention</h2><p>Blocked work and required next actions, prioritized for your team.</p></div><span class="workflow-attention-pill">${attention.length} shown</span></div>
-          <div class="workflow-attention-list">${attention.length ? attention.map(item => `<article class="workflow-queue-row"><div class="workflow-row-identity"><span class="workflow-hub-eyebrow">${esc(item.requestReference || item.orderId)}</span><h3>${esc(item.customer?.name || 'Customer')}</h3><p>${esc(item.service || 'Service request')}</p></div><div class="workflow-row-stage"><span>Current stage</span><strong>Stage ${item.stage}</strong><small>${esc(statusText(item.workflowStatus))}</small></div><div class="workflow-row-reasons" aria-label="Reasons this request needs attention">${item.reasons.map(priorityChip).join('')}</div><button class="btn-primary workflow-row-action" data-workflow-open="${esc(item._id)}" data-stage="${item.stage}">Continue <i class="fas fa-arrow-right" aria-hidden="true"></i></button></article>`).join('') : '<div class="workflow-empty workflow-empty-illustrated"><span class="workflow-empty-art success"><i class="fas fa-clipboard-check"></i></span><strong>No workflow items need attention.</strong><p>Great job! Everything is on track.</p></div>'}</div>
+        <section class="workflow-overview-panel workflow-attention-panel"><div class="workflow-panel-head"><div><h2><span class="workflow-panel-icon danger"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></span>Needs Attention</h2><p>Blocked, overdue, or waiting items that require action.</p></div><span class="workflow-attention-pill ${Number(state.overview.attentionCounts?.all || 0) ? '' : 'is-zero'}">${Number(state.overview.attentionCounts?.all || 0) ? `${Number(state.overview.attentionCounts.all)} items` : 'All clear'}</span></div>
+          <div class="workflow-attention-filters" role="tablist" aria-label="Attention category">${Object.entries(filterLabels).map(([key, label]) => `<button type="button" role="tab" data-attention-filter="${key}" aria-selected="${state.overviewAttention === key}">${label}<span>${Number(state.overview.attentionCounts?.[key] || 0)}</span></button>`).join('')}</div>
+          <div class="workflow-attention-list">${attention.length ? attention.map(item => `<article class="workflow-queue-row workflow-reference-row"><div class="workflow-row-reference"><strong>${esc(item.requestReference || item.orderId)}</strong><time datetime="${esc(item.createdAt || item.updatedAt)}" data-relative-time="${esc(item.createdAt || item.updatedAt)}">${relativeTime(item.createdAt || item.updatedAt)}</time></div><div class="workflow-row-identity"><h3>${esc(item.customer?.name || 'Customer')}</h3><p>${esc(item.service || 'Service request')}</p></div><span class="workflow-stage-badge stage-${item.stage}">${esc(STAGES[item.stage - 1]?.short || `Stage ${item.stage}`)}</span><p class="workflow-primary-reason">${esc(item.primaryReason || item.reasons?.[0] || 'Review workflow item')}</p>${employeeMarkup(item)}<button class="btn-secondary workflow-row-action" data-workflow-open="${esc(item._id)}" data-stage="${item.stage}">${esc(item.nextAction?.label || 'Review')} <i class="fas fa-arrow-right" aria-hidden="true"></i></button></article>`).join('') : '<div class="workflow-empty workflow-empty-illustrated workflow-attention-empty"><span class="workflow-empty-art success"><i class="fas fa-clipboard-check"></i></span><strong>No matching items need attention</strong><p>Everything in this view is on track.</p></div>'}</div>
         </section>
-        <aside class="workflow-overview-panel"><div class="workflow-panel-head"><div><h2>Recently updated</h2><p>Latest activity across all stages.</p></div></div><div class="workflow-recent-list">${recent.length ? recent.map(item => `<button class="workflow-recent-item" data-workflow-open="${esc(item._id)}" data-stage="${item.stage}" type="button"><span class="workflow-recent-stage" aria-hidden="true">${item.stage}</span><span class="workflow-recent-content"><span class="workflow-recent-title"><strong>${esc(item.customer?.name || item.requestReference || item.orderId)}</strong><time>${fmtDate(item.updatedAt)}</time></span><span class="workflow-recent-meta"><span>Stage ${item.stage}</span><i aria-hidden="true"></i><span>${esc(item.service || 'Service request')}</span></span></span><i class="fas fa-chevron-right workflow-recent-arrow" aria-hidden="true"></i></button>`).join('') : '<div class="workflow-empty workflow-empty-illustrated compact"><span class="workflow-empty-art"><i class="fas fa-calendar-check"></i></span><strong>No workflow activity yet.</strong><p>New activity will appear here.</p></div>'}</div></aside>
+        <aside class="workflow-overview-panel workflow-activity-panel"><div class="workflow-panel-head"><div><h2><span class="workflow-panel-icon info"><i class="fas fa-wave-square" aria-hidden="true"></i></span>Recent Activity</h2><p>Latest updates across all stages.</p></div></div><div class="workflow-recent-list workflow-activity-list">${recent.length ? recent.map(item => `<button class="workflow-recent-item tone-${esc(item.tone || 'info')}" data-workflow-open="${esc(item.orderId)}" data-stage="${item.stage}" type="button"><span class="workflow-activity-dot"><i class="fas ${item.tone === 'success' ? 'fa-check' : item.tone === 'warning' || item.tone === 'danger' ? 'fa-exclamation' : 'fa-file-alt'}" aria-hidden="true"></i></span><span class="workflow-recent-content"><strong>${esc(item.label)}</strong><span class="workflow-activity-reference">${esc(item.requestReference || '')}</span><time datetime="${esc(item.occurredAt)}" data-relative-time="${esc(item.occurredAt)}">${relativeTime(item.occurredAt)}</time></span><span class="workflow-stage-badge stage-${item.stage}">${esc(STAGES[item.stage - 1]?.short || '')}</span></button>`).join('') : '<div class="workflow-empty workflow-empty-illustrated compact"><span class="workflow-empty-art"><i class="fas fa-calendar-check"></i></span><strong>No workflow activity yet.</strong><p>New activity will appear here.</p></div>'}</div></aside>
       </div></div>`;
     bindNavigation(mount);
+    updateRelativeTimes(mount);
   }
 
   async function loadOverview() {
+    if (state.loadingOverview) return;
     const mount = document.getElementById('workflowOverviewMount');
-    if (mount && !state.overview) mount.innerHTML = '<div class="workflow-skeleton"></div><div class="workflow-skeleton"></div><div class="workflow-skeleton"></div>';
+    if (mount && !state.overview) mount.innerHTML = `<div class="workflow-reference-loading" aria-label="Loading Workflow Center"><div class="workflow-skeleton workflow-skeleton-header"></div><div class="workflow-kpi-grid">${Array.from({ length: 5 }, () => '<div class="workflow-skeleton workflow-skeleton-kpi"></div>').join('')}</div><div class="workflow-skeleton workflow-skeleton-tabs"></div><div class="workflow-overview-grid"><div class="workflow-skeleton workflow-skeleton-panel"></div><div class="workflow-skeleton workflow-skeleton-panel"></div></div></div>`;
+    state.loadingOverview = true;
     try {
-      state.overview = await window.APIService.getWorkflowOverview();
+      state.overview = await window.APIService.getWorkflowOverview({ attention: state.overviewAttention, attentionLimit: 5, activityLimit: 8 });
       const badge = document.getElementById('workflowHubNavBadge');
       if (badge) { badge.textContent = state.overview.actionRequiredTotal || 0; badge.hidden = !state.overview.actionRequiredTotal; }
       renderOverview();
@@ -146,7 +170,11 @@
     } catch (error) {
       if (mount) mount.innerHTML = `<div class="workflow-empty"><i class="fas fa-exclamation-circle"></i><p>${esc(error.message || 'Unable to load Workflow Center')}</p><button class="btn-primary" data-workflow-refresh>Retry</button></div>`;
       bindNavigation(mount);
-    }
+    } finally { state.loadingOverview = false; }
+  }
+
+  function updateRelativeTimes(root = document) {
+    root.querySelectorAll('[data-relative-time]').forEach(node => { node.textContent = relativeTime(node.dataset.relativeTime); });
   }
 
   function bindNavigation(root = document) {
@@ -163,7 +191,26 @@
       button.dataset.bound = 'true';
       button.addEventListener('click', () => showView(Number(button.dataset.stage), button.dataset.workflowOpen));
     });
-    root.querySelectorAll('[data-workflow-refresh]').forEach(button => button.addEventListener('click', () => { state.overview = null; loadOverview(); }));
+    root.querySelectorAll('[data-attention-filter]').forEach(button => {
+      if (button.dataset.bound) return;
+      button.dataset.bound = 'true';
+      button.addEventListener('click', () => {
+        state.overviewAttention = button.dataset.attentionFilter;
+        state.overview = null;
+        persist();
+        loadOverview();
+      });
+    });
+    root.querySelectorAll('[data-workflow-refresh]').forEach(button => {
+      if (button.dataset.bound) return;
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        button.classList.add('is-loading');
+        state.overview = null;
+        await loadOverview();
+      });
+    });
   }
 
   function injectStageChrome() {
@@ -242,8 +289,15 @@
   }
 
   function journeyMarkup(data) {
-    return `<div class="workflow-order-context"><div><span class="workflow-hub-eyebrow">${esc(data.order.requestReference || data.order.orderId)}</span><h2>${esc(data.order.customer?.name || 'Customer')} · ${esc(data.order.service)}</h2><p>${esc(data.order.customer?.address || 'Service address not provided')}${data.order.vendor?.name ? ` · ${esc(data.order.vendor.name)}` : ''}</p></div><span class="workflow-chip info">${esc(statusText(data.order.workflowStatus))}</span></div>
-      <div class="workflow-journey" aria-label="Order workflow progress">${data.stages.map((item, index) => `<div class="workflow-journey-step ${esc(item.state)}" data-step="${item.stage}"><strong>${esc(STAGES[index].short)}</strong><span>${item.reference ? esc(item.reference) : item.state === 'upcoming' ? 'Not started' : statusText(item.state)}</span></div>`).join('')}</div>`;
+    const meta = [data.order.service, data.order.customer?.address || 'Service address not provided', data.order.vendor?.name].filter(Boolean);
+    return `<section class="workflow-workspace-overview">
+      <div class="workflow-order-context"><div><span class="workflow-hub-eyebrow">${esc(data.order.requestReference || data.order.orderId)}</span><h2>${esc(data.order.customer?.name || 'Customer')}</h2><p>${meta.map(value => `<span>${esc(value)}</span>`).join('')}</p></div><span class="workflow-chip info">${esc(statusText(data.order.workflowStatus))}</span></div>
+      <div class="workflow-journey" aria-label="Order workflow progress">${data.stages.map((item, index) => `<div class="workflow-journey-step ${esc(item.state)}" data-step="${item.stage}"><strong>${esc(STAGES[index].short)}</strong><span>${item.reference ? esc(item.reference) : item.state === 'upcoming' ? 'Not started' : statusText(item.state)}</span></div>`).join('')}</div>
+    </section>`;
+  }
+
+  function workspaceToolbar(config, loading = false) {
+    return `<div class="workflow-workspace-back"><button class="workflow-back-button" type="button"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to ${esc(config.title)}</span></button><span class="workflow-back-context">Stage ${config.stage}<i aria-hidden="true">&middot;</i>${esc(config.short)}${loading ? '<i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>' : ''}</span></div>`;
   }
 
   async function enterWorkspace(stage, orderId) {
@@ -260,9 +314,9 @@
     state.activeStage = stage; state.currentOrderId = orderId; state.dirty = false;
     let top = workspace.querySelector('.workflow-workspace-frame');
     if (!top) { top = document.createElement('div'); top.className = 'workflow-workspace-frame'; workspace.prepend(top); }
-    top.innerHTML = `<div class="workflow-workspace-back"><button class="workflow-back-button" type="button"><i class="fas fa-arrow-left"></i> Back to ${esc(config.title)}</button><span class="workflow-updated">Loading order journey…</span></div><div class="workflow-skeleton"></div>`;
+    top.innerHTML = `${workspaceToolbar(config, true)}<div class="workflow-skeleton"></div>`;
     top.querySelector('button').addEventListener('click', () => leaveWorkspace(stage));
-    try { top.innerHTML = `<div class="workflow-workspace-back"><button class="workflow-back-button" type="button"><i class="fas fa-arrow-left"></i> Back to ${esc(config.title)}</button></div>${journeyMarkup(await window.APIService.getWorkflowJourney(orderId))}`; top.querySelector('button').addEventListener('click', () => leaveWorkspace(stage)); }
+    try { top.innerHTML = `${workspaceToolbar(config)}${journeyMarkup(await window.APIService.getWorkflowJourney(orderId))}`; top.querySelector('button').addEventListener('click', () => leaveWorkspace(stage)); }
     catch (error) { top.querySelector('.workflow-skeleton').outerHTML = `<div class="workflow-chip error">${esc(error.message)}</div>`; }
     setupStageEnhancements(stage, workspace);
     workspace.scrollIntoView({ block: 'start' });
@@ -283,22 +337,56 @@
   function setupIncomingTabs(workspace) {
     const actionGrid = workspace.querySelector('.incoming-action-grid');
     if (!actionGrid) return;
-    actionGrid.classList.add('is-tabbed');
     const inviteForm = document.getElementById('incomingInvitationForm');
     const staffForm = document.getElementById('incomingStaffQuoteForm');
     const compare = workspace.querySelector('.incoming-comparison-panel');
     const invites = document.getElementById('incomingInvitationList')?.closest('.incoming-panel');
     const delivery = document.getElementById('incomingEmailDeliveryList')?.closest('.incoming-panel');
-    [[inviteForm,'invitations'],[invites,'invitations'],[staffForm,'entry'],[compare,'comparison'],[delivery,'delivery']].forEach(([node,pane]) => { if (node) node.dataset.workflowPane = pane; });
     let tabsNode = workspace.querySelector('.incoming-workspace-tabs');
     if (!tabsNode) {
       tabsNode = document.createElement('div'); tabsNode.className = 'incoming-workspace-tabs'; tabsNode.setAttribute('role','tablist');
-      tabsNode.innerHTML = [['invitations','Vendor Invitations'],['entry','Staff Quote Entry'],['comparison','Quote Comparison'],['delivery','Delivery & History']].map(([id,label],index) => `<button class="incoming-workspace-tab" role="tab" data-pane="${id}" aria-selected="${index === 0}">${label}</button>`).join('');
+      tabsNode.innerHTML = [
+        ['invitations','fa-paper-plane','Vendor Invitations','Request & follow up'],
+        ['entry','fa-keyboard','Staff Quote Entry','Record offline quote'],
+        ['comparison','fa-scale-balanced','Quote Comparison','Review & select'],
+        ['delivery','fa-clock-rotate-left','Delivery & History','Email activity']
+      ].map(([id,icon,label,description],index) => `<button id="incoming-tab-${id}" class="incoming-workspace-tab" role="tab" data-pane="${id}" aria-controls="incoming-pane-${id}" aria-selected="${index === 0}"><i class="fas ${icon}" aria-hidden="true"></i><span><strong>${label}</strong><small>${description}</small></span></button>`).join('');
       actionGrid.before(tabsNode);
     }
+    let panesHost = workspace.querySelector('.incoming-workspace-panes');
+    if (!panesHost) {
+      panesHost = document.createElement('div');
+      panesHost.className = 'incoming-workspace-panes';
+      tabsNode.after(panesHost);
+      ['invitations','entry','comparison','delivery'].forEach(pane => {
+        const section = document.createElement('section');
+        section.id = `incoming-pane-${pane}`;
+        section.className = `incoming-workspace-pane incoming-pane-${pane}`;
+        section.dataset.workflowPane = pane;
+        section.setAttribute('role', 'tabpanel');
+        section.setAttribute('aria-labelledby', `incoming-tab-${pane}`);
+        panesHost.append(section);
+      });
+    }
+    const place = (node, pane) => {
+      if (!node) return;
+      node.removeAttribute('data-workflow-pane');
+      const target = panesHost.querySelector(`[data-workflow-pane="${pane}"]`);
+      if (target && node.parentElement !== target) target.append(node);
+    };
+    place(inviteForm, 'invitations');
+    place(invites, 'invitations');
+    place(staffForm, 'entry');
+    place(compare, 'comparison');
+    place(delivery, 'delivery');
+    actionGrid.hidden = true;
     const selectPane = pane => {
-      workspace.querySelectorAll('[data-workflow-pane]').forEach(node => { node.hidden = node.dataset.workflowPane !== pane; });
-      tabsNode.querySelectorAll('button').forEach(button => button.setAttribute('aria-selected', button.dataset.pane === pane));
+      panesHost.querySelectorAll(':scope > [data-workflow-pane]').forEach(node => { node.hidden = node.dataset.workflowPane !== pane; });
+      tabsNode.querySelectorAll('button').forEach(button => {
+        const selected = button.dataset.pane === pane;
+        button.setAttribute('aria-selected', selected);
+        button.tabIndex = selected ? 0 : -1;
+      });
     };
     tabsNode.querySelectorAll('button').forEach(button => button.onclick = () => selectPane(button.dataset.pane));
     selectPane(tabsNode.querySelector('[aria-selected="true"]')?.dataset.pane || 'invitations');
@@ -500,6 +588,7 @@
     Object.values(listIds).forEach(id => { const list=document.getElementById(id); if(list)observer.observe(list,{childList:true,subtree:true}); });
     window.addEventListener('hashchange', () => { const route=parseHash(); if(route)showView(route.stage,route.orderId,{fromHash:true}); });
     window.addEventListener('beforeunload', event => { if(state.dirty){event.preventDefault();event.returnValue='';} });
+    window.setInterval(() => updateRelativeTimes(document), 60000);
     document.addEventListener('submit', event => {
       const form = event.target.closest('.workflow-stage-section form');
       const submitter = event.submitter;

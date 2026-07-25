@@ -25,11 +25,13 @@
     const select = $(selectId);
     const label = select?.closest('label');
     if (!select || !label) return;
-    let panel = label.querySelector('.incoming-vendor-compliance');
+    const form = select.closest('form');
+    let panel = form?.querySelector(`.incoming-vendor-compliance[data-compliance-for="${selectId}"]`);
     if (!panel) {
       panel = document.createElement('div');
       panel.className = 'incoming-vendor-compliance';
-      label.append(panel);
+      panel.dataset.complianceFor = selectId;
+      label.after(panel);
     }
     const vendor = vendors.find(item => String(item._id) === String(select.value));
     if (!vendor) {
@@ -122,8 +124,19 @@
     renderVendorCompliance('incomingInviteVendor');
     renderVendorCompliance('incomingStaffVendor');
     const body = $('incomingComparisonBody');
+    const comparableQuotes = quotes.filter(quote => ['submitted', 'selected'].includes(quote.status));
+    const lowestTotal = comparableQuotes.length ? Math.min(...comparableQuotes.map(quote => Number(quote.total || 0))) : null;
+    const validAvailability = comparableQuotes.map(quote => new Date(quote.earliestAvailableDate).getTime()).filter(value => Number.isFinite(value));
+    const earliestAvailability = validAvailability.length ? Math.min(...validAvailability) : null;
+    const complianceRiskCount = comparableQuotes.filter(quote => (quote.vendorSnapshot?.complianceWarnings || []).length > 0 || ['expired', 'missing'].includes(quote.vendorSnapshot?.complianceStatus)).length;
+    if ($('incomingComparisonCount')) $('incomingComparisonCount').textContent = `${quotes.length} quote${quotes.length === 1 ? '' : 's'}`;
+    if ($('incomingComparisonInsights')) {
+      $('incomingComparisonInsights').innerHTML = `<div><span class="incoming-insight-icon cost"><i class="fas fa-dollar-sign"></i></span><span><small>Lowest submitted</small><strong>${lowestTotal == null ? '—' : money(lowestTotal)}</strong></span></div>
+        <div><span class="incoming-insight-icon date"><i class="fas fa-calendar-check"></i></span><span><small>Earliest availability</small><strong>${earliestAvailability == null ? '—' : date(earliestAvailability)}</strong></span></div>
+        <div class="${complianceRiskCount ? 'has-risk' : ''}"><span class="incoming-insight-icon compliance"><i class="fas fa-shield-alt"></i></span><span><small>Compliance review</small><strong>${complianceRiskCount ? `${complianceRiskCount} risk${complianceRiskCount === 1 ? '' : 's'}` : comparableQuotes.length ? 'All current' : '—'}</strong></span></div>`;
+    }
     if (!quotes.length) {
-      body.innerHTML = '<tr><td colspan="11" class="incoming-empty-cell">No vendor quotes have been added yet.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="incoming-empty-cell">No vendor quotes have been added yet.</td></tr>';
     } else {
       body.innerHTML = quotes.map(quote => {
         const vendor = quote.vendorId || {};
@@ -131,14 +144,18 @@
         const warnings = quote.vendorSnapshot?.complianceWarnings || [];
         const docs = (quote.documents || []).filter(document => document.status !== 'archived');
         const actionAllowed = quote.status === 'submitted' && order.workflowStatus === 'quote_collection';
+        const isLowest = comparableQuotes.length > 1 && Number(quote.total || 0) === lowestTotal && ['submitted', 'selected'].includes(quote.status);
+        const quoteAvailability = new Date(quote.earliestAvailableDate).getTime();
+        const isEarliest = comparableQuotes.length > 1 && Number.isFinite(quoteAvailability) && quoteAvailability === earliestAvailability && ['submitted', 'selected'].includes(quote.status);
+        const statusClass = quote.status === 'selected' ? 'selected' : quote.status === 'submitted' ? 'submitted' : quote.status === 'draft' ? 'draft' : 'historical';
         return `<tr class="${quote.status === 'selected' ? 'is-selected' : ''}">
-          <td><strong>${escapeHtml(vendor.name || quote.vendorSnapshot?.name || 'Vendor')}</strong><small> ${escapeHtml(quote.quoteReference)} · Rev ${Number(quote.revisionNumber || 1)} · ${escapeHtml(quote.source)}</small>${docs.length ? `<div class="incoming-documents">${docs.map(doc => `<a href="/api/attachments/incoming-quote/${encodeURIComponent(quote._id)}/${encodeURIComponent(doc.documentId)}" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> ${escapeHtml(doc.name)}</a>`).join('')}</div>` : ''}</td>
-          <td><span class="incoming-compliance ${escapeHtml(compliance)}" title="${escapeHtml(warnings.join('; '))}">${escapeHtml(compliance)}</span></td>
-          <td>${money(quote.laborAmount)}</td><td>${money(quote.materialsAmount)}</td><td><strong>${money(quote.total)}</strong></td>
-          <td>${escapeHtml(quote.estimatedDuration?.value || '—')} ${escapeHtml(quote.estimatedDuration?.unit || '')}</td><td>${date(quote.earliestAvailableDate)}</td>
-          <td>${quote.siteAccessRequired ? `Required${quote.accessNotes ? `<small> ${escapeHtml(quote.accessNotes)}</small>` : ''}` : 'Not required'}</td>
-          <td>${escapeHtml(quote.exclusionsConditions || '—')}</td><td>${escapeHtml(quote.status.replaceAll('_', ' '))}</td>
-          <td><div class="incoming-quote-actions">${actionAllowed ? `<button class="incoming-mini-btn primary" onclick="selectIncomingQuote('${escapeHtml(quote._id)}',${warnings.length ? 'true' : 'false'})">Select</button><button class="incoming-mini-btn" onclick="requestIncomingQuoteRevision('${escapeHtml(quote._id)}','${escapeHtml(quote.vendorSnapshot?.email || '')}')">Request Vendor Revision</button><button class="incoming-mini-btn" onclick="createStaffIncomingQuoteRevision('${escapeHtml(quote._id)}')">Revise Internally</button>` : ''}${quote.status === 'draft' && quote.source === 'staff' ? `<button class="incoming-mini-btn" onclick="editIncomingQuoteDraft('${escapeHtml(quote._id)}')">Edit Draft</button><button class="incoming-mini-btn primary" onclick="submitIncomingQuoteDraft('${escapeHtml(quote._id)}')">Submit Draft</button>` : ''}</div></td>
+          <td data-label="Vendor"><div class="incoming-vendor-cell"><span class="incoming-vendor-avatar">${escapeHtml(String(vendor.name || quote.vendorSnapshot?.name || 'V').charAt(0).toUpperCase())}</span><span><strong>${escapeHtml(vendor.name || quote.vendorSnapshot?.name || 'Vendor')}</strong><small>${escapeHtml(quote.quoteReference)} · Revision ${Number(quote.revisionNumber || 1)}</small><small>${escapeHtml(quote.source === 'vendor' ? 'Vendor submitted' : 'Staff entered')}</small></span></div>${docs.length ? `<div class="incoming-documents">${docs.map(doc => `<a href="/api/attachments/incoming-quote/${encodeURIComponent(quote._id)}/${encodeURIComponent(doc.documentId)}" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> ${escapeHtml(doc.name)}</a>`).join('')}</div>` : ''}</td>
+          <td data-label="Compliance"><span class="incoming-compliance ${escapeHtml(compliance)}" title="${escapeHtml(warnings.join('; '))}"><i class="fas ${warnings.length ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>${escapeHtml(compliance)}</span>${warnings.length ? `<small class="incoming-risk-copy">${escapeHtml(warnings[0])}</small>` : ''}</td>
+          <td data-label="Pricing"><div class="incoming-pricing-summary"><span class="incoming-primary-value">${money(quote.total)}</span>${isLowest ? '<em class="incoming-best-badge"><i class="fas fa-arrow-down"></i> Lowest</em>' : ''}<span class="incoming-supporting-value">Labor ${money(quote.laborAmount)} <i>·</i> Materials ${money(quote.materialsAmount)}</span></div></td>
+          <td data-label="Schedule"><div class="incoming-schedule-summary"><span class="incoming-primary-value">${date(quote.earliestAvailableDate)}</span>${isEarliest ? '<em class="incoming-best-badge fastest"><i class="fas fa-bolt"></i> Earliest</em>' : ''}<span class="incoming-supporting-value">${escapeHtml(quote.estimatedDuration?.value || '—')} ${escapeHtml(quote.estimatedDuration?.unit || '')} estimated</span></div></td>
+          <td data-label="Access & Conditions"><div class="incoming-terms-cell"><span class="incoming-access ${quote.siteAccessRequired ? 'required' : ''}">${quote.siteAccessRequired ? '<i class="fas fa-key"></i> Arrange access' : '<i class="fas fa-check"></i> No arrangement'}</span>${quote.accessNotes ? `<span class="incoming-detail-line"><small>Access note</small>${escapeHtml(quote.accessNotes)}</span>` : ''}<span class="incoming-detail-line" title="${escapeHtml(quote.exclusionsConditions || 'No exclusions or conditions')}"><small>Conditions</small>${escapeHtml(quote.exclusionsConditions || 'None stated')}</span></div></td>
+          <td data-label="Status"><span class="incoming-quote-status ${statusClass}">${quote.status === 'selected' ? '<i class="fas fa-trophy"></i>' : ''}${escapeHtml(quote.status.replaceAll('_', ' '))}</span></td>
+          <td data-label="Decision"><div class="incoming-quote-actions">${actionAllowed ? `<button class="incoming-mini-btn primary incoming-select-quote" onclick="selectIncomingQuote('${escapeHtml(quote._id)}',${warnings.length ? 'true' : 'false'})"><i class="fas fa-check"></i> Select Winning Quote</button><button class="incoming-mini-btn" onclick="requestIncomingQuoteRevision('${escapeHtml(quote._id)}','${escapeHtml(quote.vendorSnapshot?.email || '')}')"><i class="fas fa-redo"></i> Request Revision</button><button class="incoming-mini-btn" onclick="createStaffIncomingQuoteRevision('${escapeHtml(quote._id)}')"><i class="fas fa-edit"></i> Revise Internally</button>` : ''}${quote.status === 'draft' && quote.source === 'staff' ? `<button class="incoming-mini-btn" onclick="editIncomingQuoteDraft('${escapeHtml(quote._id)}')"><i class="fas fa-edit"></i> Edit Draft</button><button class="incoming-mini-btn primary" onclick="submitIncomingQuoteDraft('${escapeHtml(quote._id)}')"><i class="fas fa-paper-plane"></i> Submit Draft</button>` : ''}${!actionAllowed && quote.status !== 'draft' ? '<span class="incoming-no-action">No action required</span>' : ''}</div></td>
         </tr>`;
       }).join('');
     }

@@ -27,7 +27,7 @@ test('overview, journey, and admin reconciliation APIs are authenticated and map
   assert.match(route, /router\.get\('\/orders\/:orderId\/journey', allowedRoles/);
   assert.match(route, /router\.post\('\/reconcile\/:orderId', adminOnly/);
   assert.doesNotMatch(route, /router\.(put|patch|delete)/);
-  const { stageByStatus } = require('../routes/workflowCenter').__test;
+  const { stageByStatus, phoenixWeekBounds } = require('../routes/workflowCenter').__test;
   assert.equal(stageByStatus.request_received, 1);
   assert.equal(stageByStatus.quote_collection, 2);
   assert.equal(stageByStatus.outgoing_quote_draft, 3);
@@ -35,11 +35,21 @@ test('overview, journey, and admin reconciliation APIs are authenticated and map
   assert.equal(stageByStatus.scheduled, 6);
   assert.equal(stageByStatus.completed, 6);
   assert.equal(stageByStatus.closeout_issue_reported, 6);
+  const week = phoenixWeekBounds(new Date('2026-01-01T12:00:00.000Z'));
+  assert.equal(week.start.toISOString(), '2025-12-29T07:00:00.000Z');
+  assert.equal(week.end.toISOString(), '2026-01-05T07:00:00.000Z');
+  assert.doesNotMatch(route, /\.limit\(500\)/);
+  assert.match(route, /attentionCounts/);
+  assert.match(route, /recentActivity/);
+  assert.match(route, /scheduled_this_week/);
+  assert.match(route, /America\/Phoenix/);
 });
 
 test('internal redesign provides accessible dialogs, filters, readiness, timelines, and responsive states', () => {
   const hub = read('assets/js/workflow-hub.js');
   const css = read('assets/css/workflow-redesign.css');
+  const referenceCss = read('assets/css/workflow-reference.css');
+  const incomingCss = read('assets/css/incoming-quotes.css');
   const incoming = read('assets/js/incoming-quotes.js');
   const outgoing = read('assets/js/outgoing-quotes.js');
   const intake = read('assets/js/dashboard-script.js');
@@ -56,6 +66,7 @@ test('internal redesign provides accessible dialogs, filters, readiness, timelin
   assert.match(hub, /sessionStorage/);
   assert.match(incoming, /WorkflowDialog/);
   assert.match(incoming, /incoming-vendor-compliance/);
+  assert.match(incomingCss, /#incomingQuoteWorkspace \.incoming-vendor-compliance\[hidden\][\s\S]*display:\s*none\s*!important/);
   assert.match(outgoing, /WorkflowDialog/);
   assert.match(intake, /Intake health/);
   assert.match(intake, /intake-checklist/);
@@ -73,6 +84,12 @@ test('internal redesign provides accessible dialogs, filters, readiness, timelin
   assert.match(css, /workflow-empty-art/);
   assert.match(hub, /workflow-empty-illustrated/);
   assert.match(hub, /\$\{tabs\(stage\)\}\$\{filterbar\(stage\)\}/);
+  assert.match(hub, /workflow-kpi-grid/);
+  assert.match(hub, /data-attention-filter/);
+  assert.match(hub, /recentActivity/);
+  assert.match(referenceCss, /Workflow Center reference-style operational UI/);
+  assert.match(referenceCss, /grid-template-columns: repeat\(5/);
+  assert.match(referenceCss, /workflow-activity-list/);
 });
 
 test('workflow workspaces never request a journey without a linked Order ID', () => {
@@ -121,7 +138,7 @@ test('workflow controls remain contained across desktop, tablet, and mobile layo
   assert.match(secureCss, /Public-page layout integrity/);
   assert.match(secureCss, /overflow-wrap:anywhere/);
   assert.match(secureCss, /@media\(max-width:560px\)/);
-  assert.match(html, /workflow-redesign\.css\?v=20260723-workflow-interactions/);
+  assert.match(html, /workflow-reference\.css\?v=20260725-quote-compliance/);
 });
 
 test('Workflow Center buttons provide pointer and keyboard interaction feedback', () => {
@@ -137,5 +154,21 @@ test('Workflow Center buttons provide pointer and keyboard interaction feedback'
   assert.match(css, /@keyframes workflow-button-ripple/);
   assert.match(css, /@media\(hover:hover\)/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(html, /workflow-hub\.js\?v=20260723-workflow-interactions/);
+  assert.match(html, /workflow-hub\.js\?v=20260725-quote-workspace/);
+});
+
+test('reference overview omits New Request and exposes KPI, attention, activity, and relative-time interactions', () => {
+  const html = read('pages/admin-dashboard.html');
+  const hub = read('assets/js/workflow-hub.js');
+  const api = read('assets/js/api-service.js');
+  assert.doesNotMatch(hub, /New Request/);
+  assert.match(hub, /Open Requests|open_requests/);
+  assert.match(hub, /Waiting for Vendors|waiting_vendors/);
+  assert.match(hub, /Awaiting Approval|awaiting_approval/);
+  assert.match(hub, /Scheduled This Week|scheduled_this_week/);
+  assert.match(hub, /Ready to Close|ready_to_close/);
+  assert.match(hub, /relativeTime/);
+  assert.match(api, /attentionLimit/);
+  assert.match(api, /activityLimit/);
+  assert.match(html, /workflowOverviewMount" aria-live="polite"/);
 });

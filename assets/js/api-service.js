@@ -936,9 +936,14 @@ class APIService {
     }
 
     // Unified Workflow Center
-    async getWorkflowOverview() {
-        this.requestCache.delete('GET:/workflow-center/overview');
-        return this.request('/workflow-center/overview');
+    async getWorkflowOverview(params = {}) {
+        const query = new URLSearchParams();
+        if (params.attention) query.set('attention', params.attention);
+        if (params.attentionLimit) query.set('attentionLimit', params.attentionLimit);
+        if (params.activityLimit) query.set('activityLimit', params.activityLimit);
+        const path = `/workflow-center/overview${query.size ? `?${query}` : ''}`;
+        this.requestCache.delete(`GET:${path}`);
+        return this.request(path);
     }
 
     async getWorkflowJourney(orderId) {

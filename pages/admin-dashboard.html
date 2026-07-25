@@ -39,12 +39,13 @@
     <link rel="stylesheet" href="../assets/css/vendor-review-detail-polish.css">
     <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css">
     <link rel="stylesheet" href="../assets/css/workflow-center.css">
-    <link rel="stylesheet" href="../assets/css/incoming-quotes.css">
-    <link rel="stylesheet" href="../assets/css/outgoing-quotes.css">
+    <link rel="stylesheet" href="../assets/css/incoming-quotes.css?v=20260725-quote-table-clean">
+    <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20260725-sent-summary">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
     <link rel="stylesheet" href="../assets/css/scheduling.css">
     <link rel="stylesheet" href="../assets/css/closeout.css">
     <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-workflow-interactions">
+    <link rel="stylesheet" href="../assets/css/workflow-reference.css?v=20260725-quote-compliance">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -882,9 +883,10 @@
             <div class="outgoing-toolbar"><button id="outgoingSettingsButton" class="btn-secondary" type="button" onclick="toggleOutgoingSettings(true)"><i class="fas fa-cog"></i> Quote Settings</button></div>
             <div id="outgoingQuoteOrderList" class="outgoing-order-list" aria-live="polite"><div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading outgoing quotes&hellip;</p></div></div>
             <section id="outgoingQuoteWorkspace" class="outgoing-workspace" hidden>
-                <div class="outgoing-panel-head"><div><p class="workflow-eyebrow">Customer quote workspace</p><h2 id="outgoingWorkspaceTitle">Order</h2><p id="outgoingWorkspaceSummary"></p></div><button type="button" class="btn-secondary" onclick="closeOutgoingQuoteWorkspace()">Close</button></div>
+                <button type="button" class="outgoing-back-link" onclick="closeOutgoingQuoteWorkspace()"><i class="fas fa-arrow-left"></i> Back to Outgoing Quotes</button>
+                <div class="outgoing-workspace-hero"><span class="outgoing-workspace-icon"><i class="fas fa-file-signature"></i></span><div><small>Customer quote workspace</small><h2 id="outgoingWorkspaceTitle">Order</h2><p id="outgoingWorkspaceSummary"></p></div><span class="outgoing-workspace-stage">Stage 3</span></div>
                 <div id="outgoingDraftArea"></div>
-                <section class="outgoing-panel"><h3>Revision history and delivery</h3><div id="outgoingHistoryList"></div></section>
+                <details class="outgoing-panel outgoing-history-panel"><summary><span><i class="fas fa-history"></i><strong>Revision History &amp; Delivery</strong></span><small>View quote versions and email status</small><i class="fas fa-chevron-down"></i></summary><div id="outgoingHistoryList"></div></details>
             </section>
         </section>
 
@@ -986,14 +988,16 @@
                 </div>
                 <div class="incoming-action-grid">
                     <form id="incomingInvitationForm" class="incoming-panel">
-                        <h3><i class="fas fa-paper-plane"></i> Request Vendor Quote</h3>
-                        <label>Vendor<select id="incomingInviteVendor" required></select></label>
-                        <label>Recipient Email<input id="incomingInviteEmail" type="email" required></label>
-                        <label>Message<textarea id="incomingInviteMessage" rows="3" maxlength="2000" placeholder="Optional instructions"></textarea></label>
-                        <button class="btn-primary" type="submit">Send Secure Link</button>
+                        <div class="incoming-panel-heading"><span><i class="fas fa-paper-plane"></i></span><div><h3>Request Vendor Quote</h3><p>Send a secure seven-day link for this vendor to submit job-specific pricing.</p></div></div>
+                        <div class="incoming-invite-fields">
+                            <label>Vendor<select id="incomingInviteVendor" required></select><small>Only active, approved vendors are available.</small></label>
+                            <label>Recipient Email<input id="incomingInviteEmail" type="email" required><small>The secure quote link will be delivered here.</small></label>
+                            <label class="full">Message <span class="incoming-optional">Optional</span><textarea id="incomingInviteMessage" rows="4" maxlength="2000" placeholder="Add job-specific instructions or questions for the vendor"></textarea></label>
+                        </div>
+                        <div class="incoming-primary-actions"><p><i class="fas fa-lock"></i> Customer phone and email are not shared on the quote form.</p><button class="btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Send Secure Link</button></div>
                     </form>
                     <form id="incomingStaffQuoteForm" class="incoming-panel">
-                        <h3><i class="fas fa-keyboard"></i> Enter Quote for Vendor</h3>
+                        <div class="incoming-panel-heading"><span><i class="fas fa-keyboard"></i></span><div><h3>Enter Quote for Vendor</h3><p>Record a quote received by phone, email, or another offline channel.</p></div></div>
                         <div class="incoming-form-grid">
                             <label class="full">Vendor<select id="incomingStaffVendor" required></select></label>
                             <label class="full">Scope of Work<textarea id="incomingScope" rows="4" required maxlength="10000"></textarea></label>
@@ -1011,11 +1015,16 @@
                     </form>
                 </div>
                 <section class="incoming-panel incoming-comparison-panel">
-                    <h3><i class="fas fa-balance-scale"></i> Quote Comparison</h3>
-                    <div class="incoming-table-wrap"><table class="incoming-comparison-table"><thead><tr><th>Vendor</th><th>Compliance</th><th>Labor</th><th>Materials</th><th>Total</th><th>Duration</th><th>Earliest</th><th>Access</th><th>Conditions</th><th>Status</th><th>Actions</th></tr></thead><tbody id="incomingComparisonBody"></tbody></table></div>
+                    <div class="incoming-comparison-header">
+                        <div class="incoming-panel-heading"><span><i class="fas fa-balance-scale"></i></span><div><h3>Quote Comparison</h3><p>Compare submitted pricing, availability, access needs, and compliance before selecting a vendor.</p></div></div>
+                        <span id="incomingComparisonCount" class="incoming-comparison-count">0 quotes</span>
+                    </div>
+                    <div id="incomingComparisonInsights" class="incoming-comparison-insights" aria-live="polite"></div>
+                    <div class="incoming-comparison-guide"><span><i class="fas fa-check-circle"></i> Submitted quotes are eligible for selection</span><span><i class="fas fa-lock"></i> Vendor cost remains internal</span></div>
+                    <div class="incoming-table-wrap" tabindex="0" aria-label="Vendor quote comparison table"><table class="incoming-comparison-table"><thead><tr><th>Vendor</th><th>Compliance</th><th>Pricing</th><th>Schedule</th><th>Access &amp; Conditions</th><th>Status</th><th>Decision</th></tr></thead><tbody id="incomingComparisonBody"></tbody></table></div>
                 </section>
-                <section class="incoming-panel"><h3><i class="fas fa-envelope-open-text"></i> Vendor Invitations</h3><div id="incomingInvitationList" class="incoming-invitation-list"></div></section>
-                <section class="incoming-panel"><h3><i class="fas fa-at"></i> Email Delivery</h3><div id="incomingEmailDeliveryList" class="incoming-invitation-list"></div></section>
+                <section class="incoming-panel"><div class="incoming-panel-heading"><span><i class="fas fa-envelope-open-text"></i></span><div><h3>Active Invitations</h3><p>Review link status, expiration, recipient, and follow-up actions.</p></div></div><div id="incomingInvitationList" class="incoming-invitation-list"></div></section>
+                <section class="incoming-panel"><div class="incoming-panel-heading"><span><i class="fas fa-at"></i></span><div><h3>Delivery &amp; History</h3><p>Track every vendor invitation and quote-related email attempt.</p></div></div><div id="incomingEmailDeliveryList" class="incoming-invitation-list"></div></section>
             </section>
         </section>
 
@@ -4417,7 +4426,7 @@
     </div>
 
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20260723-stage6-closeout"></script>
+    <script src="../assets/js/api-service.js?v=20260725-reference-center"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
     <script src="../assets/js/custom-fields.js"></script>
@@ -4433,12 +4442,12 @@
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
     <script src="../assets/js/dashboard-script.js?v=20260723-workflow-v2"></script>
-    <script src="../assets/js/incoming-quotes.js?v=20260723-workflow-v2"></script>
-    <script src="../assets/js/outgoing-quotes.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/incoming-quotes.js?v=20260725-quote-table-polish"></script>
+    <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/closeout.js?v=20260723-workflow-v2"></script>
-    <script src="../assets/js/workflow-hub.js?v=20260723-workflow-interactions"></script>
+    <script src="../assets/js/workflow-hub.js?v=20260725-quote-workspace"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>

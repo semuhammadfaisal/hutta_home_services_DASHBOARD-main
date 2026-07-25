@@ -140,14 +140,14 @@ test('Workflow Center renders six stages and the full closeout workspace', () =>
   const html = read('pages/admin-dashboard.html');
   const hub = read('assets/js/workflow-hub.js');
   const ui = read('assets/js/closeout.js');
-  const css = read('assets/css/workflow-redesign.css');
+  const css = read('assets/css/workflow-reference.css');
   assert.match(html, /id="closeout"/);
   assert.match(html, /Completion &amp; Closeout/);
   assert.match(html, /id="closeoutStaffForm"/);
   assert.match(hub, /stage: 6/);
-  assert.match(hub, /Six-stage workflow/);
-  assert.match(css, /workflow-stage-strip\{display:grid;grid-template-columns:repeat\(6,1fr\)/);
-  assert.match(css, /workflow-tabs\{display:grid;grid-template-columns:repeat\(7,/);
+  assert.match(hub, /workflow-reference-tabs/);
+  assert.match(css, /workflow-reference-tabs/);
+  assert.match(css, /workflow-tab/);
   assert.match(ui, /completeCloseoutOrder/);
   assert.match(ui, /resolveCloseoutIssue/);
 });

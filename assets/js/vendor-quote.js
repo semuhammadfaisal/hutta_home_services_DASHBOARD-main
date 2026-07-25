@@ -69,7 +69,19 @@
   function reviewMarkup() {
     const value = name => document.querySelector(`[name="${name}"]`)?.value || 'Not provided';
     const access = value('siteAccessRequired') === 'true' ? 'Arrangement required' : 'No arrangement needed';
-    $('vendorQuoteReview').innerHTML = `<div><span>Labor</span><strong>$${Number(value('laborAmount') || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Materials</span><strong>$${Number(value('materialsAmount') || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Total</span><strong>${escapeHtml($('quoteTotal').textContent)}</strong></div><div><span>Earliest date</span><strong>${escapeHtml(value('earliestAvailableDate'))}</strong></div><div><span>Duration</span><strong>${escapeHtml(value('durationValue'))} ${escapeHtml(value('durationUnit'))}</strong></div><div><span>Site access</span><strong>${escapeHtml(access)}</strong></div><div class="wide"><span>Scope of work</span><strong>${escapeHtml(value('scopeOfWork'))}</strong></div>`;
+    const exclusions = value('exclusionsConditions');
+    $('vendorQuoteReview').innerHTML = `<div><span>Labor</span><strong>$${Number(value('laborAmount') || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Materials</span><strong>$${Number(value('materialsAmount') || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Total</span><strong>${escapeHtml($('quoteTotal').textContent)}</strong></div><div><span>Earliest date</span><strong>${escapeHtml(formatReviewDate(value('earliestAvailableDate')))}</strong></div><div><span>Duration</span><strong>${escapeHtml(value('durationValue'))} ${escapeHtml(value('durationUnit'))}</strong></div><div><span>Site access</span><strong>${escapeHtml(access)}</strong></div><div class="wide"><span>Scope of work</span><strong>${escapeHtml(value('scopeOfWork'))}</strong></div>${exclusions !== 'Not provided' ? `<div class="wide"><span>Exclusions or conditions</span><strong>${escapeHtml(exclusions)}</strong></div>` : ''}`;
+  }
+
+  function formatReviewDate(value) {
+    if (!value || value === 'Not provided') return value;
+    const date = new Date(`${value}T12:00:00`);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString([], { dateStyle: 'medium' });
+  }
+
+  function updateFileCount() {
+    const files = [...($('quoteDocuments')?.files || [])];
+    $('quoteFileCount').textContent = files.length ? `${files.length} file${files.length === 1 ? '' : 's'} selected` : 'No files selected';
   }
 
   function showStep(next, validate = true) {
@@ -120,9 +132,12 @@
 
   document.querySelectorAll('[name="laborAmount"],[name="materialsAmount"]').forEach(input => input.addEventListener('input', updateTotal));
   $('siteAccessRequired').addEventListener('change', updateAccess);
+  $('quoteDocuments').addEventListener('change', updateFileCount);
   document.querySelectorAll('[data-next-step]').forEach(button => button.addEventListener('click', () => showStep(button.dataset.nextStep)));
   document.querySelectorAll('.secure-progress-step').forEach(button => button.addEventListener('click', () => { const next=Number(button.dataset.stepTarget); if(next<=highestStep)showStep(next,next>currentStep); }));
   $('vendorQuoteForm').addEventListener('submit', submit);
+  const earliestDate = document.querySelector('[name="earliestAvailableDate"]');
+  if (earliestDate) earliestDate.min = new Date().toISOString().slice(0, 10);
   updateAccess();
   showStep(1, false);
   if (!readToken()) return showError('The secure quote token is missing. Open the complete link from your latest invitation email.');

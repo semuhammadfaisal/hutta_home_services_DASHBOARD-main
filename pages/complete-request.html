@@ -6,50 +6,95 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="no-referrer">
   <title>Complete Service Request | Hutta Home Services</title>
+  <link rel="icon" href="../favicon.ico">
   <link rel="stylesheet" href="../assets/css/vendor-quote.css">
   <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix">
-  <link rel="stylesheet" href="../assets/css/complete-request.css">
+  <link rel="stylesheet" href="../assets/css/complete-request.css?v=20260725-intake-redesign">
   <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
 </head>
 <body>
   <main class="quote-shell intake-shell">
-    <header class="quote-header"><img src="../assets/images/logo.png" alt="Hutta Home Services"><div><p>Hutta Home Services</p><h1>Complete Your Service Request</h1></div><span>Secure private link</span></header>
+    <header class="quote-header intake-header">
+      <img src="../assets/images/logo.png" alt="Hutta Home Services">
+      <div><p>Customer request portal</p><h1>Complete Your Service Request</h1></div>
+      <span>Secure private link</span>
+    </header>
     <section id="intakeLoading" class="quote-state"><div class="spinner"></div><h2>Opening your request</h2><p>Validating your secure link&hellip;</p></section>
     <section id="intakeError" class="quote-state hidden" role="alert"><div class="state-icon error">!</div><h2>Request unavailable</h2><p id="intakeErrorMessage"></p><p>Please contact Hutta Home Services if you need a new link.</p></section>
-    <section id="intakeSuccess" class="quote-state hidden"><div class="state-icon success">&#10003;</div><h2>Request details received</h2><p id="intakeSuccessMessage"></p><strong id="intakeSuccessReference"></strong></section>
+    <section id="intakeSuccess" class="quote-state intake-success hidden">
+      <div class="state-icon success">&#10003;</div>
+      <p class="intake-state-eyebrow">Submission complete</p>
+      <h2>Request details received</h2>
+      <p id="intakeSuccessMessage"></p>
+      <span class="intake-success-reference">Request reference <strong id="intakeSuccessReference"></strong></span>
+      <small>You may safely close this page.</small>
+    </section>
 
     <form id="intakeForm" class="hidden" novalidate>
+      <section class="intake-intro" aria-labelledby="intakePageTitle">
+        <div class="intake-intro-copy">
+          <span class="intake-eyebrow">Complete your request</span>
+          <h2 id="intakePageTitle">A few more details will help us prepare an accurate quote.</h2>
+          <p>Confirm the property, describe the work, and share any timing or access notes. This usually takes less than five minutes.</p>
+        </div>
+        <div class="intake-progress" aria-live="polite">
+          <div class="intake-progress-copy"><span>Required details</span><strong id="intakeProgressLabel">0 of 4 complete</strong></div>
+          <div class="intake-progress-track" aria-hidden="true"><span id="intakeProgressBar"></span></div>
+        </div>
+      </section>
+
       <section class="quote-summary">
         <div><span>Customer</span><strong id="intakeCustomer"></strong></div>
-        <div><span>Request</span><strong id="intakeReference"></strong></div>
+        <div><span>Request reference</span><strong id="intakeReference"></strong></div>
         <div><span>Email</span><strong id="intakeEmail"></strong></div>
         <div><span>Phone</span><strong id="intakePhone"></strong></div>
-        <div class="wide"><span>Link expires</span><strong id="intakeExpiry"></strong></div>
+        <div class="wide intake-expiry"><span>Secure link expires</span><strong id="intakeExpiry"></strong></div>
       </section>
-      <section class="quote-card">
-        <div class="card-heading"><span>1</span><div><h2>Job Details</h2><p>Tell us what service you need and where the work will take place.</p></div></div>
-        <div class="quote-grid">
-          <label><span>Service Category <em>Required</em></span><select name="serviceCategory" required><option value="">Select a service</option><option>Landscaping</option><option>Plumbing</option><option>Electrical</option><option>HVAC</option><option>Cleaning</option><option>Handyman</option><option>Painting</option><option>Roofing</option><option>Pest Control</option><option>Pool Service</option><option>Property Maintenance</option><option>Other</option></select></label>
-          <label><span>Property Type</span><select name="propertyType"><option value="">Select property type</option><option>Residential</option><option>Commercial</option><option>HOA / Community</option><option>Other</option></select></label>
+
+      <div class="intake-form-layout">
+        <div class="intake-main">
+          <section class="quote-card">
+            <div class="card-heading"><span>1</span><div><h2>Job Details</h2><p>Tell us what service you need and where the work will take place.</p></div></div>
+            <div class="quote-grid">
+              <label><span>Service Category <em>Required</em></span><select name="serviceCategory" required><option value="">Select a service</option><option>Landscaping</option><option>Plumbing</option><option>Electrical</option><option>HVAC</option><option>Cleaning</option><option>Handyman</option><option>Painting</option><option>Roofing</option><option>Pest Control</option><option>Pool Service</option><option>Property Maintenance</option><option>Other</option></select></label>
+              <label><span>Property Type</span><select name="propertyType"><option value="">Select property type</option><option>Residential</option><option>Commercial</option><option>HOA / Community</option><option>Other</option></select></label>
+            </div>
+            <label class="wide"><span>Service Address <em>Required</em></span><input name="serviceAddress" type="text" maxlength="500" autocomplete="street-address" required placeholder="Street address, city, state, ZIP"></label>
+            <label class="wide"><span>Service Details <em>Required</em></span><textarea name="serviceDetails" rows="7" minlength="5" maxlength="5000" required placeholder="Describe the work, affected area, measurements, and anything else we should know."></textarea><small class="field-help">Include measurements, affected areas, current conditions, or known damage when applicable.</small></label>
+          </section>
+
+          <section class="quote-card">
+            <div class="card-heading"><span>2</span><div><h2>Timing and Access</h2><p>Optional details help us obtain more accurate vendor quotes.</p></div></div>
+            <label class="wide"><span>Preferred Timing</span><textarea name="preferredTiming" rows="3" maxlength="500" placeholder="Preferred dates, urgency, or scheduling restrictions"></textarea></label>
+            <label class="wide"><span>Access Instructions</span><textarea name="accessInstructions" rows="4" maxlength="2000" placeholder="Gate code, parking, pets, tenant coordination, or contact-on-arrival instructions"></textarea></label>
+            <label class="file-field">
+              <input name="documents" type="file" multiple accept=".pdf,.jpg,.jpeg,.png">
+              <span class="file-field-icon" aria-hidden="true">&#8593;</span>
+              <strong>Add photos or documents</strong>
+              <small>Optional &middot; Up to 6 PDF, JPG, or PNG files &middot; 10 MB maximum each</small>
+              <span id="intakeFileStatus" class="intake-file-status" aria-live="polite">No files selected</span>
+            </label>
+          </section>
         </div>
-        <label class="wide"><span>Service Address <em>Required</em></span><input name="serviceAddress" type="text" maxlength="500" autocomplete="street-address" required placeholder="Street address, city, state, ZIP"></label>
-        <label class="wide"><span>Service Details <em>Required</em></span><textarea name="serviceDetails" rows="7" minlength="5" maxlength="5000" required placeholder="Describe the work, affected area, measurements, and anything else we should know."></textarea></label>
-      </section>
-      <section class="quote-card">
-        <div class="card-heading"><span>2</span><div><h2>Timing and Access</h2><p>Optional details help us obtain more accurate vendor quotes.</p></div></div>
-        <label class="wide"><span>Preferred Timing</span><textarea name="preferredTiming" rows="3" maxlength="500" placeholder="Preferred dates, urgency, or scheduling restrictions"></textarea></label>
-        <label class="wide"><span>Access Instructions</span><textarea name="accessInstructions" rows="4" maxlength="2000" placeholder="Gate code, parking, pets, tenant coordination, or contact-on-arrival instructions"></textarea></label>
-        <label class="file-field"><input name="documents" type="file" multiple accept=".pdf,.jpg,.jpeg,.png"><span>Add Photos or Documents</span><small>Optional. Up to 6 PDF, JPG, or PNG files; 10 MB maximum each.</small></label>
-      </section>
-      <section class="quote-card submit-card">
-        <label class="ack"><input id="intakeAccuracy" type="checkbox" required><span>I confirm these service request details are accurate and may be shared with vendors for quote collection.</span></label>
-        <div id="intakeSubmitError" class="submit-error hidden" role="alert"></div>
-        <button id="intakeSubmitButton" type="submit">Complete Request &amp; Continue</button>
-        <p>Submitting completes intake only. It does not approve pricing or confirm scheduling.</p>
-      </section>
+
+        <aside class="intake-sidebar">
+          <section class="intake-help-card">
+            <span class="intake-help-icon" aria-hidden="true">&#10003;</span>
+            <div><h2>What happens next?</h2><ol><li>Our team reviews your details.</li><li>Qualified vendors prepare quotes.</li><li>You receive one customer quote to review.</li></ol></div>
+          </section>
+          <section class="quote-card submit-card">
+            <span class="submit-eyebrow">Final confirmation</span>
+            <h2>Ready to send your details?</h2>
+            <label class="ack"><input id="intakeAccuracy" type="checkbox" required><span>I confirm these service request details are accurate and may be shared with vendors for quote collection.</span></label>
+            <div id="intakeSubmitError" class="submit-error hidden" role="alert"></div>
+            <button id="intakeSubmitButton" type="submit">Complete Request &amp; Continue</button>
+            <p>Submitting completes intake only. It does not approve pricing or confirm scheduling.</p>
+          </section>
+        </aside>
+      </div>
     </form>
-    <footer>Hutta Home Services &middot; Secure Service Request</footer>
+    <footer><span>Hutta Home Services</span><span aria-hidden="true">&middot;</span><span>Secure Service Request</span></footer>
   </main>
-  <script src="../assets/js/complete-request.js"></script>
+  <script src="../assets/js/complete-request.js?v=20260725-intake-redesign"></script>
 </body>
 </html>
