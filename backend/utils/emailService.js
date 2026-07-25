@@ -63,46 +63,41 @@ const escapeHtml = (value) => String(value || '')
 
 const emailShell = (title, content, options = {}) => {
   const preheader = escapeHtml(options.preheader || title);
-  const subtitle = escapeHtml(options.subtitle || 'Professional Home Services Management');
+  const subtitle = escapeHtml(options.subtitle || 'Hutta Home Services');
   return `
-  <!doctype html>
-  <html>
+  <!doctype html><html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
     <style>
-      body{margin:0!important;padding:0!important;background:#eef4fb;color:#172033;font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
-      table{border-collapse:collapse;border-spacing:0}
-      img{border:0;outline:0;text-decoration:none}
-      a{color:#0056b8}
+      body{margin:0!important;padding:0!important;background:#f2f5f8;color:#17263a;font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+      table{border-collapse:collapse;border-spacing:0}a{color:#075eb8}
       .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
-      .page{width:100%;background:#eef4fb}
-      .page-pad{padding:34px 12px}
-      .wrap{width:100%;max-width:620px;background:#ffffff;border:1px solid #d7e3f1;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(28,68,120,.12)}
-      .head{padding:42px 42px 34px;background:#ffffff;border-bottom:1px solid #e2eaf4;text-align:center}
-      h1{margin:0;color:#0056b8;font-size:31px;line-height:1.2;font-weight:800;letter-spacing:-.02em}
-      .subtitle{margin:11px 0 0;color:#64748b;font-size:15px;line-height:1.55}
-      .body{padding:38px 42px 34px;background:#ffffff;color:#3b465a;font-size:15px;line-height:1.72}
-      .body p{margin:0 0 16px}
-      .body strong{color:#172033}
-      .btn{display:inline-block;margin:20px 0;padding:14px 26px;border-radius:999px;background:#0056b8;color:#ffffff!important;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 9px 22px rgba(0,86,184,.28)}
-      .panel{margin:22px 0;padding:18px 20px;border:1px solid #d7e5f5;border-radius:15px;background:#f7fbff}
-      .notice{margin:22px 0;padding:17px 19px;border:1px solid #bedcff;border-radius:14px;background:#edf7ff;color:#314866}
-      .warning{margin:22px 0;padding:17px 19px;border:1px solid #fed7aa;border-radius:14px;background:#fff8ed;color:#8a4518}
-      .muted{color:#718096;font-size:13px;line-height:1.58}
-      .link-box{margin:14px 0;padding:13px 15px;border:1px solid #d7e5f5;border-radius:11px;background:#f7fbff;color:#0056b8;font-size:13px;line-height:1.5;word-break:break-all}
-      .credential-grid{margin:23px 0;border:1px solid #d5e2f2;border-radius:15px;overflow:hidden;background:#ffffff;box-shadow:0 8px 22px rgba(32,74,124,.06)}
-      .credential-row{padding:18px 20px;border-bottom:1px solid #e7eef7}
-      .credential-row:last-child{border-bottom:0}
-      .credential-label{margin:0 0 7px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
-      .credential-value{margin:0;color:#172033!important;font-family:"Courier New",monospace;font-size:15px;font-weight:700;word-break:break-all;text-decoration:none!important}
-      .foot{padding:25px 34px;background:#f7faff;border-top:1px solid #dfe9f4;color:#718096;font-size:12px;line-height:1.6;text-align:center}
-      .foot strong{display:block;margin-bottom:5px;color:#163252;font-size:13px}
-      .foot a{color:#0056b8;text-decoration:none}
-      .legal{padding:15px 18px 0;color:#91a0b2;font-size:10px;line-height:1.5;text-align:center}
-      @media only screen and (max-width:600px){.page-pad{padding:14px 8px}.head{padding:32px 22px 27px}.body{padding:28px 22px 25px}.foot{padding-left:22px;padding-right:22px}h1{font-size:25px}.body{font-size:15px}.btn{display:block;text-align:center}.wrap{border-radius:16px}}
+      .page{width:100%;background:#f2f5f8}.page-pad{padding:28px 12px}
+      .wrap{width:100%;max-width:600px;background:#fff;border:1px solid #dce4ec;border-radius:12px;overflow:hidden}
+      .brand{height:4px;background:#075eb8;font-size:0;line-height:0}
+      .head{padding:28px 34px 23px;background:#ffffff;border-bottom:1px solid #e5ebf1;text-align:left}
+      .wordmark{margin:0 0 24px;color:#075eb8;font-size:18px;line-height:1;font-weight:800;letter-spacing:-.02em}
+      h1{margin:0;color:#0056b8;font-size:25px;line-height:1.25;font-weight:800;letter-spacing:-.02em}
+      .subtitle{margin:7px 0 0;color:#6b7a8e;font-size:12px;line-height:1.5}
+      .body{padding:28px 34px 30px;background:#fff;color:#3d4d61;font-size:15px;line-height:1.65}
+      .body p{margin:0 0 15px}.body strong{color:#17263a}
+      .btn{display:inline-block;margin:12px 0 20px;padding:12px 20px;border-radius:7px;background:#075eb8;color:#fff!important;text-decoration:none;font-weight:700;font-size:14px}
+      .panel,.notice,.warning{margin:18px 0;padding:15px 17px;border-radius:8px}
+      .panel{border:1px solid #dce5ee;background:#f7f9fb}
+      .notice{border-left:3px solid #075eb8;background:#eff6fd;color:#334a65}
+      .warning{border-left:3px solid #bd6b17;background:#fff7ed;color:#7a4217}
+      .panel p:last-child,.notice p:last-child,.warning p:last-child{margin-bottom:0}
+      .muted{color:#718096;font-size:12px;line-height:1.55}
+      .link-box{margin:10px 0;padding:11px 12px;border:1px solid #dce5ee;border-radius:6px;background:#fff;color:#075eb8;font-size:12px;line-height:1.45;word-break:break-all}
+      .credential-grid{margin:18px 0;border:1px solid #dce5ee;border-radius:8px;overflow:hidden;background:#fff}
+      .credential-row{padding:14px 16px;border-bottom:1px solid #e6ecf2}.credential-row:last-child{border-bottom:0}
+      .credential-label{margin:0 0 5px;color:#6b7a8e;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+      .credential-value{margin:0;color:#17263a!important;font-family:"Courier New",monospace;font-size:14px;font-weight:700;word-break:break-all;text-decoration:none!important}
+      .foot{padding:20px 30px;background:#f7f9fb;border-top:1px solid #e1e8ef;color:#718096;font-size:11px;line-height:1.55;text-align:left}
+      .foot strong{display:block;margin-bottom:4px;color:#17263a;font-size:12px}.foot a{color:#075eb8;text-decoration:none}
+      .legal{padding-top:10px;color:#8a97a8;font-size:9px;line-height:1.45}
+      @media only screen and (max-width:600px){.page-pad{padding:10px 6px}.head{padding:24px 21px 20px}.body{padding:24px 21px}.foot{padding:18px 21px}h1{font-size:22px}.btn{display:block;text-align:center}.wrap{border-radius:9px}}
     </style>
   </head>
   <body>
@@ -110,9 +105,11 @@ const emailShell = (title, content, options = {}) => {
     <table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td class="page-pad" align="center">
-          <table role="presentation" class="wrap" width="620" cellpadding="0" cellspacing="0" border="0">
+          <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0">
+            <tr><td class="brand">&nbsp;</td></tr>
             <tr>
-              <td class="head" align="center">
+              <td class="head">
+                <p class="wordmark">Huttas</p>
                 <h1>${escapeHtml(title)}</h1>
                 <p class="subtitle">${subtitle}</p>
               </td>
@@ -123,7 +120,7 @@ const emailShell = (title, content, options = {}) => {
                 <strong>Hutta Home Services</strong>
                 Professional Home Services Management Platform<br>
                 Questions? Reply to this email or contact <a href="mailto:sales@huttas.com">sales@huttas.com</a>.
-                <div class="legal">This automated message was sent by Hutta Home Services. Keep private links and account credentials secure.</div>
+                <div class="legal">This message was sent by Hutta Home Services. Do not forward private links or account credentials.</div>
               </td>
             </tr>
           </table>
