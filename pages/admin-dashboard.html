@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="../assets/css/incoming-quotes.css?v=20260725-quote-table-clean">
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20260725-sent-summary">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css">
-    <link rel="stylesheet" href="../assets/css/scheduling.css">
+    <link rel="stylesheet" href="../assets/css/scheduling.css?v=20260725-scheduling-workspace-v2">
     <link rel="stylesheet" href="../assets/css/closeout.css">
     <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-workflow-interactions">
     <link rel="stylesheet" href="../assets/css/workflow-reference.css?v=20260725-quote-compliance">
@@ -912,9 +912,42 @@
             <div class="page-header workflow-header"><div><h1>Scheduling</h1><p>Propose, confirm, and audit vendor-approved job schedules.</p></div><button class="btn-secondary" onclick="loadScheduling()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
             <div class="workflow-summary scheduling-summary"><div><strong id="scheduleReadyCount">0</strong><span>Ready to schedule</span></div><div><strong id="schedulePendingCount">0</strong><span>Awaiting vendor</span></div><div><strong id="scheduleChangesCount">0</strong><span>Changes requested</span></div><div><strong id="scheduleConfirmedCount">0</strong><span>Confirmed</span></div></div>
             <div id="schedulingOrderList" class="scheduling-list"><div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading schedules&hellip;</p></div></div>
-            <section id="schedulingWorkspace" class="scheduling-workspace" hidden><div class="scheduling-head"><div><p class="workflow-eyebrow">Schedule workspace</p><h2 id="schedulingWorkspaceTitle"></h2><p id="schedulingWorkspaceSummary"></p></div><button class="btn-secondary" onclick="closeSchedulingWorkspace()">Close</button></div>
-                <form id="scheduleProposalForm" class="scheduling-panel schedule-grid"><h3 class="full">Send vendor schedule proposal</h3><label>Arizona start<input id="scheduleStartInput" type="datetime-local" required></label><label>Arizona end<input id="scheduleEndInput" type="datetime-local" required></label><label class="full">Access instructions<textarea id="scheduleAccessInput" rows="3" maxlength="5000"></textarea></label><label class="full">Internal notes <small>Never sent externally</small><textarea id="scheduleInternalNotes" rows="3" maxlength="5000"></textarea></label><label id="scheduleConflictAckLabel" class="full conflict-ack" hidden><input id="scheduleConflictAck" type="checkbox"> I reviewed the vendor overlap and authorize this proposal.</label><div id="scheduleConflictBox" class="full schedule-conflict" hidden></div><div class="full"><button class="btn-primary" type="submit">Send Secure Proposal</button></div></form>
-                <section class="scheduling-panel"><h3>Schedule revisions and decisions</h3><div id="scheduleHistory"></div></section><section class="scheduling-panel"><h3>Email delivery</h3><div id="scheduleEmails"></div></section>
+            <section id="schedulingWorkspace" class="scheduling-workspace" hidden>
+                <button type="button" class="scheduling-back-link" onclick="closeSchedulingWorkspace()"><i class="fas fa-arrow-left"></i> Back to Scheduling</button>
+                <div class="scheduling-head">
+                    <span class="scheduling-workspace-icon"><i class="fas fa-calendar-alt"></i></span>
+                    <div><small>Vendor-confirmed scheduling</small><h2 id="schedulingWorkspaceTitle"></h2><p id="schedulingWorkspaceSummary"></p></div>
+                    <span class="scheduling-stage-label">Stage 5</span>
+                </div>
+                <div class="scheduling-workspace-layout">
+                    <main class="scheduling-workspace-main">
+                        <form id="scheduleProposalForm" class="scheduling-panel schedule-grid">
+                            <div class="schedule-panel-heading full"><span><i class="fas fa-calendar-plus"></i></span><div><h3>Send vendor schedule proposal</h3><p>Propose an exact start and end time in Arizona. The vendor must confirm before the job is scheduled.</p></div></div>
+                            <label>Arizona start<input id="scheduleStartInput" type="datetime-local" required><small id="scheduleStartPreview">Select a start date and time</small></label>
+                            <label>Arizona end<input id="scheduleEndInput" type="datetime-local" required><small id="scheduleEndPreview">Select an end date and time</small></label>
+                            <div class="schedule-timezone-note full"><i class="fas fa-clock"></i><span><strong>America/Phoenix</strong> Arizona time is used for every proposal and confirmation.</span></div>
+                            <label class="full">Access instructions <small>Shared with customer and vendor</small><textarea id="scheduleAccessInput" rows="3" maxlength="5000" placeholder="Gate codes, arrival instructions, parking, or site-contact details"></textarea></label>
+                            <label class="full schedule-private-field">Internal notes <small><i class="fas fa-lock"></i> Never sent externally</small><textarea id="scheduleInternalNotes" rows="3" maxlength="5000" placeholder="Private notes for the Huttas team"></textarea></label>
+                            <label id="scheduleConflictAckLabel" class="full conflict-ack" hidden><input id="scheduleConflictAck" type="checkbox"><span><strong>Vendor overlap reviewed</strong>I authorize sending this proposal despite the detected schedule conflict.</span></label>
+                            <div id="scheduleConflictBox" class="full schedule-conflict" hidden></div>
+                            <div class="full schedule-submit-bar"><div><strong>Vendor confirmation required</strong><small>The Order stays pending until the vendor accepts.</small></div><button class="btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Send Secure Proposal</button></div>
+                        </form>
+                        <details class="scheduling-panel scheduling-history-panel" open>
+                            <summary><span><i class="fas fa-history"></i><strong>Schedule revisions and decisions</strong></span><small>Proposal, vendor response, and work-order history</small><i class="fas fa-chevron-down"></i></summary>
+                            <div id="scheduleHistory"></div>
+                        </details>
+                    </main>
+                    <aside class="scheduling-workspace-aside">
+                        <section class="scheduling-panel scheduling-readiness-panel">
+                            <div class="schedule-panel-heading"><span><i class="fas fa-tasks"></i></span><div><h3>Scheduling readiness</h3><p>Required information is sourced from the approved quote.</p></div></div>
+                            <div class="schedule-readiness-list"><div><i class="fas fa-check-circle"></i><span><strong>Customer approved</strong><small>The commercial scope is locked.</small></span></div><div><i class="fas fa-check-circle"></i><span><strong>Vendor selected</strong><small>The proposal will go to the assigned vendor.</small></span></div><div><i class="fas fa-check-circle"></i><span><strong>Arizona timezone</strong><small>Dates are stored securely in UTC.</small></span></div></div>
+                        </section>
+                        <section class="scheduling-panel scheduling-email-panel">
+                            <div class="schedule-panel-heading"><span><i class="fas fa-envelope"></i></span><div><h3>Email delivery</h3><p>Vendor proposals and confirmation messages.</p></div></div>
+                            <div id="scheduleEmails"></div>
+                        </section>
+                    </aside>
+                </div>
             </section>
         </section>
 
@@ -4445,7 +4478,7 @@
     <script src="../assets/js/incoming-quotes.js?v=20260725-quote-table-polish"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
-    <script src="../assets/js/scheduling.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
     <script src="../assets/js/closeout.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/workflow-hub.js?v=20260725-quote-workspace"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>

@@ -1,9 +1,175 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer"><title>Confirm Job Schedule | Hutta Home Services</title><link rel="icon" href="../favicon.ico"><link rel="stylesheet" href="../assets/css/vendor-schedule.css"><link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix"><link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725"></head><body>
-<header><img src="../assets/images/logo.png" alt="Hutta Home Services"><span>Secure vendor scheduling</span></header><main>
-<section id="scheduleLoading" class="state"><div class="spinner"></div><h1>Loading schedule</h1></section><section id="scheduleError" class="state" hidden><h1>Schedule unavailable</h1><p id="scheduleErrorMessage"></p></section>
-<article id="scheduleDocument" hidden><div class="title"><div><span>Schedule proposal</span><h1 id="scheduleReference"></h1><p id="scheduleRevision"></p><span class="secure-timezone"><i aria-hidden="true">◷</i> America/Phoenix · Arizona time</span></div><strong id="scheduleStatus"></strong></div>
-<div class="times"><div><span>Start · Arizona time</span><strong id="scheduleStart"></strong></div><div><span>End · Arizona time</span><strong id="scheduleEnd"></strong></div></div>
-<section><h2>Customer and service location</h2><p><strong id="customerName"></strong><br><span id="customerPhone"></span><br><span id="customerEmail"></span><br><span id="customerAddress"></span></p></section>
-<section><h2>Service</h2><p><strong id="serviceName"></strong></p><p id="scopeOfWork" class="preserve"></p></section><section><h2>Access instructions</h2><p id="accessInstructions" class="preserve"></p></section>
-<section id="decisionPending" class="decision"><h2>Vendor response</h2><label>Full name<input id="vendorTypedName" maxlength="160" autocomplete="name"></label><div class="actions"><button id="acceptSchedule">Accept Schedule</button><button id="showChanges" class="secondary">Request Changes</button></div><div id="changesPanel" hidden><label>Requested changes<textarea id="changeMessage" minlength="10" maxlength="3000" rows="5"></textarea></label><div class="actions"><button id="submitChanges">Submit Change Request</button><button id="cancelChanges" class="secondary">Cancel</button></div></div><p id="decisionError" class="error" hidden></p></section>
-<section id="decisionComplete" class="decision complete" hidden><h2 id="decisionTitle"></h2><p id="decisionSummary"></p></section></article></main><script src="../assets/js/vendor-schedule.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Confirm Job Schedule | Hutta Home Services</title>
+  <link rel="icon" href="../favicon.ico">
+  <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix">
+  <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
+  <link rel="stylesheet" href="../assets/css/vendor-schedule.css?v=20260725-vendor-schedule-redesign">
+</head>
+<body>
+  <header class="vendor-schedule-header">
+    <img src="../assets/images/logo.png" alt="Hutta Home Services">
+    <span>Secure vendor scheduling</span>
+  </header>
+
+  <main class="vendor-schedule-shell">
+    <section id="scheduleLoading" class="state schedule-state" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <h1>Loading schedule</h1>
+      <p>Retrieving the secure proposal details.</p>
+    </section>
+
+    <section id="scheduleError" class="state schedule-state schedule-state-error" hidden role="alert">
+      <div class="state-mark" aria-hidden="true">!</div>
+      <h1>Schedule unavailable</h1>
+      <p id="scheduleErrorMessage"></p>
+      <p class="state-help">Please contact Hutta Home Services if you need a new scheduling link.</p>
+    </section>
+
+    <article id="scheduleDocument" class="vendor-schedule-document" hidden>
+      <header class="schedule-document-header">
+        <div class="schedule-document-identity">
+          <span class="schedule-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M7 2v3M17 2v3M3.5 9h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm2 9h3v3h-3v-3Z"/></svg>
+          </span>
+          <div>
+            <span class="schedule-eyebrow">Schedule proposal</span>
+            <h1 id="scheduleReference"></h1>
+            <div class="schedule-meta">
+              <span id="scheduleRevision"></span>
+              <span class="schedule-timezone">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                America/Phoenix
+              </span>
+            </div>
+          </div>
+        </div>
+        <strong id="scheduleStatus" class="schedule-status"></strong>
+      </header>
+
+      <section class="schedule-time-summary" aria-label="Proposed schedule">
+        <div class="schedule-time-card schedule-time-start">
+          <span>Proposed start</span>
+          <strong id="scheduleStart"></strong>
+          <small>Arizona time</small>
+        </div>
+        <div class="schedule-time-divider" aria-hidden="true">
+          <span></span>
+          <svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+          <span></span>
+        </div>
+        <div class="schedule-time-card">
+          <span>Proposed end</span>
+          <strong id="scheduleEnd"></strong>
+          <small>Arizona time</small>
+        </div>
+      </section>
+
+      <div class="schedule-content-grid">
+        <div class="schedule-details">
+          <section class="schedule-detail-card schedule-location-card">
+            <div class="detail-heading">
+              <span class="detail-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 21s7-5.1 7-12A7 7 0 1 0 5 9c0 6.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg>
+              </span>
+              <div><span>Job location</span><h2 id="customerAddress"></h2></div>
+            </div>
+            <div class="customer-contact">
+              <div><span>Customer</span><strong id="customerName"></strong></div>
+              <div><span>Phone</span><strong id="customerPhone"></strong></div>
+              <div><span>Email</span><strong id="customerEmail"></strong></div>
+            </div>
+          </section>
+
+          <section class="schedule-detail-card">
+            <div class="detail-heading">
+              <span class="detail-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5 5L4 17v3h3l5.7-5.7a4 4 0 0 0 5-5l-2.4 2.4-3-3 2.4-2.4Z"/></svg>
+              </span>
+              <div><span>Approved work</span><h2 id="serviceName"></h2></div>
+            </div>
+            <p id="scopeOfWork" class="schedule-copy preserve"></p>
+          </section>
+
+          <section class="schedule-detail-card">
+            <div class="detail-heading">
+              <span class="detail-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 20V8l8-5 8 5v12M9 20v-7h6v7"/></svg>
+              </span>
+              <div><span>Arrival details</span><h2>Access instructions</h2></div>
+            </div>
+            <p id="accessInstructions" class="schedule-copy preserve"></p>
+          </section>
+        </div>
+
+        <aside class="schedule-response-column">
+          <section id="decisionPending" class="schedule-decision">
+            <div class="decision-heading">
+              <span class="decision-step">Your response</span>
+              <h2>Confirm this schedule</h2>
+              <p>Review the proposed time and job details, then accept or request an adjustment.</p>
+            </div>
+
+            <label class="schedule-field" for="vendorTypedName">
+              <span>Full name <em>Required</em></span>
+              <input id="vendorTypedName" maxlength="160" autocomplete="name" placeholder="Enter your full name">
+            </label>
+
+            <div id="primaryDecisionActions" class="schedule-actions">
+              <button id="acceptSchedule" class="schedule-primary" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+                Accept Schedule
+              </button>
+              <button id="showChanges" class="schedule-secondary" type="button" aria-expanded="false" aria-controls="changesPanel">
+                Request Changes
+              </button>
+            </div>
+
+            <div id="changesPanel" class="schedule-change-panel" hidden>
+              <div class="change-panel-heading">
+                <strong>What needs to change?</strong>
+                <p>Suggest a different date, time, or provide any scheduling constraints.</p>
+              </div>
+              <label class="schedule-field" for="changeMessage">
+                <span>Requested changes <em>Required</em></span>
+                <textarea id="changeMessage" minlength="10" maxlength="3000" rows="5" placeholder="Describe the schedule change you need"></textarea>
+                <small>Minimum 10 characters</small>
+              </label>
+              <div class="schedule-actions">
+                <button id="submitChanges" class="schedule-primary" type="button">Submit request</button>
+                <button id="cancelChanges" class="schedule-secondary" type="button">Cancel</button>
+              </div>
+            </div>
+
+            <p id="decisionError" class="schedule-error" hidden role="alert"></p>
+            <div class="schedule-trust">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 3 8.2 7 10 4-1.8 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg>
+              <span>Your response is recorded securely. Acceptance confirms scheduling only.</span>
+            </div>
+          </section>
+
+          <section id="decisionComplete" class="schedule-decision schedule-decision-complete" hidden aria-live="polite">
+            <div class="decision-success-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
+            </div>
+            <span class="decision-step">Response recorded</span>
+            <h2 id="decisionTitle"></h2>
+            <p id="decisionSummary"></p>
+          </section>
+        </aside>
+      </div>
+
+      <footer class="schedule-document-footer">
+        <span>Hutta Home Services</span>
+        <span>Questions? Reply to your scheduling email for assistance.</span>
+      </footer>
+    </article>
+  </main>
+  <script src="../assets/js/vendor-schedule.js?v=20260725-vendor-schedule-redesign"></script>
+</body>
+</html>
