@@ -462,39 +462,89 @@
             const dialog = document.createElement('dialog');
             dialog.id = 'closeoutSettingsDialog';
             dialog.className = 'closeout-settings-dialog';
+            dialog.setAttribute('aria-labelledby', 'closeoutSettingsTitle');
             const methodKeys = ['bank-transfer', 'check', 'online'];
             const defaults = { 'bank-transfer': 'Bank Transfer', check: 'Check', online: 'Online / Other' };
+            const methodIcons = { 'bank-transfer': 'fa-university', check: 'fa-money-check', online: 'fa-external-link-alt' };
+            const methodDescriptions = {
+                'bank-transfer': 'Show approved account and transfer directions to customers.',
+                check: 'Explain who the check is payable to and where it should be delivered.',
+                online: 'Provide a hosted payment link or another approved payment option.'
+            };
             const byKey = new Map((settings.paymentMethods || []).map(method => [method.key, method]));
+            const enabledCount = methodKeys.filter(key => byKey.has(key) && byKey.get(key)?.enabled !== false).length;
             dialog.innerHTML = `<form method="dialog" id="closeoutSettingsForm">
-                <header><div><small>Stage 6 settings</small><h2>Customer payment instructions</h2><p>Only enter information approved for customer display.</p></div><button type="button" data-settings-close aria-label="Close">×</button></header>
+                <header class="closeout-settings-head">
+                    <span class="closeout-settings-head-icon" aria-hidden="true"><i class="fas fa-wallet"></i></span>
+                    <div><small>Stage 6 settings</small><h2 id="closeoutSettingsTitle">Customer payment instructions</h2><p>Configure what customers see on closeout pages, invoices, and completion emails.</p></div>
+                    <button type="button" class="closeout-settings-close" data-settings-close aria-label="Close payment settings"><i class="fas fa-times" aria-hidden="true"></i></button>
+                </header>
                 <div class="closeout-settings-body">
-                    ${methodKeys.map(key => {
-                        const method = byKey.get(key) || {};
-                        return `<section data-method="${key}">
-                            <label class="closeout-check"><input type="checkbox" data-method-enabled ${method.enabled !== false && byKey.has(key) ? 'checked' : ''}><span><strong>${defaults[key]}</strong>Show this option to customers.</span></label>
-                            <label>Customer-facing label<input data-method-label maxlength="100" value="${esc(method.label || defaults[key])}"></label>
-                            <label>Instructions<textarea data-method-instructions maxlength="4000" rows="3">${esc(method.instructions || '')}</textarea></label>
-                            <label class="closeout-check"><input type="checkbox" data-method-reference ${method.transactionReferenceRequired ? 'checked' : ''}><span>Require a transaction/reference number.</span></label>
-                        </section>`;
-                    }).join('')}
-                    <label>Remittance contact<input id="closeoutRemittanceContact" maxlength="500" value="${esc(settings.remittanceContact || '')}"></label>
-                    <label>Proof upload instructions<textarea id="closeoutProofInstructions" maxlength="2000" rows="3">${esc(settings.proofUploadInstructions || '')}</textarea></label>
-                    <label>Customer closeout email message<textarea id="closeoutEmailMessage" maxlength="3000" rows="3">${esc(settings.customerCloseoutEmailMessage || '')}</textarea></label>
+                    <aside class="closeout-settings-notice"><i class="fas fa-shield-alt" aria-hidden="true"></i><div><strong>Customer-visible information</strong><p>Only publish remittance details approved for customer use. Never add private credentials or internal notes.</p></div></aside>
+                    <div class="closeout-settings-section-head"><div><small>Payment methods</small><h3>Choose how customers can pay</h3><p>Enable a method, give it a clear label, and provide complete instructions.</p></div><span data-enabled-count>${enabledCount} enabled</span></div>
+                    <div class="closeout-method-list">
+                        ${methodKeys.map(key => {
+                            const method = byKey.get(key) || {};
+                            const enabled = byKey.has(key) && method.enabled !== false;
+                            return `<section class="closeout-method-card${enabled ? ' is-enabled' : ''}" data-method="${key}">
+                                <header>
+                                    <span class="closeout-method-icon" aria-hidden="true"><i class="fas ${methodIcons[key]}"></i></span>
+                                    <div><h4>${defaults[key]}</h4><p>${methodDescriptions[key]}</p></div>
+                                    <label class="closeout-method-switch"><input type="checkbox" data-method-enabled ${enabled ? 'checked' : ''}><span aria-hidden="true"></span><b data-method-status>${enabled ? 'Enabled' : 'Hidden'}</b></label>
+                                </header>
+                                <div class="closeout-method-fields">
+                                    <label><span>Customer-facing label</span><small>Name displayed on invoices and closeout pages.</small><input type="text" data-method-label maxlength="100" value="${esc(method.label || defaults[key])}" placeholder="${defaults[key]}"></label>
+                                    <label class="full"><span>Payment instructions</span><small>Give all approved steps needed to use this method.</small><textarea data-method-instructions maxlength="4000" rows="3" placeholder="Enter clear, customer-safe payment directions">${esc(method.instructions || '')}</textarea></label>
+                                    <label class="closeout-reference-check"><input type="checkbox" data-method-reference ${method.transactionReferenceRequired ? 'checked' : ''}><span><strong>Require transaction/reference number</strong><small>The payment-proof form will ask the customer for this value.</small></span></label>
+                                </div>
+                            </section>`;
+                        }).join('')}
+                    </div>
+                    <div class="closeout-settings-section-head closeout-copy-head"><div><small>Customer communication</small><h3>Closeout and proof guidance</h3><p>These details are copied into the secure customer experience.</p></div></div>
+                    <section class="closeout-copy-card">
+                        <label><span>Remittance contact</span><small>Public contact for payment questions.</small><input type="text" id="closeoutRemittanceContact" maxlength="500" value="${esc(settings.remittanceContact || '')}" placeholder="sales@huttas.com"></label>
+                        <label><span>Proof upload instructions</span><small>Explain what customers should upload after an external payment.</small><textarea id="closeoutProofInstructions" maxlength="2000" rows="3" placeholder="Upload a clear image showing the amount, date, and transaction reference.">${esc(settings.proofUploadInstructions || '')}</textarea></label>
+                        <label class="full"><span>Customer closeout email message</span><small>Short introduction displayed before the completed service details.</small><textarea id="closeoutEmailMessage" maxlength="3000" rows="3" placeholder="Your service is complete and ready for review.">${esc(settings.customerCloseoutEmailMessage || '')}</textarea></label>
+                    </section>
                 </div>
-                <footer><button type="button" class="btn-secondary" data-settings-close>Cancel</button><button type="submit" class="btn-primary">Save Payment Settings</button></footer>
+                <footer><p><i class="fas fa-info-circle" aria-hidden="true"></i> Changes apply to future invoices and closeouts only.</p><div><button type="button" class="btn-secondary" data-settings-close>Cancel</button><button type="submit" class="btn-primary"><i class="fas fa-check" aria-hidden="true"></i> Save Payment Settings</button></div></footer>
             </form>`;
             document.body.append(dialog);
             dialog.querySelectorAll('[data-settings-close]').forEach(button => button.onclick = () => dialog.close());
+            const syncMethodCard = section => {
+                const enabled = section.querySelector('[data-method-enabled]').checked;
+                section.classList.toggle('is-enabled', enabled);
+                section.querySelector('[data-method-status]').textContent = enabled ? 'Enabled' : 'Hidden';
+                section.querySelectorAll('[data-method-label],[data-method-instructions],[data-method-reference]').forEach(field => {
+                    field.disabled = !enabled;
+                });
+                const count = [...dialog.querySelectorAll('[data-method-enabled]')].filter(input => input.checked).length;
+                dialog.querySelector('[data-enabled-count]').textContent = `${count} enabled`;
+            };
+            dialog.querySelectorAll('[data-method]').forEach(section => {
+                syncMethodCard(section);
+                section.querySelector('[data-method-enabled]').addEventListener('change', () => syncMethodCard(section));
+            });
             dialog.querySelector('form').onsubmit = async event => {
                 event.preventDefault();
-                const save = dialog.querySelector('button[type="submit"]'); save.disabled = true;
+                const save = dialog.querySelector('button[type="submit"]');
                 const paymentMethods = [...dialog.querySelectorAll('[data-method]')].map(section => ({
                     key: section.dataset.method,
                     label: section.querySelector('[data-method-label]').value.trim(),
                     instructions: section.querySelector('[data-method-instructions]').value.trim(),
                     enabled: section.querySelector('[data-method-enabled]').checked,
                     transactionReferenceRequired: section.querySelector('[data-method-reference]').checked
-                })).filter(method => !method.enabled || (method.label && method.instructions));
+                }));
+                const invalid = paymentMethods.find(method => method.enabled && (!method.label || !method.instructions));
+                if (invalid) {
+                    const section = dialog.querySelector(`[data-method="${invalid.key}"]`);
+                    const field = !invalid.label ? section.querySelector('[data-method-label]') : section.querySelector('[data-method-instructions]');
+                    window.showToast?.('Every enabled payment method needs a customer label and instructions.', 'error');
+                    field.focus();
+                    return;
+                }
+                save.disabled = true;
+                save.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Saving...';
                 try {
                     await window.APIService.updateCloseoutSettings({
                         paymentMethods,
@@ -505,7 +555,9 @@
                     window.showToast?.('Stage 6 payment settings saved.');
                     dialog.close();
                 } catch (error) {
-                    window.showToast?.(error.message, 'error'); save.disabled = false;
+                    window.showToast?.(error.message, 'error');
+                    save.disabled = false;
+                    save.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Save Payment Settings';
                 }
             };
             dialog.addEventListener('close', () => dialog.remove(), { once: true });

@@ -195,6 +195,21 @@ test('Workflow Center renders six stages and the full closeout workspace', () =>
   assert.match(ui, /openCloseoutSettings/);
 });
 
+test('Stage 6 payment settings use an accessible customer-facing configuration workspace', () => {
+  const html = read('pages/admin-dashboard.html');
+  const ui = read('assets/js/closeout.js');
+  const css = read('assets/css/closeout.css');
+  assert.match(html, /closeout\.css\?v=20260726-payment-settings-v2/);
+  assert.match(ui, /aria-labelledby/);
+  assert.match(ui, /closeout-settings-notice/);
+  assert.match(ui, /closeout-method-card/);
+  assert.match(ui, /data-enabled-count/);
+  assert.match(ui, /Every enabled payment method needs a customer label and instructions/);
+  assert.match(css, /\.closeout-method-switch/);
+  assert.match(css, /\.closeout-copy-card/);
+  assert.match(css, /@media\(max-width:700px\)/);
+});
+
 test('invoice PDF is generated from the immutable invoice snapshot', async () => {
   const pdf = await createCustomerInvoicePdf({
     invoiceNumber: 'INV-2026-000001',
