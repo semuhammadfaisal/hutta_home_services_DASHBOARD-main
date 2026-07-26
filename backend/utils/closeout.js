@@ -7,6 +7,8 @@ const FOLLOWUP_DELAY_MS = 48 * 60 * 60 * 1000;
 const MAX_FILES_PER_CATEGORY = 10;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_PUBLIC_BODY_BYTES = 110 * 1024 * 1024;
+const MAX_PAYMENT_PROOF_FILES = 3;
+const MAX_PAYMENT_PROOF_FILE_BYTES = 10 * 1024 * 1024;
 
 const cleanText = (value, max = 5000) => String(value || '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max);
 const sha256 = value => crypto.createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
@@ -35,6 +37,7 @@ async function nextReference(kind, prefix, session) {
 const nextCompletionReference = session => nextReference('job-completion', 'CMP', session);
 const nextInvoiceNumber = session => nextReference('customer-invoice', 'INV', session);
 const nextPaymentId = session => nextReference('stage6-payment', 'PAY', session);
+const nextPaymentProofReference = session => nextReference('payment-proof', 'PPF', session);
 function completionSnapshot(value) {
   return {
     completionReference: value.completionReference,
@@ -67,13 +70,34 @@ function invoiceSnapshotHash(value) {
     companySnapshot: value.companySnapshot,
     customerSnapshot: value.customerSnapshot,
     jobSnapshot: value.jobSnapshot,
-    quoteSnapshot: value.quoteSnapshot
+    quoteSnapshot: value.quoteSnapshot,
+    paymentInstructionsSnapshot: value.paymentInstructionsSnapshot || {}
+  }));
+}
+function evidenceSnapshotHash(value) {
+  return sha256(JSON.stringify({
+    completionSnapshotHash: value.completionSnapshotHash,
+    beforePhotos: (value.beforePhotos || []).map(file => ({ documentId: file.documentId, name: file.name, type: file.type, size: file.size })),
+    afterPhotos: (value.afterPhotos || []).map(file => ({ documentId: file.documentId, name: file.name, type: file.type, size: file.size }))
   }));
 }
 function parseSatisfaction(body = {}) {
-  const action = cleanText(body.action, 40); const issueMessage = cleanText(body.issueMessage, 3000); const errors = [];
+  const action = cleanText(body.action, 40);
+  const issueMessage = cleanText(body.issueMessage, 3000);
+  const typedName = cleanText(body.typedName, 160);
+  const completionConfirmed = body.completionConfirmed === true || body.completionConfirmed === 'true';
+  const errors = [];
   if (!['satisfied', 'report_issue'].includes(action)) errors.push('Choose satisfied or report issue');
+  if (typedName.length < 2) errors.push('Enter your full name');
+  if (action === 'satisfied' && !completionConfirmed) errors.push('Confirm that you reviewed and accept the completed work');
   if (action === 'report_issue' && issueMessage.length < 10) errors.push('Issue details must contain at least 10 characters');
-  return { payload: { decision: action === 'report_issue' ? 'issue_reported' : 'satisfied', issueMessage }, errors };
+  return { payload: { decision: action === 'report_issue' ? 'issue_reported' : 'satisfied', issueMessage, typedName, completionConfirmed }, errors };
 }
-module.exports = { COMPLETION_TOKEN_TTL_MS, SATISFACTION_TOKEN_TTL_MS, FOLLOWUP_DELAY_MS, MAX_FILES_PER_CATEGORY, MAX_FILE_BYTES, MAX_PUBLIC_BODY_BYTES, cleanText, sha256, generateToken, hashToken, encryptToken, decryptToken, nextCompletionReference, nextInvoiceNumber, nextPaymentId, completionSnapshotHash, invoiceSnapshotHash, parseSatisfaction };
+module.exports = {
+  COMPLETION_TOKEN_TTL_MS, SATISFACTION_TOKEN_TTL_MS, FOLLOWUP_DELAY_MS,
+  MAX_FILES_PER_CATEGORY, MAX_FILE_BYTES, MAX_PUBLIC_BODY_BYTES,
+  MAX_PAYMENT_PROOF_FILES, MAX_PAYMENT_PROOF_FILE_BYTES,
+  cleanText, sha256, generateToken, hashToken, encryptToken, decryptToken,
+  nextCompletionReference, nextInvoiceNumber, nextPaymentId, nextPaymentProofReference,
+  completionSnapshotHash, invoiceSnapshotHash, evidenceSnapshotHash, parseSatisfaction
+};

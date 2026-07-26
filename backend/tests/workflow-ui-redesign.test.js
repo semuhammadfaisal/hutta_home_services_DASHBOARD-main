@@ -33,6 +33,7 @@ test('overview, journey, and admin reconciliation APIs are authenticated and map
   assert.equal(stageByStatus.outgoing_quote_draft, 3);
   assert.equal(stageByStatus.quote_changes_requested, 4);
   assert.equal(stageByStatus.scheduled, 6);
+  assert.equal(stageByStatus.awaiting_customer_closeout, 6);
   assert.equal(stageByStatus.completed, 6);
   assert.equal(stageByStatus.closeout_issue_reported, 6);
   const week = phoenixWeekBounds(new Date('2026-01-01T12:00:00.000Z'));

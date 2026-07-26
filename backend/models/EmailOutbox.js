@@ -31,6 +31,15 @@ const emailOutboxSchema = new mongoose.Schema({
       ,'staff_satisfaction_alert'
       ,'staff_closeout_issue_alert'
       ,'staff_closeout_issue_resolved'
+      ,'customer_closeout_review'
+      ,'customer_closeout_followup'
+      ,'customer_closeout_confirmation'
+      ,'customer_closeout_issue_confirmation'
+      ,'customer_closeout_issue_resolved'
+      ,'customer_payment_proof_received'
+      ,'staff_payment_proof_alert'
+      ,'customer_payment_proof_verified'
+      ,'customer_payment_proof_rejected'
     ],
     required: true
   },
@@ -47,6 +56,7 @@ const emailOutboxSchema = new mongoose.Schema({
   jobCompletionId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobCompletion' },
   customerInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerInvoice' },
   satisfactionDecisionId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerSatisfactionDecision' },
+  paymentProofSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentProofSubmission' },
   status: {
     type: String,
     enum: ['pending', 'processing', 'sent', 'retry_scheduled', 'permanently_failed', 'cancelled'],

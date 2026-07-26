@@ -994,6 +994,33 @@ class APIService {
         });
     }
 
+    async resendCustomerCloseoutLink(orderId) {
+        return this.request(`/closeout/orders/${encodeURIComponent(orderId)}/closeout-link/resend`, { method: 'POST' });
+    }
+
+    async rotateCustomerCloseoutLink(orderId) {
+        return this.request(`/closeout/orders/${encodeURIComponent(orderId)}/closeout-link/rotate`, { method: 'POST' });
+    }
+
+    async verifyPaymentProof(proofId) {
+        return this.request(`/closeout/payment-proofs/${encodeURIComponent(proofId)}/verify`, { method: 'POST' });
+    }
+
+    async rejectPaymentProof(proofId, rejectionReason) {
+        return this.request(`/closeout/payment-proofs/${encodeURIComponent(proofId)}/reject`, {
+            method: 'POST',
+            body: JSON.stringify({ rejectionReason })
+        });
+    }
+
+    async getCloseoutSettings() {
+        return this.request('/closeout/settings');
+    }
+
+    async updateCloseoutSettings(settings) {
+        return this.request('/closeout/settings', { method: 'PUT', body: JSON.stringify(settings) });
+    }
+
     async retryCloseoutEmail(messageId) {
         return this.request(`/closeout/outbox/${encodeURIComponent(messageId)}/retry`, { method: 'POST' });
     }

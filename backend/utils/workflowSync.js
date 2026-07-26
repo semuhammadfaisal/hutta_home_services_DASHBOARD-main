@@ -14,8 +14,9 @@ const WORKFLOW_STATUS = Object.freeze({
   schedule_pending_vendor: { orderStatus: 'in-progress', stageKey: 'approved_ready_to_schedule' },
   schedule_changes_requested: { orderStatus: 'in-progress', stageKey: 'approved_ready_to_schedule' },
   scheduled: { orderStatus: 'in-progress', stageKey: 'in_progress' },
+  awaiting_customer_closeout: { orderStatus: 'in-progress', stageKey: 'invoice_sent' },
   completed: { orderStatus: 'completed', stageKey: 'invoice_sent' },
-  closeout_issue_reported: { orderStatus: 'completed', stageKey: 'awaiting_documentation' }
+  closeout_issue_reported: { orderStatus: 'in-progress', stageKey: 'awaiting_documentation' }
 });
 
 const STAGE_DEFINITIONS = Object.freeze({

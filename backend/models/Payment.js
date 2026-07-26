@@ -22,6 +22,7 @@ const paymentSchema = new mongoose.Schema({
   jobCompletionId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobCompletion' },
   outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
   invoiceIssuedAt: Date,
+  paymentProofSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentProofSubmission' },
   order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
   project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },

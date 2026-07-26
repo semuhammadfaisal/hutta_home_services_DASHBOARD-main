@@ -12,9 +12,10 @@ const { STAGE_DEFINITIONS, WORKFLOW_STATUS } = require('../utils/workflowSync');
 test('every Workflow Center state has a broad Order status and Pipeline mapping', () => {
   assert.deepEqual(WORKFLOW_STATUS.request_received, { orderStatus: 'new', stageKey: 'work_order_received' });
   assert.deepEqual(WORKFLOW_STATUS.scheduled, { orderStatus: 'in-progress', stageKey: 'in_progress' });
+  assert.deepEqual(WORKFLOW_STATUS.awaiting_customer_closeout, { orderStatus: 'in-progress', stageKey: 'invoice_sent' });
   assert.deepEqual(WORKFLOW_STATUS.completed, { orderStatus: 'completed', stageKey: 'invoice_sent' });
-  assert.deepEqual(WORKFLOW_STATUS.closeout_issue_reported, { orderStatus: 'completed', stageKey: 'awaiting_documentation' });
-  assert.equal(Object.keys(WORKFLOW_STATUS).length, 12);
+  assert.deepEqual(WORKFLOW_STATUS.closeout_issue_reported, { orderStatus: 'in-progress', stageKey: 'awaiting_documentation' });
+  assert.equal(Object.keys(WORKFLOW_STATUS).length, 13);
   assert.equal(STAGE_DEFINITIONS.paid.name, 'Paid');
 });
 

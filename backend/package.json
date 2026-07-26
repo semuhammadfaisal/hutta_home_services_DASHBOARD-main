@@ -24,6 +24,8 @@
     "migrate:stage5-scheduling:apply": "node migrate-stage5-scheduling.js --apply",
     "migrate:stage6-closeout": "node migrate-stage6-closeout.js",
     "migrate:stage6-closeout:apply": "node migrate-stage6-closeout.js --apply",
+    "migrate:stage6-customer-closeout": "node migrate-stage6-customer-closeout.js",
+    "migrate:stage6-customer-closeout:apply": "node migrate-stage6-customer-closeout.js --apply",
     "migrate:workflow-pipeline-sync": "node migrate-workflow-pipeline-sync.js",
     "migrate:workflow-pipeline-sync:apply": "node migrate-workflow-pipeline-sync.js --apply",
     "test": "node --test tests/*.test.js"
@@ -39,7 +41,8 @@
     "mongoose": "^8.0.3",
     "multer": "^2.1.0",
     "pdfkit": "^0.19.1",
-    "resend": "^4.8.0"
+    "resend": "^4.8.0",
+    "sharp": "^0.34.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

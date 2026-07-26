@@ -15,6 +15,7 @@ const schema = new mongoose.Schema({
   customerSnapshot: { type: mongoose.Schema.Types.Mixed, required: true, immutable: true },
   jobSnapshot: { type: mongoose.Schema.Types.Mixed, required: true, immutable: true },
   quoteSnapshot: { type: mongoose.Schema.Types.Mixed, required: true, immutable: true },
+  paymentInstructionsSnapshot: { type: mongoose.Schema.Types.Mixed, default: {}, immutable: true },
   snapshotHash: { type: String, required: true, match: /^[a-f0-9]{64}$/, immutable: true },
   pdfGeneratedAt: Date
 }, { timestamps: true });

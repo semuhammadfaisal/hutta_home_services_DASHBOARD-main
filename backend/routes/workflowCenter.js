@@ -29,6 +29,7 @@ const stageByStatus = {
   schedule_pending_vendor: 5,
   schedule_changes_requested: 5,
   scheduled: 6,
+  awaiting_customer_closeout: 6,
   completed: 6,
   closeout_issue_reported: 6
 };
@@ -41,6 +42,7 @@ const attentionLabel = {
   customer_approved: 'Propose vendor schedule',
   schedule_changes_requested: 'Vendor requested schedule changes',
   scheduled: 'Submit job completion',
+  awaiting_customer_closeout: 'Follow up on customer closeout',
   closeout_issue_reported: 'Resolve customer closeout issue'
 };
 
@@ -131,6 +133,7 @@ function nextActionFor(order) {
     schedule_pending_vendor: 'Follow Up',
     schedule_changes_requested: 'Review Changes',
     scheduled: 'Complete',
+    awaiting_customer_closeout: 'Follow Up',
     completed: 'Review',
     closeout_issue_reported: 'Resolve'
   };
@@ -242,7 +245,7 @@ router.get('/overview', allowedRoles, async (req, res, next) => {
       OutgoingQuote.find({ status: 'sent', customerDecisionStatus: 'pending', validUntil: { $lte: now } }).distinct('orderId'),
       JobSchedule.find({ status: 'pending_vendor', tokenExpiresAt: { $lte: now } }).distinct('orderId'),
       JobCompletion.find({ status: 'pending', tokenExpiresAt: { $lte: now } }).distinct('orderId'),
-      Order.find({ workflowStatus: 'completed', satisfactionStatus: 'pending', completedAt: { $lte: satisfactionDeadline } }).distinct('_id'),
+      Order.find({ workflowStatus: 'awaiting_customer_closeout', satisfactionStatus: 'pending', closeoutRequestedAt: { $lte: satisfactionDeadline } }).distinct('_id'),
       Order.countDocuments({ workflowStatus: { $in: workflowStatuses }, scheduledStart: { $gte: weekStart, $lt: weekEnd } }),
       loadRecentActivity(activityLimit)
     ]);
@@ -302,15 +305,15 @@ router.get('/overview', allowedRoles, async (req, res, next) => {
       .limit(12)
       .lean();
     const recent = recentOrders.map(order => summary(order, failedEmailOrderIds, complianceOrderIds));
-    const [completedNeedsClose, fullyClosed] = await Promise.all([
-      Order.countDocuments({ workflowStatus: 'completed', satisfactionStatus: { $in: ['not_requested', 'pending'] } }),
-      Order.countDocuments({ workflowStatus: 'completed', satisfactionStatus: { $in: ['satisfied', 'issue_resolved'] } })
-    ]);
+    const fullyClosed = await Order.countDocuments({
+      workflowStatus: 'completed',
+      satisfactionStatus: { $in: ['satisfied', 'issue_resolved'] }
+    });
     const workflowOrderTotal = [...statusTotals.values()].reduce((total, value) => total + value, 0);
     const openRequests = Math.max(0, workflowOrderTotal - fullyClosed);
     const readyToClose = (statusTotals.get('scheduled') || 0)
-      + (statusTotals.get('closeout_issue_reported') || 0)
-      + completedNeedsClose;
+      + (statusTotals.get('awaiting_customer_closeout') || 0)
+      + (statusTotals.get('closeout_issue_reported') || 0);
     const metrics = [
       { key: 'open_requests', label: 'Open Requests', total: openRequests, supportingCount: blockedCount, supportingLabel: 'blocked', tone: 'info', targetStage: 1 },
       { key: 'waiting_vendors', label: 'Waiting for Vendors', total: statusTotals.get('quote_collection') || 0, supportingCount: idsToSet(expiredInvitations).size, supportingLabel: 'overdue', tone: 'warning', targetStage: 2 },
@@ -359,6 +362,7 @@ router.get('/orders/:orderId/journey', allowedRoles, async (req, res, next) => {
     if (order.workflowStatus === 'quote_changes_requested') stages[3].state = 'attention';
     if (order.workflowStatus === 'schedule_changes_requested') stages[4].state = 'attention';
     if (order.workflowStatus === 'completed') stages[5].state = 'completed';
+    if (order.workflowStatus === 'awaiting_customer_closeout') stages[5].state = 'current';
     if (order.workflowStatus === 'closeout_issue_reported') stages[5].state = 'attention';
     res.json({ order, currentStage, stages });
   } catch (error) { next(error); }

@@ -1,6 +1,7 @@
 const os = require('os');
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
+const sharp = require('sharp');
 const EmailOutbox = require('../models/EmailOutbox');
 const IntakeSubmission = require('../models/IntakeSubmission');
 const Notification = require('../models/Notification');
@@ -29,6 +30,8 @@ const {
   sendCustomerCompletionSatisfactionEmail,
   sendCustomerSatisfactionResultEmail,
   sendStaffCloseoutEmail,
+  sendCustomerPaymentProofEmail,
+  sendStaffPaymentProofEmail,
   sendWebsiteOperationsAlertEmail,
   sendWebsiteRequestConfirmationEmail
 } = require('./emailService');
@@ -57,7 +60,15 @@ const STAGE4_TYPES = new Set([
   'staff_quote_change_alert'
 ]);
 const STAGE5_TYPES = new Set(['vendor_schedule_proposal', 'vendor_schedule_accepted_confirmation', 'customer_schedule_confirmation', 'staff_schedule_accepted_alert', 'vendor_schedule_change_confirmation', 'staff_schedule_change_alert']);
-const CLOSEOUT_TYPES = new Set(['vendor_completion_link','vendor_completion_confirmation','customer_completion_satisfaction','customer_satisfaction_followup','customer_satisfaction_confirmation','customer_issue_confirmation','staff_completion_alert','staff_satisfaction_alert','staff_closeout_issue_alert','staff_closeout_issue_resolved']);
+const CLOSEOUT_TYPES = new Set([
+  'vendor_completion_link','vendor_completion_confirmation','customer_completion_satisfaction',
+  'customer_satisfaction_followup','customer_satisfaction_confirmation','customer_issue_confirmation',
+  'staff_completion_alert','staff_satisfaction_alert','staff_closeout_issue_alert','staff_closeout_issue_resolved',
+  'customer_closeout_review','customer_closeout_followup','customer_closeout_confirmation',
+  'customer_closeout_issue_confirmation','customer_closeout_issue_resolved',
+  'customer_payment_proof_received','staff_payment_proof_alert',
+  'customer_payment_proof_verified','customer_payment_proof_rejected'
+]);
 
 let timer = null;
 let polling = false;
@@ -75,6 +86,21 @@ async function cleanupCloseoutOrphans() {
   if (!files.length) return;
   const bucket = new GridFSBucket(mongoose.connection.db, { bucketName: 'uploads' });
   await Promise.allSettled(files.map(file => bucket.delete(file._id)));
+}
+async function readGridFsBuffer(fileId) {
+  if (!fileId) return null;
+  const chunks=[];
+  await new Promise((resolve,reject)=>{
+    const stream=new GridFSBucket(mongoose.connection.db,{bucketName:'uploads'}).openDownloadStream(fileId);
+    stream.on('data',chunk=>chunks.push(chunk));stream.once('end',resolve);stream.once('error',reject);
+  });
+  return Buffer.concat(chunks);
+}
+async function evidencePreviewAttachment(file, contentId, label) {
+  if (!file?.fileId) return null;
+  const original=await readGridFsBuffer(file.fileId);
+  const content=await sharp(original).rotate().resize({width:640,height:480,fit:'inside',withoutEnlargement:true}).jpeg({quality:78,mozjpeg:true}).toBuffer();
+  return {filename:`${label}.jpg`,content,contentId};
 }
 
 function deliveryField(type) {
@@ -211,6 +237,15 @@ async function deliverMessage(message) {
     ,staff_satisfaction_alert: sendStaffCloseoutEmail
     ,staff_closeout_issue_alert: sendStaffCloseoutEmail
     ,staff_closeout_issue_resolved: sendStaffCloseoutEmail
+    ,customer_closeout_review: sendCustomerCompletionSatisfactionEmail
+    ,customer_closeout_followup: sendCustomerCompletionSatisfactionEmail
+    ,customer_closeout_confirmation: sendCustomerSatisfactionResultEmail
+    ,customer_closeout_issue_confirmation: sendCustomerSatisfactionResultEmail
+    ,customer_closeout_issue_resolved: sendCustomerCompletionSatisfactionEmail
+    ,customer_payment_proof_received: sendCustomerPaymentProofEmail
+    ,staff_payment_proof_alert: sendStaffPaymentProofEmail
+    ,customer_payment_proof_verified: sendCustomerPaymentProofEmail
+    ,customer_payment_proof_rejected: sendCustomerPaymentProofEmail
   };
   const sender = senders[message.type];
   if (!sender) throw new Error(`Unsupported email outbox type: ${message.type}`);
@@ -255,18 +290,33 @@ async function deliverMessage(message) {
       const active = await JobCompletion.exists({ _id: message.jobCompletionId, publicTokenHash: hashCloseoutToken(payload.completionToken), status: 'pending', tokenExpiresAt: { $gt: new Date() } });
       if (!active) { await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: 'completion_link_inactive' } }); return; }
     }
-    if (['customer_completion_satisfaction', 'customer_satisfaction_followup'].includes(message.type)) {
-      const active = await JobCompletion.exists({ _id: message.jobCompletionId, satisfactionTokenHash: hashCloseoutToken(payload.satisfactionToken), status: 'completed', satisfactionTokenExpiresAt: { $gt: new Date() } });
-      const decided = await CustomerSatisfactionDecision.exists({ jobCompletionId: message.jobCompletionId });
+    if (['customer_completion_satisfaction', 'customer_satisfaction_followup','customer_closeout_review','customer_closeout_followup','customer_closeout_issue_resolved'].includes(message.type)) {
+      const completion = await JobCompletion.findOne({ _id: message.jobCompletionId, satisfactionTokenHash: hashCloseoutToken(payload.satisfactionToken), status: 'completed', satisfactionTokenExpiresAt: { $gt: new Date() }, closeoutTokenRevokedAt: { $exists: false } }).lean();
+      const active = Boolean(completion);
+      const decided = completion ? await CustomerSatisfactionDecision.exists({ jobCompletionId: message.jobCompletionId, closeoutRevision: completion.closeoutRevision }) : false;
       if (!active || decided) { await EmailOutbox.updateOne({ _id: message._id, lockedBy: WORKER_ID }, { $set: { status: 'cancelled', lockedUntil: null, lockedBy: null, lastErrorCategory: decided ? 'satisfaction_already_recorded' : 'satisfaction_link_inactive' } }); return; }
-      if (message.type === 'customer_satisfaction_followup') payload.followup = true;
+      if (['customer_satisfaction_followup','customer_closeout_followup'].includes(message.type)) payload.followup = true;
     }
-    if (message.type === 'customer_completion_satisfaction' && message.customerInvoiceId) {
+    if (['customer_completion_satisfaction','customer_closeout_review','customer_closeout_issue_resolved'].includes(message.type) && message.customerInvoiceId) {
       const invoice = await CustomerInvoice.findById(message.customerInvoiceId).lean();
       if (!invoice) throw new Error('Customer invoice is missing');
       payload.attachments = [{ filename: `${invoice.invoiceNumber}.pdf`, content: await createCustomerInvoicePdf(invoice) }];
+      const completion=await JobCompletion.findById(message.jobCompletionId).lean();
+      try {
+        const previews=await Promise.all([
+          evidencePreviewAttachment(completion?.beforePhotos?.[0],'before-evidence','before-service'),
+          evidencePreviewAttachment(completion?.afterPhotos?.[0],'after-evidence','after-service')
+        ]);
+        payload.attachments.push(...previews.filter(Boolean));
+      } catch (previewError) {
+        console.warn('Closeout email preview generation skipped:', previewError.message);
+      }
       await CustomerInvoice.updateOne({ _id: invoice._id }, { $set: { pdfGeneratedAt: new Date() } });
     }
+    if (message.type === 'customer_closeout_issue_resolved') payload.resolutionNote = payload.resolutionNote || 'The reported service issue was addressed.';
+    if (message.type === 'customer_payment_proof_received') payload.status = 'received';
+    if (message.type === 'customer_payment_proof_verified') payload.status = 'verified';
+    if (message.type === 'customer_payment_proof_rejected') payload.status = 'rejected';
     if (message.type === 'vendor_schedule_change_confirmation') payload.decision = 'changes_requested';
     if (message.type === 'staff_schedule_accepted_alert') payload.decision = 'accepted';
     if (message.type === 'staff_schedule_change_alert') payload.decision = 'changes_requested';
@@ -311,7 +361,7 @@ async function deliverMessage(message) {
     const delivery = { status: 'sent', attempts: message.attempts, lastAttemptAt: now, sentAt: now, lastErrorCategory: null, provider: result?.provider, providerMessageId: result?.messageId };
     await markIntakeDelivery(message, delivery);
     await markQuoteDelivery(message, delivery);
-    if (message.type === 'customer_satisfaction_followup') await Order.updateOne({ _id: message.orderId }, { $set: { satisfactionFollowupSentAt: now } });
+    if (['customer_satisfaction_followup','customer_closeout_followup'].includes(message.type)) await Order.updateOne({ _id: message.orderId }, { $set: { satisfactionFollowupSentAt: now } });
   } catch (error) {
     const category = errorCategory(error);
     const permanent = message.attempts >= MAX_ATTEMPTS;

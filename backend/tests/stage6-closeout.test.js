@@ -5,14 +5,17 @@ const path = require('node:path');
 const JobCompletion = require('../models/JobCompletion');
 const CustomerInvoice = require('../models/CustomerInvoice');
 const CustomerSatisfactionDecision = require('../models/CustomerSatisfactionDecision');
+const CloseoutSettings = require('../models/CloseoutSettings');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
+const PaymentProofSubmission = require('../models/PaymentProofSubmission');
 const EmailOutbox = require('../models/EmailOutbox');
 const {
   generateToken,
   hashToken,
   completionSnapshotHash,
   invoiceSnapshotHash,
+  evidenceSnapshotHash,
   parseSatisfaction,
   FOLLOWUP_DELAY_MS
 } = require('../utils/closeout');
@@ -26,16 +29,19 @@ test('Stage 6 schemas expose completion, invoice, satisfaction, Order, and Payme
   assert.deepEqual(JobCompletion.schema.path('status').enumValues, ['pending', 'completed', 'voided']);
   assert.equal(CustomerInvoice.schema.path('amount').options.immutable, true);
   assert.equal(CustomerSatisfactionDecision.schema.path('decision').options.immutable, true);
-  for (const state of ['completed', 'closeout_issue_reported']) {
+  for (const state of ['awaiting_customer_closeout', 'completed', 'closeout_issue_reported']) {
     assert.ok(Order.schema.path('workflowStatus').enumValues.includes(state));
   }
-  for (const field of ['jobCompletionId', 'customerInvoiceId', 'satisfactionDecisionId', 'completedAt', 'completedBy', 'satisfactionStatus', 'satisfactionFollowupSentAt']) {
+  for (const field of ['jobCompletionId', 'customerInvoiceId', 'satisfactionDecisionId', 'paymentProofSubmissionId', 'closeoutRequestedAt', 'completedAt', 'completedBy', 'satisfactionStatus', 'satisfactionFollowupSentAt']) {
     assert.ok(Order.schema.path(field), `Order.${field} should exist`);
   }
   assert.deepEqual(Payment.schema.path('source').enumValues, ['manual', 'stage6_invoice']);
   for (const field of ['customerInvoiceId', 'jobCompletionId', 'outgoingQuoteId', 'invoiceIssuedAt']) {
     assert.ok(Payment.schema.path(field), `Payment.${field} should exist`);
   }
+  assert.deepEqual(PaymentProofSubmission.schema.path('status').enumValues, ['pending_review', 'verified', 'rejected', 'superseded']);
+  assert.ok(CloseoutSettings.schema.path('paymentMethods'));
+  assert.ok(CustomerInvoice.schema.path('paymentInstructionsSnapshot'));
 });
 
 test('Stage 6 tokens and immutable hashes are deterministic and content-sensitive', () => {
@@ -75,12 +81,15 @@ test('Stage 6 tokens and immutable hashes are deterministic and content-sensitiv
   };
   assert.equal(invoiceSnapshotHash(invoice), invoiceSnapshotHash({ ...invoice }));
   assert.notEqual(invoiceSnapshotHash(invoice), invoiceSnapshotHash({ ...invoice, amount: 251 }));
+  const evidence = { ...completion, completionSnapshotHash: completionSnapshotHash(completion) };
+  assert.equal(evidenceSnapshotHash(evidence), evidenceSnapshotHash({ ...evidence }));
 });
 
-test('satisfaction validation supports satisfied or a meaningful reported issue', () => {
-  assert.equal(parseSatisfaction({ action: 'satisfied' }).errors.length, 0);
-  assert.equal(parseSatisfaction({ action: 'report_issue', issueMessage: 'The gate was left open.' }).errors.length, 0);
-  assert.match(parseSatisfaction({ action: 'report_issue', issueMessage: 'short' }).errors.join(' '), /10 characters/);
+test('customer closeout validation requires identity, confirmation, or a meaningful issue', () => {
+  assert.equal(parseSatisfaction({ action: 'satisfied', typedName: 'Customer Name', completionConfirmed: true }).errors.length, 0);
+  assert.equal(parseSatisfaction({ action: 'report_issue', typedName: 'Customer Name', issueMessage: 'The gate was left open.' }).errors.length, 0);
+  assert.match(parseSatisfaction({ action: 'satisfied', typedName: '', completionConfirmed: false }).errors.join(' '), /full name/i);
+  assert.match(parseSatisfaction({ action: 'report_issue', typedName: 'Customer Name', issueMessage: 'short' }).errors.join(' '), /10 characters/);
   assert.equal(FOLLOWUP_DELAY_MS, 48 * 60 * 60 * 1000);
 });
 
@@ -95,7 +104,16 @@ test('outbox supports every Stage 6 delivery type and delayed cancellation state
     'staff_completion_alert',
     'staff_satisfaction_alert',
     'staff_closeout_issue_alert',
-    'staff_closeout_issue_resolved'
+    'staff_closeout_issue_resolved',
+    'customer_closeout_review',
+    'customer_closeout_followup',
+    'customer_closeout_confirmation',
+    'customer_closeout_issue_confirmation',
+    'customer_closeout_issue_resolved',
+    'customer_payment_proof_received',
+    'staff_payment_proof_alert',
+    'customer_payment_proof_verified',
+    'customer_payment_proof_rejected'
   ];
   for (const type of types) assert.ok(EmailOutbox.schema.path('type').enumValues.includes(type));
   assert.ok(EmailOutbox.schema.path('status').enumValues.includes('cancelled'));
@@ -110,10 +128,13 @@ test('completion transaction is mounted publicly before auth and creates one inv
   assert.match(route, /CustomerInvoice\.create/);
   assert.match(route, /Payment\.create/);
   assert.match(route, /source:'stage6_invoice'/);
-  assert.match(route, /synchronizeWorkflowOrder\(order,'completed'/);
+  assert.match(route, /synchronizeWorkflowOrder\(order,'awaiting_customer_closeout'/);
   assert.doesNotMatch(route, /cannot be completed before the confirmed start time/i);
   assert.match(route, /nextAttemptAt:new Date\(now\.getTime\(\)\+FOLLOWUP_DELAY_MS\)/);
-  assert.match(route, /customer_satisfaction_followup/);
+  assert.match(route, /customer_closeout_followup/);
+  assert.match(route, /router\.post\('\/public\/payment-proof'/);
+  assert.match(route, /router\.get\('\/public\/evidence\/:documentId'/);
+  assert.match(route, /synchronizePaymentStage/);
   const worker = read('backend/utils/intakeEmailWorker.js');
   assert.match(worker, /cleanupCloseoutOrphans/);
   assert.match(worker, /'metadata\.linkStatus': 'pending'/);
@@ -130,8 +151,10 @@ test('public closeout pages keep tokens in fragments and use request headers', (
   assert.match(completionJs, /location\.hash/);
   assert.match(completionJs, /X-Vendor-Completion-Token/);
   assert.doesNotMatch(completionJs, /\?token=/);
-  assert.match(satisfactionPage, /I’m Satisfied/);
+  assert.match(satisfactionPage, /Confirm Work Complete/);
   assert.match(satisfactionPage, /Report an Issue/);
+  assert.match(satisfactionPage, /Invoice &amp; payment/);
+  assert.match(satisfactionPage, /id="paymentProofForm"/);
   assert.match(satisfactionJs, /X-Customer-Satisfaction-Token/);
   assert.doesNotMatch(satisfactionJs, /\?token=/);
 });
@@ -144,12 +167,15 @@ test('Workflow Center renders six stages and the full closeout workspace', () =>
   assert.match(html, /id="closeout"/);
   assert.match(html, /Completion &amp; Closeout/);
   assert.match(html, /id="closeoutStaffForm"/);
+  assert.match(html, /id="closeoutPaymentProofPanel"/);
   assert.match(hub, /stage: 6/);
   assert.match(hub, /workflow-reference-tabs/);
   assert.match(css, /workflow-reference-tabs/);
   assert.match(css, /workflow-tab/);
   assert.match(ui, /completeCloseoutOrder/);
   assert.match(ui, /resolveCloseoutIssue/);
+  assert.match(ui, /verifyPaymentProof/);
+  assert.match(ui, /openCloseoutSettings/);
 });
 
 test('invoice PDF is generated from the immutable invoice snapshot', async () => {
@@ -162,7 +188,12 @@ test('invoice PDF is generated from the immutable invoice snapshot', async () =>
     companySnapshot: { name: 'Hutta Home Services', email: 'sales@huttas.com' },
     customerSnapshot: { name: 'Customer', email: 'customer@example.com', address: '123 Main St' },
     jobSnapshot: { service: 'Landscaping', scopeOfWork: 'Approved scope' },
-    quoteSnapshot: { quoteReference: 'OQ-2026-000001', revisionNumber: 1 }
+    quoteSnapshot: { quoteReference: 'OQ-2026-000001', revisionNumber: 1 },
+    paymentInstructionsSnapshot: {
+      paymentMethods: [{ key: 'bank_transfer', label: 'Bank transfer', instructions: 'Use the invoice number as the reference.', enabled: true }],
+      remittanceContact: 'sales@huttas.com',
+      proofUploadInstructions: 'Upload transaction proof through the secure closeout page.'
+    }
   });
   assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
   assert.ok(pdf.length > 1000);

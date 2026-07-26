@@ -466,9 +466,62 @@ const sendStaffScheduleAlertEmail = ({ recipients, decision, vendorName, custome
 
 const sendVendorCompletionLinkEmail = ({ recipients, completionToken, vendorName, completionReference, requestReference, service }) => { const url=buildPublicUrl('/pages/vendor-completion.html',`token=${encodeURIComponent(completionToken)}`);return deliverEmail({to:recipients,subject:`Job completion link — ${completionReference}`,text:`Hello ${vendorName},\n\nAfter completing ${service}, upload the required before and after photos here:\n${url}`,html:emailShell('Submit Job Completion',`<p>Hello ${escapeHtml(vendorName)},</p><p>Use the secure link below after completing <strong>${escapeHtml(service)}</strong>.</p><div class="panel"><p><strong>Completion:</strong> ${escapeHtml(completionReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p></div><p><a class="btn" href="${url}">Submit Completion Photos</a></p>`)})};
 const sendVendorCompletionConfirmationEmail = ({ recipients, vendorName, completionReference, service, completedAt }) => deliverEmail({to:recipients,subject:`Completion received — ${completionReference}`,text:`Hello ${vendorName},\n\nCompletion for ${service} was recorded on ${scheduleTime(completedAt)} Arizona time.`,html:emailShell('Completion Received',`<p>Hello ${escapeHtml(vendorName)},</p><p>The completion and photo evidence were recorded.</p><div class="panel"><p><strong>Completion:</strong> ${escapeHtml(completionReference)}</p><p><strong>Service:</strong> ${escapeHtml(service)}</p><p><strong>Completed:</strong> ${escapeHtml(scheduleTime(completedAt))} Arizona time</p></div>`)});
-const sendCustomerCompletionSatisfactionEmail = ({ recipients, satisfactionToken, customerName, completionReference, invoiceNumber, requestReference, service, completedAt, amount, followup=false, attachments }) => {const url=buildPublicUrl('/pages/customer-satisfaction.html',`token=${encodeURIComponent(satisfactionToken)}`);return deliverEmail({to:recipients,subject:followup?`How did we do? — ${requestReference}`:`Service completed and invoice attached — ${invoiceNumber}`,text:`Hello ${customerName},\n\nYour ${service} service was completed on ${scheduleTime(completedAt)} Arizona time.${followup?' We would still appreciate your feedback.':` Invoice ${invoiceNumber} for $${Number(amount||0).toFixed(2)} is attached.`}\n\nShare feedback: ${url}`,html:emailShell(followup?'A Quick Follow-up':'Your Service Is Complete',`<p>Hello ${escapeHtml(customerName)},</p><p>${followup?'We would still appreciate your feedback about the completed service.':'Your service is complete. Your due-on-receipt invoice is attached.'}</p><div class="panel"><p><strong>Completion:</strong> ${escapeHtml(completionReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p>${!followup?`<p><strong>Invoice:</strong> ${escapeHtml(invoiceNumber)}</p><p><strong>Total:</strong> $${escapeHtml(Number(amount||0).toFixed(2))}</p>`:''}</div><p><a class="btn" href="${url}">Share Your Feedback</a></p>`),attachments})};
+const paymentInstructionsHtml = snapshot => {
+  const methods = (snapshot?.paymentMethods || []).filter(method => method.enabled !== false);
+  if (!methods.length) return '<p class="muted">Contact sales@huttas.com for payment instructions.</p>';
+  return methods.map(method => `<p><strong>${escapeHtml(method.label)}:</strong><br>${escapeHtml(method.instructions).replace(/\n/g,'<br>')}</p>`).join('');
+};
+const sendCustomerCompletionSatisfactionEmail = ({
+  recipients, satisfactionToken, customerName, completionReference, invoiceNumber, requestReference,
+  orderReference, service, address, scopeOfWork, vendorName, scheduledStart, scheduledEnd, completedAt,
+  completionNotes, amount, paymentInstructions, followup=false, resolutionNote, attachments
+}) => {
+  const url=buildPublicUrl('/pages/customer-satisfaction.html',`token=${encodeURIComponent(satisfactionToken)}`);
+  const evidence = !followup && attachments?.some(item => item.contentId === 'before-evidence')
+    ? '<table role="presentation" width="100%" style="margin:18px 0"><tr><td width="50%" style="padding-right:5px"><img src="cid:before-evidence" alt="Before service" style="display:block;width:100%;max-height:190px;object-fit:cover;border-radius:8px"></td><td width="50%" style="padding-left:5px"><img src="cid:after-evidence" alt="After service" style="display:block;width:100%;max-height:190px;object-fit:cover;border-radius:8px"></td></tr><tr><td style="padding-top:6px;font-size:11px;color:#6b7a8e">Before</td><td style="padding-top:6px;font-size:11px;color:#6b7a8e">After</td></tr></table>'
+    : '';
+  const title = resolutionNote ? 'Your Service Issue Was Addressed' : followup ? 'Please Review Your Completed Service' : 'Your Service Is Ready for Review';
+  const intro = resolutionNote
+    ? `Our team recorded the following resolution: ${resolutionNote}`
+    : followup
+      ? 'Your completed service is still awaiting your review.'
+      : 'The vendor has submitted completion details and photo evidence. Please review the work and confirm whether it is complete.';
+  return deliverEmail({
+    to:recipients,
+    subject:resolutionNote?`Please review the resolved service — ${requestReference}`:followup?`Closeout reminder — ${requestReference}`:`Review completed work and invoice — ${invoiceNumber}`,
+    text:`Hello ${customerName},\n\n${intro}\n\nService: ${service}\nAddress: ${address||''}\nCompletion: ${completionReference}\nInvoice: ${invoiceNumber}\nAmount due: $${Number(amount||0).toFixed(2)}\n\nReview work, evidence, invoice, and payment instructions: ${url}`,
+    html:emailShell(title,`
+      <p>Hello ${escapeHtml(customerName)},</p><p>${escapeHtml(intro)}</p>
+      <div class="panel">
+        <p><strong>Request:</strong> ${escapeHtml(requestReference)}${orderReference?` · ${escapeHtml(orderReference)}`:''}</p>
+        <p><strong>Completion:</strong> ${escapeHtml(completionReference)}</p>
+        <p><strong>Service:</strong> ${escapeHtml(service)}</p>
+        ${address?`<p><strong>Address:</strong> ${escapeHtml(address)}</p>`:''}
+        ${vendorName?`<p><strong>Contractor:</strong> ${escapeHtml(vendorName)}</p>`:''}
+        ${scopeOfWork?`<p><strong>Approved scope:</strong> ${escapeHtml(scopeOfWork)}</p>`:''}
+        ${scheduledStart?`<p><strong>Scheduled:</strong> ${escapeHtml(scheduleTime(scheduledStart))} through ${escapeHtml(scheduleTime(scheduledEnd))} Arizona time</p>`:''}
+        <p><strong>Completed:</strong> ${escapeHtml(scheduleTime(completedAt))} Arizona time</p>
+        ${completionNotes?`<p><strong>Completion notes:</strong> ${escapeHtml(completionNotes)}</p>`:''}
+      </div>
+      ${evidence}
+      <div class="panel"><p><strong>Invoice:</strong> ${escapeHtml(invoiceNumber)}</p><p><strong>Amount due:</strong> $${escapeHtml(Number(amount||0).toFixed(2))}</p>${paymentInstructionsHtml(paymentInstructions)}</div>
+      <p><a class="btn" href="${url}">Review Work &amp; Complete Closeout</a></p>
+      <p class="muted">The secure page contains the complete before-and-after gallery. Payment proof is reviewed separately by the Huttas team.</p>
+    `,{preheader:`Review completed work for ${requestReference}.`}),
+    attachments
+  });
+};
 const sendCustomerSatisfactionResultEmail = ({ recipients, customerName, completionReference, decision, issueMessage }) => deliverEmail({to:recipients,subject:decision==='issue_reported'?`We received your concern — ${completionReference}`:`Thank you for your feedback — ${completionReference}`,text:decision==='issue_reported'?`Hello ${customerName},\n\nWe recorded your concern: ${issueMessage}`:`Hello ${customerName},\n\nThank you for confirming that you are satisfied.`,html:emailShell(decision==='issue_reported'?'Your Concern Was Received':'Thank You',decision==='issue_reported'?`<p>Hello ${escapeHtml(customerName)},</p><p>We recorded your concern and our team will review it.</p><div class="panel"><p>${escapeHtml(issueMessage)}</p></div>`:`<p>Hello ${escapeHtml(customerName)},</p><p>Thank you for confirming that you are satisfied with the completed service.</p>`)});
 const sendStaffCloseoutEmail = ({ recipients, completionReference, invoiceNumber, requestReference, customerName, vendorName, service, decision, issueMessage, resolutionNote }) => {const url=buildPublicUrl('/pages/admin-dashboard.html','workflow-center/stage-6');return deliverEmail({to:recipients,subject:decision==='issue_reported'?`Closeout issue reported — ${completionReference}`:resolutionNote?`Closeout issue resolved — ${completionReference}`:`Stage 6 update — ${completionReference}`,text:`${completionReference||'Closeout'} / ${requestReference||''}. ${issueMessage||resolutionNote||`${service||'Service'} completion recorded. Invoice ${invoiceNumber||''}.`}\n\n${url}`,html:emailShell(decision==='issue_reported'?'Customer Reported an Issue':resolutionNote?'Closeout Issue Resolved':'Stage 6 Update',`<div class="panel"><p><strong>Completion:</strong> ${escapeHtml(completionReference||'Closeout')}</p><p><strong>Request:</strong> ${escapeHtml(requestReference||'')}</p>${customerName?`<p><strong>Customer:</strong> ${escapeHtml(customerName)}</p>`:''}${vendorName?`<p><strong>Vendor:</strong> ${escapeHtml(vendorName)}</p>`:''}${issueMessage?`<p><strong>Issue:</strong> ${escapeHtml(issueMessage)}</p>`:''}${resolutionNote?`<p><strong>Resolution:</strong> ${escapeHtml(resolutionNote)}</p>`:''}</div><p><a class="btn" href="${url}">Open Completion &amp; Closeout</a></p>`)})};
+const sendCustomerPaymentProofEmail = ({ recipients, customerName, proofReference, invoiceNumber, amount, rejectionReason, status }) => {
+  const rejected=status==='rejected';const verified=status==='verified';
+  const title=rejected?'Payment Proof Needs Attention':verified?'Payment Proof Verified':'Payment Proof Received';
+  return deliverEmail({to:recipients,subject:`${title} — ${invoiceNumber}`,text:`Hello ${customerName},\n\n${title}. Proof ${proofReference} for $${Number(amount||0).toFixed(2)}.${rejectionReason?`\nReason: ${rejectionReason}`:''}`,html:emailShell(title,`<p>Hello ${escapeHtml(customerName)},</p><p>${verified?'Your payment proof was verified and the Payment was marked received.':rejected?'The submitted proof could not be verified. You may upload a replacement from your secure closeout page.':'We received your payment proof. It remains pending until a staff member verifies it.'}</p><div class="panel"><p><strong>Proof:</strong> ${escapeHtml(proofReference)}</p><p><strong>Invoice:</strong> ${escapeHtml(invoiceNumber)}</p><p><strong>Amount:</strong> $${escapeHtml(Number(amount||0).toFixed(2))}</p>${rejectionReason?`<p><strong>Reason:</strong> ${escapeHtml(rejectionReason)}</p>`:''}</div>`)});
+};
+const sendStaffPaymentProofEmail = ({ recipients, customerName, proofReference, invoiceNumber, requestReference, amount }) => {
+  const url=buildPublicUrl('/pages/admin-dashboard.html','workflow-center/stage-6');
+  return deliverEmail({to:recipients,subject:`Payment proof awaiting review — ${proofReference}`,text:`${customerName} submitted ${proofReference} for ${invoiceNumber}, $${Number(amount||0).toFixed(2)}.\n\n${url}`,html:emailShell('Payment Proof Awaiting Review',`<div class="panel"><p><strong>Proof:</strong> ${escapeHtml(proofReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Customer:</strong> ${escapeHtml(customerName)}</p><p><strong>Invoice:</strong> ${escapeHtml(invoiceNumber)}</p><p><strong>Amount:</strong> $${escapeHtml(Number(amount||0).toFixed(2))}</p></div><p><a class="btn" href="${url}">Review Payment Proof</a></p>`)});
+};
 
 module.exports = {
   deliverEmail,
@@ -497,4 +550,6 @@ module.exports = {
   ,sendCustomerCompletionSatisfactionEmail
   ,sendCustomerSatisfactionResultEmail
   ,sendStaffCloseoutEmail
+  ,sendCustomerPaymentProofEmail
+  ,sendStaffPaymentProofEmail
 };

@@ -34,7 +34,11 @@ const schema = new mongoose.Schema({
   customerInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerInvoice' },
   satisfactionTokenHash: { type: String, select: false },
   satisfactionTokenExpiresAt: Date,
+  closeoutRevision: { type: Number, min: 1, default: 1 },
+  closeoutTokenSentAt: Date,
+  closeoutTokenRevokedAt: Date,
   satisfactionDecisionId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerSatisfactionDecision' },
+  paymentProofSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentProofSubmission' },
   history: [{ action: String, actorType: String, actorId: mongoose.Schema.Types.ObjectId, actorEmail: String, message: String, createdAt: { type: Date, default: Date.now } }]
 }, { timestamps: true });
 

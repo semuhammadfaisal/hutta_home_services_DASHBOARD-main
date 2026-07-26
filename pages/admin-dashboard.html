@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="../assets/css/scheduling.css?v=20260725-scheduling-workspace-v2">
     <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-workflow-interactions">
     <link rel="stylesheet" href="../assets/css/workflow-reference.css?v=20260725-quote-compliance">
-    <link rel="stylesheet" href="../assets/css/closeout.css?v=20260725-closeout-workspace">
+    <link rel="stylesheet" href="../assets/css/closeout.css?v=20260726-customer-closeout">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -954,7 +954,7 @@
         <section id="closeout" class="content-section closeout-section workflow-stage-section" data-workflow-stage="6">
             <div class="page-header workflow-header">
                 <div><h1>Completion &amp; Closeout</h1><p>Collect completion evidence, generate invoices, and resolve customer feedback.</p></div>
-                <button class="btn-secondary" type="button" onclick="loadCloseout()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <div class="closeout-header-actions"><button id="closeoutSettingsButton" class="btn-secondary" type="button" onclick="openCloseoutSettings()"><i class="fas fa-cog"></i> Payment Settings</button><button class="btn-secondary" type="button" onclick="loadCloseout()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
             </div>
             <div class="workflow-summary closeout-summary" aria-label="Completion and closeout summary">
                 <div><strong id="closeoutReadyCount">0</strong><span>Ready for completion</span></div>
@@ -1006,6 +1006,7 @@
                         </form>
                         <section id="closeoutPhotosPanel" class="closeout-panel closeout-evidence-panel" hidden><div class="closeout-panel-title"><span><i class="fas fa-images"></i></span><div><small>Completion evidence</small><h3>Before and after photos</h3></div></div><div id="closeoutPhotos" class="closeout-photo-groups"></div></section>
                         <section id="closeoutSatisfactionPanel" class="closeout-panel closeout-feedback-panel" hidden><div class="closeout-panel-title"><span><i class="fas fa-comments"></i></span><div><small>Customer response</small><h3>Satisfaction and issue timeline</h3></div></div><div id="closeoutSatisfaction"></div></section>
+                        <section id="closeoutPaymentProofPanel" class="closeout-panel closeout-payment-proof-panel" hidden><div class="closeout-panel-title"><span><i class="fas fa-receipt"></i></span><div><small>Payment evidence</small><h3>Customer payment proof</h3></div></div><div id="closeoutPaymentProofs"></div></section>
                     </div>
                     <aside class="closeout-aside">
                         <section class="closeout-panel closeout-summary-panel"><div class="closeout-panel-title"><span><i class="fas fa-briefcase"></i></span><div><small>Order context</small><h3>Job summary</h3></div></div><div id="closeoutJobSummary"></div></section>
@@ -4498,7 +4499,7 @@
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
-    <script src="../assets/js/closeout.js?v=20260725-closeout-workspace"></script>
+    <script src="../assets/js/closeout.js?v=20260726-customer-closeout"></script>
     <script src="../assets/js/workflow-hub.js?v=20260725-quote-workspace"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>

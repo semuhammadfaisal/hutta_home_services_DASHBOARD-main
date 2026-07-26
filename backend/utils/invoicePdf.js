@@ -48,6 +48,22 @@ function createCustomerInvoicePdf(invoice) {
       value: money(invoice.amount),
       note: 'Payment terms: Due on receipt'
     });
+    const payment = invoice.paymentInstructionsSnapshot || {};
+    const methods = Array.isArray(payment.paymentMethods)
+      ? payment.paymentMethods.filter(method => method?.enabled !== false && method?.label && method?.instructions)
+      : [];
+    if (methods.length || payment.remittanceContact || payment.proofUploadInstructions) {
+      drawSectionTitle(doc, 'Payment instructions');
+      methods.forEach(method => {
+        drawText(doc, `${method.label}\n${method.instructions}`);
+      });
+      if (payment.remittanceContact) {
+        drawText(doc, `Remittance contact\n${payment.remittanceContact}`);
+      }
+      if (payment.proofUploadInstructions) {
+        drawNotice(doc, payment.proofUploadInstructions);
+      }
+    }
     drawNotice(doc, 'Thank you for choosing Hutta Home Services. Questions about this invoice? Reply to sales@huttas.com.');
     addPageFooters(doc, { reference: invoice.invoiceNumber });
     doc.end();

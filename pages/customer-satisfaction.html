@@ -5,102 +5,121 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex,nofollow,noarchive">
     <meta name="referrer" content="no-referrer">
-    <title>Service Satisfaction | Hutta Home Services</title>
+    <title>Review Completed Work | Hutta Home Services</title>
     <link rel="icon" href="../favicon.ico">
-    <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix">
-    <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
-    <link rel="stylesheet" href="../assets/css/vendor-completion.css?v=20260725-customer-feedback-v2">
+    <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260726">
+    <link rel="stylesheet" href="../assets/css/customer-closeout.css?v=20260726">
 </head>
-<body class="satisfaction-page satisfaction-page-v2">
-    <header class="secure-header satisfaction-public-header">
+<body class="customer-closeout-page">
+    <header class="closeout-public-header">
         <img src="../assets/images/logo.png" alt="Hutta Home Services">
-        <span class="secure-session">Secure feedback</span>
+        <span><i aria-hidden="true">✓</i> Secure customer closeout</span>
     </header>
 
-    <main class="feedback-page">
-        <section id="satisfactionLoading" class="feedback-state" aria-live="polite">
-            <span class="completion-spinner" aria-hidden="true"></span>
-            <h1>Loading service details</h1>
-            <p>Retrieving your secure completion record.</p>
+    <main class="closeout-public-main">
+        <section id="satisfactionLoading" class="closeout-public-state" aria-live="polite">
+            <span class="closeout-public-spinner" aria-hidden="true"></span>
+            <h1>Loading completed work</h1>
+            <p>Retrieving your secure service record.</p>
         </section>
 
-        <section id="satisfactionError" class="feedback-state feedback-state-error" hidden role="alert">
-            <span class="feedback-error-mark" aria-hidden="true">!</span>
-            <h1>Feedback link unavailable</h1>
+        <section id="satisfactionError" class="closeout-public-state is-error" hidden role="alert">
+            <span class="closeout-public-error-icon" aria-hidden="true">!</span>
+            <h1>Closeout link unavailable</h1>
             <p id="satisfactionErrorMessage"></p>
-            <small>Please contact Hutta Home Services if you need assistance.</small>
+            <small>Please contact sales@huttas.com for assistance.</small>
         </section>
 
-        <article id="satisfactionDocument" class="feedback-card" hidden>
-            <header class="feedback-card-header">
-                <div class="feedback-complete-mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
+        <article id="satisfactionDocument" class="closeout-public-document" hidden>
+            <header class="closeout-public-hero">
+                <div>
+                    <span class="closeout-public-eyebrow">Completed service review</span>
+                    <h1 id="satisfactionService">Completed service</h1>
+                    <p><strong id="satisfactionReference"></strong> <span id="satisfactionCompletedAt"></span></p>
                 </div>
-                <div class="feedback-card-title">
-                    <span>Service completed</span>
-                    <h1 id="satisfactionService"></h1>
-                    <p id="satisfactionCompletedAt"></p>
-                </div>
-                <span class="feedback-secure-badge">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 3 8.2 7 10 4-1.8 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg>
-                    Secure
-                </span>
+                <span id="closeoutStatusBadge" class="closeout-public-status">Awaiting your review</span>
             </header>
 
-            <div class="feedback-reference">
-                <span>Completion reference</span>
-                <strong id="satisfactionReference"></strong>
-            </div>
+            <nav class="closeout-public-steps" aria-label="Closeout sections">
+                <a href="#review-work"><span>1</span> Review work</a>
+                <a href="#confirm-work"><span>2</span> Confirm service</a>
+                <a href="#invoice-payment"><span>3</span> Invoice &amp; payment</a>
+            </nav>
 
-            <section id="satisfactionPending" class="feedback-decision">
-                <div class="feedback-question">
-                    <span>Share your experience</span>
-                    <h2 id="satisfactionGreeting">Was everything completed to your satisfaction?</h2>
-                    <p>Your response helps us confirm the work is complete or quickly address anything that still needs attention.</p>
+            <section id="review-work" class="closeout-public-section">
+                <header>
+                    <span class="closeout-section-icon" aria-hidden="true">✓</span>
+                    <div><small>Step 1</small><h2>Review completed work</h2><p>Confirm the service details and vendor-provided evidence.</p></div>
+                </header>
+                <dl id="closeoutOrderFacts" class="closeout-public-facts"></dl>
+                <div class="closeout-public-copy">
+                    <h3>Approved scope</h3><p id="closeoutScope"></p>
+                    <div id="closeoutNotesBlock"><h3>Completion notes</h3><p id="closeoutNotes"></p></div>
                 </div>
-
-                <div id="satisfactionChoices" class="feedback-options">
-                    <button id="satisfiedButton" class="feedback-option feedback-option-positive" type="button">
-                        <span class="feedback-option-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
-                        <span class="feedback-option-copy"><strong>I’m Satisfied</strong><small>The work meets my expectations.</small></span>
-                        <svg class="feedback-option-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-                    </button>
-
-                    <button id="showIssueButton" class="feedback-option feedback-option-issue" type="button" aria-expanded="false" aria-controls="issuePanel">
-                        <span class="feedback-option-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 17h.01"/></svg></span>
-                        <span class="feedback-option-copy"><strong>Report an Issue</strong><small>Something still needs attention.</small></span>
-                        <svg class="feedback-option-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-                    </button>
+                <div class="closeout-evidence-groups">
+                    <section><div class="closeout-evidence-title"><h3>Before</h3><span id="beforeCount"></span></div><div id="beforeGallery" class="closeout-evidence-gallery"></div></section>
+                    <section><div class="closeout-evidence-title"><h3>After</h3><span id="afterCount"></span></div><div id="afterGallery" class="closeout-evidence-gallery"></div></section>
                 </div>
-
-                <div id="issuePanel" class="feedback-issue-form" hidden>
-                    <button id="cancelIssueButton" class="feedback-back" type="button"><span aria-hidden="true">←</span> Back</button>
-                    <span class="feedback-issue-label">Report a service issue</span>
-                    <h3>What needs our attention?</h3>
-                    <p>Describe the concern so our team can review it and follow up.</p>
-                    <label for="issueMessage">
-                        <span>Issue details <em>Required</em></span>
-                        <textarea id="issueMessage" minlength="10" maxlength="3000" rows="6" placeholder="Tell us what happened or what remains unfinished"></textarea>
-                        <small>Minimum 10 characters</small>
-                    </label>
-                    <button id="submitIssueButton" class="feedback-submit-issue" type="button">Send Issue to Huttas</button>
-                </div>
-
-                <p id="satisfactionFormError" class="feedback-error" role="alert" hidden></p>
-                <p class="feedback-privacy"><i class="fas fa-lock" aria-hidden="true"></i> Your response is private and can only be submitted once.</p>
             </section>
 
-            <section id="satisfactionComplete" class="feedback-result" hidden aria-live="polite">
-                <span id="satisfactionResultIcon" class="feedback-result-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
-                <span class="feedback-result-label">Response recorded</span>
-                <h2 id="satisfactionResultTitle"></h2>
-                <p id="satisfactionResultMessage"></p>
-                <time id="satisfactionDecisionAt"></time>
+            <section id="confirm-work" class="closeout-public-section">
+                <header>
+                    <span class="closeout-section-icon" aria-hidden="true">2</span>
+                    <div><small>Step 2</small><h2>Confirm the service</h2><p>Accept the completed work or tell us what still needs attention.</p></div>
+                </header>
+                <div id="satisfactionPending">
+                    <label class="closeout-public-field">Full name <em>Required</em><input id="typedName" maxlength="160" autocomplete="name" placeholder="Enter your full name"></label>
+                    <label class="closeout-public-confirm"><input id="completionConfirmed" type="checkbox"><span id="confirmationStatement"></span></label>
+                    <div id="satisfactionChoices" class="closeout-public-actions">
+                        <button id="satisfiedButton" class="closeout-primary" type="button">Confirm Work Complete</button>
+                        <button id="showIssueButton" class="closeout-secondary" type="button" aria-expanded="false" aria-controls="issuePanel">Report an Issue</button>
+                    </div>
+                    <div id="issuePanel" class="closeout-issue-panel" hidden>
+                        <button id="cancelIssueButton" class="closeout-text-button" type="button">← Back to confirmation</button>
+                        <label class="closeout-public-field">What needs attention? <em>Required</em><textarea id="issueMessage" minlength="10" maxlength="3000" rows="5" placeholder="Describe incomplete work or another service concern"></textarea><small>10–3,000 characters</small></label>
+                        <button id="submitIssueButton" class="closeout-danger" type="button">Send Issue to Huttas</button>
+                    </div>
+                    <p id="satisfactionFormError" class="closeout-public-error" role="alert" hidden></p>
+                </div>
+                <div id="satisfactionComplete" class="closeout-decision-result" hidden aria-live="polite">
+                    <span id="satisfactionResultIcon" aria-hidden="true">✓</span>
+                    <div><small>Response recorded</small><h3 id="satisfactionResultTitle"></h3><p id="satisfactionResultMessage"></p><time id="satisfactionDecisionAt"></time></div>
+                </div>
             </section>
 
-            <footer class="feedback-card-footer">Thank you for choosing Hutta Home Services.</footer>
+            <section id="invoice-payment" class="closeout-public-section">
+                <header>
+                    <span class="closeout-section-icon" aria-hidden="true">$</span>
+                    <div><small>Step 3</small><h2>Invoice and payment</h2><p>Review the due-on-receipt invoice and optionally submit transaction evidence.</p></div>
+                </header>
+                <div class="closeout-invoice-summary">
+                    <div><small>Invoice</small><strong id="invoiceNumber"></strong></div>
+                    <div><small>Amount due</small><strong id="invoiceAmount"></strong></div>
+                    <div><small>Payment status</small><strong id="paymentStatus"></strong></div>
+                </div>
+                <div id="paymentMethods" class="closeout-payment-methods"></div>
+                <div id="paymentProofState" class="closeout-proof-state" hidden></div>
+                <form id="paymentProofForm" class="closeout-proof-form">
+                    <h3>Submit transaction proof</h3>
+                    <p id="proofInstructions"></p>
+                    <div class="closeout-proof-grid">
+                        <label class="closeout-public-field">Payment method <em>Required</em><select id="paymentMethod" name="paymentMethod" required></select></label>
+                        <label class="closeout-public-field">Payer name <em>Required</em><input id="payerName" name="payerName" maxlength="160" autocomplete="name" required></label>
+                        <label class="closeout-public-field">Amount paid <em>Required</em><input id="declaredAmount" name="declaredAmount" type="number" min="0.01" step="0.01" required></label>
+                        <label class="closeout-public-field">Payment date <em>Required</em><input id="paidAt" name="paidAt" type="date" required></label>
+                        <label class="closeout-public-field">Transaction/reference number<input id="transactionReference" name="transactionReference" maxlength="200"></label>
+                        <label class="closeout-public-field full">Notes<textarea id="customerNotes" name="customerNotes" maxlength="2000" rows="3" placeholder="Optional details for the Huttas team"></textarea></label>
+                    </div>
+                    <label class="closeout-proof-upload"><input id="proofImages" name="proofImages" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple required><span>Choose transaction images</span><small>JPG, PNG, or WebP. Up to 3 images, 10 MB each.</small></label>
+                    <div id="proofPreviews" class="closeout-proof-previews"></div>
+                    <div id="proofProgress" class="closeout-proof-progress" hidden><span></span></div>
+                    <button id="submitProofButton" class="closeout-primary" type="submit">Submit Payment Proof</button>
+                    <p id="proofError" class="closeout-public-error" role="alert" hidden></p>
+                </form>
+            </section>
+            <footer class="closeout-public-footer">Your information is securely recorded. Payment proof is verified by Hutta Home Services staff.</footer>
         </article>
     </main>
-    <script src="../assets/js/customer-satisfaction.js?v=20260725-customer-feedback-v2"></script>
+    <script src="../assets/js/customer-satisfaction.js?v=20260726-closeout"></script>
 </body>
 </html>
