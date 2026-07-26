@@ -146,6 +146,7 @@ test('public closeout pages keep tokens in fragments and use request headers', (
   const completionJs = read('assets/js/vendor-completion.js');
   const satisfactionPage = read('pages/customer-satisfaction.html');
   const satisfactionJs = read('assets/js/customer-satisfaction.js');
+  const satisfactionCss = read('assets/css/customer-closeout.css');
   assert.match(completionPage, /Before photos/);
   assert.match(completionPage, /After photos/);
   assert.match(completionJs, /location\.hash/);
@@ -155,8 +156,24 @@ test('public closeout pages keep tokens in fragments and use request headers', (
   assert.match(satisfactionPage, /Report an Issue/);
   assert.match(satisfactionPage, /Invoice &amp; payment/);
   assert.match(satisfactionPage, /id="paymentProofForm"/);
+  assert.match(satisfactionPage, /closeout-public-hero-copy/);
   assert.match(satisfactionJs, /X-Customer-Satisfaction-Token/);
   assert.doesNotMatch(satisfactionJs, /\?token=/);
+  assert.match(satisfactionCss, /grid-template-columns:minmax\(0,1\.2fr\) minmax\(350px,.8fr\)/);
+  assert.match(satisfactionCss, /#confirm-work\{grid-column:1/);
+  assert.match(satisfactionCss, /#invoice-payment\{grid-column:2/);
+});
+
+test('customer closeout email sends working Resend inline evidence attachments', () => {
+  const worker = read('backend/utils/intakeEmailWorker.js');
+  const email = read('backend/utils/emailService.js');
+  assert.match(worker, /inlineContentId:contentId/);
+  assert.match(worker, /contentType:'image\/jpeg'/);
+  assert.doesNotMatch(worker, /return \{filename:`\$\{label\}\.jpg`,content,contentId\}/);
+  assert.match(email, /item\.inlineContentId === 'before-evidence'/);
+  assert.match(email, /item\.inlineContentId === 'after-evidence'/);
+  assert.match(email, /src="cid:before-evidence"/);
+  assert.match(email, /src="cid:after-evidence"/);
 });
 
 test('Workflow Center renders six stages and the full closeout workspace', () => {

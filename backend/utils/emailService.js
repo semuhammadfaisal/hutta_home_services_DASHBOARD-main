@@ -477,8 +477,21 @@ const sendCustomerCompletionSatisfactionEmail = ({
   completionNotes, amount, paymentInstructions, followup=false, resolutionNote, attachments
 }) => {
   const url=buildPublicUrl('/pages/customer-satisfaction.html',`token=${encodeURIComponent(satisfactionToken)}`);
-  const evidence = !followup && attachments?.some(item => item.contentId === 'before-evidence')
-    ? '<table role="presentation" width="100%" style="margin:18px 0"><tr><td width="50%" style="padding-right:5px"><img src="cid:before-evidence" alt="Before service" style="display:block;width:100%;max-height:190px;object-fit:cover;border-radius:8px"></td><td width="50%" style="padding-left:5px"><img src="cid:after-evidence" alt="After service" style="display:block;width:100%;max-height:190px;object-fit:cover;border-radius:8px"></td></tr><tr><td style="padding-top:6px;font-size:11px;color:#6b7a8e">Before</td><td style="padding-top:6px;font-size:11px;color:#6b7a8e">After</td></tr></table>'
+  const hasBefore = attachments?.some(item => item.inlineContentId === 'before-evidence');
+  const hasAfter = attachments?.some(item => item.inlineContentId === 'after-evidence');
+  const evidence = !followup && hasBefore && hasAfter
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border-collapse:separate">
+        <tr>
+          <td width="50%" style="padding:0 6px 0 0">
+            <div style="padding:9px 12px;background:#eef5fc;border:1px solid #d9e6f2;border-bottom:0;border-radius:9px 9px 0 0;color:#075eb8;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">Before service</div>
+            <img src="cid:before-evidence" alt="Before service" width="286" style="display:block;width:100%;height:190px;object-fit:cover;border:1px solid #d9e6f2;border-radius:0 0 9px 9px">
+          </td>
+          <td width="50%" style="padding:0 0 0 6px">
+            <div style="padding:9px 12px;background:#eaf8f1;border:1px solid #cce9db;border-bottom:0;border-radius:9px 9px 0 0;color:#087c50;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">After service</div>
+            <img src="cid:after-evidence" alt="After service" width="286" style="display:block;width:100%;height:190px;object-fit:cover;border:1px solid #cce9db;border-radius:0 0 9px 9px">
+          </td>
+        </tr>
+      </table>`
     : '';
   const title = resolutionNote ? 'Your Service Issue Was Addressed' : followup ? 'Please Review Your Completed Service' : 'Your Service Is Ready for Review';
   const intro = resolutionNote

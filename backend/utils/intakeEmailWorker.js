@@ -100,7 +100,8 @@ async function evidencePreviewAttachment(file, contentId, label) {
   if (!file?.fileId) return null;
   const original=await readGridFsBuffer(file.fileId);
   const content=await sharp(original).rotate().resize({width:640,height:480,fit:'inside',withoutEnlargement:true}).jpeg({quality:78,mozjpeg:true}).toBuffer();
-  return {filename:`${label}.jpg`,content,contentId};
+  // Resend maps this property to the API's inline_content_id field.
+  return {filename:`${label}.jpg`,content,contentType:'image/jpeg',inlineContentId:contentId};
 }
 
 function deliveryField(type) {
