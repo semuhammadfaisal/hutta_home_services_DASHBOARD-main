@@ -217,3 +217,10 @@ test('Stage 6 email links always use deployed HTTPS fragments and reject localho
     }
   }
 });
+
+test('Stage 6 customer closeout migration manages only its new or changed indexes', () => {
+  const migration = read('backend/migrate-stage6-customer-closeout.js');
+  assert.match(migration, /CloseoutSettings,\s*PaymentProofSubmission,\s*CustomerSatisfactionDecision/);
+  assert.doesNotMatch(migration, /JobCompletion,\s*Order,\s*Payment,\s*EmailOutbox/);
+  assert.match(migration, /dropIndex\(legacyUnique\.name\)/);
+});

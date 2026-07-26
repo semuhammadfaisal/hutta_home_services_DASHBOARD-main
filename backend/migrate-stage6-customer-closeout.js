@@ -15,10 +15,7 @@ async function run() {
   await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
   const CloseoutSettings = require('./models/CloseoutSettings');
   const CustomerSatisfactionDecision = require('./models/CustomerSatisfactionDecision');
-  const EmailOutbox = require('./models/EmailOutbox');
-  const JobCompletion = require('./models/JobCompletion');
   const Order = require('./models/Order');
-  const Payment = require('./models/Payment');
   const PaymentProofSubmission = require('./models/PaymentProofSubmission');
   const indexes = await CustomerSatisfactionDecision.collection.indexes().catch(() => []);
   const legacyUnique = indexes.find(index =>
@@ -45,9 +42,13 @@ async function run() {
       { $setOnInsert: { key: 'global' } },
       { upsert: true, setDefaultsOnInsert: true }
     );
+    // Manage only indexes introduced or structurally changed by this migration.
+    // Rebuilding indexes for legacy collections can conflict with production
+    // indexes that intentionally use different uniqueness options.
     for (const model of [
-      CloseoutSettings, PaymentProofSubmission, CustomerSatisfactionDecision,
-      JobCompletion, Order, Payment, EmailOutbox
+      CloseoutSettings,
+      PaymentProofSubmission,
+      CustomerSatisfactionDecision
     ]) await ensureIndexes(model);
     console.log('Stage 6 customer closeout settings and indexes are ready.');
   } else {
