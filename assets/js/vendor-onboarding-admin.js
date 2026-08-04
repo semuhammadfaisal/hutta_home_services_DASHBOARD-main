@@ -593,11 +593,11 @@
     if (!banner) return;
     try {
       const status = await request('/email-status');
-      const ready = status.provider === 'resend';
+      const ready = status.provider === 'resend' || status.provider === 'gmail';
       banner.classList.toggle('is-ready', ready);
       banner.innerHTML = ready
-        ? `<strong><i class="fas fa-circle-check"></i> Email delivery ready</strong>Resend is sending from ${escapeHtml(status.sender || 'sales@smplfix.com')} with replies routed to ${escapeHtml(status.replyTo || 'sales@smplfix.com')}.`
-        : `<strong><i class="fas fa-triangle-exclamation"></i> Email delivery unavailable</strong>${escapeHtml(status.warning || 'Resend is not fully configured.')}`;
+        ? `<strong><i class="fas fa-circle-check"></i> Email delivery ready</strong>${escapeHtml(status.provider === 'resend' ? 'Resend' : 'Gmail')} is sending from ${escapeHtml(status.sender || 'the configured Hutta mailbox')} with replies routed to ${escapeHtml(status.replyTo || 'the Hutta team')}.`
+        : `<strong><i class="fas fa-triangle-exclamation"></i> Email delivery unavailable</strong>${escapeHtml(status.warning || 'Email delivery is not fully configured.')}`;
       banner.hidden = false;
     } catch (error) {
       banner.classList.remove('is-ready');
