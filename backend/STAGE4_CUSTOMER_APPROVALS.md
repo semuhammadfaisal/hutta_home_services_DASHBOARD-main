@@ -5,7 +5,7 @@
 Add this environment variable to the CRM web service and redeploy:
 
 ```text
-QUOTE_APPROVAL_NOTIFICATION_EMAILS=sales@huttas.com
+QUOTE_APPROVAL_NOTIFICATION_EMAILS=sales@smplfix.com
 ```
 
 Use a comma-separated list when multiple staff recipients are required. If this setting is blank, Stage 4 falls back to `INTAKE_NOTIFICATION_EMAILS`.

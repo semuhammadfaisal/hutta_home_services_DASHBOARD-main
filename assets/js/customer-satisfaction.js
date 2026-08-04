@@ -70,7 +70,7 @@
         $('paymentProofState').hidden = !proof && !finalPayment;
         if (finalPayment) {
             $('paymentProofState').className = 'closeout-proof-state is-success';
-            $('paymentProofState').innerHTML = '<strong>Payment verified</strong><p>The Huttas team has marked this Payment received.</p>';
+            $('paymentProofState').innerHTML = '<strong>Payment verified</strong><p>The smplfix team has marked this Payment received.</p>';
             $('paymentProofForm').hidden = true;
         } else if (proof?.status === 'pending_review') {
             $('paymentProofState').className = 'closeout-proof-state is-pending';
@@ -91,7 +91,7 @@
         const methods = settings.paymentMethods || [];
         $('paymentMethods').innerHTML = methods.length
             ? methods.map(method => `<article><strong>${esc(method.label)}</strong><p>${esc(method.instructions).replace(/\n/g, '<br>')}</p></article>`).join('')
-            : '<article><strong>Payment instructions</strong><p>Contact sales@huttas.com for payment instructions.</p></article>';
+            : '<article><strong>Payment instructions</strong><p>Contact sales@smplfix.com for payment instructions.</p></article>';
         $('paymentMethod').innerHTML = '<option value="">Choose method</option>' + methods.map(method => `<option value="${esc(method.key)}" data-reference-required="${Boolean(method.transactionReferenceRequired)}">${esc(method.label)}</option>`).join('');
         $('proofInstructions').textContent = settings.proofUploadInstructions || 'Upload a clear transaction image for staff review.';
         if (!methods.length) $('paymentProofForm').hidden = true;

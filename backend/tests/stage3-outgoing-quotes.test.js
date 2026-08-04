@@ -49,7 +49,7 @@ test('Stage 3 schemas expose immutable versions, settings, and Order/outbox stat
 });
 
 test('customer PDF contains quote content but not internal cost or markup labels', async () => {
-  const pdf = await createOutgoingQuotePdf({ quoteReference: 'OQ-2026-000001', revisionNumber: 1, customerSnapshot: { name: 'Customer', address: 'Site' }, jobSnapshot: { service: 'Landscaping', requestReference: 'REQ-1' }, scopeOfWork: 'Complete requested landscaping.', vendorSnapshot: { licensedContractorName: 'Vendor LLC', licenseType: 'CR-21', rocNumber: '123' }, customerTotal: 1200, termsAndConditions: 'Approved terms.', legalDisclosure: 'Required legal disclosure.', validUntil: new Date(Date.now() + 86400000) }, { company: { name: 'Hutta Home Services' } });
+  const pdf = await createOutgoingQuotePdf({ quoteReference: 'OQ-2026-000001', revisionNumber: 1, customerSnapshot: { name: 'Customer', address: 'Site' }, jobSnapshot: { service: 'Landscaping', requestReference: 'REQ-1' }, scopeOfWork: 'Complete requested landscaping.', vendorSnapshot: { licensedContractorName: 'Vendor LLC', licenseType: 'CR-21', rocNumber: '123' }, customerTotal: 1200, termsAndConditions: 'Approved terms.', legalDisclosure: 'Required legal disclosure.', validUntil: new Date(Date.now() + 86400000) }, { company: { name: 'smplfix' } });
   assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
   assert.ok(pdf.length > 1000);
 });

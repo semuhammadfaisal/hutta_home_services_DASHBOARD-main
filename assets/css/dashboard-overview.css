@@ -1989,7 +1989,7 @@
 }
 
 #dashboard.dashboard-overview .orders-inline-bar {
-    fill: url(#ordersInlineTrendBar);
+    fill: #0B0B0C;
     filter: drop-shadow(0 4px 7px rgba(0, 86, 184, 0.12));
     transition: opacity 0.16s ease, transform 0.16s ease;
     transform-box: fill-box;
@@ -3366,7 +3366,7 @@
 }
 
 #dashboard.dashboard-overview .revenue-area-path {
-    fill: url(#revenueOverviewArea);
+    fill: rgba(11, 11, 12, 0.10);
 }
 
 #dashboard.dashboard-overview .revenue-line-path {

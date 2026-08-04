@@ -107,7 +107,7 @@ async function saveEmployeePayment() {
             throw new Error('Failed to save employee payment');
         }
 
-        showToast('Employee payment saved successfully', 'success');
+        showToast('Employee payment saved.', 'success');
         await showPaymentDetail(currentPaymentDetailData._id);
         await loadPayments();
     } catch (error) {

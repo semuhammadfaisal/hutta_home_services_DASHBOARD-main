@@ -1,11 +1,11 @@
-Huttas Forminator CRM Webhook 2.1.0
+smplfix Forminator CRM Webhook 2.1.0
 ===================================
 
 Installation
 ------------
 1. In WordPress go to Plugins > Add New > Upload Plugin.
 2. Upload huttas-forminator-crm-webhook.zip and activate it.
-3. Go to Settings > Huttas CRM Webhook.
+3. Go to Settings > smplfix CRM Webhook.
 4. Enter the numeric Forminator Form ID.
 5. Enter the complete CRM endpoint:
    https://YOUR-RENDER-DOMAIN/api/integrations/website-requests

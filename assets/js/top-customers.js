@@ -31,8 +31,8 @@ function renderTopCustomers(customers = topCustomersData) {
         grid.innerHTML = `
             <div class="top-customers-empty">
                 <i class="fas fa-users"></i>
-                <h3>No Customer Data</h3>
-                <p>No customers with orders found for the selected period</p>
+                <h3>No customer data</h3>
+                <p>No customers with orders were found for this period.</p>
             </div>
         `;
         return;
@@ -109,7 +109,7 @@ function renderTopCustomers(customers = topCustomersData) {
         ${hasMoreCustomers ? `
             <div class="top-customers-actions">
                 <button type="button" class="top-customers-toggle" onclick="toggleTopCustomersList()">
-                    ${showAllTopCustomers ? 'Show top 3' : `View All ${customers.length} Customers`}
+                    ${showAllTopCustomers ? 'Show top 3' : `View all ${customers.length} customers`}
                     <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </button>
             </div>

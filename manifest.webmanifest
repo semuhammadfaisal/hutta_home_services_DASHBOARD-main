@@ -1,0 +1,22 @@
+{
+  "name": "smplfix",
+  "short_name": "smplfix",
+  "description": "smplfix home-services administration dashboard",
+  "start_url": "/pages/login.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F6F4",
+  "theme_color": "#0B0B0C",
+  "icons": [
+    {
+      "src": "/assets/images/smplfix-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/smplfix-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

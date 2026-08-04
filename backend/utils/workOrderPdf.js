@@ -55,7 +55,7 @@ function createVendorWorkOrderPdf(workOrder) {
     drawSectionTitle(doc, 'Access instructions');
     drawText(doc, workOrder.accessInstructions, { fallback: 'No special access instructions.' });
     doc.moveDown(.8);
-    drawNotice(doc, 'This work order reflects the vendor-confirmed schedule. Contact Hutta Home Services at sales@huttas.com regarding any required changes.');
+    drawNotice(doc, 'This work order reflects the vendor-confirmed schedule. Contact smplfix at sales@smplfix.com regarding any required changes.');
     addPageFooters(doc, { reference: workOrder.workOrderReference });
     doc.end();
   });

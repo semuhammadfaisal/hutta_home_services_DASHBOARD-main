@@ -8,9 +8,18 @@
     { stage: 6, section: 'closeout', short: 'Closeout', title: 'Completion & Closeout', load: 'loadCloseout', open: 'openCloseoutWorkspace', close: 'closeCloseoutWorkspace', workspace: 'closeoutWorkspace' }
   ];
   const listIds = { 1: 'workflowRequestList', 2: 'incomingQuoteOrderList', 3: 'outgoingQuoteOrderList', 4: 'customerApprovalList', 5: 'schedulingOrderList', 6: 'closeoutOrderList' };
-  const STORAGE_KEY = 'huttas.workflow-center.ui.v2';
+  const STORAGE_KEY = 'smplfix.workflow-center.ui.v2';
+  const LEGACY_STORAGE_KEY = 'huttas.workflow-center.ui.v2';
   const restored = (() => {
-    try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); }
+    try {
+      const current = sessionStorage.getItem(STORAGE_KEY);
+      const legacy = current ? null : sessionStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacy) {
+        sessionStorage.setItem(STORAGE_KEY, legacy);
+        sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+      }
+      return JSON.parse(current || legacy || '{}');
+    }
     catch (_) { return {}; }
   })();
   const state = {
@@ -110,7 +119,7 @@
   }
 
   function overviewHeader() {
-    return `<header class="workflow-hub-header workflow-reference-header"><div><h1>Workflow Center</h1><p>Manage requests, quotes, approvals, scheduling, and closeout from one place.</p></div><div class="workflow-hub-actions"><span class="workflow-updated">Updated <time data-relative-time="${esc(state.overview?.refreshedAt || '')}">${relativeTime(state.overview?.refreshedAt)}</time></span><button class="btn-secondary" type="button" data-workflow-refresh><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div></header>`;
+    return `<header class="workflow-hub-header workflow-reference-header smpl-section-header"><div class="smpl-section-header-copy"><p class="page-eyebrow">Command</p><h1>Workflow center</h1><p class="smpl-section-description">Requests, quotes, approvals, scheduling, and closeout.</p></div><div class="workflow-hub-actions smpl-section-header-actions"><span class="workflow-updated">Updated <time data-relative-time="${esc(state.overview?.refreshedAt || '')}">${relativeTime(state.overview?.refreshedAt)}</time></span><button class="btn-refresh" type="button" data-workflow-refresh><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div></header>`;
   }
 
   const metricIcons = {

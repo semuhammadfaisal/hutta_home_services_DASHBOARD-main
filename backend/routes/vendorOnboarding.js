@@ -45,11 +45,11 @@ const DOCUMENT_FIELDS = [
   { name: 'generalDocuments', maxCount: 5 }
 ];
 const COMPLIANCE_LABELS = {
-  huttasContract: 'Huttas Contract with Sub (Signed and Dated)',
+  huttasContract: 'smplfix Contract with Sub (Signed and Dated)',
   w9: 'W-9 on File (Signed and Dated)',
   certificateOfInsurance: 'Certificate of Insurance on File',
   workersCompInsurance: 'Workers Comp Insurance on File',
-  huttasAdditionalInsured: 'Huttas Listed as Additional Insured on GL Policy'
+  huttasAdditionalInsured: 'smplfix Listed as Additional Insured on GL Policy'
 };
 const CATEGORY_COMPLIANCE_RULES = {
   default: Object.keys(COMPLIANCE_LABELS)

@@ -176,6 +176,68 @@
         });
     }
 
+    function renderCustomerEngagement(data) {
+        const completion = data.completion || {};
+        const messages = data.emailMessages || [];
+        const decisions = data.decisions || (data.decision ? [data.decision] : []);
+        const proofs = data.paymentProofs || [];
+        const customerEmailTypes = new Set([
+            'customer_closeout_review',
+            'customer_closeout_followup',
+            'customer_closeout_issue_resolved',
+            'customer_closeout_confirmation',
+            'customer_closeout_issue_confirmation'
+        ]);
+        const customerMessages = messages.filter(message => customerEmailTypes.has(message.type));
+        const reviewEmail = customerMessages.find(message => ['customer_closeout_review', 'customer_closeout_issue_resolved'].includes(message.type))
+            || customerMessages[0];
+        const emailFailed = reviewEmail?.status === 'permanently_failed';
+        const emailSent = reviewEmail?.status === 'sent';
+        const latestDecision = decisions[0];
+        const latestProof = proofs[0];
+        const paymentReceived = ['received', 'completed'].includes(data.invoice?.paymentId?.status);
+        const cards = [
+            {
+                icon: 'fa-envelope',
+                tone: emailFailed ? 'error' : emailSent ? 'success' : 'warning',
+                label: 'Closeout email',
+                value: emailFailed ? 'Delivery failed' : emailSent ? 'Sent' : reviewEmail ? 'Queued' : 'Not queued',
+                detail: reviewEmail ? date(reviewEmail.sentAt || reviewEmail.nextAttemptAt || reviewEmail.createdAt) : 'No customer message'
+            },
+            {
+                icon: 'fa-eye',
+                tone: completion.closeoutViewCount ? 'success' : 'warning',
+                label: 'Secure page',
+                value: completion.closeoutViewCount ? 'Viewed' : 'Not opened',
+                detail: completion.closeoutViewCount
+                    ? `${completion.closeoutViewCount} ${completion.closeoutViewCount === 1 ? 'view' : 'views'} · last ${date(completion.closeoutLastViewedAt)}`
+                    : 'Waiting for customer'
+            },
+            {
+                icon: 'fa-clipboard-check',
+                tone: latestDecision?.decision === 'issue_reported' ? 'error' : latestDecision ? 'success' : 'warning',
+                label: 'Work response',
+                value: latestDecision ? status(latestDecision.decision) : 'Awaiting response',
+                detail: latestDecision ? `${latestDecision.typedName || 'Customer'} · ${date(latestDecision.decisionAt)}` : 'No decision submitted'
+            },
+            {
+                icon: 'fa-receipt',
+                tone: paymentReceived || latestProof?.status === 'verified' ? 'success' : latestProof?.status === 'rejected' ? 'error' : latestProof ? 'warning' : 'muted',
+                label: 'Payment proof',
+                value: paymentReceived ? 'Payment received' : latestProof ? status(latestProof.status) : 'Not submitted',
+                detail: latestProof ? `${latestProof.proofReference} · ${date(latestProof.submittedAt)}` : 'No transaction evidence'
+            }
+        ];
+        return `<div class="closeout-engagement">
+            <div class="closeout-engagement-head"><div><small>Customer activity</small><h4>Review and checkout progress</h4></div>${completion.closeoutFirstViewedAt ? `<span>First viewed ${date(completion.closeoutFirstViewedAt)}</span>` : ''}</div>
+            <div class="closeout-engagement-grid">${cards.map(card => `
+                <article class="${card.tone}">
+                    <span><i class="fas ${card.icon}" aria-hidden="true"></i></span>
+                    <div><small>${esc(card.label)}</small><strong>${esc(card.value)}</strong><p>${esc(card.detail)}</p></div>
+                </article>`).join('')}</div>
+        </div>`;
+    }
+
     function renderWorkspace(data) {
         activeWorkspace = data;
         const { order, completion, invoice, decision } = data;
@@ -214,11 +276,20 @@
         }
         $('closeoutSatisfactionPanel').hidden = !completion || completion.status !== 'completed';
         if (completion?.status === 'completed') {
-            let timeline = `<div class="closeout-timeline"><div class="closeout-timeline-item success"><strong>Completion evidence recorded</strong><p>${date(completion.completedAt)} · ${esc(status(completion.source))}</p></div>`;
+            let timeline = `${renderCustomerEngagement(data)}<div class="closeout-timeline"><div class="closeout-timeline-item success"><strong>Completion evidence recorded</strong><p>${date(completion.completedAt)} · ${esc(status(completion.source))}</p></div>`;
+            const closeoutEmail = (data.emailMessages || []).find(message => ['customer_closeout_review', 'customer_closeout_issue_resolved'].includes(message.type));
+            if (closeoutEmail) {
+                timeline += `<div class="closeout-timeline-item ${closeoutEmail.status === 'permanently_failed' ? 'error' : closeoutEmail.status === 'sent' ? 'success' : ''}"><strong>Customer closeout email ${esc(status(closeoutEmail.status))}</strong><p>${date(closeoutEmail.sentAt || closeoutEmail.nextAttemptAt || closeoutEmail.createdAt)}</p></div>`;
+            }
+            if (completion.closeoutFirstViewedAt) {
+                timeline += `<div class="closeout-timeline-item success"><strong>Customer opened the secure closeout page</strong><p>First ${date(completion.closeoutFirstViewedAt)} · ${completion.closeoutViewCount || 1} total ${(completion.closeoutViewCount || 1) === 1 ? 'view' : 'views'} · last ${date(completion.closeoutLastViewedAt)}</p></div>`;
+            } else {
+                timeline += '<div class="closeout-timeline-item"><strong>Secure closeout page not opened</strong><p>The customer has not loaded the secure review page yet.</p></div>';
+            }
             const decisions = data.decisions || (decision ? [decision] : []);
             if (decisions.length) {
                 [...decisions].reverse().forEach(item => {
-                    timeline += `<div class="closeout-timeline-item ${item.decision === 'issue_reported' ? 'error' : 'success'}"><strong>Revision ${esc(item.closeoutRevision || 1)} · ${esc(status(item.decision))}</strong><p>${esc(item.typedName || 'Customer')} · ${date(item.decisionAt)}</p></div>`;
+                    timeline += `<div class="closeout-timeline-item ${item.decision === 'issue_reported' ? 'error' : 'success'}"><strong>Customer submitted ${esc(status(item.decision))}</strong><p>Revision ${esc(item.closeoutRevision || 1)} · ${esc(item.typedName || 'Customer')} · ${date(item.decisionAt)}</p></div>`;
                     if (item.decision === 'issue_reported') {
                         timeline += `<div class="closeout-issue"><strong>Customer issue</strong><p>${esc(item.issueMessage)}</p>${item.resolvedAt
                             ? `<p><strong>Resolved:</strong> ${esc(item.resolutionNote)} · ${date(item.resolvedAt)}</p>`
@@ -227,6 +298,10 @@
                 });
             } else {
                 timeline += '<div class="closeout-timeline-item"><strong>Awaiting customer closeout</strong><p>The customer is reviewing completion evidence and the invoice.</p></div>';
+            }
+            const latestProof = (data.paymentProofs || [])[0];
+            if (latestProof) {
+                timeline += `<div class="closeout-timeline-item ${latestProof.status === 'verified' ? 'success' : latestProof.status === 'rejected' ? 'error' : ''}"><strong>Payment proof ${esc(status(latestProof.status))}</strong><p>${esc(latestProof.proofReference)} · ${esc(latestProof.payerName)} · ${money(latestProof.declaredAmount)} · submitted ${date(latestProof.submittedAt)}</p></div>`;
             }
             timeline += '<div class="closeout-customer-link-actions"><button class="btn-secondary" type="button" data-customer-closeout-link="resend"><i class="fas fa-paper-plane"></i> Resend Customer Link</button><button class="btn-secondary" type="button" data-customer-closeout-link="rotate"><i class="fas fa-sync-alt"></i> Rotate Secure Link</button></div>';
             $('closeoutSatisfaction').innerHTML = `${timeline}</div>`;
@@ -502,7 +577,7 @@
                     </div>
                     <div class="closeout-settings-section-head closeout-copy-head"><div><small>Customer communication</small><h3>Closeout and proof guidance</h3><p>These details are copied into the secure customer experience.</p></div></div>
                     <section class="closeout-copy-card">
-                        <label><span>Remittance contact</span><small>Public contact for payment questions.</small><input type="text" id="closeoutRemittanceContact" maxlength="500" value="${esc(settings.remittanceContact || '')}" placeholder="sales@huttas.com"></label>
+                        <label><span>Remittance contact</span><small>Public contact for payment questions.</small><input type="text" id="closeoutRemittanceContact" maxlength="500" value="${esc(settings.remittanceContact || '')}" placeholder="sales@smplfix.com"></label>
                         <label><span>Proof upload instructions</span><small>Explain what customers should upload after an external payment.</small><textarea id="closeoutProofInstructions" maxlength="2000" rows="3" placeholder="Upload a clear image showing the amount, date, and transaction reference.">${esc(settings.proofUploadInstructions || '')}</textarea></label>
                         <label class="full"><span>Customer closeout email message</span><small>Short introduction displayed before the completed service details.</small><textarea id="closeoutEmailMessage" maxlength="3000" rows="3" placeholder="Your service is complete and ready for review.">${esc(settings.customerCloseoutEmailMessage || '')}</textarea></label>
                     </section>

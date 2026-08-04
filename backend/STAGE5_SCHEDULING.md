@@ -1,6 +1,6 @@
 # Stage 5 Scheduling
 
-Stage 5 reuses the existing Resend sender `sales@huttas.com`, token-encryption secret, application URL, MongoDB, and email worker. No new secret is required.
+Stage 5 reuses the existing Resend sender `sales@smplfix.com`, token-encryption secret, application URL, MongoDB, and email worker. No new secret is required.
 
 After deployment, run in Render Shell:
 

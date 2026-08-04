@@ -1,4 +1,4 @@
-// API Service for Hutta Home Services
+// API Service for smplfix
 window.AuthSession = window.AuthSession || { user: null, csrfToken: null, expiresAt: null };
 window.AuthSession.lastUserActivityAt = Date.now();
 ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
@@ -219,7 +219,7 @@ class APIService {
                     window.AppLogger?.debug('Returning mock login response');
                     resolve({
                         token: 'demo-token-' + Date.now(),
-                        user: { email: 'admin@hutta.com', name: 'Admin User' }
+                        user: { email: 'admin@smplfix.com', name: 'Admin User' }
                     });
                 } else if (endpoint.startsWith('/orders')) {
                     resolve({ data: [], pagination: { page: 1, limit: 5000, total: 0, pages: 1 } });

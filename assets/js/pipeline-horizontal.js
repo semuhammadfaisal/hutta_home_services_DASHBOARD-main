@@ -109,7 +109,7 @@ function clearPipelineData() {
     initializeSampleRecords();
     loadStages();
     
-    alert('Pipeline data cleared and reset to defaults!');
+    alert('Pipeline data reset to defaults.');
 }
 
 // Create stage column

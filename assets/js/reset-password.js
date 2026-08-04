@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             await window.APIService.resetPassword(token, password);
-            resetBtn.innerHTML = '<i class="fas fa-check"></i> Password Reset!';
+            resetBtn.innerHTML = '<i class="fas fa-check"></i> Password reset';
             resetBtn.style.background = 'var(--success)';
             setTimeout(() => {
                 window.location.href = 'login.html';
@@ -53,6 +53,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const icon = button.querySelector('i');
         icon.classList.toggle('fa-eye');
         icon.classList.toggle('fa-eye-slash');
+        const isVisible = type === 'text';
+        button.setAttribute('aria-pressed', String(isVisible));
+        button.setAttribute('aria-label', isVisible ? 'Hide password' : (input === confirmPasswordInput ? 'Show password confirmation' : 'Show password'));
     }
 
     function showLoading(show) {

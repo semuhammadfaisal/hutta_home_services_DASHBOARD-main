@@ -6,7 +6,7 @@
 }
 
 body {
-    font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif;
+    font-family: var(--smpl-font-ui);
     background-color: #f5f7fa;
     color: #333;
     line-height: 1.6;
@@ -2121,17 +2121,17 @@ h3 {
     font-size: 13px;
 }
 
-.orders-col-order { width: 15%; }
-.orders-col-customer { width: 15%; }
-.orders-col-service { width: 13%; }
+.orders-col-order { width: 11%; }
+.orders-col-customer { width: 14%; }
+.orders-col-service { width: 12%; }
 .orders-col-vendor { width: 10%; }
 .orders-col-status { width: 10%; }
-.orders-col-priority { width: 8%; }
-.orders-col-date { width: 9%; }
-.orders-col-revenue,
-.orders-col-cost,
+.orders-col-priority { width: 7%; }
+.orders-col-created,
+.orders-col-schedule { width: 8%; }
+.orders-col-revenue { width: 7%; }
+.orders-col-cost { width: 6%; }
 .orders-col-profit { width: 7%; }
-.orders-col-actions { width: 7%; }
 
 .orders-table thead {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
@@ -2187,6 +2187,16 @@ h3 {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.orders-table th:nth-child(n + 9),
+.orders-table td:nth-child(n + 9) {
+    text-align: right;
+}
+
+.orders-table th:last-child,
+.orders-table td:last-child {
+    padding-right: 18px;
 }
 
 /* Order ID Cell */
@@ -2464,25 +2474,6 @@ h3 {
     color: #2563eb;
 }
 
-/* Order Actions */
-.order-actions {
-    display: flex;
-    gap: 5px;
-    justify-content: flex-end;
-    flex-shrink: 0;
-    min-width: 0;
-}
-
-.orders-table .action-btn {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
 /* Empty State */
 .orders-empty-state {
     text-align: center;
@@ -2553,16 +2544,16 @@ h3 {
         width: 0;
     }
 
-    .orders-col-order { width: 17%; }
-    .orders-col-customer { width: 17%; }
-    .orders-col-service { width: 14%; }
+    .orders-col-order { width: 14%; }
+    .orders-col-customer { width: 16%; }
+    .orders-col-service { width: 13%; }
     .orders-col-status { width: 11%; }
-    .orders-col-priority { width: 9%; }
-    .orders-col-date { width: 10%; }
-    .orders-col-revenue,
-    .orders-col-cost,
-    .orders-col-profit { width: 8%; }
-    .orders-col-actions { width: 8%; }
+    .orders-col-priority { width: 8%; }
+    .orders-col-created,
+    .orders-col-schedule { width: 9%; }
+    .orders-col-revenue { width: 7%; }
+    .orders-col-cost { width: 6%; }
+    .orders-col-profit { width: 7%; }
 }
 
 @media (max-width: 768px) {
@@ -2685,18 +2676,18 @@ h3 {
     }
 
     .orders-col-priority,
-    .orders-col-cost {
+    .orders-col-revenue {
         width: 0;
     }
 
-    .orders-col-order { width: 20%; }
+    .orders-col-order { width: 18%; }
     .orders-col-customer { width: 20%; }
-    .orders-col-service { width: 16%; }
+    .orders-col-service { width: 15%; }
     .orders-col-status { width: 13%; }
-    .orders-col-date { width: 12%; }
-    .orders-col-revenue,
-    .orders-col-profit { width: 10%; }
-    .orders-col-actions { width: 9%; }
+    .orders-col-created,
+    .orders-col-schedule { width: 10%; }
+    .orders-col-cost,
+    .orders-col-profit { width: 7%; }
 
     .order-number {
         font-size: 13px;
@@ -2713,10 +2704,6 @@ h3 {
         font-size: 11px;
     }
     
-    .orders-table .action-btn {
-        width: 28px;
-        height: 28px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -2803,17 +2790,16 @@ h3 {
     }
 
     .orders-col-service,
-    .orders-col-date,
-    .orders-col-cost,
-    .orders-col-profit {
+    .orders-col-created,
+    .orders-col-cost {
         width: 0;
     }
 
-    .orders-col-order { width: 27%; }
-    .orders-col-customer { width: 24%; }
-    .orders-col-status { width: 17%; }
-    .orders-col-revenue { width: 16%; }
-    .orders-col-actions { width: 16%; }
+    .orders-col-order { width: 25%; }
+    .orders-col-customer { width: 26%; }
+    .orders-col-status { width: 18%; }
+    .orders-col-schedule { width: 16%; }
+    .orders-col-profit { width: 15%; }
 
     .orders-table th,
     .orders-table td {
@@ -2851,12 +2837,6 @@ h3 {
     
     .order-amount {
         font-size: 13px;
-    }
-    
-    .order-actions {
-        gap: 5px;
-        flex-wrap: nowrap;
-        min-width: 0;
     }
     
     .orders-empty-state {
@@ -5631,14 +5611,13 @@ h3 {
     box-shadow: inset 3px 0 0 var(--primary-blue);
 }
 
-.customers-col-customer { width: 20%; }
-.customers-col-email { width: 19%; }
-.customers-col-phone { width: 13%; }
-.customers-col-city { width: 12%; }
+.customers-col-customer { width: 22%; }
+.customers-col-email { width: 21%; }
+.customers-col-phone { width: 14%; }
+.customers-col-city { width: 13%; }
 .customers-col-type { width: 11%; }
 .customers-col-status { width: 10%; }
-.customers-col-orders { width: 7%; }
-.customers-col-actions { width: 8%; }
+.customers-col-orders { width: 9%; }
 
 .vendors-col-vendor { width: 23%; }
 .vendors-col-email { width: 22%; }
@@ -5655,7 +5634,6 @@ h3 {
 .employees-col-department { width: 12%; }
 .employees-col-status { width: 11%; }
 .employees-col-hire-date { width: 10%; }
-.employees-col-actions { width: 8%; }
 
 .payments-col-payment { width: 14%; }
 .payments-col-invoice { width: 10%; }

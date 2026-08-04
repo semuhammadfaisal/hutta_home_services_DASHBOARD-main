@@ -1,5 +1,5 @@
 :root{--h-blue:#075eb8;--h-blue-dark:#064b91;--h-ink:#15253b;--h-text:#3c4d61;--h-muted:#6b7a8e;--h-border:#dbe4ed;--h-surface:#f5f8fb;--h-page:#f2f5f8;--h-success:#167548;--h-warning:#946000;--h-danger:#b42318;--h-radius:10px;--h-shadow:0 8px 24px rgba(28,52,82,.06)}
-*{box-sizing:border-box}html{color-scheme:light}body{min-height:100vh;margin:0;color:var(--h-ink);background:var(--h-page)!important;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}[hidden],.hidden{display:none!important}.preserve{white-space:pre-wrap}
+*{box-sizing:border-box}html{color-scheme:light}body{min-height:100vh;margin:0;color:var(--h-ink);background:var(--h-page)!important;font-family:var(--smpl-font-ui);-webkit-font-smoothing:antialiased}[hidden],.hidden{display:none!important}.preserve{white-space:pre-wrap}
 
 /* Brand header */
 .quote-header,.quote-public-header,.secure-header,body>header,.onboarding-header{position:relative!important;z-index:5;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:18px;width:100%!important;min-height:68px!important;margin:0!important;padding:11px max(20px,calc((100vw - 1040px)/2))!important;border:0!important;border-bottom:1px solid var(--h-border)!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}

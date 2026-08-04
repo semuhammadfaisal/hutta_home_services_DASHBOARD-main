@@ -3,143 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In — Hutta Home Services</title>
-    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <title>Sign In - smplfix</title>
+    <meta name="application-name" content="smplfix">
+    <meta name="theme-color" content="#09090a">
+    <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/login-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@700&amp;display=swap">
+    <link rel="stylesheet" href="../assets/css/login-styles.css?v=20260804-auth-compact-2">
 </head>
-<body>
+<body class="auth-page login-page">
+    <div class="auth-shell">
+        <aside class="brand-stage" aria-label="About smplfix">
+            <div class="brand-stage__art" aria-hidden="true">
+                <span class="brand-arc brand-arc--one"></span>
+                <span class="brand-arc brand-arc--two"></span>
+                <span class="brand-arc brand-arc--three"></span>
+            </div>
 
-    <div class="page-shell">
+            <header class="brand-stage__header">
+                <img class="brand-logo" src="../assets/images/smplfix-logo-ink.png" alt="smplfix" width="624" height="368">
+                <span class="brand-context">Operations platform</span>
+            </header>
 
-        <!-- ── LEFT PANEL ─────────────────────────────── -->
-        <aside class="hero-panel" aria-hidden="true">
-            <div class="hero-bg"></div>
-            <div class="hero-noise"></div>
+            <section class="brand-story">
+                <p class="brand-kicker">Built for home service teams</p>
+                <h2>We focus on the problems.<br>You experience the solutions.</h2>
+                <p class="brand-copy">Keep customers, field teams, orders, and payments moving through one dependable workspace.</p>
 
-            <!-- decorative orbs -->
-            <div class="orb orb-1"></div>
-            <div class="orb orb-2"></div>
-            <div class="orb orb-3"></div>
-
-            <div class="hero-content">
-                <img src="../assets/images/logo.png" alt="Hutta Home Services" class="hero-logo">
-
-                <blockquote class="hero-quote">
-                    "Transforming homes across the nation — one service at a time."
-                </blockquote>
-
-                <div class="hero-stats">
-                    <div class="hero-stat">
-                        <span class="stat-number">10K+</span>
-                        <span class="stat-label">Happy Customers</span>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="stat-number">500+</span>
-                        <span class="stat-label">Expert Technicians</span>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="stat-number">24/7</span>
-                        <span class="stat-label">Support Available</span>
-                    </div>
+                <div class="brand-proof" aria-label="Platform benefits">
+                    <article>
+                        <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
+                        <strong>One workspace</strong>
+                        <span>From intake to closeout</span>
+                    </article>
+                    <article>
+                        <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                        <strong>Clear visibility</strong>
+                        <span>Across every active job</span>
+                    </article>
+                    <article>
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        <strong>Secure access</strong>
+                        <span>Protected business data</span>
+                    </article>
                 </div>
-            </div>
+            </section>
 
-            <div class="hero-footer">
-                <span class="trust-badge">
-                    <i class="fas fa-shield-halved"></i>
-                    256-bit SSL encrypted
-                </span>
-            </div>
+            <footer class="brand-stage__footer">
+                <span><i class="fa-solid fa-lock" aria-hidden="true"></i> Enterprise-grade security</span>
+                <span>smplfix &copy; 2026</span>
+            </footer>
         </aside>
 
-        <!-- ── RIGHT PANEL ────────────────────────────── -->
-        <main class="form-panel">
-            <div class="form-card">
+        <main class="auth-workspace">
+            <header class="workspace-header">
+                <span>SMPLFIX / SECURE ACCESS</span>
+                <a href="mailto:support@smplfix.com">Need help?</a>
+            </header>
 
-                <header class="card-header">
-                    <div class="card-eyebrow">
-                        <i class="fas fa-lock" aria-hidden="true"></i>
-                        Secure sign-in
-                    </div>
-                    <h1 class="card-title">Welcome back</h1>
-                    <p class="card-subtitle">Enter your credentials to access the operations dashboard.</p>
+            <section class="auth-card form-card" aria-labelledby="loginTitle">
+                <header class="auth-card__header">
+                    <span class="auth-badge"><i class="fa-solid fa-lock" aria-hidden="true"></i> Secure sign-in</span>
+                    <h1 id="loginTitle">Welcome back.</h1>
+                    <p>Sign in to continue to your operations dashboard.</p>
                 </header>
 
                 <form id="loginForm" class="auth-form" novalidate>
-
                     <div class="field-group">
-                        <label class="field-label" for="email">Email address</label>
-                        <div class="field-wrap">
-                            <i class="fas fa-envelope field-icon" aria-hidden="true"></i>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                class="field-input"
-                                placeholder="you@company.com"
-                                autocomplete="email"
-                                aria-describedby="errorMessage"
-                                required
-                            >
+                        <label for="email">Email address</label>
+                        <div class="field-control">
+                            <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                            <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" aria-describedby="errorMessage" required>
                         </div>
                     </div>
 
                     <div class="field-group">
-                        <div class="field-label-row">
-                            <label class="field-label" for="password">Password</label>
-                            <a href="forgot-password.html" class="link-muted">Forgot password?</a>
+                        <div class="field-heading">
+                            <label for="password">Password</label>
+                            <a href="forgot-password.html">Forgot password?</a>
                         </div>
-                        <div class="field-wrap field-wrap--password">
-                            <i class="fas fa-lock field-icon" aria-hidden="true"></i>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                class="field-input"
-                                placeholder="••••••••"
-                                autocomplete="current-password"
-                                aria-describedby="errorMessage"
-                                required
-                            >
-                            <button type="button" class="pw-toggle" id="togglePassword" aria-label="Show password">
-                                <i class="fas fa-eye" aria-hidden="true"></i>
+                        <div class="field-control field-control--password">
+                            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                            <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" aria-describedby="errorMessage" required>
+                            <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" aria-pressed="false">
+                                <i class="fa-regular fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
 
-                    <button type="submit" class="submit-btn" id="loginBtn">
-                        <span class="submit-btn__text">Sign in</span>
-                        <i class="fas fa-arrow-right submit-btn__arrow" aria-hidden="true"></i>
-                        <i class="fas fa-circle-notch fa-spin submit-btn__spinner" aria-hidden="true"></i>
-                    </button>
+                    <label class="check-control">
+                        <input type="checkbox" id="rememberMe" name="rememberMe">
+                        <span class="check-control__box" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+                        <span>Keep me signed in on this device</span>
+                    </label>
 
-                    <div
-                        class="alert alert--error"
-                        id="errorMessage"
-                        style="display:none"
-                        role="alert"
-                        aria-live="polite"
-                    >
-                        <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                    <div class="alert alert--error" id="errorMessage" style="display:none" role="alert" aria-live="polite">
+                        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
                         <span id="errorText"></span>
                     </div>
 
+                    <button type="submit" class="submit-btn" id="loginBtn">
+                        <span class="submit-btn__text">Sign in</span>
+                        <i class="fa-solid fa-arrow-right submit-btn__arrow" aria-hidden="true"></i>
+                        <i class="fa-solid fa-circle-notch fa-spin submit-btn__spinner" aria-hidden="true"></i>
+                    </button>
                 </form>
 
-                <footer class="card-footer">
-                    New to Hutta?&nbsp;<a href="signup.html" class="link-primary">Create an account</a>
+                <footer class="auth-card__footer">
+                    <span>New to smplfix?</span>
+                    <a href="signup.html">Create an account</a>
                 </footer>
+            </section>
 
-            </div>
+            <p class="workspace-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Your session is encrypted and securely managed.</p>
         </main>
-
-    </div><!-- /page-shell -->
+    </div>
 
     <script src="../assets/js/api-service.js"></script>
-    <script src="../assets/js/login-script.js?v=20260716-1"></script>
+    <script src="../assets/js/login-script.js?v=20260804-auth-compact"></script>
 </body>
 </html>

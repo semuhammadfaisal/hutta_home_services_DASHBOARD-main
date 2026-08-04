@@ -303,7 +303,7 @@ function nextMonth() {
 }
 
 function addEvent() {
-    alert('Add Event functionality coming soon!');
+    alert('Event creation is not available yet.');
 }
 
 function loadCalendarSection() {

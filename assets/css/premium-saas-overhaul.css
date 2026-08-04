@@ -37,7 +37,7 @@ body,
 .main-content {
     background: var(--saas-bg) !important;
     color: var(--saas-text);
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-family: var(--smpl-font-ui) !important;
 }
 
 h1,

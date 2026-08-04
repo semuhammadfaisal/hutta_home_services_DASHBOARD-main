@@ -10,7 +10,7 @@
   --vs-success: #147a4b;
   --vs-warning: #9a6400;
   --vs-danger: #b42318;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-family: var(--smpl-font-ui);
 }
 
 * { box-sizing: border-box; }

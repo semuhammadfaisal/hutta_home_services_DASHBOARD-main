@@ -5,8 +5,10 @@
         { section: 'pipeline', label: 'Pipeline', hint: 'Kanban stages and assignments', icon: 'stream', loader: 'loadPipelineSection', focus: 'pipelineSearchInput' },
         { section: 'calendar', label: 'Calendar', hint: 'Scheduled work', icon: 'calendar-alt', loader: 'loadCalendarSection' },
         { section: 'recurring-calendar', label: 'Recurring Calendar', hint: 'Recurring services', icon: 'calendar-check', loader: 'loadRecurringCalendarSection' },
+        { section: 'workflow-overview', label: 'Workflow Center', hint: 'Quotes, approvals, scheduling, and closeout', icon: 'route', loader: 'loadWorkflowCenter' },
         { section: 'customers', label: 'Customers', hint: 'Customer profiles and history', icon: 'users', loader: 'loadCustomersSection', focus: 'customerSearchInput' },
         { section: 'vendors', label: 'Vendors', hint: 'Vendor network and status', icon: 'handshake', loader: 'loadVendorsSection', focus: 'vendorSearchInput' },
+        { section: 'vendor-reviews', label: 'Vendor Reviews', hint: 'Vendor applications and approvals', icon: 'user-check', loader: 'loadVendorReviews' },
         { section: 'payments', label: 'Payments', hint: 'Invoices, collections, status', icon: 'credit-card', loader: 'loadPaymentsSection', focus: 'paymentSearchInput' },
         { section: 'accounting', label: 'Accounting', hint: 'Cash flow and jobs', icon: 'calculator', loader: 'loadAccountingSection' },
         { section: 'reports', label: 'Reports', hint: 'Analytics and reporting center', icon: 'chart-bar', loader: 'loadReportsSection', focus: 'reportSearchInput' },
@@ -262,23 +264,11 @@
         updateKpiTrends(window.dashboard.data || {});
     }
 
-    function initProfileKeyboard() {
-        const profile = document.getElementById('adminProfile');
-        if (!profile) return;
-        profile.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                profile.click();
-            }
-        });
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
         initSidebarBackdrop();
         initCommandPalette();
         initTableObserver();
         enhanceIconButtons();
-        initProfileKeyboard();
         patchDashboardKpis();
         window.setTimeout(() => {
             enhanceTables();

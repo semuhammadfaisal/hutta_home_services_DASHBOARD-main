@@ -33,7 +33,7 @@
     $('decisionTitle').textContent = accepted ? 'Schedule accepted' : 'Changes requested';
     $('decisionSummary').textContent = accepted
       ? 'The job is now scheduled. Your confirmed work order will be sent by email.'
-      : 'Your request has been recorded. Hutta Home Services will send a revised schedule proposal.';
+      : 'Your request has been recorded. smplfix will send a revised schedule proposal.';
     $('scheduleStatus').textContent = accepted ? 'Confirmed' : 'Changes requested';
     $('scheduleStatus').dataset.tone = accepted ? 'success' : 'neutral';
   }

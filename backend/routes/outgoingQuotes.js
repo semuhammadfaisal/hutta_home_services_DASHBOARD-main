@@ -232,10 +232,10 @@ router.put('/settings', checkRole(['admin']), async (req, res, next) => {
       defaultValidityDays: Number(req.body.defaultValidityDays),
       termsAndConditions: cleanText(req.body.termsAndConditions, 30000),
       company: {
-        name: cleanText(req.body.company?.name, 300) || 'Hutta Home Services',
+        name: cleanText(req.body.company?.name, 300) || 'smplfix',
         address: cleanText(req.body.company?.address, 500), phone: cleanText(req.body.company?.phone, 100),
         email: cleanText(req.body.company?.email, 300), website: cleanText(req.body.company?.website, 300),
-        logo: cleanText(req.body.company?.logo, 500) || '/assets/images/logo.png'
+        logo: cleanText(req.body.company?.logo, 500) || '/assets/images/smplfix-logo-ink.png'
       },
       updatedBy: actorId(req)
     };

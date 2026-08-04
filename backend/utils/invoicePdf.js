@@ -64,7 +64,7 @@ function createCustomerInvoicePdf(invoice) {
         drawNotice(doc, payment.proofUploadInstructions);
       }
     }
-    drawNotice(doc, 'Thank you for choosing Hutta Home Services. Questions about this invoice? Reply to sales@huttas.com.');
+    drawNotice(doc, 'Thank you for choosing smplfix. Questions about this invoice? Reply to sales@smplfix.com.');
     addPageFooters(doc, { reference: invoice.invoiceNumber });
     doc.end();
   });

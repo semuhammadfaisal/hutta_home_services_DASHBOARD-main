@@ -2,7 +2,7 @@
    PIPELINE MANAGEMENT - ENHANCED DESIGN
    ======================================== */
 
-/* Board tokens + MongoDB column layout (aligned with Hutta primary blue) */
+/* Board tokens + MongoDB column layout (normalized by the smplfix theme) */
 #pipeline {
     --pipe-accent: #0056b8;
     --pipe-accent-soft: rgba(0, 86, 184, 0.12);

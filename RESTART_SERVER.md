@@ -46,11 +46,7 @@ The NO BID filtering has been added to the backend. You need to restart your ser
 Open browser console (F12) and run:
 ```javascript
 // Check if orders are being filtered
-fetch('/api/orders/stats', {
-  headers: {
-    'Authorization': 'Bearer ' + JSON.parse(sessionStorage.getItem('huttaSession')).token
-  }
-})
+fetch('/api/orders/stats', { credentials: 'include' })
 .then(r => r.json())
 .then(data => console.log('Stats from backend:', data));
 ```

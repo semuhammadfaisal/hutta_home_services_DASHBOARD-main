@@ -1,5 +1,6 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
+const path = require('path');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const Customer = require('../models/Customer');
@@ -169,11 +170,12 @@ function currency(value) {
 }
 
 function writePdf(res, report) {
-  const document = new PDFDocument({ margin: 48, size: 'LETTER', info: { Title: 'Hutta Home Services - Reports & Analytics' } });
+  const document = new PDFDocument({ margin: 48, size: 'LETTER', info: { Title: 'smplfix - Reports & Analytics', Author: 'smplfix' } });
   document.pipe(res);
-  document.fillColor('#0056b8').fontSize(20).text('Hutta Home Services');
-  document.fillColor('#172033').fontSize(18).text('Reports & Analytics Executive Summary', { continued: false });
-  document.moveDown(0.4).fillColor('#667085').fontSize(9)
+  document.image(path.resolve(__dirname, '../../assets/images/smplfix-logo-ink.png'), 48, 42, { fit: [96, 48] });
+  document.y = 102;
+  document.fillColor('#0B0B0C').fontSize(18).text('Reports & Analytics Executive Summary', { continued: false });
+  document.moveDown(0.4).fillColor('#737377').fontSize(9)
     .text(`Period: ${new Date(report.meta.period.start).toLocaleDateString('en-US')} - ${new Date(report.meta.period.end).toLocaleDateString('en-US')}`)
     .text(`Generated: ${new Date(report.meta.generatedAt).toLocaleString('en-US', { timeZone: report.meta.timezone })} (${report.meta.timezone})`);
   document.moveDown();
@@ -191,22 +193,22 @@ function writePdf(res, report) {
   metrics.forEach(([label, value], index) => {
     const x = index % 2 === 0 ? 48 : 310;
     const y = 140 + Math.floor(index / 2) * 44;
-    document.roundedRect(x, y, 244, 34, 5).fillAndStroke('#f6f8fb', '#d9e2ef');
-    document.fillColor('#667085').fontSize(8).text(label, x + 10, y + 7, { width: 130 });
-    document.fillColor('#172033').fontSize(11).text(value, x + 130, y + 6, { width: 100, align: 'right' });
+    document.roundedRect(x, y, 244, 34, 5).fillAndStroke('#F6F6F4', '#ECECED');
+    document.fillColor('#737377').fontSize(8).text(label, x + 10, y + 7, { width: 130 });
+    document.fillColor('#0B0B0C').fontSize(11).text(value, x + 130, y + 6, { width: 100, align: 'right' });
   });
   document.y = 335;
-  document.fillColor('#172033').fontSize(13).text('Top services');
+  document.fillColor('#0B0B0C').fontSize(13).text('Top services');
   document.moveDown(0.4);
   (report.tables.topServices || []).slice(0, 8).forEach(item => {
-    document.fillColor('#344054').fontSize(9).text(`${item.label}: ${currency(item.value)} revenue / ${currency(item.profit)} profit`);
+    document.fillColor('#343436').fontSize(9).text(`${item.label}: ${currency(item.value)} revenue / ${currency(item.profit)} profit`);
   });
   document.moveDown();
-  document.fillColor('#172033').fontSize(13).text('Calculation notes');
+  document.fillColor('#0B0B0C').fontSize(13).text('Calculation notes');
   document.moveDown(0.4);
   Object.values(report.meta.definitions).forEach(definition => document.fillColor('#667085').fontSize(8).text(`• ${definition}`, { paragraphGap: 3 }));
   if (report.dataQuality.warnings.length) {
-    document.moveDown().fillColor('#b54708').fontSize(10).text('Data quality warnings');
+    document.moveDown().fillColor('#343436').fontSize(10).text('Data quality warnings');
     report.dataQuality.warnings.forEach(warning => document.fontSize(8).text(`• ${warning}`));
   }
   document.end();
@@ -249,7 +251,7 @@ router.get('/export', authenticateToken, checkRole(REPORT_ROLES), async (req, re
       const csv = recordsToCsv(sortRecords(report.records, req.query.sort, req.query.direction));
       res.set({
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="hutta-report-details-${stamp}.csv"`,
+        'Content-Disposition': `attachment; filename="smplfix-report-details-${stamp}.csv"`,
         'Cache-Control': 'private, no-store'
       });
       return res.send(`\uFEFF${csv}`);
@@ -257,7 +259,7 @@ router.get('/export', authenticateToken, checkRole(REPORT_ROLES), async (req, re
     if (lower(req.query.format) === 'pdf') {
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="hutta-report-summary-${stamp}.pdf"`,
+        'Content-Disposition': `attachment; filename="smplfix-report-summary-${stamp}.pdf"`,
         'Cache-Control': 'private, no-store'
       });
       return writePdf(res, report);

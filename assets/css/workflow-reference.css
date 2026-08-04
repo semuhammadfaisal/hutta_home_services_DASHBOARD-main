@@ -30,7 +30,7 @@
 
 .workflow-reference-shell,
 .workflow-stage-section {
-  font-family: Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: var(--smpl-font-ui);
 }
 
 .workflow-reference-shell {

@@ -1,11 +1,13 @@
 {
-  "name": "hutta-home-services-backend",
+  "name": "smplfix-dashboard-backend",
   "version": "1.0.0",
-  "description": "Backend API for Hutta Home Services",
+  "description": "Backend API for the smplfix administration dashboard",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
+    "audit:smplfix": "node scripts/smplfix-audit.js",
+    "test": "npm --prefix backend test",
     "migrate:stage6-closeout": "node backend/migrate-stage6-closeout.js",
     "migrate:stage6-closeout:apply": "node backend/migrate-stage6-closeout.js --apply",
     "migrate:workflow-pipeline-sync": "node backend/migrate-workflow-pipeline-sync.js",

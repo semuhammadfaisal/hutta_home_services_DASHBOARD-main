@@ -42,12 +42,12 @@ function decisionOutbox(schedule, decision, workOrder, completionToken) {
   const base = { decision: decision.decision, typedName: decision.typedName, changeRequestMessage: decision.changeRequestMessage, scheduleReference: schedule.scheduleReference, revisionNumber: schedule.revisionNumber, requestReference: schedule.jobSnapshot.requestReference, orderReference: schedule.jobSnapshot.orderReference, customerName: schedule.customerSnapshot.name, vendorName: schedule.vendorSnapshot.name, service: schedule.jobSnapshot.service, address: schedule.customerSnapshot.address, proposedStart: schedule.proposedStart, proposedEnd: schedule.proposedEnd, timezone: TIMEZONE, accessInstructions: schedule.accessInstructions, decisionAt: decision.decisionAt };
   if (!accepted) return [
     { type: 'vendor_schedule_change_confirmation', dedupeKey: `${schedule._id}:vendor_schedule_change_confirmation`, recipients: [schedule.vendorSnapshot.email], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id },
-    { type: 'staff_schedule_change_alert', dedupeKey: `${schedule._id}:staff_schedule_change_alert`, recipients: ['sales@huttas.com'], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id }
+    { type: 'staff_schedule_change_alert', dedupeKey: `${schedule._id}:staff_schedule_change_alert`, recipients: ['sales@smplfix.com'], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id }
   ];
   return [
     { type: 'customer_schedule_confirmation', dedupeKey: `${schedule._id}:customer_schedule_confirmation`, recipients: [schedule.customerSnapshot.email], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
     { type: 'vendor_schedule_accepted_confirmation', dedupeKey: `${schedule._id}:vendor_schedule_accepted_confirmation`, recipients: [schedule.vendorSnapshot.email], payload: { ...base, vendorWorkOrderId: String(workOrder._id), encryptedCompletionToken: encryptCompletionToken(completionToken) }, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
-    { type: 'staff_schedule_accepted_alert', dedupeKey: `${schedule._id}:staff_schedule_accepted_alert`, recipients: ['sales@huttas.com'], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id }
+    { type: 'staff_schedule_accepted_alert', dedupeKey: `${schedule._id}:staff_schedule_accepted_alert`, recipients: ['sales@smplfix.com'], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id }
   ];
 }
 

@@ -5,26 +5,31 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="no-referrer">
-  <title>Secure Vendor Quote | Hutta Home Services</title>
+  <title>Secure Vendor Quote | smplfix</title>
+  <meta name="application-name" content="smplfix">
+  <meta name="theme-color" content="#0B0B0C">
+  <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/secure-workflow.css?v=20260723-workflow-layout-fix">
   <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
   <link rel="stylesheet" href="../assets/css/vendor-quote.css?v=20260725-vendor-quote-redesign">
+  <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
+  <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260804-final">
 </head>
 <body>
   <main class="quote-shell">
     <header class="quote-header">
-      <div class="quote-brand" aria-label="Hutta Home Services">
-        <img src="../assets/images/logo.png" alt="Hutta Home Services">
+      <div class="quote-brand" aria-label="smplfix">
+        <img src="../assets/images/smplfix-logo-ink.png" alt="smplfix" width="624" height="368" decoding="async">
       </div>
       <div class="quote-header-copy"><p>Vendor portal</p><h1>Submit Your Quote</h1></div>
       <span class="secure-session"><span aria-hidden="true">&#128274;</span> Secure one-time link</span>
     </header>
     <section id="quoteLoading" class="quote-state"><div class="spinner"></div><h2>Opening quote request</h2><p>Validating your secure invitation&hellip;</p></section>
     <section id="quoteError" class="quote-state hidden" role="alert"><div class="state-icon error">!</div><h2>Quote request unavailable</h2><p id="quoteErrorMessage"></p></section>
-    <section id="quoteSuccess" class="quote-state hidden"><div class="state-icon success">&#10003;</div><h2>Quote submitted</h2><p>Your quote was received securely. Hutta Home Services will contact you if a revision is needed.</p><strong id="quoteSuccessReference"></strong></section>
+    <section id="quoteSuccess" class="quote-state hidden"><div class="state-icon success">&#10003;</div><h2>Quote submitted</h2><p>Your quote was received securely. smplfix will contact you if a revision is needed.</p><strong id="quoteSuccessReference"></strong></section>
 
     <form id="vendorQuoteForm" class="hidden" novalidate>
       <section class="quote-intro">
@@ -58,7 +63,7 @@
         <div class="quote-step-area">
           <section class="quote-card secure-step" data-step="1">
             <div class="card-heading"><span>1</span><div><h2>Scope and Pricing</h2><p>Describe the work and separate labor from materials.</p></div></div>
-            <label class="wide"><span>Scope of Work <em>Required</em></span><textarea name="scopeOfWork" rows="7" maxlength="10000" required placeholder="Describe the work, deliverables, and job-specific responsibilities included in this quote."></textarea><small>Be specific so the Huttas team can compare quotes accurately.</small></label>
+            <label class="wide"><span>Scope of Work <em>Required</em></span><textarea name="scopeOfWork" rows="7" maxlength="10000" required placeholder="Describe the work, deliverables, and job-specific responsibilities included in this quote."></textarea><small>Be specific so the smplfix team can compare quotes accurately.</small></label>
             <div class="quote-grid pricing-grid">
               <label><span>Labor Amount <em>Required</em></span><span class="money-input"><b>$</b><input name="laborAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></span></label>
               <label><span>Materials Amount <em>Required</em></span><span class="money-input"><b>$</b><input name="materialsAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></span></label>
@@ -97,12 +102,12 @@
             <label class="ack"><input type="checkbox" required><span><strong>Submission certification</strong>I certify that this quote is accurate and that I am authorized to submit it for the vendor shown above.</span></label>
             <div id="quoteSubmitError" class="submit-error hidden" role="alert"></div>
             <div class="secure-wizard-actions final-actions"><button type="button" class="secure-back" data-next-step="2"><span aria-hidden="true">&larr;</span> Back</button><span>Step 3 of 3</span><button id="quoteSubmitButton" type="submit">Submit Quote Securely <span aria-hidden="true">&#128274;</span></button></div>
-            <p class="immutable-note">Submitted versions are retained and cannot be overwritten. Hutta must request a new revision if changes are needed.</p>
+            <p class="immutable-note">Submitted versions are retained and cannot be overwritten. smplfix must request a new revision if changes are needed.</p>
           </section>
         </div>
       </div>
     </form>
-    <footer><span>&copy; Hutta Home Services</span><span>Secure Vendor Quote Collection</span></footer>
+    <footer><span>&copy; smplfix</span><span>Secure Vendor Quote Collection</span></footer>
   </main>
   <script src="../assets/js/vendor-quote.js?v=20260725-vendor-quote-redesign"></script>
 </body>

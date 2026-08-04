@@ -489,7 +489,7 @@
       const text = document.createElement('span');
       const icon = document.createElement('i');
       icon.className = `fas ${failed ? 'fa-triangle-exclamation' : 'fa-circle-check'}`;
-      text.append(icon, document.createTextNode(failed ? ' Invitation saved, but email delivery failed.' : ' Secure invitation sent successfully.'));
+      text.append(icon, document.createTextNode(failed ? ' Invitation saved, but email delivery failed.' : ' Secure invitation sent.'));
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.textContent = 'Copy Link';
@@ -596,7 +596,7 @@
       const ready = status.provider === 'resend';
       banner.classList.toggle('is-ready', ready);
       banner.innerHTML = ready
-        ? `<strong><i class="fas fa-circle-check"></i> Email delivery ready</strong>Resend is sending from ${escapeHtml(status.sender || 'sales@huttas.com')} with replies routed to ${escapeHtml(status.replyTo || 'sales@huttas.com')}.`
+        ? `<strong><i class="fas fa-circle-check"></i> Email delivery ready</strong>Resend is sending from ${escapeHtml(status.sender || 'sales@smplfix.com')} with replies routed to ${escapeHtml(status.replyTo || 'sales@smplfix.com')}.`
         : `<strong><i class="fas fa-triangle-exclamation"></i> Email delivery unavailable</strong>${escapeHtml(status.warning || 'Resend is not fully configured.')}`;
       banner.hidden = false;
     } catch (error) {

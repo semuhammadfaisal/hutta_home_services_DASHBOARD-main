@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             await window.APIService.forgotPassword(email);
-            showSuccess('Password reset link sent! Check your email.');
+            showSuccess('Password reset link sent. Check your email.');
             form.reset();
         } catch (error) {
             showError(error.message || 'Failed to send reset link');

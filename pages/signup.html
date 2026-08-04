@@ -3,147 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - Hutta Home Services</title>
-    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <title>Create Account - smplfix</title>
+    <meta name="application-name" content="smplfix">
+    <meta name="theme-color" content="#09090a">
+    <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/login-styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@700&amp;display=swap">
+    <link rel="stylesheet" href="../assets/css/login-styles.css?v=20260804-auth-compact-2">
 </head>
-<body class="signup-page">
-    <div class="page-shell">
-        <aside class="hero-panel" aria-hidden="true">
-            <div class="hero-bg"></div>
-            <div class="hero-noise"></div>
-            <div class="orb orb-1"></div>
-            <div class="orb orb-2"></div>
-            <div class="orb orb-3"></div>
-
-            <div class="hero-content">
-                <img src="../assets/images/logo.png" alt="Hutta Home Services" class="hero-logo">
-                <blockquote class="hero-quote">
-                    "Join a team that transforms homes through trusted, professional service."
-                </blockquote>
-                <div class="hero-stats">
-                    <div class="hero-stat">
-                        <span class="stat-number">10K+</span>
-                        <span class="stat-label">Happy Customers</span>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="stat-number">500+</span>
-                        <span class="stat-label">Expert Technicians</span>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="stat-number">24/7</span>
-                        <span class="stat-label">Support Available</span>
-                    </div>
-                </div>
+<body class="auth-page signup-page">
+    <div class="auth-shell">
+        <aside class="brand-stage" aria-label="About smplfix">
+            <div class="brand-stage__art" aria-hidden="true">
+                <span class="brand-arc brand-arc--one"></span>
+                <span class="brand-arc brand-arc--two"></span>
+                <span class="brand-arc brand-arc--three"></span>
             </div>
 
-            <div class="hero-footer">
-                <span class="trust-badge">
-                    <i class="fas fa-shield-halved"></i>
-                    Secure account registration
-                </span>
-            </div>
+            <header class="brand-stage__header">
+                <img class="brand-logo" src="../assets/images/smplfix-logo-ink.png" alt="smplfix" width="624" height="368">
+                <span class="brand-context">Operations platform</span>
+            </header>
+
+            <section class="brand-story">
+                <p class="brand-kicker">Your work, organized</p>
+                <h2>We focus on the problems.<br>You experience the solutions.</h2>
+                <p class="brand-copy">Create your account request and bring every part of your service operation into focus.</p>
+
+                <ol class="signup-steps" aria-label="Account setup process">
+                    <li><span>01</span><div><strong>Request access</strong><small>Tell us who you are and select your role.</small></div></li>
+                    <li><span>02</span><div><strong>Administrator review</strong><small>Your team confirms the correct permissions.</small></div></li>
+                    <li><span>03</span><div><strong>Start working</strong><small>Sign in when your approval email arrives.</small></div></li>
+                </ol>
+            </section>
+
+            <footer class="brand-stage__footer">
+                <span><i class="fa-solid fa-lock" aria-hidden="true"></i> Secure account registration</span>
+                <span>smplfix &copy; 2026</span>
+            </footer>
         </aside>
 
-        <main class="form-panel">
-            <div class="form-card">
-                <header class="card-header">
-                    <div class="card-eyebrow">
-                        <i class="fas fa-user-plus" aria-hidden="true"></i>
-                        Create account
-                    </div>
-                    <h1 class="card-title">Get started</h1>
-                    <p class="card-subtitle">Request access to the Hutta Home Services operations dashboard.</p>
+        <main class="auth-workspace">
+            <header class="workspace-header">
+                <a href="login.html"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to sign in</a>
+                <span>SMPLFIX / ACCOUNT REQUEST</span>
+            </header>
+
+            <section class="auth-card auth-card--signup form-card" aria-labelledby="signupTitle">
+                <header class="auth-card__header">
+                    <span class="auth-badge"><i class="fa-regular fa-user" aria-hidden="true"></i> New account</span>
+                    <h1 id="signupTitle">Request access.</h1>
+                    <p>Set up your profile. An administrator will confirm your access level.</p>
                 </header>
 
-                <form class="auth-form" id="signupForm" novalidate>
-                <div class="form-row">
-                    <div class="field-group">
-                        <label class="field-label" for="fullName">Full name</label>
-                        <div class="field-wrap">
-                            <i class="fas fa-user field-icon" aria-hidden="true"></i>
-                            <input class="field-input" type="text" id="fullName" name="fullName" placeholder="Enter your full name" autocomplete="name" aria-describedby="errorMessage" required>
+                <form id="signupForm" class="auth-form" novalidate>
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label for="fullName">Full name</label>
+                            <div class="field-control">
+                                <i class="fa-regular fa-user" aria-hidden="true"></i>
+                                <input type="text" id="fullName" name="fullName" placeholder="Your full name" autocomplete="name" aria-describedby="errorMessage" required>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="email">Work email</label>
+                            <div class="field-control">
+                                <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                                <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" aria-describedby="errorMessage" required>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="password">Password</label>
+                            <div class="field-control field-control--password">
+                                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                <input type="password" id="password" name="password" placeholder="Minimum 8 characters" autocomplete="new-password" aria-describedby="passwordHelp errorMessage" required>
+                                <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" aria-pressed="false"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                            </div>
+                            <small id="passwordHelp">Use at least 8 characters.</small>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="confirmPassword">Confirm password</label>
+                            <div class="field-control field-control--password">
+                                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Repeat your password" autocomplete="new-password" aria-describedby="errorMessage" required>
+                                <button type="button" class="password-toggle" id="toggleConfirmPassword" aria-label="Show confirmed password" aria-pressed="false"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="field-group">
-                        <label class="field-label" for="email">Email address</label>
-                        <div class="field-wrap">
-                            <i class="fas fa-envelope field-icon" aria-hidden="true"></i>
-                            <input class="field-input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" aria-describedby="errorMessage" required>
+                        <label for="requestedRole">Requested role</label>
+                        <div class="field-control field-control--select">
+                            <i class="fa-solid fa-user-tag" aria-hidden="true"></i>
+                            <select id="requestedRole" name="requestedRole" aria-describedby="roleHelp errorMessage" required>
+                                <option value="">Select the access you need</option>
+                                <option value="account_rep">Account Representative - Sales &amp; Customer Service</option>
+                                <option value="manager">Manager - Operations &amp; Team Management</option>
+                                <option value="admin">Administrator - Full System Access</option>
+                            </select>
                         </div>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="field-group">
-                        <label class="field-label" for="password">Password</label>
-                        <div class="field-wrap field-wrap--password">
-                            <i class="fas fa-lock field-icon" aria-hidden="true"></i>
-                            <input class="field-input" type="password" id="password" name="password" placeholder="At least 8 characters" autocomplete="new-password" aria-describedby="errorMessage" required>
-                            <button type="button" class="pw-toggle" id="togglePassword" aria-label="Show password">
-                                <i class="fas fa-eye" aria-hidden="true"></i>
-                            </button>
-                        </div>
+                        <small id="roleHelp">Your administrator will review this selection before enabling access.</small>
                     </div>
 
-                    <div class="field-group">
-                        <label class="field-label" for="confirmPassword">Confirm password</label>
-                        <div class="field-wrap field-wrap--password">
-                            <i class="fas fa-lock field-icon" aria-hidden="true"></i>
-                            <input class="field-input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Repeat your password" autocomplete="new-password" aria-describedby="errorMessage" required>
-                            <button type="button" class="pw-toggle" id="toggleConfirmPassword" aria-label="Show confirmed password">
-                                <i class="fas fa-eye" aria-hidden="true"></i>
-                            </button>
-                        </div>
+                    <label class="check-control">
+                        <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
+                        <span class="check-control__box" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+                        <span>I agree to the <a href="#">Terms &amp; Conditions</a>.</span>
+                    </label>
+
+                    <div class="alert alert--error" id="errorMessage" style="display:none" role="alert" aria-live="polite">
+                        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                        <span id="errorText"></span>
                     </div>
-                </div>
 
-                <div class="field-group">
-                    <label class="field-label" for="requestedRole">Requested role</label>
-                    <div class="field-wrap">
-                        <i class="fas fa-user-tag field-icon" aria-hidden="true"></i>
-                        <select id="requestedRole" name="requestedRole" aria-describedby="roleHelp errorMessage" required>
-                            <option value="">Choose your role...</option>
-                            <option value="account_rep">Account Representative - Sales & Customer Service</option>
-                            <option value="manager">Manager - Operations & Team Management</option>
-                            <option value="admin">Administrator - Full System Access</option>
-                        </select>
-                    </div>
-                    <small id="roleHelp">Your request will be reviewed by an administrator before access is enabled.</small>
-                </div>
-
-                <label class="remember-row terms-row">
-                    <input type="checkbox" id="agreeTerms" name="agreeTerms" class="sr-only" required>
-                    <span class="custom-check" aria-hidden="true"></span>
-                    <span class="remember-text">I agree to the <a href="#" class="link-primary">Terms &amp; Conditions</a></span>
-                </label>
-
-                <button type="submit" class="submit-btn" id="signupBtn">
-                    <span class="submit-btn__text">Create account</span>
-                    <i class="fas fa-arrow-right submit-btn__arrow" aria-hidden="true"></i>
-                    <i class="fas fa-circle-notch fa-spin submit-btn__spinner" aria-hidden="true"></i>
-                </button>
-
-                <div class="alert alert--error" id="errorMessage" style="display:none" role="alert" aria-live="polite">
-                    <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
-                    <span id="errorText"></span>
-                </div>
-
+                    <button type="submit" class="submit-btn" id="signupBtn">
+                        <span class="submit-btn__text">Request account</span>
+                        <i class="fa-solid fa-arrow-right submit-btn__arrow" aria-hidden="true"></i>
+                        <i class="fa-solid fa-circle-notch fa-spin submit-btn__spinner" aria-hidden="true"></i>
+                    </button>
                 </form>
 
-                <footer class="card-footer">
-                    Already have an account?&nbsp;<a href="login.html" class="link-primary">Sign in</a>
+                <footer class="auth-card__footer">
+                    <span>Already have access?</span>
+                    <a href="login.html">Sign in</a>
                 </footer>
-            </div>
+            </section>
+
+            <p class="workspace-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Account requests require administrator approval.</p>
         </main>
-    </div><!-- /page-shell -->
-    
+    </div>
+
     <script src="../assets/js/api-service.js"></script>
-    <script src="../assets/js/signup-script.js"></script>
+    <script src="../assets/js/signup-script.js?v=20260804-auth-compact"></script>
 </body>
 </html>

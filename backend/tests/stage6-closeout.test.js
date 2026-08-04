@@ -35,6 +35,9 @@ test('Stage 6 schemas expose completion, invoice, satisfaction, Order, and Payme
   for (const field of ['jobCompletionId', 'customerInvoiceId', 'satisfactionDecisionId', 'paymentProofSubmissionId', 'closeoutRequestedAt', 'completedAt', 'completedBy', 'satisfactionStatus', 'satisfactionFollowupSentAt']) {
     assert.ok(Order.schema.path(field), `Order.${field} should exist`);
   }
+  for (const field of ['closeoutFirstViewedAt', 'closeoutLastViewedAt', 'closeoutViewCount']) {
+    assert.ok(JobCompletion.schema.path(field), `JobCompletion.${field} should exist`);
+  }
   assert.deepEqual(Payment.schema.path('source').enumValues, ['manual', 'stage6_invoice']);
   for (const field of ['customerInvoiceId', 'jobCompletionId', 'outgoingQuoteId', 'invoiceIssuedAt']) {
     assert.ok(Payment.schema.path(field), `Payment.${field} should exist`);
@@ -74,7 +77,7 @@ test('Stage 6 tokens and immutable hashes are deterministic and content-sensitiv
     issuedAt: completion.completedAt,
     dueDate: completion.completedAt,
     terms: 'Due on receipt',
-    companySnapshot: { name: 'Hutta Home Services' },
+    companySnapshot: { name: 'smplfix' },
     customerSnapshot: { name: 'Customer' },
     jobSnapshot: { service: 'Landscaping' },
     quoteSnapshot: { quoteReference: 'OQ-1' }
@@ -199,7 +202,7 @@ test('Stage 6 payment settings use an accessible customer-facing configuration w
   const html = read('pages/admin-dashboard.html');
   const ui = read('assets/js/closeout.js');
   const css = read('assets/css/closeout.css');
-  assert.match(html, /closeout\.css\?v=20260726-payment-settings-v2/);
+  assert.match(html, /closeout\.css\?v=20260727-customer-engagement/);
   assert.match(ui, /aria-labelledby/);
   assert.match(ui, /closeout-settings-notice/);
   assert.match(ui, /closeout-method-card/);
@@ -210,6 +213,23 @@ test('Stage 6 payment settings use an accessible customer-facing configuration w
   assert.match(css, /@media\(max-width:700px\)/);
 });
 
+test('Stage 6 records secure-page engagement and displays customer submissions to staff', () => {
+  const route = read('backend/routes/closeout.js');
+  const ui = read('assets/js/closeout.js');
+  const css = read('assets/css/closeout.css');
+  assert.match(route, /\$min:\{closeoutFirstViewedAt:viewedAt\}/);
+  assert.match(route, /\$set:\{closeoutLastViewedAt:viewedAt\}/);
+  assert.match(route, /\$inc:\{closeoutViewCount:1\}/);
+  assert.match(ui, /Review and checkout progress/);
+  assert.match(ui, /Customer opened the secure closeout page/);
+  assert.match(ui, /Customer submitted/);
+  assert.match(ui, /Payment proof/);
+  assert.match(ui, /proof\.payerName/);
+  assert.match(ui, /proof\.transactionReference/);
+  assert.match(ui, /proof\.proofImages/);
+  assert.match(css, /\.closeout-engagement-grid/);
+});
+
 test('invoice PDF is generated from the immutable invoice snapshot', async () => {
   const pdf = await createCustomerInvoicePdf({
     invoiceNumber: 'INV-2026-000001',
@@ -217,13 +237,13 @@ test('invoice PDF is generated from the immutable invoice snapshot', async () =>
     issuedAt: new Date('2026-07-23T12:00:00.000Z'),
     dueDate: new Date('2026-07-23T12:00:00.000Z'),
     terms: 'Due on receipt',
-    companySnapshot: { name: 'Hutta Home Services', email: 'sales@huttas.com' },
+    companySnapshot: { name: 'smplfix', email: 'sales@smplfix.com' },
     customerSnapshot: { name: 'Customer', email: 'customer@example.com', address: '123 Main St' },
     jobSnapshot: { service: 'Landscaping', scopeOfWork: 'Approved scope' },
     quoteSnapshot: { quoteReference: 'OQ-2026-000001', revisionNumber: 1 },
     paymentInstructionsSnapshot: {
       paymentMethods: [{ key: 'bank_transfer', label: 'Bank transfer', instructions: 'Use the invoice number as the reference.', enabled: true }],
-      remittanceContact: 'sales@huttas.com',
+      remittanceContact: 'sales@smplfix.com',
       proofUploadInstructions: 'Upload transaction proof through the secure closeout page.'
     }
   });

@@ -1,7 +1,7 @@
 {
-  "name": "hutta-home-services-backend",
+  "name": "smplfix-dashboard-backend",
   "version": "1.0.0",
-  "description": "Backend API for Hutta Home Services",
+  "description": "Backend API for the smplfix administration dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

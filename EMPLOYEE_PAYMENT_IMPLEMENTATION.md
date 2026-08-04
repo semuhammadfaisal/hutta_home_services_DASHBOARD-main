@@ -2,7 +2,7 @@
 
 ##  Implementation Complete
 
-The employee payment feature has been successfully added to the Hutta Home Services Dashboard. This feature allows you to track and manage payments made to employees for their work on orders.
+The employee payment feature is available in the smplfix dashboard. It tracks and manages payments made to employees for their work on orders.
 
 ##  Files Modified
 

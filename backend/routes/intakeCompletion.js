@@ -73,7 +73,7 @@ async function publicIntake(req, res, next) {
   try {
     const token = String(req.get('x-intake-completion-token') || '');
     const intake = await findIntakeByToken(token);
-    if (!intake) return res.status(410).json({ message: 'This request link is invalid or has expired. Please contact Hutta Home Services.' });
+    if (!intake) return res.status(410).json({ message: 'This request link is invalid or has expired. Please contact smplfix.' });
     req.intake = intake;
     req.intakeToken = token;
     next();

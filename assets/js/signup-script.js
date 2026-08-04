@@ -28,6 +28,8 @@ class SignupManager {
     togglePasswordVisibility(input, button) {
         const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
         input.setAttribute('type', type);
+        button.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+        button.setAttribute('aria-pressed', type === 'text' ? 'true' : 'false');
         
         const icon = button.querySelector('i');
         icon.classList.toggle('fa-eye');
@@ -116,7 +118,7 @@ class SignupManager {
             <div class="signup-success">
                 <div class="signup-success__icon"><i class="fas fa-check" aria-hidden="true"></i></div>
                 <h1 class="card-title">Account created</h1>
-                <p class="card-subtitle">Your registration was submitted successfully.</p>
+                <p class="card-subtitle">Your registration was submitted.</p>
 
                 <div class="signup-success__panel">
                     <h2><i class="fas fa-circle-info"></i> What happens next?</h2>
@@ -161,8 +163,8 @@ class SignupManager {
 
     showSuccess() {
         const signupBtn = document.getElementById('signupBtn');
-        signupBtn.innerHTML = '<i class="fas fa-check"></i> Account Created!';
-        signupBtn.style.background = 'var(--success)';
+        signupBtn.innerHTML = '<i class="fas fa-check"></i> Account created';
+        signupBtn.classList.add('is-success');
     }
 }
 

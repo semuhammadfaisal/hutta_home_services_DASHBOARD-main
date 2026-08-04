@@ -130,9 +130,8 @@ class LoginManager {
     showSuccess() {
         const loginBtn = document.getElementById('loginBtn');
         if (loginBtn) {
-            loginBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>&nbsp;Signed in!';
-            loginBtn.style.background = '#047857';
-            loginBtn.style.boxShadow = '0 2px 4px rgba(4,120,87,.12), 0 8px 24px rgba(4,120,87,.28)';
+            loginBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>&nbsp;Signed in';
+            loginBtn.classList.add('is-success');
         }
     }
 

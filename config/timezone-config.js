@@ -1,4 +1,4 @@
-// Timezone Configuration for Hutta Home Services
+// Timezone Configuration for smplfix
 // Uses America/Phoenix (Arizona Time: MST / GMT-7 year-round, no DST)
 
 const ARIZONA_ZONE = 'America/Phoenix';

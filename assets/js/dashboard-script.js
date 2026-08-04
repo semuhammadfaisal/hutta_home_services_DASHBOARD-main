@@ -614,11 +614,11 @@ class DashboardManager {
             { key: 'completed', label: 'Completed', value: completedOrders, icon: 'check-circle' }
         ];
         const statusRows = [
-            { key: 'completed', label: 'Completed', value: completedOrders, color: '#2fbf71' },
-            { key: 'new', label: 'New Orders', value: cards.find(card => card.key === 'new')?.value || 0, color: '#3478f6' },
-            { key: 'progress', label: 'In Progress', value: activeOrders, color: '#7c4dff' },
-            { key: 'delayed', label: 'Delayed', value: cards.find(card => card.key === 'delayed')?.value || 0, color: '#ff8a2a' },
-            { key: 'cancelled', label: 'Cancelled', value: cards.find(card => card.key === 'cancelled')?.value || 0, color: '#ef4444' }
+            { key: 'completed', label: 'Completed', value: completedOrders, color: '#176B4A' },
+            { key: 'new', label: 'New Orders', value: cards.find(card => card.key === 'new')?.value || 0, color: '#0B0B0C' },
+            { key: 'progress', label: 'In Progress', value: activeOrders, color: '#555559' },
+            { key: 'delayed', label: 'Delayed', value: cards.find(card => card.key === 'delayed')?.value || 0, color: '#7A4E00' },
+            { key: 'cancelled', label: 'Cancelled', value: cards.find(card => card.key === 'cancelled')?.value || 0, color: '#B42318' }
         ];
         const summaryTiles = [
             {
@@ -662,37 +662,37 @@ class DashboardManager {
             <div class="orders-overview-detail-grid">
                 <article class="orders-overview-detail-card orders-status-distribution">
                     <div class="orders-detail-head">
-                        <h3>Order Status Distribution</h3>
+                        <h3>Order status distribution</h3>
                     </div>
                     ${this.renderOrdersStatusDistribution(statusRows, total)}
                 </article>
                 <article class="orders-overview-detail-card orders-flow-card">
                     <div class="orders-detail-head">
-                        <h3>Order Flow</h3>
+                        <h3>Order flow</h3>
                     </div>
                     ${this.renderOrdersFlow(flowRows, completedRate)}
                 </article>
                 <article class="orders-overview-detail-card orders-trend-card">
                     <div class="orders-detail-head">
-                        <h3>Orders Trend <span>Last 30 Days</span></h3>
+                        <h3>Orders trend <span>Last 30 days</span></h3>
                     </div>
                     ${this.renderOrdersOverviewTrendCard(trendSeries)}
                 </article>
                 <article class="orders-overview-detail-card orders-priority-card">
                     <div class="orders-detail-head">
-                        <h3>Priority Breakdown</h3>
+                        <h3>Priority breakdown</h3>
                     </div>
                     ${this.renderOrdersPriorityBreakdown(priorityCounts)}
                 </article>
                 <article class="orders-overview-detail-card orders-weekly-card">
                     <div class="orders-detail-head">
-                        <h3>Weekly Performance <span>Orders created this week</span></h3>
+                        <h3>Weekly performance <span>Orders created this week</span></h3>
                     </div>
                     ${this.renderOrdersWeeklyPerformance(weeklySeries)}
                 </article>
                 <article class="orders-overview-detail-card orders-recent-priority-card">
                     <div class="orders-detail-head">
-                        <h3>Recent High Priority Orders</h3>
+                        <h3>Recent high-priority orders</h3>
                         <button type="button" onclick="openOrdersSection()">View all</button>
                     </div>
                     ${this.renderRecentHighPriorityOrders(recentHighPriority)}
@@ -713,7 +713,7 @@ class DashboardManager {
                         ${escapePaymentHtml(tile.delta.label)}
                     </span>
                 </div>
-                ${this.renderOrdersSparkline(tile.spark, tile.key === 'priority' ? '#ff6b1a' : tile.key === 'completed' ? '#2fbf71' : '#3478f6')}
+                ${this.renderOrdersSparkline(tile.spark, tile.key === 'priority' ? '#7A4E00' : tile.key === 'completed' ? '#176B4A' : '#0B0B0C')}
             </article>
         `;
     }
@@ -742,7 +742,7 @@ class DashboardManager {
         return this.buildOrderVolumeDailySeriesForDays(orders.filter(order => ['high', 'urgent'].includes(this.normalizeOrderOverviewText(order.priority))), 10);
     }
 
-    renderOrdersSparkline(series = [], color = '#3478f6') {
+    renderOrdersSparkline(series = [], color = '#0B0B0C') {
         const values = series.map(item => item.value);
         const max = Math.max(...values, 1);
         const points = values.map((value, index) => {
@@ -823,9 +823,9 @@ class DashboardManager {
     renderOrdersPriorityBreakdown(counts) {
         const total = Math.max(counts.high + counts.medium + counts.low, 1);
         const rows = [
-            { key: 'high', label: 'High Priority', value: counts.high, color: '#ff4d4f' },
-            { key: 'medium', label: 'Medium Priority', value: counts.medium, color: '#ff8a2a' },
-            { key: 'low', label: 'Low Priority', value: counts.low, color: '#2fbf71' }
+            { key: 'high', label: 'High Priority', value: counts.high, color: '#B42318' },
+            { key: 'medium', label: 'Medium Priority', value: counts.medium, color: '#7A4E00' },
+            { key: 'low', label: 'Low Priority', value: counts.low, color: '#77777B' }
         ];
         return `
             <div class="orders-priority-list">
@@ -1012,12 +1012,6 @@ class DashboardManager {
 
         return `
             <svg class="orders-inline-trend-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                <defs>
-                    <linearGradient id="ordersInlineTrendBar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#3478f6"/>
-                        <stop offset="100%" stop-color="#0056b8"/>
-                    </linearGradient>
-                </defs>
                 ${yTicks.map(tick => {
                     const y = pad.top + plotHeight - ((tick / niceMax) * plotHeight);
                     return `
@@ -1037,16 +1031,16 @@ class DashboardManager {
 
     getCategoryOverviewPalette() {
         return [
-            '#1d6fd4',
-            '#0f9f8f',
-            '#7c3aed',
-            '#b45309',
-            '#0369a1',
-            '#16a34a',
-            '#dc2626',
-            '#475569',
-            '#c026d3',
-            '#0891b2'
+            '#0B0B0C',
+            '#363638',
+            '#555559',
+            '#707074',
+            '#858589',
+            '#9A9A9E',
+            '#AAAAAE',
+            '#B6B6BA',
+            '#C9C9CC',
+            '#DEDEDF'
         ];
     }
 
@@ -1276,7 +1270,7 @@ class DashboardManager {
                 { label: 'Orders', value: orders.toLocaleString() },
                 { label: latest ? latest.label : 'Latest', value: latest ? this.formatMiniCurrency(latest.value) : '$0' }
             ])}
-            ${this.renderMiniLineChart(data, '#1d6fd4', 'Revenue')}
+            ${this.renderMiniLineChart(data, '#0B0B0C', 'Revenue')}
         `;
     }
 
@@ -1302,7 +1296,7 @@ class DashboardManager {
                 { label: 'Top status', value: topStatus ? topStatus.label : '-' },
                 { label: 'Top count', value: topStatus ? topStatus.value.toLocaleString() : '0' }
             ])}
-            ${this.renderMiniHorizontalBars(data, ['#1d6fd4', '#0f9f8f', '#f59e0b', '#7c3aed', '#64748b'])}
+            ${this.renderMiniHorizontalBars(data, ['#0B0B0C', '#4B4B4F', '#77777B', '#9A9A9E', '#B6B6BA'])}
         `;
     }
 
@@ -1325,7 +1319,7 @@ class DashboardManager {
                 { label: latest ? latest.label : 'Latest', value: latest ? this.formatMiniCurrency(latest.value) : '$0' },
                 { label: best ? `Best ${best.label}` : 'Best', value: best ? this.formatMiniCurrency(best.value) : '$0' }
             ])}
-            ${this.renderMiniColumnChart(data, '#0f9f8f')}
+            ${this.renderMiniColumnChart(data, '#0B0B0C')}
         `;
     }
 
@@ -1350,7 +1344,7 @@ class DashboardManager {
                 { label: 'Recurring', value: recurring.toLocaleString() },
                 { label: 'One-time', value: oneTime.toLocaleString() }
             ])}
-            ${this.renderMiniDonutChart(data, ['#1d6fd4', '#0f9f8f', '#f59e0b'])}
+            ${this.renderMiniDonutChart(data, ['#0B0B0C', '#77777B', '#B6B6BA'])}
         `;
     }
 
@@ -1450,7 +1444,7 @@ class DashboardManager {
                     const h = Math.max(3, Math.abs(zeroY - valueY));
                     const x = pad.left + index * (barWidth + gap);
                     const y = Math.min(valueY, zeroY);
-                    const fill = row.value >= 0 ? color : '#ef4444';
+                    const fill = row.value >= 0 ? color : '#B42318';
                     return `
                         <g class="mini-chart-column-group">
                             <rect class="mini-chart-column-hit" x="${x.toFixed(2)}" y="${pad.top}" width="${barWidth.toFixed(2)}" height="${plotHeight}" rx="6"></rect>
@@ -1624,7 +1618,7 @@ class DashboardManager {
         if (!ordersData || ordersData.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="12" class="orders-empty-state">
+                    <td colspan="11" class="orders-empty-state">
                         <i class="fas fa-clipboard-list"></i>
                         <h3>No Orders Found</h3>
                         <p>Start by creating your first order</p>
@@ -1680,16 +1674,6 @@ class DashboardManager {
                 <td><span class="order-amount">${order.pricingStatus === 'unquoted' ? 'Unquoted' : `$${Number(order.amount || 0).toLocaleString()}`}</span></td>
                 <td><span class="order-cost">$${order.vendorCost?.toLocaleString() || '0'}</span></td>
                 <td><span class="order-profit">${order.pricingStatus === 'unquoted' ? '—' : `$${((order.amount || 0) - (order.vendorCost || 0)).toLocaleString()}`}</span></td>
-                <td onclick="event.stopPropagation()">
-                    <div class="order-actions">
-                        <button class="action-btn edit" onclick="editOrder('${order._id || order.id}')" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="action-btn delete" onclick="deleteOrder('${order._id || order.id}')" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
             </tr>
         `;
         };
@@ -2126,15 +2110,6 @@ class DashboardManager {
 
         return `
             <svg class="revenue-overview-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                <defs>
-                    <linearGradient id="revenueOverviewArea" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#0056b8" stop-opacity="0.22"/>
-                        <stop offset="100%" stop-color="#0056b8" stop-opacity="0"/>
-                    </linearGradient>
-                    <filter id="revenueOverviewShadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0056b8" flood-opacity="0.16"/>
-                    </filter>
-                </defs>
                 ${yTicks.map(tick => {
                     const y = pad.top + plotHeight - ((tick / niceMax) * plotHeight);
                     return `
@@ -2142,7 +2117,7 @@ class DashboardManager {
                     `;
                 }).join('')}
                 <path class="revenue-area-path" d="${areaPath}"></path>
-                <path class="revenue-line-path" d="${linePath}" filter="url(#revenueOverviewShadow)"></path>
+                <path class="revenue-line-path" d="${linePath}"></path>
                 ${points.map(point => `
                     <g class="revenue-point-group">
                         <circle class="revenue-point-hit" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="13"></circle>
@@ -2630,7 +2605,7 @@ function displayNotificationPanel(notifications) {
         <div class="notification-header">
             <h3>Notifications</h3>
             <button onclick="markAllAsRead()" class="mark-all-read">Mark All Read</button>
-            <button onclick="closeNotificationPanel()" class="close-panel">×</button>
+            <button type="button" onclick="closeNotificationPanel()" class="close-panel" aria-label="Close notifications">×</button>
         </div>
     `;
     
@@ -2778,6 +2753,20 @@ const SOFTWARE_UPDATES = [
     }
 ];
 
+const SOFTWARE_UPDATES_STORAGE_KEY = 'smplfixLatestReadSoftwareUpdate';
+const LEGACY_SOFTWARE_UPDATES_STORAGE_KEY = 'huttaLatestReadSoftwareUpdate';
+
+function getLatestReadSoftwareUpdate() {
+    const current = localStorage.getItem(SOFTWARE_UPDATES_STORAGE_KEY);
+    if (current) return current;
+    const legacy = localStorage.getItem(LEGACY_SOFTWARE_UPDATES_STORAGE_KEY);
+    if (legacy) {
+        localStorage.setItem(SOFTWARE_UPDATES_STORAGE_KEY, legacy);
+        localStorage.removeItem(LEGACY_SOFTWARE_UPDATES_STORAGE_KEY);
+    }
+    return legacy;
+}
+
 function initializeSoftwareUpdates() {
     const updatesIcon = document.querySelector('.updates-icon');
     if (!updatesIcon) return;
@@ -2791,7 +2780,7 @@ function initializeSoftwareUpdates() {
 }
 
 function getUnseenSoftwareUpdatesCount() {
-    const latestReadId = localStorage.getItem('huttaLatestReadSoftwareUpdate');
+    const latestReadId = getLatestReadSoftwareUpdate();
     if (!latestReadId) return SOFTWARE_UPDATES.length;
 
     const latestReadIndex = SOFTWARE_UPDATES.findIndex(update => update.id === latestReadId);
@@ -2799,7 +2788,7 @@ function getUnseenSoftwareUpdatesCount() {
 }
 
 function isSoftwareUpdateUnread(updateId) {
-    const latestReadId = localStorage.getItem('huttaLatestReadSoftwareUpdate');
+    const latestReadId = getLatestReadSoftwareUpdate();
     if (!latestReadId) return true;
 
     const updateIndex = SOFTWARE_UPDATES.findIndex(update => update.id === updateId);
@@ -2849,7 +2838,7 @@ function showSoftwareUpdatesPanel() {
         <div class="notification-header">
             <h3>What's New</h3>
             <button onclick="markSoftwareUpdatesAsRead()" class="mark-all-read">Mark as read</button>
-            <button onclick="closeSoftwareUpdatesPanel()" class="close-panel">&times;</button>
+            <button type="button" onclick="closeSoftwareUpdatesPanel()" class="close-panel" aria-label="Close software updates">&times;</button>
         </div>
         <div class="notification-list">${updateList}</div>
     `;
@@ -2864,7 +2853,7 @@ function showSoftwareUpdatesPanel() {
 
 function markSoftwareUpdatesAsRead() {
     if (SOFTWARE_UPDATES[0]) {
-        localStorage.setItem('huttaLatestReadSoftwareUpdate', SOFTWARE_UPDATES[0].id);
+        localStorage.setItem(SOFTWARE_UPDATES_STORAGE_KEY, SOFTWARE_UPDATES[0].id);
     }
 
     document.querySelectorAll('.software-update-item.unread').forEach(item => {
@@ -3061,7 +3050,7 @@ window.onPipelineStageChange = async function() {
 };
 
 // Loading Overlay Functions
-function showLoading(message = 'Loading...') {
+function showLoading(message = 'Loading records.') {
     let overlay = document.getElementById('loadingOverlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -3202,7 +3191,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Apply saved theme on initialization
     applySavedTheme();
     
-    window.AppLogger?.debug('Hutta Home Services Admin Dashboard initialized successfully!');
+    window.AppLogger?.debug('smplfix Admin Dashboard initialized successfully.');
 });
 
 // Update user information in dashboard
@@ -3225,7 +3214,7 @@ function updateUserInfo(sessionData) {
             } else {
                 const firstLetter = (user.firstName || user.email).charAt(0).toUpperCase();
                 // Use data URI instead of placeholder service
-                adminAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter' font-size='20' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
+                adminAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%230B0B0C'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk' font-size='20' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
             }
             adminAvatar.alt = displayName;
         }
@@ -3573,7 +3562,7 @@ function handleCustomerSelect() {
     if (selectedValue === 'new' || selectedValue === '') {
         window.AppLogger?.debug('Showing new customer fields');
         // Show new customer fields
-        newCustomerFields.style.display = 'block';
+        newCustomerFields.style.display = 'grid';
         customerAddressSelection.style.display = 'none';
         
         // Clear fields
@@ -3594,7 +3583,7 @@ function handleCustomerSelect() {
         
         if (customer) {
             newCustomerFields.style.display = 'none';
-            customerAddressSelection.style.display = 'block';
+            customerAddressSelection.style.display = 'grid';
             
             // Populate customer info (these fields will be used when saving)
             document.getElementById('customerName').value = customer.name;
@@ -3667,13 +3656,18 @@ function showAddOrderModal() {
     currentOrderId = null;
     window.existingOrderDocs = [];
     if (window.uploadedFiles) window.uploadedFiles.order = [];
-    document.getElementById('orderModalTitle').textContent = 'Add New Order';
+    const orderModal = document.getElementById('orderModal');
+    orderModal.dataset.mode = 'create';
+    document.getElementById('orderModalEyebrow').textContent = 'New order';
+    document.getElementById('orderModalTitle').textContent = 'Create Order';
+    document.getElementById('orderModalDescription').textContent = 'Build a complete service order and assign the right team.';
+    document.getElementById('orderModalSubmit').innerHTML = '<i class="fas fa-plus" aria-hidden="true"></i> Create Order';
     document.getElementById('orderForm').reset();
     
     // Reset customer search and hide address selection
     document.getElementById('customerSearchInput').value = '-- Select Existing Customer --';
     document.getElementById('customerSelect').value = '';
-    document.getElementById('newCustomerFields').style.display = 'block';
+    document.getElementById('newCustomerFields').style.display = 'grid';
     document.getElementById('customerAddressSelection').style.display = 'none';
     document.getElementById('customerSelectDropdown').classList.remove('show');
     const searchableSelect = document.querySelector('#orderModal .searchable-select');
@@ -3730,7 +3724,6 @@ function showAddOrderModal() {
     loadOrderCustomers();
     initializeServiceSuggestions();
     closeServiceSuggestions();
-    const orderModal = document.getElementById('orderModal');
     orderModal.style.display = '';
     orderModal.classList.add('show');
     } catch (error) {
@@ -3746,7 +3739,12 @@ async function editOrder(orderId) {
         currentOrderId = orderId;
         const order = await window.APIService.getOrder(orderId);
         
+        const orderModal = document.getElementById('orderModal');
+        orderModal.dataset.mode = 'edit';
+        document.getElementById('orderModalEyebrow').textContent = order.orderId || 'Existing order';
         document.getElementById('orderModalTitle').textContent = 'Edit Order';
+        document.getElementById('orderModalDescription').textContent = 'Update service details, pricing, scheduling, and assignments.';
+        document.getElementById('orderModalSubmit').innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Save Changes';
         
         // Load customers and vendors first
         await loadVendors();
@@ -3755,7 +3753,7 @@ async function editOrder(orderId) {
         
         // Populate form - make customer fields read-only
         document.getElementById('customerSelect').value = 'new';
-        document.getElementById('newCustomerFields').style.display = 'block';
+        document.getElementById('newCustomerFields').style.display = 'grid';
         document.getElementById('customerName').value = order.customer.name || '';
         document.getElementById('customerEmail').value = order.customer.email || '';
         document.getElementById('customerPhone').value = order.customer.phone || '';
@@ -3832,7 +3830,7 @@ async function editOrder(orderId) {
         window.existingOrderDocs = Array.isArray(order.documents) ? order.documents : [];
         window.updateDocumentPreview?.('order', 'orderDocsPreview');
         
-        document.getElementById('orderModal').classList.add('show');
+        orderModal.classList.add('show');
     } catch (error) {
         alert('Failed to load order: ' + error.message);
     }
@@ -3934,7 +3932,7 @@ async function saveOrder() {
                 }
             }
             
-            showToast('Pipeline record updated successfully!', 'success');
+            showToast('Pipeline record updated.', 'success');
             closeOrderModal();
             
             // Store the record ID to reopen view modal
@@ -4026,7 +4024,7 @@ async function saveOrder() {
             if (document.getElementById('notes')?.value.trim()) {
                 await addNoteEntry('orders', currentOrderId, 'notes');
             }
-            showToast('Order updated successfully!', 'success');
+            showToast('Order updated.', 'success');
             
             // If this order was edited from pipeline, store the pipeline record ID
             const pipelineRecordId = window.currentPipelineRecordId;
@@ -4052,7 +4050,7 @@ async function saveOrder() {
                 updateLoadingMessage('Attaching order documents...');
                 await window.uploadEntityAttachments('order', savedOrder?._id, pendingFiles);
             }
-            showToast('Order created successfully! Payment record auto-created.', 'success');
+            showToast('Order created. Payment record added.', 'success');
             
             // If this was a new customer, refresh the customers list
             if (!selectedCustomerId || selectedCustomerId === 'new') {
@@ -4107,13 +4105,13 @@ async function saveOrder() {
 }
 
 async function deleteOrder(orderId) {
-    if (!confirm('Are you sure you want to delete this order?')) {
+    if (!confirm('Delete this order? This action cannot be undone.')) {
         return;
     }
     
     try {
         await window.APIService.deleteOrder(orderId);
-        showToast('Order deleted successfully!', 'success');
+        showToast('Order deleted.', 'success');
         await refreshOrders();
         if (currentDetailOrderId === orderId) {
             currentDetailOrderId = null;
@@ -4151,7 +4149,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         // If opened from pipeline, show modal instead of full page
         if (fromPipeline) {
             // Populate modal fields
-            document.getElementById('modalOrderDetailTitle').textContent = `Order Details - ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
+            document.getElementById('modalOrderDetailTitle').textContent = `Order ${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}`;
             document.getElementById('modalDetailOrderId').textContent = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
             document.getElementById('modalDetailOrderStatus').innerHTML = renderOrderStageBadge(order);
             document.getElementById('modalDetailOrderPriority').innerHTML = `<span class="priority-badge ${order.priority || 'medium'}">${order.priority || 'medium'}</span>`;
@@ -4204,6 +4202,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             
             // Show modal
             document.getElementById('orderDetailModal').classList.add('show');
+            document.getElementById('orderDetailModal').setAttribute('aria-hidden', 'false');
             return;
         }
         
@@ -4342,7 +4341,9 @@ function backToOrders() {
 }
 
 function closeOrderDetailModal() {
-    document.getElementById('orderDetailModal').classList.remove('show');
+    const modal = document.getElementById('orderDetailModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
 }
 
 window.showOrderDetail = showOrderDetail;
@@ -4536,14 +4537,14 @@ async function saveSettings() {
         // Apply theme immediately
         applyTheme(settingsData.theme);
         
-        showToast('Settings saved successfully!', 'success');
+        showToast('Changes saved.', 'success');
     } catch (error) {
         showToast('Failed to save settings: ' + error.message, 'error');
     }
 }
 
 async function resetSettings() {
-    if (!confirm('Are you sure you want to reset all settings to default?')) {
+    if (!confirm('Reset all settings to defaults? This action cannot be undone.')) {
         return;
     }
     
@@ -4551,7 +4552,7 @@ async function resetSettings() {
         const defaultSettings = await window.APIService.resetSettings();
         currentSettings = defaultSettings;
         populateSettingsForm(defaultSettings);
-        showToast('Settings reset to default successfully!', 'success');
+        showToast('Settings reset to defaults.', 'success');
     } catch (error) {
         showToast('Failed to reset settings: ' + error.message, 'error');
     }
@@ -4589,7 +4590,7 @@ let reportsAppliedFilters = {};
 let reportsLoading = false;
 let reportsRuntimeWarning = '';
 let reportRecordsState = { rows: [], page: 1, pageSize: 25, total: 0, pages: 1, sort: 'date', direction: 'desc', error: '' };
-const reportColors = ['#0056b8', '#14b8a6', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9', '#64748b'];
+const reportColors = ['#0B0B0C', '#363638', '#555559', '#707074', '#858589', '#9A9A9E', '#B6B6BA'];
 const reportTabs = new Set(['overview', 'financial', 'operations', 'relationships', 'pipeline', 'details']);
 const reportFilterLabels = {
     customerId: 'Customer', employeeId: 'Assigned employee', vendorId: 'Vendor', service: 'Service', orderStatus: 'Order status',
@@ -4847,7 +4848,7 @@ function renderRevenueProfitChart(series) {
     const labelStep = Math.max(1, Math.ceil(series.length / 6));
     const compact = value => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
     return `
-        <div class="report-chart-legend"><span><i style="background:#0056b8"></i>Revenue</span><span><i style="background:#14b8a6"></i>Profit</span></div>
+        <div class="report-chart-legend"><span><i style="background:#0B0B0C"></i>Revenue</span><span><i style="background:#9A9A9E"></i>Profit</span></div>
         <div class="line-chart">
             <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Revenue and profit trend. Revenue ranges from ${formatReportMoney(Math.min(...revenue.map(point => point.revenue)))} to ${formatReportMoney(Math.max(...revenue.map(point => point.revenue)))}.">
                 ${ticks.map(tick => `<line class="chart-grid-line" x1="${plot.left}" x2="${plot.right}" y1="${tick.y}" y2="${tick.y}"></line><text class="report-chart-tick" x="${plot.left - 8}" y="${tick.y + 4}" text-anchor="end">${escapeReportHtml(compact(tick.value))}</text>`).join('')}
@@ -5233,7 +5234,7 @@ async function exportReports(format) {
         }
         const blob = await response.blob();
         const disposition = response.headers.get('content-disposition') || '';
-        const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `hutta-report.${format}`;
+        const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `smplfix-report.${format}`;
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -5421,10 +5422,10 @@ async function savePayment() {
             if (document.getElementById('paymentNotes')?.value.trim()) {
                 await addNoteEntry('payments', currentPaymentId, 'paymentNotes');
             }
-            showToast('Payment updated successfully!', 'success');
+            showToast('Payment updated.', 'success');
         } else {
             await window.APIService.createPayment(paymentData);
-            showToast('Payment recorded successfully!', 'success');
+            showToast('Payment recorded.', 'success');
         }
         
         closePaymentModal();
@@ -5442,13 +5443,13 @@ async function savePayment() {
 }
 
 async function deletePayment(paymentId) {
-    if (!confirm('Are you sure you want to delete this payment?')) {
+    if (!confirm('Delete this payment? This action cannot be undone.')) {
         return;
     }
     
     try {
         await window.APIService.deletePayment(paymentId);
-        showToast('Payment deleted successfully!', 'success');
+        showToast('Payment deleted.', 'success');
         await refreshPayments();
     } catch (error) {
         showToast('Failed to delete payment: ' + error.message, 'error');
@@ -5507,6 +5508,7 @@ function renderPaymentsTable(payments) {
     
     tbody.innerHTML = payments.map(payment => {
         const paymentStatus = payment.status || 'pending';
+        const paymentStatusClass = paymentStatus === 'bidding' ? 'status-neutral-payment' : `status-${paymentStatus}`;
         return `
         <tr onclick="showPaymentDetail('${payment._id}')">
             <td>
@@ -5521,7 +5523,7 @@ function renderPaymentsTable(payments) {
             <td><strong class="payment-amount ${Number(payment.amount || 0) < 0 ? 'negative' : ''}">$${Number(payment.amount || 0).toLocaleString()}</strong></td>
             <td><span class="method-badge ${payment.paymentMethod || 'pending'}">${payment.paymentMethod ? payment.paymentMethod.replace('-', ' ') : 'Not Set'}</span></td>
             <td onclick="event.stopPropagation();">
-                <select class="payment-status-select status-${paymentStatus}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value, this)">
+                <select class="payment-status-select ${paymentStatusClass}" onchange="quickUpdatePaymentStatus('${payment._id}', this.value, this)">
                     <option value="bidding" ${payment.status === 'bidding' ? 'selected' : ''}>Bidding</option>
                     <option value="pending" ${payment.status === 'pending' ? 'selected' : ''}>Pending</option>
                     <option value="received" ${payment.status === 'received' ? 'selected' : ''}>Received</option>
@@ -5533,12 +5535,14 @@ function renderPaymentsTable(payments) {
             </td>
             <td>${payment.paymentDate ? formatDisplayDate(payment.paymentDate) : 'Not Paid'}</td>
             <td onclick="event.stopPropagation();">
-                <button class="btn-action" onclick="showPaymentDetail('${payment._id}')" title="View">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn-action delete" onclick="deletePayment('${payment._id}')" title="Delete">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <div class="payment-row-actions">
+                    <button class="btn-action" onclick="showPaymentDetail('${payment._id}')" title="View" aria-label="View payment">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
+                    <button class="btn-action delete" onclick="deletePayment('${payment._id}')" title="Delete" aria-label="Delete payment">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     `;
@@ -5719,7 +5723,8 @@ window.savePayment = savePayment;
 // Quick update payment status from table
 async function quickUpdatePaymentStatus(paymentId, newStatus, selectEl = null) {
     if (selectEl) {
-        selectEl.className = `payment-status-select status-${newStatus}`;
+        const statusClass = newStatus === 'bidding' ? 'status-neutral-payment' : `status-${newStatus}`;
+        selectEl.className = `payment-status-select ${statusClass}`;
     }
 
     try {
@@ -5736,7 +5741,7 @@ async function quickUpdatePaymentStatus(paymentId, newStatus, selectEl = null) {
         };
         
         await window.APIService.updatePayment(paymentId, updateData);
-        showToast(`Payment status updated to ${newStatus}!`, 'success');
+        showToast(`Payment status updated to ${newStatus}.`, 'success');
         
         // Refresh payments table
         await refreshPayments();
@@ -5769,7 +5774,7 @@ async function editInvoiceNumber(paymentId, currentInvoice) {
         <div class="invoice-edit-modal">
             <div class="invoice-modal-header">
                 <h3><i class="fas fa-file-invoice"></i> Edit Invoice Number</h3>
-                <button class="invoice-modal-close" onclick="this.closest('.invoice-edit-modal-overlay').remove()">
+                <button type="button" class="invoice-modal-close" onclick="this.closest('.invoice-edit-modal-overlay').remove()" aria-label="Close invoice editor">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -5873,7 +5878,7 @@ async function saveInvoiceNumber(paymentId) {
         if (modal) modal.remove();
         
         // Show success message
-        showToast('Invoice number updated successfully!', 'success');
+        showToast('Invoice number updated.', 'success');
         
         // Refresh the payments table
         await refreshPayments();
@@ -6105,7 +6110,7 @@ async function addNoteEntry(entity, recordId, textareaId) {
         const result = await window.APIService.addNote(entity, recordId, text);
         textarea.value = '';
         renderNotesManager(entity, recordId, result, textareaId);
-        showToast('Note added successfully.', 'success');
+        showToast('Note added.', 'success');
         return result;
     } catch (error) {
         console.warn('Note save failed:', error);
@@ -6225,7 +6230,7 @@ async function editNoteEntry(entity, recordId, noteId, textareaId) {
     try {
         const result = await window.APIService.updateNote(entity, recordId, noteId, trimmed);
         renderNotesManager(entity, recordId, result, textareaId);
-        showToast('Note updated successfully.', 'success');
+        showToast('Note updated.', 'success');
     } catch (error) {
         showToast(error.message || 'Failed to update note.', 'error');
     }
@@ -6236,7 +6241,7 @@ async function deleteNoteEntry(entity, recordId, noteId, textareaId) {
     try {
         const result = await window.APIService.deleteNote(entity, recordId, noteId);
         renderNotesManager(entity, recordId, result, textareaId);
-        showToast('Note deleted successfully.', 'success');
+        showToast('Note deleted.', 'success');
     } catch (error) {
         showToast(error.message || 'You can only delete your own notes.', 'error');
     }
@@ -6471,7 +6476,7 @@ async function savePaymentMilestones() {
         await window.APIService.updatePayment(currentPaymentDetailData._id, {
             milestones
         });
-        showToast('Payment milestones updated successfully!', 'success');
+        showToast('Payment milestones updated.', 'success');
         await showPaymentDetail(currentPaymentDetailData._id);
         await refreshPayments();
         if (window.dashboard && window.dashboard.renderDashboard) {
@@ -6915,7 +6920,7 @@ async function saveEmployeePayment() {
         const result = await window.APIService.updatePayment(currentPaymentDetailData._id, employeePaymentData);
         window.AppLogger?.debug('Save successful:', result);
 
-        showToast('Employee payment saved successfully', 'success');
+        showToast('Employee payment saved.', 'success');
         
         // Refresh the modal with updated data
         await showPaymentDetail(currentPaymentDetailData._id);
@@ -6958,7 +6963,7 @@ async function saveVendorPayment() {
         const result = await window.APIService.updatePayment(currentPaymentDetailData._id, vendorPaymentData);
         window.AppLogger?.debug('Save successful:', result);
 
-        showToast('Vendor payment saved successfully', 'success');
+        showToast('Vendor payment saved.', 'success');
         
         // Refresh the modal with updated data
         await showPaymentDetail(currentPaymentDetailData._id);
@@ -6980,6 +6985,7 @@ window.saveVendorPayment = saveVendorPayment;
 
 // Employee Management Functions
 let currentEmployeeId = null;
+let currentDetailEmployeeId = null;
 
 function showAddEmployeeModal() {
     currentEmployeeId = null;
@@ -7058,10 +7064,10 @@ async function saveEmployee() {
         let savedEmployee;
         if (currentEmployeeId) {
             savedEmployee = await window.APIService.updateEmployee(currentEmployeeId, employeeData);
-            showToast('Employee updated successfully!', 'success');
+            showToast('Employee updated.', 'success');
         } else {
             savedEmployee = await window.APIService.createEmployee(employeeData);
-            showToast('Employee created successfully!', 'success');
+            showToast('Employee created.', 'success');
         }
         const employeeId = currentEmployeeId || savedEmployee?._id;
         if (pendingFiles.length) {
@@ -7077,22 +7083,27 @@ async function saveEmployee() {
         
         closeEmployeeModal();
         await refreshEmployees();
+        if (currentDetailEmployeeId && document.getElementById('employee-detail')?.classList.contains('active')) {
+            await showEmployeeDetail(currentDetailEmployeeId);
+        }
     } catch (error) {
         showToast('Failed to save employee: ' + error.message, 'error');
     }
 }
 
 async function deleteEmployee(employeeId) {
-    if (!confirm('Are you sure you want to delete this employee?')) {
-        return;
+    if (!confirm('Delete this employee? This action cannot be undone.')) {
+        return false;
     }
     
     try {
         await window.APIService.deleteEmployee(employeeId);
-        showToast('Employee deleted successfully!', 'success');
+        showToast('Employee deleted.', 'success');
         await refreshEmployees();
+        return true;
     } catch (error) {
         showToast('Failed to delete employee: ' + error.message, 'error');
+        return false;
     }
 }
 
@@ -7105,14 +7116,17 @@ async function showEmployeeDetail(employeeId) {
     try {
         window.AppLogger?.debug('Loading employee details for:', employeeId);
         const employee = await window.APIService.getEmployee(employeeId);
+        currentDetailEmployeeId = employee._id || employeeId;
         window.AppLogger?.debug('Employee data loaded:', employee);
         
-        document.getElementById('employeeDetailName').textContent = employee.name;
+        document.getElementById('employeeDetailName').textContent = employee.name || 'Employee';
+        document.getElementById('employeeDetailSummary').textContent = `${formatOrderFilterLabel(employee.role || 'team member')} / ${formatOrderFilterLabel(employee.status || 'status unavailable')}`;
         document.getElementById('detailEmployeeEmail').textContent = employee.email || '-';
         document.getElementById('detailEmployeePhone').textContent = employee.phone || '-';
-        document.getElementById('detailEmployeeRole').textContent = employee.role.replace('-', ' ') || '-';
+        document.getElementById('detailEmployeeRole').textContent = employee.role ? formatOrderFilterLabel(employee.role) : '-';
         document.getElementById('detailEmployeeDepartment').textContent = employee.department || '-';
-        document.getElementById('detailEmployeeStatus').innerHTML = `<span class="employee-status-badge ${employee.status}">${employee.status.replace('-', ' ')}</span>`;
+        const employeeStatus = String(employee.status || 'offline');
+        document.getElementById('detailEmployeeStatus').innerHTML = `<span class="employee-status-badge ${escapePaymentHtml(employeeStatus)}">${escapePaymentHtml(formatOrderFilterLabel(employeeStatus))}</span>`;
         document.getElementById('detailEmployeeHireDate').textContent = employee.hireDate ? formatDisplayDate(employee.hireDate) : '-';
         document.getElementById('detailEmployeeAddress').textContent = employee.address || '-';
         document.getElementById('detailEmployeeSkills').textContent = employee.skills && employee.skills.length > 0 ? employee.skills.join(', ') : '-';
@@ -7179,7 +7193,23 @@ async function showEmployeeDetail(employeeId) {
 }
 
 function backToEmployees() {
+    currentDetailEmployeeId = null;
     showSection('employees');
+}
+
+function editCurrentDetailEmployee() {
+    if (currentDetailEmployeeId) {
+        editEmployee(currentDetailEmployeeId);
+    }
+}
+
+async function deleteCurrentDetailEmployee() {
+    if (!currentDetailEmployeeId) return;
+
+    const deleted = await deleteEmployee(currentDetailEmployeeId);
+    if (deleted) {
+        backToEmployees();
+    }
 }
 
 function closeEmployeeModal() {
@@ -7217,7 +7247,7 @@ function renderEmployeesTable(employees) {
     if (!employees || employees.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="employees-empty-state">
+                <td colspan="7" class="employees-empty-state">
                     <i class="fas fa-user-tie"></i>
                     <h3>No Employees Found</h3>
                     <p>Start by adding your first employee</p>
@@ -7246,16 +7276,6 @@ function renderEmployeesTable(employees) {
             <td><span class="employee-department">${employee.department || 'N/A'}</span></td>
             <td><span class="employee-status-badge ${employee.status}">${employee.status.replace('-', ' ')}</span></td>
             <td><span class="employee-date-cell">${employee.hireDate ? formatDisplayDate(employee.hireDate) : 'N/A'}</span></td>
-            <td onclick="event.stopPropagation()">
-                <div class="employee-actions">
-                    <button class="action-btn edit" onclick="editEmployee('${employee._id}')" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete" onclick="deleteEmployee('${employee._id}')" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
         </tr>
     `;
     }).join('');
@@ -7371,6 +7391,8 @@ window.closeEmployeeModal = closeEmployeeModal;
 window.saveEmployee = saveEmployee;
 window.showEmployeeDetail = showEmployeeDetail;
 window.backToEmployees = backToEmployees;
+window.editCurrentDetailEmployee = editCurrentDetailEmployee;
+window.deleteCurrentDetailEmployee = deleteCurrentDetailEmployee;
 
 async function archiveExistingAttachment(entityType, entityId, attachment, previewType, previewId) {
     if (!attachment?.documentId) {
@@ -7420,11 +7442,11 @@ const VENDOR_COMPLIANCE_FIELDS = [
 ];
 
 const VENDOR_COMPLIANCE_DOCUMENT_FIELDS = [
-    { key: 'huttasContract', inputId: 'vendorHuttasContractFile', previewId: 'vendorHuttasContractPreview', label: 'Huttas Contract with Sub (Signed and Dated)' },
+    { key: 'huttasContract', inputId: 'vendorHuttasContractFile', previewId: 'vendorHuttasContractPreview', label: 'smplfix Contract with Sub (Signed and Dated)' },
     { key: 'w9', inputId: 'vendorW9File', previewId: 'vendorW9Preview', label: 'W-9 on File (Signed and Dated)' },
     { key: 'certificateOfInsurance', inputId: 'vendorCertificateOfInsuranceFile', previewId: 'vendorCertificateOfInsurancePreview', label: 'Certificate of Insurance on File' },
     { key: 'workersCompInsurance', inputId: 'vendorWorkersCompInsuranceFile', previewId: 'vendorWorkersCompInsurancePreview', label: 'Workers Comp Insurance on File' },
-    { key: 'huttasAdditionalInsured', inputId: 'vendorHuttasAdditionalInsuredFile', previewId: 'vendorHuttasAdditionalInsuredPreview', label: 'Huttas Listed as Additional Insured on GL Policy' }
+    { key: 'huttasAdditionalInsured', inputId: 'vendorHuttasAdditionalInsuredFile', previewId: 'vendorHuttasAdditionalInsuredPreview', label: 'smplfix Listed as Additional Insured on GL Policy' }
 ];
 
 let vendorComplianceFiles = {};
@@ -8024,7 +8046,7 @@ async function runOptimisticVendorSave(snapshot) {
 
     setOptimisticVendorProgress(clientId, 98, 'Finalizing');
     finishOptimisticVendorSave(clientId, savedVendor);
-    showToast(snapshot.isEdit ? 'Vendor updated successfully!' : 'Vendor created successfully!', 'success');
+    showToast(snapshot.isEdit ? 'Vendor updated.' : 'Vendor created.', 'success');
 }
 
 function addVendorEmail() {
@@ -8298,13 +8320,13 @@ async function saveVendor() {
 }
 
 async function deleteVendor(vendorId) {
-    if (!confirm('Are you sure you want to delete this vendor?')) {
+    if (!confirm('Delete this vendor? This action cannot be undone.')) {
         return;
     }
     
     try {
         await window.APIService.deleteVendor(vendorId);
-        showToast('Vendor deleted successfully!', 'success');
+        showToast('Vendor deleted.', 'success');
         await refreshVendors();
     } catch (error) {
         showToast('Failed to delete vendor: ' + error.message, 'error');
@@ -8585,6 +8607,7 @@ window.removeExistingVendorDoc = async function(index) {
 
 // Customer Management Functions
 let currentCustomerId = null;
+let currentDetailCustomerId = null;
 let addressCounter = 1;
 let emailCounter = 1;
 let phoneCounter = 1;
@@ -8987,11 +9010,11 @@ async function saveCustomer() {
             if (document.getElementById('customerNotes')?.value.trim()) {
                 await addNoteEntry('customers', currentCustomerId, 'customerNotes');
             }
-            showToast('Customer updated successfully!', 'success');
+            showToast('Customer updated.', 'success');
         } else {
             updateLoadingMessage('Creating customer...');
             savedCustomer = await window.APIService.createCustomer(customerData);
-            showToast('Customer created successfully!', 'success');
+            showToast('Customer created.', 'success');
         }
         const customerId = currentCustomerId || savedCustomer?._id;
         if (pendingFiles.length) {
@@ -9007,6 +9030,9 @@ async function saveCustomer() {
         
         closeCustomerModal();
         await refreshCustomers();
+        if (currentDetailCustomerId && document.getElementById('customer-profile')?.classList.contains('active')) {
+            await showCustomerProfile(currentDetailCustomerId);
+        }
     } catch (error) {
         showToast('Failed to save customer: ' + error.message, 'error');
     } finally {
@@ -9016,16 +9042,18 @@ async function saveCustomer() {
 }
 
 async function deleteCustomer(customerId) {
-    if (!confirm('Are you sure you want to delete this customer?')) {
-        return;
+    if (!confirm('Delete this customer? This action cannot be undone.')) {
+        return false;
     }
     
     try {
         await window.APIService.deleteCustomer(customerId);
-        showToast('Customer deleted successfully!', 'success');
+        showToast('Customer deleted.', 'success');
         await refreshCustomers();
+        return true;
     } catch (error) {
         showToast('Failed to delete customer: ' + error.message, 'error');
+        return false;
     }
 }
 
@@ -9036,6 +9064,7 @@ function viewCustomer(customerId) {
 async function showCustomerProfile(customerId) {
     try {
         const profileData = await window.APIService.getCustomerProfile(customerId);
+        currentDetailCustomerId = profileData.customer._id || customerId;
         
         // Hide customers section, show profile section
         document.getElementById('customers').classList.remove('active');
@@ -9045,13 +9074,17 @@ async function showCustomerProfile(customerId) {
         document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
         
         // Populate customer info
-        document.getElementById('customerProfileName').textContent = profileData.customer.name;
+        const customerName = String(profileData.customer.name || 'Customer').trim();
+        document.getElementById('customerProfileName').textContent = customerName;
+        const customerTypeLabel = formatOrderFilterLabel(profileData.customer.customerType || 'customer');
+        const customerStatusLabel = formatOrderFilterLabel(profileData.customer.status || 'status unavailable');
+        document.getElementById('customerProfileSummary').textContent = `${customerTypeLabel} account / ${customerStatusLabel}`;
         
         // Display all emails
-        const emailElement = document.getElementById('profileEmail');
+        const emailElement = document.getElementById('customerProfileEmail');
         if (profileData.customer.emails && profileData.customer.emails.length > 0) {
             emailElement.innerHTML = profileData.customer.emails.map((email, index) => 
-                `<div style="margin-bottom: ${index < profileData.customer.emails.length - 1 ? '5px' : '0'};"><strong>${email.label || 'Email ' + (index + 1)}:</strong> ${email.address || '-'}</div>`
+                `<span class="customer-profile-value-line"><strong>${escapePaymentHtml(email.label || 'Email ' + (index + 1))}</strong>${escapePaymentHtml(email.address || '-')}</span>`
             ).join('');
         } else {
             emailElement.textContent = profileData.customer.email || '-';
@@ -9061,7 +9094,7 @@ async function showCustomerProfile(customerId) {
         const phoneElement = document.getElementById('profilePhone');
         if (profileData.customer.phones && profileData.customer.phones.length > 0) {
             phoneElement.innerHTML = profileData.customer.phones.map((phone, index) => 
-                `<div style="margin-bottom: ${index < profileData.customer.phones.length - 1 ? '5px' : '0'};"><strong>${phone.label || 'Phone ' + (index + 1)}:</strong> ${phone.number || '-'}</div>`
+                `<span class="customer-profile-value-line"><strong>${escapePaymentHtml(phone.label || 'Phone ' + (index + 1))}</strong>${escapePaymentHtml(phone.number || '-')}</span>`
             ).join('');
         } else {
             phoneElement.textContent = profileData.customer.phone || '-';
@@ -9071,7 +9104,7 @@ async function showCustomerProfile(customerId) {
         const addressElement = document.getElementById('profileAddress');
         if (profileData.customer.addresses && profileData.customer.addresses.length > 0) {
             addressElement.innerHTML = profileData.customer.addresses.map((addr, index) => 
-                `<div style="margin-bottom: ${index < profileData.customer.addresses.length - 1 ? '10px' : '0'};"><strong>${addr.label || 'Address ' + (index + 1)}:</strong> ${addr.address || '-'}</div>`
+                `<span class="customer-profile-value-line"><strong>${escapePaymentHtml(addr.label || 'Address ' + (index + 1))}</strong>${escapePaymentHtml(addr.address || '-')}</span>`
             ).join('');
         } else {
             addressElement.textContent = profileData.customer.address || '-';
@@ -9089,14 +9122,14 @@ async function showCustomerProfile(customerId) {
             window.AppLogger?.debug('Displaying', profileData.customer.customFields.length, 'custom fields');
             customFieldsContainer.innerHTML = profileData.customer.customFields.map(field => 
                 `<div class="info-item">
-                    <label>${field.name}:</label>
-                    <span>${field.value || '-'}</span>
+                    <span class="display-label">${escapePaymentHtml(field.name || 'Custom field')}</span>
+                    <span>${escapePaymentHtml(field.value || '-')}</span>
                 </div>`
             ).join('');
-            customFieldsContainer.style.display = 'grid';
+            customFieldsContainer.hidden = false;
         } else {
             window.AppLogger?.debug('No custom fields to display');
-            customFieldsContainer.style.display = 'none';
+            customFieldsContainer.hidden = true;
         }
         
         // Populate stats
@@ -9108,7 +9141,7 @@ async function showCustomerProfile(customerId) {
         // Populate orders table
         const ordersBody = document.getElementById('profileOrdersBody');
         if (profileData.orders.length === 0) {
-            ordersBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No orders found</td></tr>';
+            ordersBody.innerHTML = '<tr class="profile-orders-empty"><td colspan="6">No orders found</td></tr>';
         } else {
             ordersBody.innerHTML = profileData.orders.map(order => {
                 const statusDisplay = order.workflowStatus ? formatOrderFilterLabel(order.workflowStatus) : (order.pipelineStage || (order.status || 'new').replace('-', ' '));
@@ -9164,12 +9197,28 @@ async function showCustomerProfile(customerId) {
 }
 
 function backToCustomers() {
+    currentDetailCustomerId = null;
     document.getElementById('customer-profile').classList.remove('active');
     document.getElementById('customers').classList.add('active');
     
     // Update menu
     document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
     document.querySelector('[data-section="customers"]').parentElement.classList.add('active');
+}
+
+function editCurrentDetailCustomer() {
+    if (currentDetailCustomerId) {
+        editCustomer(currentDetailCustomerId);
+    }
+}
+
+async function deleteCurrentDetailCustomer() {
+    if (!currentDetailCustomerId) return;
+
+    const deleted = await deleteCustomer(currentDetailCustomerId);
+    if (deleted) {
+        backToCustomers();
+    }
 }
 
 function closeCustomerModal() {
@@ -9229,7 +9278,7 @@ function renderCustomersTable(customers) {
     if (!customers || customers.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="customers-empty-state">
+                <td colspan="7" class="customers-empty-state">
                     <i class="fas fa-users"></i>
                     <h3>No Customers Found</h3>
                     <p>Start by adding your first customer</p>
@@ -9258,16 +9307,6 @@ function renderCustomersTable(customers) {
             <td><span class="customer-type-badge ${customer.customerType}">${customer.customerType}</span></td>
             <td><span class="customer-status-badge ${customer.status}">${customer.status}</span></td>
             <td><span class="customer-orders-count">${customer.totalOrders || 0}</span></td>
-            <td onclick="event.stopPropagation()">
-                <div class="customer-actions">
-                    <button class="action-btn edit" onclick="editCustomer('${customer._id}')" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete" onclick="deleteCustomer('${customer._id}')" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
         </tr>
     `;
     }).join('');
@@ -9398,6 +9437,8 @@ window.showAddCustomerModal = showAddCustomerModal;
 window.closeCustomerModal = closeCustomerModal;
 window.saveCustomer = saveCustomer;
 window.backToCustomers = backToCustomers;
+window.editCurrentDetailCustomer = editCurrentDetailCustomer;
+window.deleteCurrentDetailCustomer = deleteCurrentDetailCustomer;
 window.addPhysicalAddress = addPhysicalAddress;
 window.removePhysicalAddress = removePhysicalAddress;
 window.addEmailAddress = addEmailAddress;
@@ -10113,7 +10154,7 @@ function showProfile() {
                 profileAvatar.src = user.avatar;
             } else {
                 const firstLetter = (user.firstName || 'A').charAt(0).toUpperCase();
-                profileAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter' font-size='50' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
+                profileAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%230B0B0C'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk,Arial,sans-serif' font-size='50' font-weight='600' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
             }
         }
     }
@@ -10173,7 +10214,7 @@ async function saveProfile() {
             return;
         }
 
-        showToast('Profile updated successfully!', 'success');
+        showToast('Changes saved.', 'success');
         closeProfileModal();
     } catch (error) {
         console.error('Profile update error:', error);
@@ -10298,7 +10339,8 @@ async function showVendorDetail(vendorId) {
         window.AppLogger?.debug('Vendor notes:', vendor.notes);
         window.AppLogger?.debug('Vendor notes type:', typeof vendor.notes);
         
-        document.getElementById('vendorDetailName').textContent = vendor.name;
+        document.getElementById('vendorDetailName').textContent = vendor.name || 'Vendor';
+        document.getElementById('vendorDetailSummary').textContent = `${formatOrderFilterLabel(vendor.category || 'service provider')} / ${vendor.isActive ? 'Active' : 'Inactive'}`;
         
         // Display all emails
         const emailElement = document.getElementById('detailVendorEmail');
@@ -10319,7 +10361,7 @@ async function showVendorDetail(vendorId) {
         if (emailsToDisplay.length > 0) {
             window.AppLogger?.debug('Displaying emails:', emailsToDisplay);
             emailElement.innerHTML = emailsToDisplay.map((email, index) => 
-                `<div style="margin-bottom: ${index < emailsToDisplay.length - 1 ? '5px' : '0'};"><strong>${email.label || 'Email ' + (index + 1)}:</strong> ${email.address || '-'}</div>`
+                `<span class="record-detail-value-line"><strong>${escapePaymentHtml(email.label || 'Email ' + (index + 1))}</strong>${escapePaymentHtml(email.address || '-')}</span>`
             ).join('');
         } else {
             window.AppLogger?.debug('No email data found');
@@ -10344,7 +10386,7 @@ async function showVendorDetail(vendorId) {
         if (phonesToDisplay.length > 0) {
             window.AppLogger?.debug('Displaying phones:', phonesToDisplay);
             phoneElement.innerHTML = phonesToDisplay.map((phone, index) => 
-                `<div style="margin-bottom: ${index < phonesToDisplay.length - 1 ? '5px' : '0'};"><strong>${phone.label || 'Phone ' + (index + 1)}:</strong> ${phone.number || '-'}</div>`
+                `<span class="record-detail-value-line"><strong>${escapePaymentHtml(phone.label || 'Phone ' + (index + 1))}</strong>${escapePaymentHtml(phone.number || '-')}</span>`
             ).join('');
         } else {
             window.AppLogger?.debug('No phone data found');
@@ -10354,9 +10396,9 @@ async function showVendorDetail(vendorId) {
         document.getElementById('detailVendorCategory').textContent = vendor.category || '-';
         document.getElementById('detailVendorRating').textContent = `${Number(vendor.rating || 0)}/5`;
         document.getElementById('detailVendorAddress').textContent = vendor.address || '-';
-        document.getElementById('detailVendorStatus').innerHTML = vendor.isActive 
-            ? '<span style="color: #22c55e;">Active</span>' 
-            : '<span style="color: #ef4444;">Inactive</span>';
+        document.getElementById('detailVendorStatus').innerHTML = vendor.isActive
+            ? '<span class="record-status-badge active">Active</span>'
+            : '<span class="record-status-badge inactive">Inactive</span>';
         renderVendorComplianceDetails(vendor);
         
         renderNotesManager('vendors', vendor._id, vendor, 'vendorDetailNoteComposer');
@@ -10369,14 +10411,14 @@ async function showVendorDetail(vendorId) {
             window.AppLogger?.debug('Displaying', vendor.customFields.length, 'custom fields');
             customFieldsContainer.innerHTML = vendor.customFields.map(field => 
                 `<div class="info-item">
-                    <label>${field.name}:</label>
-                    <span>${field.value || '-'}</span>
+                    <span class="display-label">${escapePaymentHtml(field.name || 'Custom field')}</span>
+                    <span>${escapePaymentHtml(field.value || '-')}</span>
                 </div>`
             ).join('');
-            customFieldsContainer.style.display = 'grid';
+            customFieldsContainer.hidden = false;
         } else {
             window.AppLogger?.debug('No custom fields to display');
-            customFieldsContainer.style.display = 'none';
+            customFieldsContainer.hidden = true;
         }
         
         const docsList = document.getElementById('vendorDocumentsList');
@@ -10625,7 +10667,7 @@ function renderUsersTable(users) {
                 </span>
             </td>
             <td>
-                <div class="user-actions">
+                <div class="user-actions ${isPending ? 'is-pending' : 'is-active'}">
                     ${isPending ? `
                         ${user.requestedRole ? `
                             <button class="btn-assign-role approve" onclick="approveUserRole('${user._id}', '${user.requestedRole}')" title="Approve requested role">
@@ -10669,7 +10711,7 @@ async function assignUserRole(userId) {
     
     try {
         await window.APIService.assignUserRole(userId, role);
-        showToast('Role assigned successfully! User must logout and login to see changes.', 'success');
+        showToast('Role assigned. The user must sign out and sign in to see changes.', 'success');
         await loadUsersSection();
     } catch (error) {
         showToast('Failed to assign role: ' + error.message, 'error');
@@ -10687,7 +10729,7 @@ async function changeUserRole(userId) {
     
     try {
         await window.APIService.assignUserRole(userId, role);
-        showToast('Role updated successfully! User must logout and login to see changes.', 'success');
+        showToast('Role updated. The user must sign out and sign in to see changes.', 'success');
         await loadUsersSection();
     } catch (error) {
         showToast('Failed to update role: ' + error.message, 'error');
@@ -10702,7 +10744,7 @@ async function approveUserRole(userId, requestedRole) {
     
     try {
         await window.APIService.assignUserRole(userId, requestedRole);
-        showToast('User approved! They can now login with their requested role.', 'success');
+        showToast('User approved. They can now sign in with their requested role.', 'success');
         await loadUsersSection();
     } catch (error) {
         showToast('Failed to approve user: ' + error.message, 'error');
@@ -10717,7 +10759,7 @@ async function deleteUser(userId) {
         async () => {
             try {
                 await window.APIService.deleteUser(userId);
-                showToast('User deleted successfully!', 'success');
+                showToast('User deleted.', 'success');
                 await loadUsersSection();
             } catch (error) {
                 showToast('Failed to delete user: ' + error.message, 'error');
@@ -10877,9 +10919,9 @@ async function saveNewUser() {
         
         const sendEmail = document.getElementById('sendEmailCheckbox').checked;
         if (sendEmail) {
-            showToast('User created successfully! Login credentials have been sent to their email.', 'success');
+            showToast('User created. Login credentials were sent by email.', 'success');
         } else {
-            showToast('User created successfully!', 'success');
+            showToast('User created.', 'success');
         }
         
         closeAddUserModal();
@@ -10902,7 +10944,7 @@ window.forceRefreshDashboard = forceRefreshDashboard;
 // Copy Order ID to Clipboard
 function copyOrderId(orderId) {
     navigator.clipboard.writeText(orderId).then(() => {
-        showToast('Order ID copied to clipboard!', 'success');
+        showToast('Order ID copied.', 'success');
     }).catch(err => {
         console.error('Failed to copy:', err);
         showToast('Failed to copy Order ID', 'error');
@@ -10967,7 +11009,7 @@ function toggleRecurringFields() {
     if (!recurringFields) return;
 
     if (orderType === 'recurring') {
-        recurringFields.style.display = 'block';
+        recurringFields.style.display = 'grid';
         if (recurringFrequency) recurringFrequency.required = true;
         if (endDateGroup) endDateGroup.style.display = 'none';
         if (endDateInput) endDateInput.required = false;
@@ -11063,5 +11105,3 @@ window.addEventListener('order:status-changed', event => {
         }
     }, 150);
 });
-
-

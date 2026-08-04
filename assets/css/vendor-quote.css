@@ -1,5 +1,5 @@
 :root{
-  font-family:Inter,Arial,sans-serif;
+  font-family:var(--smpl-font-ui);
   color:#101b31;
   background:#f4f7fb;
   --vq-blue:#075fc6;

@@ -123,13 +123,13 @@ if (userRole === 'admin') {
 The user's role is available in the session:
 
 ```javascript
-const session = JSON.parse(sessionStorage.getItem('huttaSession'));
-const userRole = session.role; // 'admin', 'manager', or 'account_rep'
+const session = await window.APIService.getSession();
+const userRole = session.user.role; // 'admin', 'manager', or 'account_rep'
 ```
 
 ## Security Notes
 
-- All delete operations require authentication (valid JWT token)
+- All delete operations require an authenticated server session
 - Role checks happen on the backend, not just frontend
 - Even if someone bypasses frontend restrictions, backend will reject unauthorized deletes
 - Admin users should be carefully managed and limited in number

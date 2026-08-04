@@ -1,4 +1,4 @@
-// Reusable UI Components for Hutta Home Services
+// Reusable UI Components for smplfix
 
 class UIComponents {
     // Create a modal component

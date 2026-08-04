@@ -761,7 +761,7 @@ function payContractor(jobId) {
                 contractorPaidDate: window.TimezoneConfig ? window.TimezoneConfig.todayInputMDT() : new Date().toISOString().split('T')[0] 
             });
             updateAccountingDashboard();
-            alert('Contractor paid successfully!');
+            alert('Contractor paid.');
         }
     }
 }
@@ -800,7 +800,7 @@ function confirmOverridePayout() {
         
         updateAccountingDashboard();
         closeOverridePayoutModal();
-        alert('Contractor payout approved with override!');
+        alert('Contractor payout approved with override.');
     } catch (error) {
         alert(error.message);
     }
@@ -825,18 +825,18 @@ function generateWeeklyCashReport() {
             <title>Weekly Cash Summary Report</title>
             <style>
                 body { font-family: "Inter", "Plus Jakarta Sans", "Manrope", sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-                h1 { color: #2c3e50; border-bottom: 3px solid #2196F3; padding-bottom: 10px; }
+                h1 { color: #0B0B0C; border-bottom: 1px solid #ECECED; padding-bottom: 10px; }
                 .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 30px 0; }
-                .summary-item { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #2196F3; }
-                .summary-item label { display: block; color: #7f8c8d; font-size: 14px; margin-bottom: 5px; }
-                .summary-item .value { font-size: 24px; font-weight: bold; color: #2c3e50; }
-                .positive { color: #4CAF50; }
-                .negative { color: #f44336; }
+                .summary-item { background: #F6F6F4; padding: 20px; border-radius: 8px; border: 1px solid #ECECED; }
+                .summary-item label { display: block; color: #626266; font-size: 14px; margin-bottom: 5px; }
+                .summary-item .value { font-size: 24px; font-weight: bold; color: #0B0B0C; }
+                .positive { color: #176B4A; }
+                .negative { color: #B42318; }
                 .alerts { margin-top: 30px; }
                 .alert { padding: 15px; margin: 10px 0; border-radius: 5px; }
                 .alert-warning { background: #fff3cd; border-left: 4px solid #ffc107; }
                 .alert-danger { background: #f8d7da; border-left: 4px solid #dc3545; }
-                .print-btn { background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 20px; }
+                .print-btn { background: #0B0B0C; color: white; border: 1px solid #0B0B0C; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 20px; }
                 @media print { .print-btn { display: none; } }
             </style>
         </head>
@@ -1039,11 +1039,11 @@ function renderForecastChart(scenarios) {
     
     chartContainer.innerHTML = `
         <div class="chart-legend">
-            <div class="legend-item"><span class="legend-color" style="background: #2196F3;"></span> Revenue</div>
-            <div class="legend-item"><span class="legend-color" style="background: #f44336;"></span> Contractor Expense</div>
-            <div class="legend-item"><span class="legend-color" style="background: #FF9800;"></span> Operating Expense</div>
-            <div class="legend-item"><span class="legend-color" style="background: #4CAF50;"></span> Net Profit</div>
-            <div class="legend-item"><span class="legend-color" style="background: #9C27B0;"></span> Cash Reserve</div>
+            <div class="legend-item"><span class="legend-color" style="background: #0B0B0C;"></span> Revenue</div>
+            <div class="legend-item"><span class="legend-color" style="background: #4B4B4F;"></span> Contractor Expense</div>
+            <div class="legend-item"><span class="legend-color" style="background: #727276;"></span> Operating Expense</div>
+            <div class="legend-item"><span class="legend-color" style="background: #9A9A9E;"></span> Net Profit</div>
+            <div class="legend-item"><span class="legend-color" style="background: #B6B6BA;"></span> Cash Reserve</div>
         </div>
         <div class="chart-grid">
             ${expected.map(month => `
@@ -1124,7 +1124,7 @@ function saveWealthTracking() {
     
     accountingSystem.updateWealthTracking(data);
     loadWealthTab();
-    alert('Wealth tracking updated successfully!');
+    alert('Wealth tracking updated.');
 }
 
 function renderAllocationPieChart(allocation) {
@@ -1136,10 +1136,10 @@ function renderAllocationPieChart(allocation) {
     }
     
     const data = [
-        { label: 'Growth (50%)', value: allocation.growth, color: '#4CAF50', percent: 50 },
-        { label: 'Tax Reserve (20%)', value: allocation.taxReserve, color: '#FF9800', percent: 20 },
-        { label: 'Cash Reserve (20%)', value: allocation.cashReserve, color: '#2196F3', percent: 20 },
-        { label: 'Long-Term Wealth (10%)', value: allocation.longTermWealth, color: '#9C27B0', percent: 10 }
+        { label: 'Growth (50%)', value: allocation.growth, color: '#0B0B0C', percent: 50 },
+        { label: 'Tax Reserve (20%)', value: allocation.taxReserve, color: '#555559', percent: 20 },
+        { label: 'Cash Reserve (20%)', value: allocation.cashReserve, color: '#9A9A9E', percent: 20 },
+        { label: 'Long-Term Wealth (10%)', value: allocation.longTermWealth, color: '#B6B6BA', percent: 10 }
     ];
     
     let currentAngle = 0;

@@ -99,7 +99,7 @@ test('public links always use HTTPS and reject localhost or private origins', ()
   }
 });
 
-test('email configuration requires Resend with the sales@huttas.com sender identity', () => {
+test('email configuration requires Resend with the sales@smplfix.com sender identity', () => {
   const previous = {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
@@ -107,19 +107,19 @@ test('email configuration requires Resend with the sales@huttas.com sender ident
   };
   try {
     process.env.RESEND_API_KEY = 'test-key';
-    process.env.EMAIL_FROM = 'Hutta Home Services <sales@huttas.com>';
-    process.env.EMAIL_REPLY_TO = 'sales@huttas.com';
+    process.env.EMAIL_FROM = 'smplfix <sales@smplfix.com>';
+    process.env.EMAIL_REPLY_TO = 'sales@smplfix.com';
     assert.equal(getEmailDeliveryStatus().provider, 'resend');
     assert.equal(getEmailDeliveryStatus().warning, null);
-    assert.equal(getEmailDeliveryStatus().sender, 'sales@huttas.com');
-    assert.equal(getEmailDeliveryStatus().replyTo, 'sales@huttas.com');
+    assert.equal(getEmailDeliveryStatus().sender, 'sales@smplfix.com');
+    assert.equal(getEmailDeliveryStatus().replyTo, 'sales@smplfix.com');
 
-    process.env.EMAIL_FROM = 'Hutta Home Services <another@huttas.com>';
+    process.env.EMAIL_FROM = 'smplfix <another@smplfix.com>';
     assert.equal(getEmailDeliveryStatus().provider, 'unconfigured');
-    assert.match(getEmailDeliveryStatus().warning, /sales@huttas\.com/);
+    assert.match(getEmailDeliveryStatus().warning, /sales@smplfix\.com/);
 
-    process.env.EMAIL_FROM = 'Hutta Home Services <sales@huttas.com>';
-    process.env.EMAIL_REPLY_TO = 'another@huttas.com';
+    process.env.EMAIL_FROM = 'smplfix <sales@smplfix.com>';
+    process.env.EMAIL_REPLY_TO = 'another@smplfix.com';
     assert.equal(getEmailDeliveryStatus().provider, 'unconfigured');
   } finally {
     for (const [key, value] of Object.entries(previous)) {
@@ -128,16 +128,16 @@ test('email configuration requires Resend with the sales@huttas.com sender ident
   }
 });
 
-test('email templates use the clean white Hutta corporate shell', () => {
+test('email templates use the clean white smplfix corporate shell', () => {
   const emailSource = fs.readFileSync(path.join(__dirname, '../utils/emailService.js'), 'utf8');
   assert.doesNotMatch(emailSource, /class="logo"|logo-card|LOGO_CONTENT_ID/);
   assert.doesNotMatch(emailSource, /class="hero-mark"/);
   assert.match(emailSource, /table role="presentation" class="page"/);
   assert.match(emailSource, /\.head\{[^}]*background:#ffffff/);
-  assert.match(emailSource, /h1\{[^}]*color:#0056b8/);
-  assert.match(emailSource, /mailto:sales@huttas\.com/);
+  assert.match(emailSource, /h1\{[^}]*color:#0b0b0c/);
+  assert.match(emailSource, /mailto:sales@smplfix\.com/);
   assert.match(emailSource, /Professional Home Services Management Platform/);
-  assert.match(emailSource, /Hutta Home Services <\$\{REQUIRED_SENDER_ADDRESS\}>/);
+  assert.match(emailSource, /smplfix <\$\{REQUIRED_SENDER_ADDRESS\}>/);
   assert.match(emailSource, /const EMAIL_REPLY_TO = REQUIRED_SENDER_ADDRESS/);
   assert.doesNotMatch(emailSource, /nodemailer|smtp\.gmail\.com|EMAIL_PASSWORD/i);
   for (const sender of [

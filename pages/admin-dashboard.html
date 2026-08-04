@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Hutta Home Services</title>
-    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <title>Admin Dashboard - smplfix</title>
+    <meta name="application-name" content="smplfix">
+    <meta name="theme-color" content="#0B0B0C">
+    <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/dashboard-styles.css">
+    <link rel="stylesheet" href="../assets/css/dashboard-styles.css?v=20260804-customer-actions">
     <link rel="stylesheet" href="../assets/css/forms.css">
     <link rel="stylesheet" href="../assets/css/notifications.css">
     <link rel="stylesheet" href="../assets/css/reports.css">
@@ -45,8 +47,11 @@
     <link rel="stylesheet" href="../assets/css/scheduling.css?v=20260725-scheduling-workspace-v2">
     <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-workflow-interactions">
     <link rel="stylesheet" href="../assets/css/workflow-reference.css?v=20260725-quote-compliance">
-    <link rel="stylesheet" href="../assets/css/closeout.css?v=20260726-payment-settings-v2">
+    <link rel="stylesheet" href="../assets/css/closeout.css?v=20260727-customer-engagement">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
+    <link rel="stylesheet" href="../assets/css/smplfix-shell.css?v=20260804-headers">
+    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260804-users-rebrand">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -56,7 +61,7 @@
                 <i class="fas fa-bars" aria-hidden="true"></i>
             </button>
             <div class="logo">
-                <img src="../assets/images/logo.png" alt="Hutta Home Services" class="navbar-logo" decoding="async" fetchpriority="high">
+                <img src="../assets/images/smplfix-logo-ink.png" alt="smplfix" class="navbar-logo" width="624" height="368" decoding="async" fetchpriority="high">
             </div>
         </div>
         <div class="nav-center">
@@ -79,24 +84,24 @@
                 <i class="fas fa-search" aria-hidden="true"></i>
             </button>
             <div class="admin-profile" id="adminProfile" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter' font-size='20' fill='white'%3EA%3C/text%3E%3C/svg%3E" alt="Admin" id="adminAvatar">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%230B0B0C'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk' font-size='20' fill='white'%3EA%3C/text%3E%3C/svg%3E" alt="Admin" id="adminAvatar">
                 <div class="profile-info">
                     <span class="admin-name" id="adminName">Admin</span>
                     <span class="admin-role">Administrator</span>
                 </div>
                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
                 <div class="profile-dropdown" id="profileDropdown" role="menu">
-                    <div class="dropdown-item" onclick="showProfile()">
-                        <i class="fas fa-user"></i>
+                    <div class="dropdown-item" role="menuitem" tabindex="-1" onclick="showProfile()">
+                        <i class="fas fa-user" aria-hidden="true"></i>
                         <span>Profile</span>
                     </div>
-                    <div class="dropdown-item" onclick="showSettings()">
-                        <i class="fas fa-cog"></i>
+                    <div class="dropdown-item" role="menuitem" tabindex="-1" onclick="showSettings()">
+                        <i class="fas fa-cog" aria-hidden="true"></i>
                         <span>Settings</span>
                     </div>
-                    <div class="dropdown-divider"></div>
-                    <div class="dropdown-item logout" onclick="SessionManager.logout()">
-                        <i class="fas fa-sign-out-alt"></i>
+                    <div class="dropdown-divider" role="separator"></div>
+                    <div class="dropdown-item logout" role="menuitem" tabindex="-1" onclick="SessionManager.logout()">
+                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
                         <span>Logout</span>
                     </div>
                 </div>
@@ -106,6 +111,13 @@
 
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+        <div class="sidebar-brand">
+            <img src="../assets/images/smplfix-logo-reversed.png?v=20260806" alt="smplfix" class="sidebar-logo" width="696" height="400" decoding="async">
+            <button type="button" class="sidebar-close" id="sidebarClose" aria-label="Close navigation">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+        </div>
+        <nav class="sidebar-navigation" aria-label="Dashboard sections">
         <ul class="sidebar-menu">
             <li class="sidebar-section-label" aria-hidden="true">Command</li>
             <li class="menu-item active">
@@ -126,7 +138,6 @@
                     <span>Recurring Calendar</span>
                 </a>
             </li>
-            <li class="sidebar-section-label" aria-hidden="true">Workflow Center</li>
             <li class="menu-item">
                 <a href="#workflow-center/overview" data-section="workflow-overview" id="workflowCenterNav">
                     <i class="fas fa-route"></i>
@@ -210,6 +221,7 @@
                 </a>
             </li>
         </ul>
+        </nav>
     </aside>
     <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Close menu" hidden></button>
 
@@ -230,6 +242,11 @@
 
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
+        <nav class="page-breadcrumbs" id="pageBreadcrumbs" aria-label="Breadcrumb">
+            <span id="pageBreadcrumbGroup">Command</span>
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <span id="pageBreadcrumbCurrent" aria-current="page">Dashboard overview</span>
+        </nav>
         <!-- Dashboard Section -->
         <section id="dashboard" class="content-section active dashboard-overview">
             <div class="page-header overview-hero">
@@ -237,7 +254,7 @@
                     <div class="header-text">
                         <p class="overview-eyebrow">Operations</p>
                         <h1>Dashboard overview</h1>
-                        <p class="overview-lead">Here's what's happening with your business today.</p>
+                        <p class="overview-lead">Your operation at a glance.</p>
                     </div>
                     <div class="header-actions">
                         <div class="date-range" title="Current date and time">
@@ -372,8 +389,8 @@
             <section class="mini-charts-panel" aria-labelledby="miniChartsHeading">
                 <div class="mini-charts-header">
                     <div>
-                        <h2 id="miniChartsHeading">Mini Charts</h2>
-                        <p>Fast visual pulse across revenue, orders, profit, and customers.</p>
+                        <h2 id="miniChartsHeading">Mini charts</h2>
+                        <p>Revenue, orders, profit, and customers at a glance.</p>
                     </div>
                 </div>
                 <div class="mini-charts-grid">
@@ -423,7 +440,7 @@
             <section class="orders-overview-panel" aria-labelledby="ordersOverviewHeading">
                 <div class="orders-overview-head">
                     <div>
-                        <h2 id="ordersOverviewHeading">Orders Overview</h2>
+                        <h2 id="ordersOverviewHeading">Orders overview</h2>
                         <p>Track order performance and workflow status.</p>
                     </div>
                     <span class="orders-overview-total" id="ordersOverviewTotal">0 orders</span>
@@ -434,8 +451,8 @@
             <section class="service-category-panel" aria-labelledby="serviceCategoryHeading">
                 <div class="service-category-head">
                     <div>
-                        <h2 id="serviceCategoryHeading">Category Overview</h2>
-                        <p>All service categories ranked by orders and revenue.</p>
+                        <h2 id="serviceCategoryHeading">Category overview</h2>
+                        <p>Service categories ranked by orders and revenue.</p>
                     </div>
                     <span class="service-category-total" id="serviceCategoryTotal">0 orders</span>
                 </div>
@@ -449,17 +466,17 @@
                         <span class="revenue-overview-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
                         <span class="revenue-overview-title-copy">
                             <h3>Revenue overview</h3>
-                            <p>Overview of your revenue performance</p>
+                            <p>Revenue performance for the selected period.</p>
                         </span>
                     </div>
                     <label class="revenue-overview-filter">
                         <span class="visually-hidden">Revenue period</span>
                         <select id="revenueOverviewPeriod" autocomplete="off" onchange="applyRevenueOverviewFilter()">
-                            <option value="current-month">This Month</option>
-                            <option value="last-month">Last Month</option>
-                            <option value="last-30" selected>Last 30 Days</option>
-                            <option value="year-to-date">Year to Date</option>
-                            <option value="all-time">All Time</option>
+                            <option value="current-month">This month</option>
+                            <option value="last-month">Last month</option>
+                            <option value="last-30" selected>Last 30 days</option>
+                            <option value="year-to-date">Year to date</option>
+                            <option value="all-time">All time</option>
                         </select>
                         <i class="fas fa-chevron-down" aria-hidden="true"></i>
                     </label>
@@ -489,7 +506,7 @@
             <section class="top-performance-panel" aria-labelledby="topPerformanceHeading">
                 <div class="top-performance-head">
                     <div>
-                        <h2 id="topPerformanceHeading">Top Performance Cards</h2>
+                        <h2 id="topPerformanceHeading">Top performance</h2>
                         <p>Best performers across customers, vendors, employees, services, and jobs.</p>
                     </div>
                 </div>
@@ -556,7 +573,7 @@
                         </div>
                         <div class="overview-card-title">
                             <h3>Quick actions</h3>
-                            <p>Save time with your most used actions</p>
+                            <p>Your most-used actions in one place.</p>
                         </div>
                     </div>
                     <div class="quick-actions">
@@ -581,7 +598,7 @@
                             <span class="more-actions-icon" aria-hidden="true"><i class="fas fa-handshake"></i></span>
                             <span class="more-actions-text">
                                 <strong>More actions</strong>
-                                <small>Add vendor, add employee, view reports and more</small>
+                                <small>Add vendors, employees, and more.</small>
                             </span>
                             <i class="fas fa-chevron-down" aria-hidden="true"></i>
                         </summary>
@@ -609,7 +626,7 @@
                         </div>
                         <div class="overview-card-title">
                             <h3>Recent activity</h3>
-                            <p>Stay updated with what's happening</p>
+                            <p>Latest movement across your operation.</p>
                         </div>
                         <button type="button" class="overview-card-link" onclick="window.dashboard.showSection('orders'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=orders]').parentElement.classList.add('active'); loadOrdersSection();">
                             View all
@@ -691,7 +708,7 @@
                         </div>
                         <div class="summary-card-title">
                             <h3>Vendor categories</h3>
-                            <p>Overview of vendors by category</p>
+                            <p>Active vendors by category.</p>
                         </div>
                         <button type="button" class="summary-card-link" onclick="window.dashboard.showSection('vendors'); document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')); document.querySelector('[data-section=vendors]').parentElement.classList.add('active'); loadVendorsSection();">
                             View all <i class="fas fa-chevron-right" aria-hidden="true"></i>
@@ -745,7 +762,7 @@
                     <div class="top-customers-title-block">
                         <span class="top-customers-title-icon" aria-hidden="true"><i class="fas fa-trophy"></i></span>
                         <span class="top-customers-title-copy">
-                            <h3>Top Customers</h3>
+                            <h3>Top customers</h3>
                             <p>Highest revenue customers for the selected period.</p>
                         </span>
                     </div>
@@ -927,7 +944,7 @@
                             <label>Arizona end<input id="scheduleEndInput" type="datetime-local" required><small id="scheduleEndPreview">Select an end date and time</small></label>
                             <div class="schedule-timezone-note full"><i class="fas fa-clock"></i><span><strong>America/Phoenix</strong> Arizona time is used for every proposal and confirmation.</span></div>
                             <label class="full">Access instructions <small>Shared with customer and vendor</small><textarea id="scheduleAccessInput" rows="3" maxlength="5000" placeholder="Gate codes, arrival instructions, parking, or site-contact details"></textarea></label>
-                            <label class="full schedule-private-field">Internal notes <small><i class="fas fa-lock"></i> Never sent externally</small><textarea id="scheduleInternalNotes" rows="3" maxlength="5000" placeholder="Private notes for the Huttas team"></textarea></label>
+                            <label class="full schedule-private-field">Internal notes <small><i class="fas fa-lock"></i> Never sent externally</small><textarea id="scheduleInternalNotes" rows="3" maxlength="5000" placeholder="Private notes for the smplfix team"></textarea></label>
                             <label id="scheduleConflictAckLabel" class="full conflict-ack" hidden><input id="scheduleConflictAck" type="checkbox"><span><strong>Vendor overlap reviewed</strong>I authorize sending this proposal despite the detected schedule conflict.</span></label>
                             <div id="scheduleConflictBox" class="full schedule-conflict" hidden></div>
                             <div class="full schedule-submit-bar"><div><strong>Vendor confirmation required</strong><small>The Order stays pending until the vendor accepts.</small></div><button class="btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Send Secure Proposal</button></div>
@@ -1083,19 +1100,25 @@
 
         <!-- Orders Section -->
         <section id="orders" class="content-section">
-            <div class="page-header">
-                <h1>Orders Management</h1>
-                <button class="btn-primary" onclick="showAddOrderModal()">
-                    <i class="fas fa-plus"></i> New Order
-                </button>
-            </div>
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">Operations</p>
+                    <h1>Orders</h1>
+                    <p class="smpl-section-description">Create and manage service orders.</p>
+                </div>
+                <div class="smpl-section-header-actions">
+                    <button class="btn-primary" onclick="showAddOrderModal()">
+                        <i class="fas fa-plus"></i> New Order
+                    </button>
+                </div>
+            </header>
             
             <!-- Orders Toolbar -->
             <div class="orders-toolbar">
                 <div class="orders-search-filter">
                     <div class="orders-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="orderSearchInput" placeholder="Search orders by ID, customer, or service..." autocomplete="off">
+                        <input type="text" id="orderSearchInput" placeholder="Search orders by ID, customer, or service..." autocomplete="off" aria-label="Search orders">
                     </div>
                     <div class="orders-filters">
                         <span class="orders-filter-label"><i class="fas fa-sliders-h"></i> Filters</span>
@@ -1182,12 +1205,11 @@
                         <col class="orders-col-vendor">
                         <col class="orders-col-status">
                         <col class="orders-col-priority">
-                        <col class="orders-col-date">
-                        <col class="orders-col-date">
+                        <col class="orders-col-created">
+                        <col class="orders-col-schedule">
                         <col class="orders-col-revenue">
                         <col class="orders-col-cost">
                         <col class="orders-col-profit">
-                        <col class="orders-col-actions">
                     </colgroup>
                     <thead>
                         <tr>
@@ -1202,7 +1224,6 @@
                             <th>Revenue</th>
                             <th>Cost</th>
                             <th>Profit</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="ordersTableBody">
@@ -1217,14 +1238,15 @@
 
         <!-- Order Detail Section -->
         <section id="order-detail" class="content-section">
-            <div class="page-header order-detail-header">
-                <div class="order-detail-header-main">
+            <header class="page-header order-detail-header record-detail-header">
+                <div class="order-detail-header-main record-detail-header-main">
                     <button class="btn-secondary order-detail-back-btn" onclick="backToOrders()">
-                        <i class="fas fa-arrow-left"></i> Back to Orders
+                        <i class="fas fa-arrow-left"></i> Back to orders
                     </button>
-                    <div>
-                        <span class="order-detail-eyebrow">Order Details</span>
+                    <div class="order-detail-heading-copy record-detail-heading-copy">
+                        <span class="order-detail-eyebrow page-eyebrow">Order Details</span>
                         <h1 id="orderDetailTitle">Order Details</h1>
+                        <p>Service, customer, financial, and document information in one place.</p>
                     </div>
                 </div>
                 <div class="order-detail-actions">
@@ -1235,9 +1257,9 @@
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </div>
-            </div>
+            </header>
             
-            <div class="detail-container order-detail-layout">
+            <div class="detail-container order-detail-layout record-detail-layout">
                 <div class="detail-info-card order-summary-card">
                     <h3><i class="fas fa-clipboard-list"></i> Order Information</h3>
                     <div id="detailOrderIntakeBanner" class="order-intake-banner" hidden></div>
@@ -1327,7 +1349,7 @@
                     </div>
                     <div class="info-item full-width description-notes-section notes-section">
                         <span class="display-label">Notes</span>
-                        <textarea id="detailOrderNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off"></textarea>
+                        <textarea id="detailOrderNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off" aria-label="Add order note"></textarea>
                     </div>
                 </div>
                 
@@ -1342,9 +1364,13 @@
 
         <!-- Other sections (simplified for brevity) -->
         <section id="customers" class="content-section">
-            <div class="page-header">
-                <h1>Customers</h1>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">Operations</p>
+                    <h1>Customers</h1>
+                    <p class="smpl-section-description">Manage customer records and service history.</p>
+                </div>
+                <div class="smpl-section-header-actions">
                     <button class="btn-secondary" onclick="importCustomersFromCSV()" style="white-space: nowrap;">
                         <i class="fas fa-file-csv"></i> Import CSV
                     </button>
@@ -1352,22 +1378,22 @@
                         <i class="fas fa-user-plus"></i> Add Customer
                     </button>
                 </div>
-            </div>
+            </header>
             
             <!-- Customers Toolbar -->
             <div class="customers-toolbar">
                 <div class="customers-search-filter">
                     <div class="customers-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="customersToolbarSearchInput" placeholder="Search customers by name, email, or phone..." autocomplete="off">
+                        <input type="text" id="customersToolbarSearchInput" placeholder="Search customers by name, email, or phone..." autocomplete="off" aria-label="Search customers">
                     </div>
                     <div class="customers-filters">
-                        <select class="filter-select" id="customerTypeFilter" autocomplete="off">
+                        <select class="filter-select" id="customerTypeFilter" autocomplete="off" aria-label="Filter customers by type">
                             <option value="all">All Types</option>
                             <option value="recurring">Recurring</option>
                             <option value="one-time">One-time</option>
                         </select>
-                        <select class="filter-select" id="customerStatusFilter" autocomplete="off">
+                        <select class="filter-select" id="customerStatusFilter" autocomplete="off" aria-label="Filter customers by status">
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
@@ -1397,7 +1423,6 @@
                         <col class="customers-col-type">
                         <col class="customers-col-status">
                         <col class="customers-col-orders">
-                        <col class="customers-col-actions">
                     </colgroup>
                     <thead>
                         <tr>
@@ -1408,8 +1433,6 @@
                             <th>Type</th>
                             <th>Status</th>
                             <th>Orders</th>
-                            
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="customersTableBody">
@@ -1421,20 +1444,34 @@
 
         <!-- Customer Profile Section -->
         <section id="customer-profile" class="content-section">
-            <div class="page-header">
-                <button class="btn-secondary" onclick="backToCustomers()">
-                    <i class="fas fa-arrow-left"></i> Back to Customers
+            <header class="page-header customer-profile-header record-detail-header">
+                <div class="customer-detail-header-main record-detail-header-main">
+                <button type="button" class="btn-secondary customer-profile-back" onclick="backToCustomers()">
+                    <i class="fas fa-arrow-left"></i> Back to customers
                 </button>
-                <h1 id="customerProfileName">Customer Profile</h1>
-            </div>
+                <div class="customer-profile-heading record-detail-heading-copy">
+                    <p class="page-eyebrow">Customer details</p>
+                    <h1 id="customerProfileName">Customer Profile</h1>
+                    <p id="customerProfileSummary">Contact details, service activity, notes, and documents.</p>
+                </div>
+                </div>
+                <div class="customer-detail-actions">
+                    <button type="button" class="btn-secondary" onclick="editCurrentDetailCustomer()">
+                        <i class="fas fa-pen" aria-hidden="true"></i> Edit
+                    </button>
+                    <button type="button" class="btn-danger" onclick="deleteCurrentDetailCustomer()">
+                        <i class="fas fa-trash" aria-hidden="true"></i> Delete
+                    </button>
+                </div>
+            </header>
             
-            <div class="profile-container">
-                <div class="profile-info-card">
+            <div class="profile-container record-detail-layout">
+                <div class="profile-info-card record-detail-card">
                     <h3><i class="fas fa-user"></i> Customer Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Email:</span>
-                            <span id="profileEmail">-</span>
+                            <span id="customerProfileEmail">-</span>
                         </div>
                         <div class="info-item">
                             <span class="display-label">Phone:</span>
@@ -1453,24 +1490,16 @@
                             <span id="profileStatus">-</span>
                         </div>
                     </div>
-                    <div class="info-grid" id="profileCustomFields" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                    <div class="info-grid profile-custom-fields" id="profileCustomFields" hidden>
                         <!-- Custom fields will be populated here -->
                     </div>
                 </div>
 
-                <div class="detail-info-card order-notes-card profile-notes-card">
-                    <h3><i class="fas fa-align-left"></i> Notes</h3>
-                    <div class="info-item full-width description-notes-section notes-section">
-                        <span class="display-label">Notes</span>
-                        <textarea id="profileCustomerNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off"></textarea>
-                    </div>
-                </div>
-                
                 <div class="profile-stats-grid">
                     <div class="stat-card">
                         <i class="fas fa-clipboard-list"></i>
                         <h3 id="profileTotalOrders">0</h3>
-                        <p>Total Orders</p>
+                        <p>Total orders</p>
                     </div>
                     <div class="stat-card">
                         <i class="fas fa-check-circle"></i>
@@ -1485,42 +1514,58 @@
                     <div class="stat-card">
                         <i class="fas fa-dollar-sign"></i>
                         <h3 id="profileTotalSpent">$0</h3>
-                        <p>Total Spent</p>
+                        <p>Total spent</p>
+                    </div>
+                </div>
+
+                <div class="customer-profile-support-grid">
+                    <div class="detail-info-card order-notes-card profile-notes-card record-detail-card">
+                        <h3><i class="fas fa-align-left"></i> Notes</h3>
+                        <div class="info-item full-width description-notes-section notes-section">
+                            <span class="display-label">Notes</span>
+                            <textarea id="profileCustomerNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off" aria-label="Add customer note"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="profile-documents-card record-detail-card">
+                        <h3><i class="fas fa-file-alt"></i> Documents</h3>
+                        <div id="customerDocumentsList" class="documents-list">
+                            <p class="no-documents">No documents uploaded</p>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="profile-orders-card">
-                    <h3><i class="fas fa-clipboard-list"></i> Work Orders</h3>
-                    <table class="profile-orders-table">
-                        <thead>
-                            <tr>
-                                <th>Work Order #</th>
-                                <th>Order ID</th>
-                                <th>Service</th>
-                                <th>Status</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody id="profileOrdersBody">
-                            <!-- Orders will be populated -->
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="profile-documents-card">
-                    <h3><i class="fas fa-file-alt"></i> Documents</h3>
-                    <div id="customerDocumentsList" class="documents-list">
-                        <p class="no-documents">No documents uploaded</p>
+                <div class="profile-orders-card record-detail-card">
+                    <h3><i class="fas fa-clipboard-list"></i> Work orders</h3>
+                    <div class="profile-orders-table-wrap">
+                        <table class="profile-orders-table">
+                            <thead>
+                                <tr>
+                                    <th>Work order #</th>
+                                    <th>Order ID</th>
+                                    <th>Service</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="profileOrdersBody">
+                                <!-- Orders will be populated -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </section>
 
         <section id="vendors" class="content-section">
-            <div class="page-header">
-                <h1>Vendors</h1>
-                <div style="display: flex; gap: 10px;">
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">Operations</p>
+                    <h1>Vendors</h1>
+                    <p class="smpl-section-description">Manage vendor records and service coverage.</p>
+                </div>
+                <div class="smpl-section-header-actions">
                     <button class="btn-secondary" onclick="importVendorsFromCSV()">
                         <i class="fas fa-file-csv"></i> Import CSV
                     </button>
@@ -1528,17 +1573,17 @@
                         <i class="fas fa-user-plus"></i> Add Vendor
                     </button>
                 </div>
-            </div>
+            </header>
 
             <!-- Vendors Toolbar -->
             <div class="vendors-toolbar">
                 <div class="vendors-search-filter">
                     <div class="vendors-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="vendorSearchInput" placeholder="Search vendors by name, email, or category..." autocomplete="off">
+                        <input type="text" id="vendorSearchInput" placeholder="Search vendors by name, email, or category..." autocomplete="off" aria-label="Search vendors">
                     </div>
                     <div class="vendors-filters">
-                        <select class="filter-select" id="vendorCategoryFilter" autocomplete="off">
+                        <select class="filter-select" id="vendorCategoryFilter" autocomplete="off" aria-label="Filter vendors by category">
                             <option value="all">All Categories</option>
                             <option value="electrical">Electrical</option>
                             <option value="plumbing">Plumbing</option>
@@ -1548,7 +1593,7 @@
                             <option value="painting">Painting</option>
                             <option value="cleaning">Cleaning</option>
                         </select>
-                        <select class="filter-select" id="vendorStatusFilter" autocomplete="off">
+                        <select class="filter-select" id="vendorStatusFilter" autocomplete="off" aria-label="Filter vendors by status">
                             <option value="all">All Status</option>
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
@@ -1598,15 +1643,16 @@
         </section>
 
         <section id="vendor-reviews" class="content-section vendor-reviews-workspace">
-            <div class="page-header vendor-review-hero">
-                <div class="vendor-review-hero-copy">
-                    <div>
-                        <h1>Vendor Reviews</h1>
-                        <p class="vendor-review-lead">Review submitted applications, verify compliance, and activate trusted vendors.</p>
-                    </div>
+            <header class="page-header vendor-review-hero smpl-section-header">
+                <div class="vendor-review-hero-copy smpl-section-header-copy">
+                    <p class="page-eyebrow">Operations</p>
+                    <h1>Vendor reviews</h1>
+                    <p class="vendor-review-lead smpl-section-description">Review applications and compliance.</p>
                 </div>
-                <button type="button" class="btn-secondary vendor-review-refresh" onclick="loadVendorReviews(true); refreshVendorInvitations(); refreshVendorEmailStatus()"><i class="fas fa-sync-alt"></i> Refresh all</button>
-            </div>
+                <div class="smpl-section-header-actions">
+                    <button type="button" class="btn-refresh vendor-review-refresh" onclick="loadVendorReviews(true); refreshVendorInvitations(); refreshVendorEmailStatus()"><i class="fas fa-sync-alt"></i> Refresh all</button>
+                </div>
+            </header>
             <div class="vendor-review-stats" aria-label="Vendor review totals">
                 <button type="button" data-review-status-card="pending_review" onclick="setVendorReviewStatus('pending_review')"><span class="vendor-review-stat-icon pending"><i class="fas fa-clock"></i></span><span class="vendor-review-stat-copy"><strong id="vendorReviewsPendingCount">0</strong><span>Pending Review</span><small>Ready for a decision</small></span><i class="fas fa-chevron-right vendor-review-stat-arrow"></i></button>
                 <button type="button" data-review-status-card="changes_requested" onclick="setVendorReviewStatus('changes_requested')"><span class="vendor-review-stat-icon changes"><i class="fas fa-pen"></i></span><span class="vendor-review-stat-copy"><strong id="vendorReviewsChangesCount">0</strong><span>Changes Requested</span><small>Waiting on vendors</small></span><i class="fas fa-chevron-right vendor-review-stat-arrow"></i></button>
@@ -1671,7 +1717,7 @@
         <section id="vendor-review-detail" class="content-section vendor-review-detail-workspace">
             <header class="vendor-review-detail-header">
                 <div class="vendor-review-detail-heading">
-                    <button type="button" class="btn-secondary vendor-review-back" onclick="backToVendorReviews()"><i class="fas fa-arrow-left"></i> Back to Reviews</button>
+                    <button type="button" class="btn-secondary vendor-review-back" onclick="backToVendorReviews()"><i class="fas fa-arrow-left"></i> Back to reviews</button>
                     <div class="vendor-review-title-row"><div><p class="vendor-review-eyebrow">Read-only Application</p><h1 id="vendorReviewDetailTitle">Vendor Application</h1><div id="vendorReviewDetailMeta" class="vendor-review-detail-meta"></div></div></div>
                 </div>
                 <div id="vendorReviewDetailActions" class="vendor-review-detail-actions"></div>
@@ -1690,14 +1736,15 @@
 
         <!-- Vendor Detail Section -->
         <section id="vendor-detail" class="content-section">
-            <div class="page-header vendor-detail-header">
-                <div class="vendor-detail-header-main">
+            <header class="page-header vendor-detail-header record-detail-header">
+                <div class="vendor-detail-header-main record-detail-header-main">
                     <button class="btn-secondary vendor-detail-back-btn" onclick="backToVendors()">
-                        <i class="fas fa-arrow-left"></i> Back to Vendors
+                        <i class="fas fa-arrow-left"></i> Back to vendors
                     </button>
-                    <div>
-                        <span class="vendor-detail-eyebrow">Vendor Details</span>
+                    <div class="record-detail-heading-copy">
+                        <span class="vendor-detail-eyebrow page-eyebrow">Vendor details</span>
                         <h1 id="vendorDetailName">Vendor Details</h1>
+                        <p id="vendorDetailSummary">Contact, compliance, financial, and assignment information.</p>
                     </div>
                 </div>
                 <div class="vendor-detail-actions">
@@ -1708,12 +1755,12 @@
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </div>
-            </div>
+            </header>
 
             <div id="vendorOnboardingReviewBanner" class="vendor-review-banner" hidden></div>
             
-            <div class="detail-container">
-                <div class="detail-info-card">
+            <div class="detail-container record-detail-layout">
+                <div class="detail-info-card record-detail-card">
                     <h3><i class="fas fa-handshake"></i> Vendor Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
@@ -1741,46 +1788,46 @@
                             <span id="detailVendorStatus">-</span>
                         </div>
                     </div>
-                    <div class="info-grid" id="detailVendorCustomFields" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                    <div class="info-grid record-detail-custom-fields" id="detailVendorCustomFields" hidden>
                         <!-- Custom fields will be populated here -->
                     </div>
                 </div>
 
-                <div class="detail-info-card">
+                <div class="detail-info-card record-detail-card">
                     <h3><i class="fas fa-clipboard-check"></i> Vendor Compliance</h3>
                     <div class="info-grid" id="detailVendorComplianceFields">
                         <!-- Compliance fields will be populated by JavaScript -->
                     </div>
                 </div>
 
-                <div class="detail-info-card order-notes-card vendor-notes-card">
+                <div class="detail-info-card order-notes-card vendor-notes-card record-detail-card">
                     <h3><i class="fas fa-align-left"></i> Notes</h3>
                     <div class="info-item full-width description-notes-section notes-section">
                         <span class="display-label">Notes</span>
-                        <textarea id="vendorDetailNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off"></textarea>
+                        <textarea id="vendorDetailNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off" aria-label="Add vendor note"></textarea>
                     </div>
                 </div>
                 
-                <div class="detail-documents-card">
+                <div class="detail-documents-card record-detail-card">
                     <h3><i class="fas fa-file-alt"></i> Documents</h3>
                     <div id="vendorDocumentsList" class="documents-list">
                         <p class="no-documents">No documents uploaded</p>
                     </div>
                 </div>
 
-                <div class="detail-orders-card">
-                    <h3><i class="fas fa-clipboard-list"></i> Assigned Orders</h3>
+                <div class="detail-orders-card record-detail-card">
+                    <h3><i class="fas fa-clipboard-list"></i> Assigned orders</h3>
                     <div class="vendor-financial-summary" id="vendorFinancialSummary">
                         <div class="summary-item">
-                            <span class="summary-label">Total Project Value:</span>
+                            <span class="summary-label">Total project value</span>
                             <span class="summary-value" id="vendorTotalValue">$0</span>
                         </div>
                         <div class="summary-item">
-                            <span class="summary-label">Vendor Cost:</span>
+                            <span class="summary-label">Vendor cost</span>
                             <span class="summary-value" id="vendorTotalCost">$0</span>
                         </div>
                         <div class="summary-item profit">
-                            <span class="summary-label">Our Profit:</span>
+                            <span class="summary-label">Our profit</span>
                             <span class="summary-value" id="vendorTotalProfit">$0</span>
                         </div>
                     </div>
@@ -1792,9 +1839,13 @@
         </section>
 
         <section id="employees" class="content-section">
-            <div class="page-header">
-                <h1>Employees</h1>
-                <div style="display: flex; gap: 10px;">
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">People &amp; Admin</p>
+                    <h1>Employees</h1>
+                    <p class="smpl-section-description">Manage employee records and assignments.</p>
+                </div>
+                <div class="smpl-section-header-actions">
                     <button class="btn-secondary" onclick="importEmployeesFromCSV()">
                         <i class="fas fa-file-csv"></i> Import CSV
                     </button>
@@ -1802,17 +1853,17 @@
                         <i class="fas fa-user-plus"></i> Add Employee
                     </button>
                 </div>
-            </div>
+            </header>
             
             <!-- Employees Toolbar -->
             <div class="employees-toolbar">
                 <div class="employees-search-filter">
                     <div class="employees-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="employeeSearchInput" placeholder="Search employees by name, email, or role..." autocomplete="off">
+                        <input type="text" id="employeeSearchInput" placeholder="Search employees by name, email, or role..." autocomplete="off" aria-label="Search employees">
                     </div>
                     <div class="employees-filters">
-                        <select class="filter-select" id="employeeRoleFilter" autocomplete="off">
+                        <select class="filter-select" id="employeeRoleFilter" autocomplete="off" aria-label="Filter employees by role">
                             <option value="all">All Roles</option>
                             <option value="electrician">Electrician</option>
                             <option value="plumber">Plumber</option>
@@ -1822,7 +1873,7 @@
                             <option value="supervisor">Supervisor</option>
                             <option value="general-worker">General Worker</option>
                         </select>
-                        <select class="filter-select" id="employeeStatusFilter" autocomplete="off">
+                        <select class="filter-select" id="employeeStatusFilter" autocomplete="off" aria-label="Filter employees by status">
                             <option value="all">All Status</option>
                             <option value="available">Available</option>
                             <option value="busy">Busy</option>
@@ -1854,7 +1905,6 @@
                         <col class="employees-col-department">
                         <col class="employees-col-status">
                         <col class="employees-col-hire-date">
-                        <col class="employees-col-actions">
                     </colgroup>
                     <thead>
                         <tr>
@@ -1865,7 +1915,6 @@
                             <th>Department</th>
                             <th>Status</th>
                             <th>Hire Date</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="employeesTableBody">
@@ -1877,15 +1926,29 @@
 
         <!-- Employee Detail Section -->
         <section id="employee-detail" class="content-section">
-            <div class="page-header">
-                <button class="btn-secondary" onclick="backToEmployees()">
-                    <i class="fas fa-arrow-left"></i> Back to Employees
+            <header class="page-header employee-detail-header record-detail-header">
+                <div class="employee-detail-header-main record-detail-header-main">
+                <button type="button" class="btn-secondary employee-detail-back" onclick="backToEmployees()">
+                    <i class="fas fa-arrow-left"></i> Back to employees
                 </button>
-                <h1 id="employeeDetailName">Employee Details</h1>
-            </div>
+                <div class="record-detail-heading-copy">
+                    <span class="page-eyebrow">Employee details</span>
+                    <h1 id="employeeDetailName">Employee Details</h1>
+                    <p id="employeeDetailSummary">Contact, role, performance, and document information.</p>
+                </div>
+                </div>
+                <div class="employee-detail-actions">
+                    <button type="button" class="btn-secondary" onclick="editCurrentDetailEmployee()">
+                        <i class="fas fa-pen" aria-hidden="true"></i> Edit
+                    </button>
+                    <button type="button" class="btn-danger" onclick="deleteCurrentDetailEmployee()">
+                        <i class="fas fa-trash" aria-hidden="true"></i> Delete
+                    </button>
+                </div>
+            </header>
             
-            <div class="detail-container">
-                <div class="detail-info-card">
+            <div class="detail-container record-detail-layout">
+                <div class="detail-info-card record-detail-card">
                     <h3><i class="fas fa-user-tie"></i> Employee Information</h3>
                     <div class="info-grid">
                         <div class="info-item">
@@ -1923,33 +1986,33 @@
                     </div>
                 </div>
                 
-                <div class="detail-info-card">
-                    <h3><i class="fas fa-chart-line"></i> Performance Stats</h3>
+                <div class="detail-info-card record-detail-card">
+                    <h3><i class="fas fa-chart-line"></i> Performance</h3>
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="display-label">Total Orders:</span>
-                            <span id="employeeTotalOrders" style="font-weight: 600; color: #3b82f6;">0</span>
+                            <span id="employeeTotalOrders">0</span>
                         </div>
                         <div class="info-item">
                             <span class="display-label">Active Orders:</span>
-                            <span id="employeeActiveOrders" style="font-weight: 600; color: #f59e0b;">0</span>
+                            <span id="employeeActiveOrders">0</span>
                         </div>
                         <div class="info-item">
                             <span class="display-label">Completed Orders:</span>
-                            <span id="employeeCompletedOrders" style="font-weight: 600; color: #10b981;">0</span>
+                            <span id="employeeCompletedOrders">0</span>
                         </div>
                         <div class="info-item">
                             <span class="display-label">Total Revenue:</span>
-                            <span id="employeeTotalRevenue" style="font-weight: 600; color: #3b82f6;">$0</span>
+                            <span id="employeeTotalRevenue">$0</span>
                         </div>
                         <div class="info-item">
                             <span class="display-label">Total Profit:</span>
-                            <span id="employeeTotalProfit" style="font-weight: 600; color: #10b981;">$0</span>
+                            <span id="employeeTotalProfit">$0</span>
                         </div>
                     </div>
                 </div>
                 
-                <div class="detail-documents-card">
+                <div class="detail-documents-card record-detail-card">
                     <h3><i class="fas fa-file-alt"></i> Documents</h3>
                     <div id="employeeDocumentsList" class="documents-list">
                         <p class="no-documents">No documents uploaded</p>
@@ -1961,12 +2024,13 @@
         <!-- Pipeline Section -->
         <section id="pipeline" class="content-section">
             <div class="pipeline-page">
-                <div class="pipeline-header-bar">
-                    <div class="pipeline-title-block">
-                        <h1>Pipeline Management</h1>
-                        <p class="pipeline-subtitle">Drag cards between stages to update progress. Use the first column to pull in recent orders.</p>
+                <header class="pipeline-header-bar smpl-section-header">
+                    <div class="pipeline-title-block smpl-section-header-copy">
+                        <p class="page-eyebrow">Operations</p>
+                        <h1>Pipeline</h1>
+                        <p class="pipeline-subtitle smpl-section-description">Track work through every stage.</p>
                     </div>
-                    <div class="pipeline-actions">
+                    <div class="pipeline-actions smpl-section-header-actions">
                         <div class="pipeline-stats" role="group" aria-label="Pipeline summary">
                             <div class="stat-item">
                                 <span class="stat-value" id="totalStages">0</span>
@@ -1989,12 +2053,12 @@
                             <button type="button" class="btn-add-stage" onclick="openStageModal()"><i class="fas fa-plus" aria-hidden="true"></i> Add stage</button>
                         </div>
                     </div>
-                </div>
+                </header>
                 <div class="pipeline-filter-bar">
                     <div class="pipeline-search-bar">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)" autocomplete="off">
-                        <button class="btn-clear-search" onclick="clearPipelineSearch()" style="display: none;">
+                        <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)" autocomplete="off" aria-label="Search pipeline records">
+                        <button type="button" class="btn-clear-search" onclick="clearPipelineSearch()" style="display: none;" aria-label="Clear pipeline search">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -2012,47 +2076,63 @@
         </section>
 
         <section id="payments" class="content-section">
-            <div class="page-header">
-                <div class="payments-title-block">
-                    <h1>Payments Management</h1>
+            <header class="page-header smpl-section-header">
+                <div class="payments-title-block smpl-section-header-copy">
+                    <p class="page-eyebrow">Finance</p>
+                    <h1>Payments</h1>
+                    <p class="smpl-section-description">Track customer payments and contractor payouts.</p>
                 </div>
-            </div>
+            </header>
             
             <!-- Payments Toolbar -->
             <div class="payments-toolbar">
                 <div class="payments-search-filter">
-                    <div class="payments-search">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="paymentSearchInput" placeholder="Search payments by ID, customer, or transaction..." autocomplete="off">
-                    </div>
+                    <label class="payments-search">
+                        <span class="payments-control-label">Search</span>
+                        <span class="payments-search-control">
+                            <i class="fas fa-search" aria-hidden="true"></i>
+                            <input type="text" id="paymentSearchInput" placeholder="Search by payment ID, customer, or transaction..." autocomplete="off" aria-label="Search payments">
+                        </span>
+                    </label>
                     <div class="payments-filters">
-                        <select class="filter-select" id="paymentStatusFilter" autocomplete="off">
-                            <option value="all">All Status</option>
-                            <option value="bidding">Bidding</option>
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                            <option value="failed">Failed</option>
-                            <option value="refunded">Refunded</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                        <select class="filter-select" id="paymentMethodFilter" autocomplete="off">
-                            <option value="all">All Methods</option>
-                            <option value="cash">Cash</option>
-                            <option value="credit-card">Credit Card</option>
-                            <option value="debit-card">Debit Card</option>
-                            <option value="bank-transfer">Bank Transfer</option>
-                            <option value="check">Check</option>
-                            <option value="online">Online</option>
-                        </select>
-                        <select class="filter-select" id="paymentDateFilter" autocomplete="off">
-                            <option value="all">All Dates</option>
-                            <option value="today">Today</option>
-                            <option value="week">This Week</option>
-                            <option value="month">This Month</option>
-                            <option value="year">This Year</option>
-                        </select>
+                        <label class="payments-filter-control">
+                            <span class="payments-control-label">Status</span>
+                            <select class="filter-select" id="paymentStatusFilter" autocomplete="off" aria-label="Filter payments by status">
+                                <option value="all">All Status</option>
+                                <option value="bidding">Bidding</option>
+                                <option value="pending">Pending</option>
+                                <option value="received">Received</option>
+                                <option value="completed">Completed</option>
+                                <option value="failed">Failed</option>
+                                <option value="refunded">Refunded</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </label>
+                        <label class="payments-filter-control">
+                            <span class="payments-control-label">Method</span>
+                            <select class="filter-select" id="paymentMethodFilter" autocomplete="off" aria-label="Filter payments by method">
+                                <option value="all">All Methods</option>
+                                <option value="cash">Cash</option>
+                                <option value="credit-card">Credit Card</option>
+                                <option value="debit-card">Debit Card</option>
+                                <option value="bank-transfer">Bank Transfer</option>
+                                <option value="check">Check</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </label>
+                        <label class="payments-filter-control">
+                            <span class="payments-control-label">Date</span>
+                            <select class="filter-select" id="paymentDateFilter" autocomplete="off" aria-label="Filter payments by date">
+                                <option value="all">All Dates</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="year">This Year</option>
+                            </select>
+                        </label>
                         <button type="button" class="payments-refresh-btn" onclick="refreshPayments()" aria-label="Refresh payments">
                             <i class="fas fa-rotate-right" aria-hidden="true"></i>
+                            <span>Refresh</span>
                         </button>
                     </div>
                 </div>
@@ -2081,7 +2161,7 @@
                     </div>
                 </div>
                 <div class="stat-item failed">
-                    <span class="payment-stat-icon" aria-hidden="true"><i class="fas fa-dollar-sign"></i></span>
+                    <span class="payment-stat-icon" aria-hidden="true"><i class="fas fa-circle-xmark"></i></span>
                     <div>
                         <div class="stat-value" id="failedPaymentsCount">0</div>
                         <div class="stat-label">Failed</div>
@@ -2122,13 +2202,17 @@
         </section>
 
         <section id="accounting" class="content-section">
-            <div class="page-header">
-                <h1>Accounting</h1>
-                <div>
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">Finance</p>
+                    <h1>Accounting</h1>
+                    <p class="smpl-section-description">Monitor cash, margins, and operating costs.</p>
+                </div>
+                <div class="smpl-section-header-actions">
                     <button class="btn-secondary" onclick="setMonthlyOverhead()"><i class="fas fa-cog"></i> Set Monthly Overhead</button>
                     <button class="btn-primary" onclick="generateWeeklyCashReport()"><i class="fas fa-file-alt"></i> Generate Weekly Cash Report</button>
                 </div>
-            </div>
+            </header>
             
             <!-- Dashboard Alerts -->
             <div id="dashboardAlerts" class="dashboard-alerts"></div>
@@ -2673,13 +2757,13 @@
         </section>
 
         <section id="reports" class="content-section reports-workspace">
-            <div class="reports-header">
-                <div>
-                    <span class="reports-eyebrow">Live reporting center</span>
-                    <h1>Reports & Analytics</h1>
-                    <p>Performance insights calculated from orders, payments, customers, assigned employees, vendors, pipeline, and recurring services.</p>
+            <header class="reports-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">Finance</p>
+                    <h1>Reports and analytics</h1>
+                    <p class="smpl-section-description">Review performance across your operation.</p>
                 </div>
-                <div class="reports-header-actions">
+                <div class="reports-header-actions smpl-section-header-actions">
                     <div class="report-update-meta"><span class="report-updated-at" id="reportUpdatedAt">Not updated yet</span><span id="reportAppliedRange">Last 30 Days</span></div>
                     <button class="btn-secondary" id="reportDefinitionsButton" type="button" onclick="toggleReportDefinitions()" aria-expanded="false" aria-controls="reportDefinitionsPanel"><i class="fas fa-circle-info"></i> Calculations</button>
                     <button class="btn-secondary" id="reportRefreshButton" onclick="refreshReports()" type="button"><i class="fas fa-rotate"></i> Refresh reports</button>
@@ -2691,7 +2775,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
             <div class="reports-filter-bar">
                 <div class="report-filter-topline">
@@ -2790,9 +2874,13 @@
 
         <!-- Users Section (Admin Only) -->
         <section id="users" class="content-section">
-            <div class="page-header">
-                <h1>User Management</h1>
-                <div style="display: flex; align-items: center; gap: 20px;">
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">People &amp; Admin</p>
+                    <h1>Users</h1>
+                    <p class="smpl-section-description">Manage access, roles, and account status.</p>
+                </div>
+                <div class="smpl-section-header-actions users-header-actions">
                     <div class="header-stats">
                         <div class="stat-badge pending">
                             <i class="fas fa-clock"></i>
@@ -2807,7 +2895,7 @@
                         <i class="fas fa-user-plus"></i> Add User
                     </button>
                 </div>
-            </div>
+            </header>
             
             <div class="users-table-container">
                 <table class="users-table">
@@ -2837,13 +2925,17 @@
         </section>
 
         <section id="settings" class="content-section">
-            <div class="page-header">
-                <h1>Settings</h1>
-                <div class="settings-actions">
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">People &amp; Admin</p>
+                    <h1>Settings</h1>
+                    <p class="smpl-section-description">Manage workspace preferences and defaults.</p>
+                </div>
+                <div class="settings-actions smpl-section-header-actions">
                     <button class="btn-secondary" onclick="resetSettings()">Reset to Default</button>
                     <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
                 </div>
-            </div>
+            </header>
             
             <div class="settings-container">
                 <!-- User Preferences -->
@@ -2946,7 +3038,7 @@
                     <div class="settings-grid">
                         <div class="setting-item full-width">
                             <label for="companyName">Company Name</label>
-                            <input type="text" id="companyName" placeholder="Hutta Home Services" autocomplete="name">
+                            <input type="text" id="companyName" placeholder="smplfix" autocomplete="name">
                         </div>
                         <div class="setting-item full-width">
                             <label for="companyAddress">Address</label>
@@ -2994,19 +3086,22 @@
 
         <!-- Calendar Section -->
         <section id="calendar" class="content-section">
-            <div class="page-header">
-                <h1><i class="fas fa-calendar-alt"></i> Calendar</h1>
-
-            </div>
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">Command</p>
+                    <h1>Calendar</h1>
+                    <p class="smpl-section-description">Scheduled work across your operation.</p>
+                </div>
+            </header>
             
             <div class="calendar-layout">
                 <div class="calendar-container">
                     <div class="calendar-header">
-                        <button class="btn-secondary" onclick="previousMonth()">
+                        <button type="button" class="btn-secondary" onclick="previousMonth()" aria-label="Previous month">
                             <i class="fas fa-chevron-left"></i>
                         </button>
                         <h2 id="calendarMonth">January 2024</h2>
-                        <button class="btn-secondary" onclick="nextMonth()">
+                        <button type="button" class="btn-secondary" onclick="nextMonth()" aria-label="Next month">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -3027,7 +3122,7 @@
                 <div class="calendar-detail-panel" id="calendarDetailPanel" style="display: none;">
                     <div class="detail-panel-header">
                         <h3 id="detailPanelTitle">Event Details</h3>
-                        <button class="btn-close" onclick="closeDetailPanel()">
+                        <button type="button" class="btn-close" onclick="closeDetailPanel()" aria-label="Close event details">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -3040,23 +3135,27 @@
 
         <!-- Recurring Calendar Section -->
         <section id="recurring-calendar" class="content-section">
-            <div class="page-header">
-                <h1><i class="fas fa-calendar-check"></i> Recurring Calendar</h1>
-                <div class="header-actions">
+            <header class="page-header smpl-section-header">
+                <div class="smpl-section-header-copy">
+                    <p class="page-eyebrow">Command</p>
+                    <h1>Recurring calendar</h1>
+                    <p class="smpl-section-description">Recurring service work at a glance.</p>
+                </div>
+                <div class="header-actions smpl-section-header-actions">
                     <button class="btn-primary" onclick="showAddOrderModal()">
                         <i class="fas fa-plus"></i> New Recurring Order
                     </button>
                 </div>
-            </div>
+            </header>
             
             <div class="calendar-layout">
                 <div class="calendar-container">
                     <div class="calendar-header">
-                        <button class="btn-secondary" onclick="previousRecurringMonth()">
+                        <button type="button" class="btn-secondary" onclick="previousRecurringMonth()" aria-label="Previous recurring calendar month">
                             <i class="fas fa-chevron-left"></i>
                         </button>
                         <h2 id="recurringCalendarMonth">January 2024</h2>
-                        <button class="btn-secondary" onclick="nextRecurringMonth()">
+                        <button type="button" class="btn-secondary" onclick="nextRecurringMonth()" aria-label="Next recurring calendar month">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -3077,7 +3176,7 @@
                 <div class="calendar-detail-panel" id="recurringDetailPanel" style="display: none;">
                     <div class="detail-panel-header">
                         <h3 id="recurringDetailPanelTitle">Recurring Order Details</h3>
-                        <button class="btn-close" onclick="closeRecurringDetailPanel()">
+                        <button type="button" class="btn-close" onclick="closeRecurringDetailPanel()" aria-label="Close recurring order details">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -3093,14 +3192,22 @@
     <div class="modal-overlay" id="orderModal">
         <div class="modal-content order-modal">
             <div class="modal-header">
-                <h2 id="orderModalTitle">Add New Order</h2>
-                <button class="modal-close" onclick="closeOrderModal()">
+                <div class="order-modal-heading">
+                    <span class="order-modal-eyebrow" id="orderModalEyebrow">New order</span>
+                    <h2 id="orderModalTitle">Create Order</h2>
+                    <p id="orderModalDescription">Build a complete service order and assign the right team.</p>
+                </div>
+                <button type="button" class="modal-close" onclick="closeOrderModal()" aria-label="Close order form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
             <div class="modal-body">
                 <form id="orderForm">
+                    <header class="order-form-section-heading">
+                        <span aria-hidden="true">01</span>
+                        <div><h3>Customer</h3><p>Select an existing customer or add a new customer record.</p></div>
+                    </header>
                     <div class="form-row order-form-row order-customer-select-row">
                         <div class="form-group">
                             <label for="customerSearchInput">Select Customer</label>
@@ -3108,7 +3215,7 @@
                                 <input type="text" id="customerSearchInput" placeholder="-- Select Existing Customer --" autocomplete="off" onclick="toggleCustomerDropdown(event)">
                                 <div class="select-dropdown" id="customerSelectDropdown">
                                     <div class="select-option search-input-container">
-                                        <input type="text" id="customerSearchFilter" placeholder="Search customers..." autocomplete="off" oninput="filterCustomerOptions(this.value)">
+                                        <input type="text" id="customerSearchFilter" placeholder="Search customers..." autocomplete="off" oninput="filterCustomerOptions(this.value)" aria-label="Search customer options">
                                     </div>
                                     <div class="select-option" data-value="new">
                                         <i class="fas fa-plus"></i> Add New Customer
@@ -3145,6 +3252,11 @@
                             </div>
                         </div>
                     </div>
+
+                    <header class="order-form-section-heading">
+                        <span aria-hidden="true">02</span>
+                        <div><h3>Job &amp; pricing</h3><p>Define the service, order type, and financial details.</p></div>
+                    </header>
                     
                     <div class="form-row order-form-row order-service-row">
                         <div class="form-group">
@@ -3184,6 +3296,21 @@
                             </select>
                         </div>
                     </div>
+
+                    <!-- Address selection for existing customers with multiple service locations. -->
+                    <div id="customerAddressSelection" class="order-form-panel order-address-panel" style="display: none;">
+                        <div class="form-group">
+                            <label for="customerAddressSelect">Select Address for Order</label>
+                            <select id="customerAddressSelect" autocomplete="street-address">
+                                <option value="">Select an address...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <header class="order-form-section-heading">
+                        <span aria-hidden="true">03</span>
+                        <div><h3>Schedule &amp; assignment</h3><p>Set key dates, ownership, status, and priority.</p></div>
+                    </header>
 
                     <div class="form-row order-form-row order-date-sequence">
                         <div class="form-group">
@@ -3229,16 +3356,6 @@
                         </div>
                     </div>
                     
-                    <!-- Customer Address Selection (for existing customers with multiple addresses) -->
-                    <div id="customerAddressSelection" class="order-form-panel order-address-panel" style="display: none;">
-                        <div class="form-group">
-                            <label for="customerAddressSelect">Select Address for Order</label>
-                            <select id="customerAddressSelect" autocomplete="street-address">
-                                <option value="">Select an address...</option>
-                            </select>
-                        </div>
-                    </div>
-                    
                     <div class="form-row order-form-row order-assignment-row">
                         <div class="form-group">
                             <label for="vendor">Vendor</label>
@@ -3274,6 +3391,11 @@
                             </select>
                         </div>
                     </div>
+
+                    <header class="order-form-section-heading">
+                        <span aria-hidden="true">04</span>
+                        <div><h3>Details &amp; files</h3><p>Add the scope, internal context, and supporting documents.</p></div>
+                    </header>
                     
                     <div class="form-group order-textarea-field">
                         <label for="description">Description</label>
@@ -3296,7 +3418,7 @@
             
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="closeOrderModal()">Cancel</button>
-                <button type="button" class="btn-primary" onclick="saveOrder()">Save Order</button>
+                <button type="button" class="btn-primary" id="orderModalSubmit" onclick="saveOrder()"><i class="fas fa-plus" aria-hidden="true"></i> Create Order</button>
             </div>
         </div>
     </div>
@@ -3306,7 +3428,7 @@
         <div class="modal-content payment-modal">
             <div class="modal-header">
                 <h2 id="paymentModalTitle">Record New Payment</h2>
-                <button class="modal-close" onclick="closePaymentModal()">
+                <button type="button" class="modal-close" onclick="closePaymentModal()" aria-label="Close payment form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -3415,7 +3537,7 @@
         <div class="modal-content employee-modal">
             <div class="modal-header">
                 <h2 id="employeeModalTitle">Add New Employee</h2>
-                <button class="modal-close" onclick="closeEmployeeModal()">
+                <button type="button" class="modal-close" onclick="closeEmployeeModal()" aria-label="Close employee form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -3628,7 +3750,7 @@
                                 <input type="file" id="vendorHuttasContractFile" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
                                 <label for="vendorHuttasContractFile">
                                     <i class="fas fa-cloud-upload-alt"></i>
-                                    <strong>Huttas Contract with Sub</strong>
+                                    <strong>smplfix Contract with Sub</strong>
                                     <span>Signed and dated PDF, image, or document</span>
                                 </label>
                                 <div class="vendor-compliance-file-preview" id="vendorHuttasContractPreview">No file attached</div>
@@ -3697,7 +3819,7 @@
                                 <label for="vendorHuttasAdditionalInsuredFile">
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <strong>Additional Insured GL Policy</strong>
-                                    <span>Huttas listed as additional insured</span>
+                                    <span>smplfix listed as additional insured</span>
                                 </label>
                                 <div class="vendor-compliance-file-preview" id="vendorHuttasAdditionalInsuredPreview">No file attached</div>
                             </div>
@@ -3719,7 +3841,7 @@
                                 <option value="cleaning">Cleaning</option>
                                 <option value="__add_new__">+ Add New Category</option>
                             </select>
-                            <input type="text" id="vendorCategoryCustom" placeholder="Enter new category name" style="display: none; margin-top: 10px;" autocomplete="name">
+                            <input type="text" id="vendorCategoryCustom" placeholder="Enter new category name" style="display: none; margin-top: 10px;" autocomplete="name" aria-label="New vendor category">
                         </div>
                         
                         <div class="form-row">
@@ -3785,7 +3907,7 @@
         <div class="modal-content customer-modal">
             <div class="modal-header">
                 <h2 id="customerModalTitle">Add New Customer</h2>
-                <button class="modal-close" onclick="closeCustomerModal()">
+                <button type="button" class="modal-close" onclick="closeCustomerModal()" aria-label="Close customer form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -3881,7 +4003,7 @@
         <div class="modal-content profile-modal">
             <div class="modal-header">
                 <h2><i class="fas fa-user"></i> Profile Settings</h2>
-                <button class="modal-close" onclick="closeProfileModal()">
+                <button type="button" class="modal-close" onclick="closeProfileModal()" aria-label="Close profile settings">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -3890,8 +4012,8 @@
                 <div class="profile-section">
                     <div class="profile-avatar-section">
                         <div class="avatar-container">
-                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%234CAF50'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Inter' font-size='50' fill='white'%3EA%3C/text%3E%3C/svg%3E" alt="Profile" id="profileAvatar">
-                            <button class="avatar-upload-btn" onclick="uploadAvatar()">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%230B0B0C'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk,Arial,sans-serif' font-size='50' font-weight='600' fill='white'%3EA%3C/text%3E%3C/svg%3E" alt="Administrator profile" id="profileAvatar">
+                            <button type="button" class="avatar-upload-btn" onclick="uploadAvatar()" aria-label="Upload profile photo">
                                 <i class="fas fa-camera"></i>
                             </button>
                         </div>
@@ -3911,7 +4033,7 @@
                         
                         <div class="form-group">
                             <label for="profileEmail">Email Address</label>
-                            <input type="email" id="profileEmail" name="email" value="admin@huttaservices.com" required autocomplete="email">
+                            <input type="email" id="profileEmail" name="email" value="admin@smplfix.com" required autocomplete="email">
                         </div>
                         
                         <div class="form-group">
@@ -3966,7 +4088,7 @@
         <div class="modal-content stage-modal">
             <div class="modal-header">
                 <h2 id="stageModalTitle">Add Stage</h2>
-                <button class="modal-close" onclick="closeStageModal()">
+                <button type="button" class="modal-close" onclick="closeStageModal()" aria-label="Close stage form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -3992,7 +4114,7 @@
         <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">
                 <h2 id="recordModalTitle"><i class="fas fa-folder-plus"></i> Add Record</h2>
-                <button class="modal-close" onclick="closeRecordModal()">
+                <button type="button" class="modal-close" onclick="closeRecordModal()" aria-label="Close record form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -4084,7 +4206,7 @@
         <div class="modal-content job-modal">
             <div class="modal-header">
                 <h2 id="jobModalTitle"><i class="fas fa-briefcase"></i> Add New Job</h2>
-                <button class="modal-close" onclick="closeJobModal()">
+                <button type="button" class="modal-close" onclick="closeJobModal()" aria-label="Close job form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -4173,7 +4295,7 @@
         <div class="modal-content job-modal">
             <div class="modal-header">
                 <h2><i class="fas fa-info-circle"></i> Job Details</h2>
-                <button class="modal-close" onclick="closeJobDetailModal()">
+                <button type="button" class="modal-close" onclick="closeJobDetailModal()" aria-label="Close job details">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -4238,7 +4360,7 @@
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h2><i class="fas fa-exclamation-triangle"></i> Override Contractor Payout</h2>
-                <button class="modal-close" onclick="closeOverridePayoutModal()">
+                <button type="button" class="modal-close" onclick="closeOverridePayoutModal()" aria-label="Close payout override">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -4373,15 +4495,19 @@
     </div>
 
     <!-- Order Detail Modal -->
-    <div class="modal-overlay" id="orderDetailModal">
-        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h2 id="modalOrderDetailTitle">Order Details</h2>
-                <button type="button" class="modal-close" onclick="closeOrderDetailModal()">
+    <div class="modal-overlay" id="orderDetailModal" aria-hidden="true">
+        <div class="modal-content pipeline-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="modalOrderDetailTitle" aria-describedby="modalOrderDetailDescription">
+            <div class="modal-header pipeline-order-detail-header">
+                <div class="pipeline-order-detail-heading">
+                    <span class="pipeline-order-detail-eyebrow">Pipeline record</span>
+                    <h2 id="modalOrderDetailTitle">Order details</h2>
+                    <p id="modalOrderDetailDescription">Customer, financial, scheduling, and document information in one place.</p>
+                </div>
+                <button type="button" class="modal-close pipeline-order-detail-close" onclick="closeOrderDetailModal()" aria-label="Close order details">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body pipeline-order-detail-body">
                 <div class="detail-container modal-order-detail-layout">
                     <div class="detail-info-card modal-order-summary-card">
                         <h3><i class="fas fa-clipboard-list"></i> Order Information</h3>
@@ -4461,7 +4587,7 @@
                         </div>
                         <div class="info-item full-width description-notes-section notes-section">
                             <span class="display-label">Notes</span>
-                            <textarea id="modalDetailOrderNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off"></textarea>
+                            <textarea id="modalDetailOrderNoteComposer" rows="3" placeholder="Write a new note..." autocomplete="off" aria-label="Add order detail note"></textarea>
                         </div>
                     </div>
                     <div class="detail-info-card modal-order-documents-card">
@@ -4472,7 +4598,8 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer pipeline-order-detail-footer">
+                <p><i class="fas fa-lock" aria-hidden="true"></i> Internal order record</p>
                 <button type="button" class="btn-secondary" onclick="closeOrderDetailModal()">Close</button>
             </div>
         </div>
@@ -4488,22 +4615,23 @@
     <script src="../assets/js/file-upload.js"></script>
     <script src="../assets/js/form-required-fields.js"></script>
     <script src="../assets/js/security-utils.js"></script>
-    <script src="../assets/js/pipeline-mongodb.js"></script>
+    <script src="../assets/js/pipeline-mongodb.js?v=20260804-stage-details"></script>
     <script src="../assets/js/pipeline-drag-fix.js"></script>
     <script src="../assets/js/accounting-system.js"></script>
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260723-workflow-v2"></script>
+    <script src="../assets/js/dashboard-script.js?v=20260804-users-rebrand"></script>
     <script src="../assets/js/incoming-quotes.js?v=20260725-quote-table-polish"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
-    <script src="../assets/js/closeout.js?v=20260726-payment-settings-v2"></script>
-    <script src="../assets/js/workflow-hub.js?v=20260725-quote-workspace"></script>
+    <script src="../assets/js/closeout.js?v=20260727-customer-engagement"></script>
+    <script src="../assets/js/workflow-hub.js?v=20260804-headers"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js"></script>
+    <script src="../assets/js/smplfix-shell.js?v=20260804-order-detail-header"></script>
     <script>
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});

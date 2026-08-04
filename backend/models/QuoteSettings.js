@@ -6,12 +6,12 @@ const quoteSettingsSchema = new mongoose.Schema({
   defaultMarkupValue: { type: Number, min: 0, default: 20 },
   defaultValidityDays: { type: Number, min: 1, max: 365, default: 30 },
   company: {
-    name: { type: String, default: 'Hutta Home Services' },
+    name: { type: String, default: 'smplfix' },
     address: { type: String, default: '' },
     phone: { type: String, default: '' },
     email: { type: String, default: '' },
-    website: { type: String, default: 'huttas.com' },
-    logo: { type: String, default: '/assets/images/logo.png' }
+    website: { type: String, default: 'smplfix.com' },
+    logo: { type: String, default: '/assets/images/smplfix-logo-ink.png' }
   },
   termsAndConditions: { type: String, trim: true, maxlength: 30000, default: '' },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }

@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_NAME = 'hutta-static-v5';
+const CACHE_NAME = 'smplfix-static-v2';
+const LEGACY_CACHE_PREFIX = 'hutta-static-';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -10,7 +11,9 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((cacheNames) => Promise.all(
         cacheNames
-          .filter((cacheName) => cacheName.startsWith('hutta-static-') && cacheName !== CACHE_NAME)
+          .filter((cacheName) => (
+            cacheName.startsWith('smplfix-static-') || cacheName.startsWith(LEGACY_CACHE_PREFIX)
+          ) && cacheName !== CACHE_NAME)
           .map((cacheName) => caches.delete(cacheName))
       ))
       .then(() => self.clients.claim())

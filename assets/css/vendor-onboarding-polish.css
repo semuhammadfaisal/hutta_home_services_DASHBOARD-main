@@ -12,7 +12,7 @@
 }
 
 html { scroll-behavior: smooth; background: var(--onboard-bg); }
-body { min-height: 100vh; background: var(--onboard-bg); color: var(--onboard-ink); font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body { min-height: 100vh; background: var(--onboard-bg); color: var(--onboard-ink); font-family: var(--smpl-font-ui); }
 button,input,select,textarea { font: inherit; }
 .onboarding-page-accent { position: fixed; inset: 0 0 auto; z-index: 0; height: 5px; background: var(--onboard-blue); }
 .onboarding-shell { position: relative; z-index: 1; width: min(100% - 32px, 1120px); margin: 28px auto 46px; }

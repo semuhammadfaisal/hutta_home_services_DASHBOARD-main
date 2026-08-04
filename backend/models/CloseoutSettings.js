@@ -11,7 +11,7 @@ const methodSchema = new mongoose.Schema({
 const schema = new mongoose.Schema({
   key: { type: String, default: 'global', unique: true, immutable: true },
   paymentMethods: { type: [methodSchema], default: [] },
-  remittanceContact: { type: String, trim: true, maxlength: 500, default: 'sales@huttas.com' },
+  remittanceContact: { type: String, trim: true, maxlength: 500, default: 'sales@smplfix.com' },
   proofUploadInstructions: {
     type: String,
     trim: true,

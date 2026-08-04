@@ -1,5 +1,5 @@
 @echo off
-echo Starting Hutta Home Services Backend...
+echo Starting smplfix Backend...
 echo.
 cd backend
 node server.js

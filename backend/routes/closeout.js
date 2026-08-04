@@ -67,7 +67,7 @@ const proofUpload = multer({
 
 const actorId = req => req.user?.userId || req.user?.id;
 const noStore = res => res.set({ 'Cache-Control': 'no-store, max-age=0', Pragma: 'no-cache', 'X-Content-Type-Options': 'nosniff' });
-const staffEmails = () => String(process.env.CLOSEOUT_NOTIFICATION_EMAILS || process.env.INTAKE_NOTIFICATION_EMAILS || 'sales@huttas.com').split(',').map(v => v.trim().toLowerCase()).filter(Boolean);
+const staffEmails = () => String(process.env.CLOSEOUT_NOTIFICATION_EMAILS || process.env.INTAKE_NOTIFICATION_EMAILS || 'sales@smplfix.com').split(',').map(v => v.trim().toLowerCase()).filter(Boolean);
 const invalidate = () => { memCache.del('orders:stats:v2'); invalidateDashboardStatsCache(); };
 function uploadMiddleware(req, res, next) {
   upload(req, res, error => {
@@ -126,7 +126,7 @@ async function globalCloseoutSettings(session) {
   return settings || {
     key: 'global',
     paymentMethods: [],
-    remittanceContact: 'sales@huttas.com',
+    remittanceContact: 'sales@smplfix.com',
     proofUploadInstructions: 'Upload a clear image showing the transaction date, amount, and reference.',
     customerCloseoutEmailMessage: 'Please review the completed work, confirm the service, and review your invoice.'
   };
@@ -248,7 +248,7 @@ async function completeJob({completion,source,notes,enteredName,beforeFiles,afte
     const paymentInstructionsSnapshot = publicSettingsSnapshot(closeoutSettings);
     Object.assign(current,{source,status:'completed',completionNotes:notes,completedAt:now,vendorEnteredName:enteredName,beforePhotos:before,afterPhotos:after,photoOverride,photoOverrideReason:overrideReason,completedBy:source==='staff'?actor.id:undefined,completedByEmail:actor.email,publicTokenHash:undefined,tokenRevokedAt:now,satisfactionTokenHash:hashToken(satisfactionToken),satisfactionTokenExpiresAt:new Date(now.getTime()+SATISFACTION_TOKEN_TTL_MS),closeoutRevision:1,closeoutTokenSentAt:now,closeoutTokenRevokedAt:undefined});
     current.completionSnapshotHash=completionSnapshotHash(current);
-    const invoiceData={invoiceNumber,orderId:order._id,jobCompletionId:current._id,outgoingQuoteId:quote._id,customerId:order.customerId,amount:quote.customerTotal,issuedAt:now,dueDate:now,terms:'Due on receipt',companySnapshot:quoteSettings?.company||{name:'Hutta Home Services',email:'sales@huttas.com'},customerSnapshot:quote.customerSnapshot,jobSnapshot:{...current.jobSnapshot,scopeOfWork:quote.scopeOfWork},quoteSnapshot:{quoteReference:quote.quoteReference,revisionNumber:quote.revisionNumber,customerTotal:quote.customerTotal},paymentInstructionsSnapshot};
+    const invoiceData={invoiceNumber,orderId:order._id,jobCompletionId:current._id,outgoingQuoteId:quote._id,customerId:order.customerId,amount:quote.customerTotal,issuedAt:now,dueDate:now,terms:'Due on receipt',companySnapshot:quoteSettings?.company||{name:'smplfix',email:'sales@smplfix.com'},customerSnapshot:quote.customerSnapshot,jobSnapshot:{...current.jobSnapshot,scopeOfWork:quote.scopeOfWork},quoteSnapshot:{quoteReference:quote.quoteReference,revisionNumber:quote.revisionNumber,customerTotal:quote.customerTotal},paymentInstructionsSnapshot};
     invoiceData.snapshotHash=invoiceSnapshotHash(invoiceData);const [invoice]=await CustomerInvoice.create([invoiceData],{session});
     const [payment]=await Payment.create([{paymentId:paymentReference,invoiceNumber,order:order._id,customer:order.customerId,amount:quote.customerTotal,status:'pending',dueDate:now,description:`Invoice ${invoiceNumber} for ${order.service}`,source:'stage6_invoice',customerInvoiceId:invoice._id,jobCompletionId:current._id,outgoingQuoteId:quote._id,invoiceIssuedAt:now}],{session});
     invoice.paymentId=payment._id;await invoice.save({session});current.customerInvoiceId=invoice._id;current.history.push({action:'completed',actorType:source,actorId:source==='staff'?actor.id:undefined,actorEmail:actor.email,message:notes});await current.save({session});
@@ -278,7 +278,12 @@ router.get('/public/satisfaction',publicLimiter,async(req,res,next)=>{
       CustomerSatisfactionDecision.findOne({jobCompletionId:completion._id,closeoutRevision:completion.closeoutRevision}).lean(),
       PaymentProofSubmission.findOne({jobCompletionId:completion._id}).sort({revisionNumber:-1}).lean()
     ]);
-    if(!invoice||!payment)return res.status(409).json({message:'This closeout record is incomplete. Please contact Hutta Home Services.'});
+    if(!invoice||!payment)return res.status(409).json({message:'This closeout record is incomplete. Please contact smplfix.'});
+    const viewedAt=new Date();
+    await JobCompletion.updateOne(
+      {_id:completion._id},
+      {$min:{closeoutFirstViewedAt:viewedAt},$set:{closeoutLastViewedAt:viewedAt},$inc:{closeoutViewCount:1}}
+    );
     res.json({
       completionReference:completion.completionReference,
       closeoutRevision:completion.closeoutRevision,

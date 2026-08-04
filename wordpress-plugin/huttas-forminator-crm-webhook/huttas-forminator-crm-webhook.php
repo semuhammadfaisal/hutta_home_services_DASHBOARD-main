@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: Huttas Forminator CRM Webhook
- * Description: Securely sends the Huttas Forminator request form to the Huttas CRM Stage 1 intake webhook.
+ * Plugin Name: smplfix Forminator CRM Webhook
+ * Description: Securely sends the smplfix Forminator request form to the smplfix CRM Stage 1 intake webhook.
  * Version: 2.1.0
- * Author: Hutta Home Services
+ * Author: smplfix
  * License: GPL-2.0-or-later
  */
 
@@ -76,8 +76,8 @@ final class Huttas_Forminator_CRM_Webhook {
 
 	public static function admin_menu() {
 		add_options_page(
-			'Huttas CRM Webhook',
-			'Huttas CRM Webhook',
+			'smplfix CRM Webhook',
+			'smplfix CRM Webhook',
 			'manage_options',
 			'huttas-forminator-crm-webhook',
 			array( __CLASS__, 'settings_page' )
@@ -91,8 +91,8 @@ final class Huttas_Forminator_CRM_Webhook {
 		$settings = self::settings();
 		?>
 		<div class="wrap">
-			<h1>Huttas Forminator CRM Webhook</h1>
-			<p>Connect the Huttas Forminator request form to Stage 1 in the CRM.</p>
+			<h1>smplfix Forminator CRM Webhook</h1>
+			<p>Connect the smplfix Forminator request form to Stage 1 in the CRM.</p>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'huttas_forminator_crm_webhook_group' ); ?>
 				<table class="form-table" role="presentation">
@@ -106,7 +106,7 @@ final class Huttas_Forminator_CRM_Webhook {
 					</tr>
 					<tr>
 						<th scope="row"><label for="huttas-webhook-secret">Webhook Secret</label></th>
-						<td><input id="huttas-webhook-secret" class="large-text code" type="password" autocomplete="new-password" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[secret]" value="" placeholder="<?php echo $settings['secret'] ? esc_attr( 'Saved — leave blank to keep it' ) : esc_attr( 'Paste the same HUTTAS_WEBHOOK_SECRET used in Render' ); ?>"><p class="description">Must exactly match <code>HUTTAS_WEBHOOK_SECRET</code> in Render and contain at least 32 characters.</p></td>
+						<td><input id="huttas-webhook-secret" class="large-text code" type="password" autocomplete="new-password" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[secret]" value="" placeholder="<?php echo $settings['secret'] ? esc_attr( 'Saved — leave blank to keep it' ) : esc_attr( 'Paste the same webhook secret used in Render' ); ?>"><p class="description">Must exactly match the configured webhook secret in Render and contain at least 32 characters.</p></td>
 					</tr>
 				</table>
 				<h2>Expected Forminator fields</h2>
@@ -299,7 +299,7 @@ final class Huttas_Forminator_CRM_Webhook {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			error_log( 'Huttas CRM webhook network failure; submission queued for retry.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'smplfix CRM webhook network failure; submission queued for retry.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			return array( 'success' => false );
 		}
 
@@ -312,13 +312,13 @@ final class Huttas_Forminator_CRM_Webhook {
 			);
 		}
 
-		error_log( 'Huttas CRM webhook returned HTTP ' . $status . '; submission queued for retry.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		error_log( 'smplfix CRM webhook returned HTTP ' . $status . '; submission queued for retry.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		return array( 'success' => false );
 	}
 
 	private static function schedule_retry( $payload, $attempt ) {
 		if ( $attempt >= self::MAX_ATTEMPTS ) {
-			error_log( 'Huttas CRM webhook reached the retry limit. Check the CRM URL, secret, and WordPress cron.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'smplfix CRM webhook reached the retry limit. Check the CRM URL, secret, and WordPress cron.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			return;
 		}
 		$delays = array( 60, 300, 900, 3600 );

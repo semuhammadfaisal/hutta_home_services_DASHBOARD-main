@@ -2,7 +2,7 @@
 
 ##  Implementation Complete
 
-File attachment functionality has been successfully added to orders in the Hutta Home Services dashboard.
+File attachments are available for orders in the smplfix dashboard.
 
 ##  What Was Delivered
 

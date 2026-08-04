@@ -2,17 +2,18 @@ const PDFDocument = require('pdfkit');
 const path = require('path');
 
 const COLORS = Object.freeze({
-  blue: '#075eb8',
-  blueDark: '#064b91',
-  ink: '#15253b',
-  text: '#33445a',
-  muted: '#68788d',
-  border: '#d9e3ee',
-  surface: '#f5f8fb',
-  paleBlue: '#edf6ff'
+  blue: '#0B0B0C',
+  blueDark: '#0B0B0C',
+  ink: '#0B0B0C',
+  text: '#343436',
+  muted: '#737377',
+  border: '#ECECED',
+  surface: '#F6F6F4',
+  paleBlue: '#F6F6F4'
 });
 
 const PAGE = Object.freeze({ left: 50, right: 562, width: 512, footerY: 758 });
+const BRAND_LOGO = path.resolve(__dirname, '../../assets/images/smplfix-logo-ink.png');
 const clean = (value, fallback = '') => String(value ?? '').trim() || fallback;
 
 function createDocument({ title, subject }) {
@@ -21,14 +22,18 @@ function createDocument({ title, subject }) {
     margins: { top: 46, right: 50, bottom: 58, left: 50 },
     bufferPages: true,
     info: {
-      Title: clean(title, 'Hutta Home Services Document'),
-      Author: 'Hutta Home Services',
+      Title: clean(title, 'smplfix Document'),
+      Author: 'smplfix',
       Subject: clean(subject, title)
     }
   });
   doc.on('pageAdded', () => {
-    doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(8)
-      .text('HUTTA HOME SERVICES', PAGE.left, 42, { width: 250, characterSpacing: .9 });
+    try {
+      doc.image(BRAND_LOGO, PAGE.left, 34, { fit: [78, 38], align: 'left', valign: 'center' });
+    } catch (_error) {
+      doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(8)
+        .text('smplfix', PAGE.left, 42, { width: 250, characterSpacing: .9 });
+    }
     doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8)
       .text('DOCUMENT CONTINUED', 312, 42, { width: 250, align: 'right' });
     doc.moveTo(PAGE.left, 59).lineTo(PAGE.right, 59).lineWidth(.7).strokeColor(COLORS.border).stroke();
@@ -38,16 +43,15 @@ function createDocument({ title, subject }) {
 }
 
 function drawBrandHeader(doc, { documentType, reference, meta = [], status }) {
-  const logo = path.resolve(__dirname, '../../assets/images/logo.png');
   try {
-    doc.image(logo, PAGE.left, 43, { width: 94, height: 46, fit: [94, 46] });
+    doc.image(BRAND_LOGO, PAGE.left, 43, { width: 94, height: 46, fit: [94, 46] });
   } catch (_error) {
-    doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(18).text('Huttas', PAGE.left, 54);
+    doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(18).text('smplfix', PAGE.left, 54);
   }
   doc.fillColor(COLORS.muted).font('Helvetica-Bold').fontSize(8)
-    .text('HUTTA HOME SERVICES', 300, 48, { width: 262, align: 'right', characterSpacing: 1.1 });
+    .text('smplfix', 300, 48, { width: 262, align: 'right' });
   doc.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(11)
-    .text('sales@huttas.com', 300, 63, { width: 262, align: 'right' });
+    .text('sales@smplfix.com', 300, 63, { width: 262, align: 'right' });
   doc.moveTo(PAGE.left, 101).lineTo(PAGE.right, 101).lineWidth(1).strokeColor(COLORS.border).stroke();
 
   doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(9)
@@ -165,7 +169,7 @@ function addPageFooters(doc, { reference }) {
     doc.page.margins.bottom = 0;
     doc.moveTo(PAGE.left, 744).lineTo(PAGE.right, 744).lineWidth(.7).strokeColor(COLORS.border).stroke();
     doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7.5)
-      .text('Hutta Home Services  |  sales@huttas.com', PAGE.left, PAGE.footerY, {
+      .text('smplfix  |  sales@smplfix.com', PAGE.left, PAGE.footerY, {
         width: 300,
         lineBreak: false
       });

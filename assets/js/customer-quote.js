@@ -20,7 +20,7 @@
     $('quoteDecisionTitle').textContent = approved ? 'Quote approved' : 'Changes requested';
     $('quoteDecisionSummary').textContent = approved
       ? `Approved by ${decision?.typedName || 'customer'} on ${dateTime(decision?.decisionAt)}. Approval does not confirm scheduling.`
-      : `Your change request was received on ${dateTime(decision?.decisionAt)}. The Huttas team will prepare a new quote revision.`;
+      : `Your change request was received on ${dateTime(decision?.decisionAt)}. The smplfix team will prepare a new quote revision.`;
   }
 
   function setBusy(busy) {

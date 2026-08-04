@@ -37,6 +37,9 @@ const schema = new mongoose.Schema({
   closeoutRevision: { type: Number, min: 1, default: 1 },
   closeoutTokenSentAt: Date,
   closeoutTokenRevokedAt: Date,
+  closeoutFirstViewedAt: Date,
+  closeoutLastViewedAt: Date,
+  closeoutViewCount: { type: Number, min: 0, default: 0 },
   satisfactionDecisionId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerSatisfactionDecision' },
   paymentProofSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentProofSubmission' },
   history: [{ action: String, actorType: String, actorId: mongoose.Schema.Types.ObjectId, actorEmail: String, message: String, createdAt: { type: Date, default: Date.now } }]

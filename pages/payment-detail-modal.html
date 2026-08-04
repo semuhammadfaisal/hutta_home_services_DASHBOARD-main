@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Details - Hutta Home Services</title>
+    <title>Payment Details - smplfix</title>
+    <meta name="application-name" content="smplfix">
+    <meta name="theme-color" content="#0B0B0C">
+    <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/payment-detail.css">
+    <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
+    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260804-final">
 </head>
 <body>
 
@@ -26,7 +31,7 @@
             </div>
             <div class="header-right">
                 <span class="status-badge status-paid">Paid</span>
-                <button class="payment-detail-close">X</button>
+                <button type="button" class="payment-detail-close" aria-label="Close payment details">X</button>
             </div>
         </div>
 
@@ -73,7 +78,7 @@
                     <span class="info-icon"></span>
                     <div class="info-content">
                         <span class="info-label">Invoice Number</span>
-                        <input type="text" class="info-value editable" value="INV-000123" />
+                        <input type="text" class="info-value editable" value="INV-000123" aria-label="Invoice number" />
                     </div>
                 </div>
                 <div class="info-item">

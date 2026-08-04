@@ -154,7 +154,7 @@
     $('categoryInlineDisplay').textContent = payload.categoryLabel;
     const expiry = new Date(payload.expiresAt);
     $('expiryDisplay').textContent = Number.isNaN(expiry.getTime()) ? 'Unavailable' : expiry.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-    document.title = `${payload.companyName || 'Vendor'} Onboarding | Hutta Home Services`;
+    document.title = `${payload.companyName || 'Vendor'} Onboarding | smplfix`;
     value('name', { name: vendor.name || payload.companyName });
     ['phone','address','legalBusinessName','businessEntityType','primaryOwnerName','businessAddress','contractorLicenseNumber','rocLicenseNumber','rocLicenseTypeClassification','requestedCategory'].forEach(id => value(id, vendor));
     if (vendor.rocLicenseExpirationDate) $('rocLicenseExpirationDate').value = String(vendor.rocLicenseExpirationDate).slice(0, 10);

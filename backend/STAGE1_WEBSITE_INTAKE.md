@@ -1,6 +1,6 @@
 # Stage 1 website intake
 
-The CRM accepts server-to-server submissions at `POST /api/integrations/website-requests`. Do not call this endpoint directly from browser JavaScript because the signing secret must remain on the huttas.com server.
+The CRM accepts server-to-server submissions at `POST /api/integrations/website-requests`. Do not call this endpoint directly from browser JavaScript because the signing secret must remain on the smplfix.com server.
 
 ## Forminator native webhook compatibility
 
@@ -25,7 +25,7 @@ Set these Render environment variables before deploying:
 
 ```text
 HUTTAS_WEBHOOK_SECRET=<at least 32 random bytes>
-INTAKE_NOTIFICATION_EMAILS=sales@huttas.com
+INTAKE_NOTIFICATION_EMAILS=sales@smplfix.com
 INTAKE_EMAIL_WORKER_ENABLED=true
 ```
 
@@ -75,7 +75,7 @@ const signature = crypto
   .digest('hex');
 ```
 
-The huttas.com handler should relay `requestReference` to its success screen. A timeout should be retried with the same external ID. It must not report success for non-2xx responses.
+The smplfix.com handler should relay `requestReference` to its success screen. A timeout should be retried with the same external ID. It must not report success for non-2xx responses.
 
 ## Operational behavior
 

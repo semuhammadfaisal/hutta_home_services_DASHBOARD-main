@@ -1,14 +1,14 @@
-/* Hutta Color Theme Global Overrides */
+/* Legacy color overrides; normalized by the centralized smplfix theme. */
 
 /* Menu hover - white text */
 .menu-item a:hover {
-    background-color: #0056B8 !important;
-    color: #FFFFFF !important;
+    background-color: var(--smpl-paper) !important;
+    color: var(--smpl-ink) !important;
 }
 
 .menu-item a:hover i,
 .menu-item a:hover span {
-    color: #FFFFFF !important;
+    color: var(--smpl-ink) !important;
 }
 
 /* All blue backgrounds must have white text */
@@ -20,7 +20,7 @@
 .kpi-icon,
 .project-icon,
 .payment-icon {
-    color: #FFFFFF !important;
+    color: var(--smpl-paper) !important;
 }
 
 .btn-refresh i,
@@ -28,7 +28,7 @@
 .action-btn.view i,
 .menu-item.active a i,
 .menu-item.active a span {
-    color: #FFFFFF !important;
+    color: var(--smpl-ink) !important;
 }
 
 /* Update all gradient backgrounds to solid primary blue */
@@ -37,42 +37,42 @@
 .kpi-icon.vendors,
 .kpi-icon.employees,
 .kpi-icon.revenue { 
-    background: #0056B8 !important; 
+    background: var(--smpl-ink) !important;
 }
 
 .project-icon,
 .payment-icon { 
-    background: #0056B8 !important; 
+    background: var(--smpl-ink) !important;
 }
 
 /* Update all primary color references */
 .btn-refresh,
 .btn-primary,
 .action-btn.view {
-    background: #0056B8 !important;
-    box-shadow: 0 4px 12px rgba(0, 86, 184, 0.3) !important;
+    background: var(--smpl-ink) !important;
+    box-shadow: none !important;
 }
 
 .btn-refresh:hover,
 .btn-primary:hover,
 .action-btn.view:hover {
-    background: #004494 !important;
-    box-shadow: 0 6px 20px rgba(0, 86, 184, 0.4) !important;
+    background: #242426 !important;
+    box-shadow: none !important;
 }
 
 /* Menu active state */
 .menu-item.active a {
-    background-color: #0056B8 !important;
-    color: #FFFFFF !important;
+    background-color: var(--smpl-paper) !important;
+    color: var(--smpl-ink) !important;
 }
 
 /* Links and interactive elements */
 a, .customer-email {
-    color: #0056B8 !important;
+    color: var(--smpl-ink) !important;
 }
 
 a:hover, .customer-email:hover {
-    color: #004494 !important;
+    color: #242426 !important;
 }
 
 /* Status badges - keep primary blue for active/completed states */
@@ -82,23 +82,23 @@ a:hover, .customer-email:hover {
 .vendor-status-badge.active,
 .employee-status-badge.available,
 .payment-status-badge.completed {
-    background: #E6F0FF !important;
-    color: #0056B8 !important;
-    border: 1px solid #0056B8 !important;
+    background: var(--smpl-surface) !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-line) !important;
 }
 
 /* Input focus states */
 input:focus,
 select:focus,
 textarea:focus {
-    border-color: #0056B8 !important;
-    box-shadow: 0 0 0 4px rgba(0, 86, 184, 0.1) !important;
+    border-color: var(--smpl-ink) !important;
+    box-shadow: var(--smpl-focus) !important;
 }
 
 /* Progress bars and charts */
 .progress-fill,
 .mini-chart::after {
-    background: #0056B8 !important;
+    background: var(--smpl-ink) !important;
 }
 
 /* Stat values */
@@ -107,7 +107,7 @@ textarea:focus {
 .customer-orders-count,
 .customer-total-spent,
 .payment-amount {
-    color: #0056B8 !important;
+    color: var(--smpl-ink) !important;
 }
 
 /* Page header accents */
@@ -116,14 +116,14 @@ textarea:focus {
 #vendors .page-header::before,
 #employees .page-header::before,
 #projects .page-header::before {
-    background: #0056B8 !important;
+    background: var(--smpl-ink) !important;
 }
 
 #orders .page-header h1::before,
 #customers .page-header h1::before {
-    color: #0056B8 !important;
-    background: rgba(0, 86, 184, 0.1) !important;
-    box-shadow: 0 4px 12px rgba(0, 86, 184, 0.15) !important;
+    color: var(--smpl-ink) !important;
+    background: var(--smpl-surface) !important;
+    box-shadow: none !important;
 }
 
 /* Table hover effects */
@@ -132,13 +132,13 @@ textarea:focus {
 .vendors-table tbody tr:hover,
 .employees-table tbody tr:hover,
 .projects-table tbody tr:hover {
-    background: rgba(0, 86, 184, 0.03) !important;
-    box-shadow: -4px 0 0 #0056B8 !important;
+    background: var(--smpl-surface) !important;
+    box-shadow: inset 3px 0 0 var(--smpl-ink) !important;
 }
 
 /* Notification badge */
 .notification-badge {
-    background: #0056B8 !important;
+    background: var(--smpl-ink) !important;
 }
 
 /* Text colors */
@@ -149,7 +149,7 @@ h1, h2, h3, h4, h5, h6,
 .employee-name,
 .order-number,
 .project-name {
-    color: #000000 !important;
+    color: var(--smpl-ink) !important;
 }
 
 p, span, label,
@@ -159,13 +159,13 @@ p, span, label,
 .employee-id,
 .order-date,
 .project-id {
-    color: #4A4A4A !important;
+    color: var(--smpl-text-muted) !important;
 }
 
 /* Background colors */
 body,
 .main-content {
-    background-color: #FFFFFF !important;
+    background-color: var(--smpl-surface) !important;
 }
 
 .search-box input,
@@ -174,7 +174,7 @@ body,
 .vendors-search input,
 .employees-search input,
 .projects-search input {
-    background-color: #F2F2F2 !important;
+    background-color: var(--smpl-surface) !important;
 }
 
 .search-box input:focus,
@@ -183,5 +183,5 @@ body,
 .vendors-search input:focus,
 .employees-search input:focus,
 .projects-search input:focus {
-    background-color: #FFFFFF !important;
+    background-color: var(--smpl-paper) !important;
 }

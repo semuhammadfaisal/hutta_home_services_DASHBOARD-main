@@ -1112,7 +1112,7 @@ function createStageColumn(stage) {
     column.className = 'stage-column';
     if (stage.isNoBid) {
         column.classList.add('no-bid-stage');
-        column.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+        column.style.background = 'var(--smpl-danger-bg)';
         column.style.border = '2px dashed #dc2626';
     }
     column.dataset.stageId = stage._id;
@@ -1120,7 +1120,7 @@ function createStageColumn(stage) {
     const stageHeader = document.createElement('div');
     stageHeader.className = 'stage-header';
     if (stage.isNoBid) {
-        stageHeader.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+        stageHeader.style.background = 'var(--smpl-danger)';
     }
     stageHeader.innerHTML = `
         <div class="stage-title">
@@ -1499,7 +1499,12 @@ async function editRecord(recordId) {
     window.currentOrderId = null;
     window.currentPipelineRecordId = recordId;
     
+    const orderModal = document.getElementById('orderModal');
+    orderModal.dataset.mode = 'pipeline-edit';
+    document.getElementById('orderModalEyebrow').textContent = 'Pipeline record';
     document.getElementById('orderModalTitle').textContent = 'Edit Pipeline Record';
+    document.getElementById('orderModalDescription').textContent = 'Update the customer, scope, schedule, and operational details.';
+    document.getElementById('orderModalSubmit').innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Save Changes';
     
     // Load vendors and employees
     if (typeof window.loadVendors === 'function') await window.loadVendors();
@@ -1508,7 +1513,7 @@ async function editRecord(recordId) {
     
     // Populate order form with pipeline record data
     document.getElementById('customerSelect').value = 'new';
-    document.getElementById('newCustomerFields').style.display = 'block';
+    document.getElementById('newCustomerFields').style.display = 'grid';
     document.getElementById('customerName').value = record.customerName || '';
     document.getElementById('customerEmail').value = record.email || '';
     document.getElementById('customerPhone').value = record.phone || '';
@@ -1532,7 +1537,7 @@ async function editRecord(recordId) {
     
     if (typeof window.toggleRecurringFields === 'function') window.toggleRecurringFields();
     
-    document.getElementById('orderModal').classList.add('show');
+    orderModal.classList.add('show');
 }
 
 async function saveRecord(event) {
@@ -1898,7 +1903,7 @@ async function clearPipelineData() {
         if (window.APIService && window.APIService.clearCache) window.APIService.clearCache();
         await loadDataFromDB();
         await refreshOrdersOverviewFromLiveData();
-        alert(' Pipeline data cleared successfully!');
+        alert('Pipeline data cleared.');
     } catch (error) {
         alert('Error clearing data: ' + error.message);
     }
@@ -2065,7 +2070,7 @@ function updateSearchStats() {
     if (totalRecordsEl) {
         if (hasActivePipelineFilters()) {
             totalRecordsEl.textContent = `${filteredRecords.length} / ${records.length}`;
-            totalRecordsEl.style.color = '#3b82f6';
+            totalRecordsEl.style.color = 'var(--smpl-ink)';
         } else {
             totalRecordsEl.textContent = records.length;
             totalRecordsEl.style.color = '';
@@ -2145,114 +2150,155 @@ async function expandStage(stageId) {
     if (!stage) return;
     
     const stageRecords = records.filter(r => r.stageId === stageId);
+    const recordLabel = stageRecords.length === 1 ? 'order' : 'orders';
+    const recordCards = stageRecords.map(record => {
+        const priority = ['high', 'medium', 'low'].includes(String(record.priority).toLowerCase())
+            ? String(record.priority).toLowerCase()
+            : 'medium';
+        const latestNote = typeof window.getLatestNoteText === 'function'
+            ? window.getLatestNoteText(record)
+            : record.notes;
+        const startDate = record.startDate
+            ? (window.TimezoneConfig
+                ? window.TimezoneConfig.formatDateShortMDT(record.startDate)
+                : new Date(record.startDate).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' }))
+            : '';
+        const createdDate = window.TimezoneConfig
+            ? window.TimezoneConfig.formatDateShortMDT(record.createdAt)
+            : new Date(record.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' });
+        const budgetValue = Number(record.budget);
+        const budget = record.budget && Number.isFinite(budgetValue)
+            ? `$${budgetValue.toLocaleString()}`
+            : '';
+        const displayId = record.orderIdDisplay || (record.orderId ? 'Linked order' : 'Pipeline record');
+
+        return `
+            <article class="expanded-stage-record">
+                <header class="expanded-stage-record-header">
+                    <div class="expanded-stage-record-heading">
+                        <span class="expanded-stage-record-eyebrow">${escapeHtml(displayId)}</span>
+                        <h3>${escapeHtml(record.customerName || 'Unnamed customer')}</h3>
+                    </div>
+                    <span class="priority-badge priority-${priority}">${escapeHtml(priority)}</span>
+                </header>
+
+                <div class="expanded-stage-record-actions">
+                    <button type="button" class="expanded-stage-action primary" onclick="viewRecordFromExpanded('${record._id}')">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                        <span>View details</span>
+                    </button>
+                    <button type="button" class="expanded-stage-action" onclick="editRecordFromExpanded('${record._id}')">
+                        <i class="fas fa-pen" aria-hidden="true"></i>
+                        <span>Edit record</span>
+                    </button>
+                </div>
+
+                <div class="expanded-stage-record-meta">
+                    ${record.email ? `
+                        <div class="expanded-stage-meta-item">
+                            <span class="expanded-stage-meta-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span>
+                            <div><span>Email</span><strong>${escapeHtml(record.email)}</strong></div>
+                        </div>
+                    ` : ''}
+                    ${record.phone ? `
+                        <div class="expanded-stage-meta-item">
+                            <span class="expanded-stage-meta-icon" aria-hidden="true"><i class="fas fa-phone"></i></span>
+                            <div><span>Phone</span><strong>${escapeHtml(record.phone)}</strong></div>
+                        </div>
+                    ` : ''}
+                    ${record.address ? `
+                        <div class="expanded-stage-meta-item expanded-stage-meta-wide">
+                            <span class="expanded-stage-meta-icon" aria-hidden="true"><i class="fas fa-location-dot"></i></span>
+                            <div><span>Service address</span><strong>${escapeHtml(record.address)}</strong></div>
+                        </div>
+                    ` : ''}
+                    ${budget ? `
+                        <div class="expanded-stage-meta-item">
+                            <span class="expanded-stage-meta-icon" aria-hidden="true"><i class="fas fa-dollar-sign"></i></span>
+                            <div><span>Budget</span><strong>${escapeHtml(budget)}</strong></div>
+                        </div>
+                    ` : ''}
+                    ${startDate ? `
+                        <div class="expanded-stage-meta-item">
+                            <span class="expanded-stage-meta-icon" aria-hidden="true"><i class="fas fa-calendar"></i></span>
+                            <div><span>Start date</span><strong>${escapeHtml(startDate)}</strong></div>
+                        </div>
+                    ` : ''}
+                    <div class="expanded-stage-meta-item">
+                        <span class="expanded-stage-meta-icon" aria-hidden="true"><i class="fas fa-clock"></i></span>
+                        <div><span>Created</span><strong>${escapeHtml(createdDate)}</strong></div>
+                    </div>
+                </div>
+
+                ${record.description ? `
+                    <section class="expanded-stage-copy-block">
+                        <h4>Description</h4>
+                        <p>${escapeHtml(record.description)}</p>
+                    </section>
+                ` : ''}
+                ${latestNote ? `
+                    <section class="expanded-stage-copy-block expanded-stage-note-block">
+                        <h4>Latest note</h4>
+                        <p>${escapeHtml(latestNote)}</p>
+                    </section>
+                ` : ''}
+            </article>
+        `;
+    }).join('');
     
     // Create modal
     const modal = document.createElement('div');
     modal.className = 'modal-overlay show';
     modal.id = 'expandedStageModal';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 1400px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h2><i class="fas fa-expand-alt"></i> ${stage.name} - All Orders (${stageRecords.length})</h2>
-                <button class="modal-close" onclick="closeExpandedStage()">
+        <div class="modal-content expanded-stage-modal" role="dialog" aria-modal="true" aria-labelledby="expandedStageTitle" aria-describedby="expandedStageDescription">
+            <header class="modal-header expanded-stage-header">
+                <div class="expanded-stage-heading">
+                    <span class="expanded-stage-eyebrow">Pipeline stage</span>
+                    <div class="expanded-stage-title-row">
+                        <h2 id="expandedStageTitle">${escapeHtml(stage.name)}</h2>
+                        <span class="expanded-stage-count">${stageRecords.length}</span>
+                    </div>
+                    <p id="expandedStageDescription">Review ${stageRecords.length} ${recordLabel} currently in this stage.</p>
+                </div>
+                <button type="button" class="modal-close expanded-stage-close" onclick="closeExpandedStage()" aria-label="Close stage details">
                     <i class="fas fa-times"></i>
                 </button>
-            </div>
-            <div class="modal-body" style="padding: 20px;">
-                ${stageRecords.length === 0 ? 
-                    '<p style="text-align: center; color: #999; padding: 40px;">No orders in this stage</p>' :
-                    `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 20px;">
-                        ${stageRecords.map(record => `
-                            <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                                    <div>
-                                        <h3 style="margin: 0 0 5px 0; font-size: 18px; color: #1f2937;">${record.customerName}</h3>
-                                        <span class="priority-badge priority-${record.priority}" style="font-size: 11px;">${record.priority}</span>
-                                    </div>
-                                    <div style="display: flex; gap: 5px;">
-                                        <button class="action-btn view" onclick="viewRecordFromExpanded('${record._id}')" title="View" style="padding: 6px 10px;">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="action-btn edit" onclick="editRecordFromExpanded('${record._id}')" title="Edit" style="padding: 6px 10px;">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div style="display: grid; gap: 10px; font-size: 14px; color: #4b5563;">
-                                    ${record.email ? `
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas fa-envelope" style="width: 16px; color: #6b7280;"></i>
-                                            <span>${record.email}</span>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    ${record.phone ? `
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas fa-phone" style="width: 16px; color: #6b7280;"></i>
-                                            <span>${record.phone}</span>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    ${record.address ? `
-                                        <div style="display: flex; align-items: start; gap: 8px;">
-                                            <i class="fas fa-map-marker-alt" style="width: 16px; color: #6b7280; margin-top: 2px;"></i>
-                                            <span>${record.address}</span>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    ${record.budget ? `
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas fa-dollar-sign" style="width: 16px; color: #6b7280;"></i>
-                                            <span style="font-weight: 600; color: #059669;">$${parseFloat(record.budget).toLocaleString()}</span>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    ${record.startDate ? `
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas fa-calendar" style="width: 16px; color: #6b7280;"></i>
-                                            <span>Start: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.startDate) : new Date(record.startDate).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}</span>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <i class="fas fa-clock" style="width: 16px; color: #6b7280;"></i>
-                                        <span>Created: ${window.TimezoneConfig ? window.TimezoneConfig.formatDateShortMDT(record.createdAt) : new Date(record.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}</span>
-                                    </div>
-                                </div>
-                                
-                                ${record.description ? `
-                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                                        <div style="font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 5px;">Description:</div>
-                                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${record.description}</div>
-                                    </div>
-                                ` : ''}
-                                
-                                ${(typeof window.getLatestNoteText === 'function' ? window.getLatestNoteText(record) : record.notes) ? `
-                                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
-                                        <div style="font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 5px;">Notes:</div>
-                                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${escapeHtml(typeof window.getLatestNoteText === 'function' ? window.getLatestNoteText(record) : record.notes)}</div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `).join('')}
+            </header>
+            <div class="modal-body expanded-stage-body">
+                ${stageRecords.length === 0
+                    ? `<div class="expanded-stage-empty" role="status">
+                        <span aria-hidden="true"><i class="fas fa-inbox"></i></span>
+                        <h3>No orders in this stage</h3>
+                        <p>Orders moved here will appear in this view.</p>
                     </div>`
-                }
+                    : `<div class="expanded-stage-record-grid">${recordCards}</div>`}
             </div>
-            <div class="modal-footer">
+            <footer class="modal-footer expanded-stage-footer">
+                <p><i class="fas fa-layer-group" aria-hidden="true"></i> ${stageRecords.length} ${recordLabel} in ${escapeHtml(stage.name)}</p>
                 <button type="button" class="btn-secondary" onclick="closeExpandedStage()">
-                    <i class="fas fa-times"></i> Close
+                    Close
                 </button>
-            </div>
+            </footer>
         </div>
     `;
     
     document.body.appendChild(modal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeExpandedStage();
+    });
+    modal._escapeHandler = (event) => {
+        if (event.key === 'Escape') closeExpandedStage();
+    };
+    document.addEventListener('keydown', modal._escapeHandler);
+    modal.querySelector('.expanded-stage-close')?.focus();
 }
 
 function closeExpandedStage() {
     const modal = document.getElementById('expandedStageModal');
-    if (modal) modal.remove();
+    if (!modal) return;
+    if (modal._escapeHandler) document.removeEventListener('keydown', modal._escapeHandler);
+    modal.remove();
 }
 
 function viewRecordFromExpanded(recordId) {
@@ -2441,7 +2487,7 @@ async function createPipelineRecordFromOrder(order, stageId) {
         
         // Show success message
         if (window.showToast) {
-            window.showToast(`Order "${orderIdDisplay || customerName}" added to pipeline!`, 'success');
+            window.showToast(`Order "${orderIdDisplay || customerName}" added to pipeline.`, 'success');
         }
         
         await refreshOrdersOverviewFromLiveData();

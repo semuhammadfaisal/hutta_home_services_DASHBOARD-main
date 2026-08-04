@@ -1,11 +1,11 @@
-# Hutta Home Services
+# smplfix
 
 A professional home services management platform with admin dashboard.
 
 ## Project Structure
 
 ```
-hutta_home_ervices/
+smplfix-dashboard/
 ├── index.html                 # Main entry point (redirects to login)
 ├── pages/                     # HTML pages
 │   ├── login.html            # Login page

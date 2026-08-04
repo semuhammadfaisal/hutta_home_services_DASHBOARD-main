@@ -62,7 +62,8 @@ test('internal redesign provides accessible dialogs, filters, readiness, timelin
   assert.match(hub, /Send readiness/);
   assert.match(hub, /workflow-decision-timeline/);
   assert.match(hub, /America\/Phoenix/);
-  assert.match(hub, /huttas\.workflow-center\.ui\.v2/);
+  assert.match(hub, /smplfix\.workflow-center\.ui\.v2/);
+  assert.match(hub, /LEGACY_STORAGE_KEY = 'huttas\.workflow-center\.ui\.v2'/);
   assert.match(hub, /data-filter="status"/);
   assert.match(hub, /sessionStorage/);
   assert.match(incoming, /WorkflowDialog/);
@@ -155,7 +156,7 @@ test('Workflow Center buttons provide pointer and keyboard interaction feedback'
   assert.match(css, /@keyframes workflow-button-ripple/);
   assert.match(css, /@media\(hover:hover\)/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(html, /workflow-hub\.js\?v=20260725-quote-workspace/);
+  assert.match(html, /workflow-hub\.js\?v=20260804-headers/);
 });
 
 test('reference overview omits New Request and exposes KPI, attention, activity, and relative-time interactions', () => {

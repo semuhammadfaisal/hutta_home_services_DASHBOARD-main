@@ -168,7 +168,7 @@ async function importVendorsFromCSV() {
             }
             
             if (successCount > 0) {
-                showToast(`Imported ${successCount} vendors successfully. ${errorCount} failed.`, 'success');
+                showToast(`Imported ${successCount} vendors. ${errorCount} failed.`, 'success');
                 if (typeof refreshVendors === 'function') {
                     await refreshVendors();
                 }
@@ -246,7 +246,7 @@ async function importEmployeesFromCSV() {
             }
             
             if (successCount > 0) {
-                showToast(`Imported ${successCount} employees successfully. ${errorCount} failed.`, 'success');
+                showToast(`Imported ${successCount} employees. ${errorCount} failed.`, 'success');
                 if (typeof refreshEmployees === 'function') {
                     await refreshEmployees();
                 }
@@ -351,7 +351,7 @@ async function importCustomersFromCSV() {
             }
             
             if (successCount > 0) {
-                showToast(`Imported ${successCount} customers successfully. ${errorCount} failed.`, 'success');
+                showToast(`Imported ${successCount} customers. ${errorCount} failed.`, 'success');
                 if (typeof refreshCustomers === 'function') {
                     await refreshCustomers();
                 }
