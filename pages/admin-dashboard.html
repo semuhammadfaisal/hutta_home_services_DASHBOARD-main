@@ -50,8 +50,10 @@
     <link rel="stylesheet" href="../assets/css/closeout.css?v=20260727-customer-engagement">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
-    <link rel="stylesheet" href="../assets/css/smplfix-shell.css?v=20260804-headers">
-    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260805-pipeline-card-header">
+    <link rel="stylesheet" href="../assets/css/smplfix-shell.css?v=20260806-search-polish">
+    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260806-pipeline-search-polish">
+    <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=20260806-fluid-sections">
+    <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -69,6 +71,7 @@
                 <label class="visually-hidden" for="globalDashboardSearch">Search</label>
                 <i class="fas fa-search" aria-hidden="true"></i>
                 <input id="globalDashboardSearch" type="search" name="q" autocomplete="off" placeholder="Search orders, customers, vendors…" enterkeyhint="search" aria-label="Search orders, customers, and vendors">
+                <kbd class="search-shortcut" aria-hidden="true">Ctrl K</kbd>
             </div>
         </div>
         <div class="nav-right">
@@ -228,15 +231,24 @@
     <div class="command-palette" id="commandPalette" hidden>
         <div class="command-palette-panel" role="dialog" aria-modal="true" aria-labelledby="commandPaletteTitle">
             <div class="command-palette-search">
-                <i class="fas fa-search" aria-hidden="true"></i>
-                <input id="commandPaletteInput" type="search" autocomplete="off" placeholder="Search pages, orders, customers, vendors..." aria-label="Search dashboard">
-                <button type="button" id="commandPaletteClose" aria-label="Close search">
+                <span class="command-palette-search-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
+                <input id="commandPaletteInput" type="search" autocomplete="off" placeholder="Search dashboard pages and tools…" aria-label="Search dashboard" aria-controls="commandPaletteResults" aria-describedby="commandPaletteHelp">
+                <button type="button" id="commandPaletteClose" aria-label="Close search" title="Close search (Esc)">
                     <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
 
             <h2 id="commandPaletteTitle" class="visually-hidden">Search dashboard</h2>
+            <div class="command-palette-meta">
+                <span id="commandPaletteResultCount" aria-live="polite">Quick navigation</span>
+                <span>Pages and workspace tools</span>
+            </div>
             <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Search results"></div>
+            <div class="command-palette-footer" id="commandPaletteHelp">
+                <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+                <span><kbd>Enter</kbd> Open</span>
+                <span><kbd>Esc</kbd> Close</span>
+            </div>
         </div>
     </div>
 
@@ -2056,8 +2068,11 @@
                 </header>
                 <div class="pipeline-filter-bar">
                     <div class="pipeline-search-bar">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="pipelineSearchInput" placeholder="Search by customer name, email, or phone..." oninput="filterPipelineRecords(this.value)" autocomplete="off" aria-label="Search pipeline records">
+                        <span class="pipeline-search-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
+                        <label class="pipeline-search-field" for="pipelineSearchInput">
+                            <span>Search pipeline</span>
+                            <input type="search" id="pipelineSearchInput" placeholder="Customer name, email, or phone" oninput="filterPipelineRecords(this.value)" autocomplete="off" enterkeyhint="search">
+                        </label>
                         <button type="button" class="btn-clear-search" onclick="clearPipelineSearch()" style="display: none;" aria-label="Clear pipeline search">
                             <i class="fas fa-times"></i>
                         </button>
@@ -4630,7 +4645,7 @@
     <script src="../assets/js/workflow-hub.js?v=20260804-headers"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
-    <script src="../assets/js/premium-dashboard-ux.js"></script>
+    <script src="../assets/js/premium-dashboard-ux.js?v=20260806-search-polish"></script>
     <script src="../assets/js/smplfix-shell.js?v=20260804-order-detail-header"></script>
     <script>
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {

@@ -5,8 +5,10 @@
     display: grid;
     gap: 16px;
     padding: 16px 0;
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
 }
 
 /* Info Card */
@@ -451,7 +453,7 @@
 }
 
 #order-detail .order-detail-layout {
-    max-width: 1280px;
+    max-width: none;
     grid-template-columns: 1fr;
     grid-template-areas:
         "order"
@@ -1073,7 +1075,7 @@
 #customer-profile .profile-container,
 #vendor-detail .detail-container,
 #employee-detail .detail-container {
-    max-width: 1280px;
+    max-width: none;
     display: grid;
     grid-template-columns: 1fr;
     gap: 18px;

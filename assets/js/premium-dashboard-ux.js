@@ -90,22 +90,40 @@
 
     function renderCommandResults(query = '') {
         const results = document.getElementById('commandPaletteResults');
+        const count = document.getElementById('commandPaletteResultCount');
+        const input = document.getElementById('commandPaletteInput');
         if (!results) return;
         const matches = routeMatches(query);
+        if (count) count.textContent = `${matches.length} ${matches.length === 1 ? 'result' : 'results'}`;
         if (!matches.length) {
-            results.innerHTML = '<div class="command-empty">No matching pages or workflows</div>';
+            results.innerHTML = '<div class="command-empty"><span class="command-empty-icon" aria-hidden="true"><i class="fas fa-search"></i></span><strong>No matching page found</strong><small>Try a page name such as Orders, Customers, Reports, or Settings.</small></div>';
+            input?.removeAttribute('aria-activedescendant');
             return;
         }
         results.innerHTML = matches.map((route, index) => `
-            <button type="button" class="command-item ${index === 0 ? 'active' : ''}" role="option" data-section="${route.section}">
+            <button type="button" id="command-option-${route.section}" class="command-item ${index === 0 ? 'active' : ''}" role="option" aria-selected="${index === 0 ? 'true' : 'false'}" data-section="${route.section}">
                 <span class="command-item-icon" aria-hidden="true"><i class="fas fa-${route.icon}"></i></span>
-                <span>
+                <span class="command-item-copy">
                     <strong>${route.label}</strong>
                     <small>${route.hint}</small>
                 </span>
-                <small>${route.section.replace('-', ' ')}</small>
+                <small class="command-item-route">${route.section.replaceAll('-', ' ')}</small>
             </button>
         `).join('');
+        input?.setAttribute('aria-activedescendant', `command-option-${matches[0].section}`);
+    }
+
+    function setActiveCommandItem(items, index, input) {
+        items.forEach((item, itemIndex) => {
+            const active = itemIndex === index;
+            item.classList.toggle('active', active);
+            item.setAttribute('aria-selected', String(active));
+        });
+        const selected = items[index];
+        if (selected) {
+            input?.setAttribute('aria-activedescendant', selected.id);
+            selected.scrollIntoView({ block: 'nearest' });
+        }
     }
 
     function openCommandPalette(initialQuery = '') {
@@ -113,6 +131,7 @@
         const input = document.getElementById('commandPaletteInput');
         if (!palette || !input) return;
         palette.hidden = false;
+        document.body.classList.add('command-palette-open');
         input.value = initialQuery;
         renderCommandResults(initialQuery);
         window.setTimeout(() => input.focus(), 0);
@@ -121,6 +140,7 @@
     function closeCommandPalette() {
         const palette = document.getElementById('commandPalette');
         if (palette) palette.hidden = true;
+        document.body.classList.remove('command-palette-open');
     }
 
     function initCommandPalette() {
@@ -146,9 +166,7 @@
                 const nextIndex = event.key === 'ArrowDown'
                     ? (currentIndex + 1 + items.length) % items.length
                     : (currentIndex - 1 + items.length) % items.length;
-                items.forEach((item) => item.classList.remove('active'));
-                items[nextIndex].classList.add('active');
-                items[nextIndex].scrollIntoView({ block: 'nearest' });
+                setActiveCommandItem(items, nextIndex, input);
             }
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -163,6 +181,12 @@
         results?.addEventListener('click', (event) => {
             const item = event.target.closest('.command-item');
             if (item) activateSection(item.dataset.section, input?.value.trim() || '');
+        });
+        results?.addEventListener('mousemove', (event) => {
+            const item = event.target.closest('.command-item');
+            if (!item || item.classList.contains('active')) return;
+            const items = Array.from(results.querySelectorAll('.command-item'));
+            setActiveCommandItem(items, items.indexOf(item), input);
         });
         globalSearch?.addEventListener('focus', () => openCommandPalette(globalSearch.value));
         globalSearch?.addEventListener('keydown', (event) => {
