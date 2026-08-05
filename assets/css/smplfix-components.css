@@ -1396,6 +1396,575 @@ body #dashboard.dashboard-overview .exception-row strong {
     }
 }
 
+/* Pipeline board UX redesign: final authoritative stage/card presentation. */
+body #pipeline .pipeline-board-shell {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 10px;
+    overflow: hidden;
+    border: 1px solid var(--smpl-line);
+    border-radius: var(--smpl-radius-lg);
+    background: var(--smpl-paper);
+}
+
+body #pipeline .pipeline-board-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    margin-bottom: 8px;
+    padding: 0 2px;
+}
+
+body #pipeline .pipeline-board-toolbar p {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: var(--smpl-text-muted);
+    font: 600 11px/1.3 var(--smpl-font-ui);
+}
+
+body #pipeline .pipeline-board-nav {
+    display: flex;
+    gap: 6px;
+}
+
+body #pipeline .pipeline-board-nav button {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    color: var(--smpl-ink);
+    border: 1px solid var(--smpl-line);
+    border-radius: var(--smpl-radius-sm);
+    background: var(--smpl-paper);
+}
+
+body #pipeline .pipeline-board-nav button:hover:not(:disabled) {
+    border-color: var(--smpl-soft);
+    background: var(--smpl-surface);
+}
+
+body #pipeline .pipeline-board-nav button:disabled {
+    cursor: default;
+    opacity: .35;
+}
+
+body #pipeline .pipeline-board-shell::before,
+body #pipeline .pipeline-board-shell::after {
+    content: '';
+    position: absolute;
+    z-index: 12;
+    top: 54px;
+    bottom: 26px;
+    width: 24px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+body #pipeline .pipeline-board-shell::before {
+    left: 9px;
+    border-left: 2px solid var(--smpl-soft);
+    box-shadow: 8px 0 18px var(--smpl-paper);
+}
+
+body #pipeline .pipeline-board-shell::after {
+    right: 9px;
+    border-right: 2px solid var(--smpl-soft);
+    box-shadow: -8px 0 18px var(--smpl-paper);
+}
+
+body #pipeline .pipeline-board-shell[data-can-scroll-left="true"]::before,
+body #pipeline .pipeline-board-shell[data-can-scroll-right="true"]::after {
+    opacity: 1;
+}
+
+body #pipeline #stagesContainer.stages-container {
+    gap: 12px !important;
+    min-height: 520px !important;
+    padding: 2px 2px 14px !important;
+    scroll-padding-inline: 2px;
+    scrollbar-gutter: stable;
+}
+
+body #pipeline #stagesContainer.stages-container:focus-visible {
+    outline: 2px solid var(--smpl-ink);
+    outline-offset: 3px;
+}
+
+body #pipeline #stagesContainer.stages-container > .stage-column {
+    position: relative;
+    display: flex !important;
+    flex: 0 0 320px !important;
+    flex-direction: column !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
+    height: min(68vh, 660px) !important;
+    min-height: 500px !important;
+    max-height: 660px !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 12px !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline .stage-header,
+body #pipeline .stage-column:not(.no-bid-stage) .stage-header,
+body #pipeline .new-orders-column-header {
+    position: relative;
+    z-index: 10;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    min-height: 64px !important;
+    padding: 10px 12px !important;
+    border-bottom: 1px solid var(--smpl-line) !important;
+    background: var(--smpl-paper) !important;
+}
+
+body #pipeline .new-orders-column {
+    border-style: solid !important;
+    border-color: var(--smpl-line) !important;
+}
+
+body #pipeline .new-orders-column::before {
+    content: '' !important;
+    position: absolute;
+    z-index: 13;
+    inset: 0 auto 0 0;
+    display: block !important;
+    width: 3px;
+    border-radius: 12px 0 0 12px;
+    background: var(--smpl-success) !important;
+}
+
+body #pipeline .new-orders-column-title,
+body #pipeline .new-orders-column-title i {
+    color: var(--smpl-ink) !important;
+}
+
+body #pipeline .stage-column.no-bid-stage {
+    border: 1px solid var(--smpl-danger-line) !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline .stage-column.no-bid-stage::before {
+    content: '';
+    position: absolute;
+    z-index: 13;
+    inset: 0 auto 0 0;
+    width: 3px;
+    border-radius: 12px 0 0 12px;
+    background: var(--smpl-danger);
+}
+
+body #pipeline .stage-column.no-bid-stage .stage-header,
+body #pipeline .stage-column.no-bid-stage .stage-body {
+    background: var(--smpl-paper) !important;
+}
+
+body #pipeline .stage-column.no-bid-stage .stage-title :where(h3, i) {
+    color: var(--smpl-danger) !important;
+}
+
+body #pipeline .stage-title {
+    min-width: 0;
+}
+
+body #pipeline .stage-title h3,
+body #pipeline .stage-column:not(.no-bid-stage) .stage-title h3 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--smpl-ink) !important;
+    font: 700 13px/1.3 var(--smpl-font-ui) !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body #pipeline .stage-controls,
+body #pipeline .stage-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px !important;
+}
+
+body #pipeline .stage-count {
+    display: flex;
+    align-items: center;
+}
+
+body #pipeline .stage-column:not(.no-bid-stage) .count-badge,
+body #pipeline .new-orders-column .count-badge.pipeline-new-orders-badge {
+    min-width: 25px !important;
+    padding: 4px 7px !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-line) !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline :where(.stage-actions, .record-actions) > .icon-btn,
+body #pipeline .pipeline-overflow > summary.icon-btn,
+body #pipeline .new-order-pickup-btn {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    color: var(--smpl-text-muted) !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    list-style: none;
+}
+
+body #pipeline .pipeline-overflow > summary::-webkit-details-marker {
+    display: none;
+}
+
+body #pipeline :where(.stage-actions, .record-actions) > .icon-btn:hover,
+body #pipeline .pipeline-overflow > summary.icon-btn:hover,
+body #pipeline .new-order-pickup-btn:hover {
+    color: var(--smpl-ink) !important;
+    border-color: var(--smpl-line) !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline .pipeline-overflow {
+    position: relative;
+    z-index: 20;
+}
+
+body #pipeline .pipeline-overflow-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid;
+    width: 168px;
+    padding: 6px;
+    border: 1px solid var(--smpl-line);
+    border-radius: 9px;
+    background: var(--smpl-paper);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
+}
+
+body #pipeline .pipeline-overflow-menu button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px;
+    color: var(--smpl-ink);
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font: 600 12px/1.3 var(--smpl-font-ui);
+    text-align: left;
+}
+
+body #pipeline .pipeline-overflow-menu button:hover,
+body #pipeline .pipeline-overflow-menu button:focus-visible {
+    background: var(--smpl-surface);
+}
+
+body #pipeline .pipeline-overflow-menu button.danger {
+    color: var(--smpl-danger);
+}
+
+body #pipeline .stage-body,
+body #pipeline .stage-column:not(.no-bid-stage) .stage-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline :where(.record-card, .new-order-card) {
+    position: relative;
+    isolation: isolate;
+    min-width: 0;
+    margin: 0 0 9px !important;
+    padding: 12px !important;
+    overflow: visible;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    transition: border-color 140ms ease, background-color 140ms ease, opacity 140ms ease;
+}
+
+body #pipeline :where(.record-card, .new-order-card):hover {
+    border-color: var(--smpl-soft) !important;
+    background: #fdfdfd !important;
+}
+
+body #pipeline :where(.record-card-open, .new-order-card-open) {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    cursor: grab;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+}
+
+body #pipeline :where(.record-card-open, .new-order-card-open):active {
+    cursor: grabbing;
+}
+
+body #pipeline :where(.record-card-open, .new-order-card-open):focus-visible {
+    outline: 2px solid var(--smpl-ink) !important;
+    outline-offset: 2px !important;
+}
+
+body #pipeline :where(.record-card, .new-order-card) > :not(.record-card-open, .new-order-card-open) {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+}
+
+body #pipeline :where(.record-actions, .record-description-toggle, .new-order-pickup-btn, .pipeline-overflow, .pipeline-overflow *) {
+    z-index: 4;
+    pointer-events: auto !important;
+}
+
+body #pipeline .record-header,
+body #pipeline .new-order-card-head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: start !important;
+    gap: 8px !important;
+    margin-bottom: 9px !important;
+}
+
+body #pipeline .record-actions {
+    display: flex !important;
+    gap: 3px !important;
+    opacity: 1 !important;
+}
+
+body #pipeline .record-title,
+body #pipeline .new-order-card-title {
+    overflow: hidden !important;
+    color: var(--smpl-ink) !important;
+    font: 700 13px/1.35 var(--smpl-font-ui) !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+body #pipeline .record-title.record-title--order-id {
+    font: 700 11px/1.4 var(--smpl-font-mono) !important;
+}
+
+body #pipeline .record-info,
+body #pipeline .new-order-card-row {
+    display: grid !important;
+    grid-template-columns: 22px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 7px !important;
+    min-width: 0;
+    margin-bottom: 6px !important;
+    color: var(--smpl-text-muted) !important;
+    font: 500 11px/1.4 var(--smpl-font-ui) !important;
+}
+
+body #pipeline :where(.record-info, .new-order-card-row) > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body #pipeline .record-workflow-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    margin: 1px 0 8px 2px;
+    padding: 4px 7px;
+    color: var(--smpl-text-muted);
+    border: 1px solid var(--smpl-line);
+    border-radius: 999px;
+    background: var(--smpl-surface);
+    font: 650 9px/1.3 var(--smpl-font-mono);
+    text-transform: capitalize;
+}
+
+body #pipeline .record-description-block {
+    margin-top: 9px !important;
+}
+
+body #pipeline .record-description--clamped {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+body #pipeline .record-footer,
+body #pipeline .new-order-card-foot {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-top: 10px !important;
+    padding-top: 9px !important;
+    border-top: 1px solid var(--smpl-line) !important;
+}
+
+body #pipeline .new-order-card-foot {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+body #pipeline :where(.record-card, .new-order-card).picked-up,
+body #pipeline :where(.record-card, .new-order-card).is-moving {
+    border-color: var(--smpl-ink) !important;
+    box-shadow: inset 0 0 0 1px var(--smpl-ink) !important;
+}
+
+body #pipeline :where(.record-card, .new-order-card).is-moving {
+    opacity: .62;
+    pointer-events: none;
+}
+
+body #pipeline .record-card.dragging,
+body #pipeline .new-order-card.dragging {
+    opacity: .35 !important;
+}
+
+body #pipeline .stage-column.can-place-picked .stage-header,
+body #pipeline .stage-body.drag-over {
+    background: #f3f3f3 !important;
+    box-shadow: inset 0 0 0 2px var(--smpl-ink) !important;
+}
+
+body #pipeline .pipeline-stage-state,
+body #pipeline .pipeline-board-state {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    min-width: 0;
+    min-height: 148px;
+    padding: 22px 16px;
+    color: var(--smpl-text-muted);
+    border: 1px dashed var(--smpl-soft);
+    border-radius: 9px;
+    background: var(--smpl-paper);
+    text-align: center;
+}
+
+body #pipeline .pipeline-stage-state-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 10px;
+    color: var(--smpl-ink);
+    border: 1px solid var(--smpl-line);
+    border-radius: 50%;
+    background: var(--smpl-surface);
+}
+
+body #pipeline .pipeline-stage-state--success .pipeline-stage-state-icon {
+    color: var(--smpl-paper);
+    border-color: var(--smpl-ink);
+    background: var(--smpl-ink);
+}
+
+body #pipeline :where(.pipeline-stage-state, .pipeline-board-state) strong {
+    margin-bottom: 5px;
+    color: var(--smpl-ink);
+    font: 700 13px/1.3 var(--smpl-font-ui);
+}
+
+body #pipeline :where(.pipeline-stage-state, .pipeline-board-state) p {
+    max-width: 230px;
+    margin: 0;
+    font: 500 11px/1.5 var(--smpl-font-ui);
+}
+
+body #pipeline .pipeline-state-action {
+    min-height: 36px;
+    margin-top: 12px;
+    padding: 8px 12px;
+    color: var(--smpl-paper);
+    border: 1px solid var(--smpl-ink);
+    border-radius: 7px;
+    background: var(--smpl-ink);
+    font: 600 11px/1.3 var(--smpl-font-ui);
+}
+
+body #pipeline .pipeline-board-state {
+    flex: 0 0 100%;
+    width: 100%;
+    min-height: 300px;
+}
+
+body #pipeline .pipeline-state-spinner {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 12px;
+    border: 3px solid var(--smpl-line);
+    border-top-color: var(--smpl-ink);
+    border-radius: 50%;
+    animation: pipeline-spin 800ms linear infinite;
+}
+
+@keyframes pipeline-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 720px) {
+    body #pipeline .pipeline-board-toolbar p {
+        font-size: 10px;
+    }
+
+    body #pipeline .pipeline-board-nav button,
+    body #pipeline :where(.stage-actions, .record-actions) > .icon-btn,
+    body #pipeline .pipeline-overflow > summary.icon-btn,
+    body #pipeline .new-order-pickup-btn,
+    body #pipeline .pipeline-state-action {
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+
+    body #pipeline #stagesContainer.stages-container > .stage-column {
+        flex-basis: calc(100cqi - 8px) !important;
+        width: calc(100cqi - 8px) !important;
+        min-width: calc(100cqi - 8px) !important;
+        max-width: calc(100cqi - 8px) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body #pipeline *,
+    body #pipeline *::before,
+    body #pipeline *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
 /* Mini charts: compact SMPLFix analytics cards. */
 body #dashboard.dashboard-overview .mini-charts-panel {
     margin-bottom: var(--smpl-space-4) !important;
@@ -2698,22 +3267,6 @@ body #pipeline .record-card {
 
 body #pipeline .record-card:active {
     cursor: grabbing !important;
-}
-
-body #pipeline .record-card::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 2px;
-    border-radius: 9px 0 0 9px;
-    background: var(--smpl-soft);
-    transition: width 140ms ease, background-color 140ms ease;
-}
-
-body #pipeline .record-card:hover::before,
-body #pipeline .record-card:focus-within::before {
-    width: 3px;
-    background: var(--smpl-ink);
 }
 
 body #pipeline .record-header {
@@ -10255,5 +10808,109 @@ body #addUserModal .user-create-actions .btn-primary:hover {
         border-right: 1px solid var(--smpl-line) !important;
         border-left: 1px solid var(--smpl-line) !important;
         border-radius: var(--smpl-radius) !important;
+    }
+}
+
+/* Pipeline board cascade lock (must remain after legacy feature refinements). */
+body #pipelineLiveStatus {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+body #pipeline .stage-column.no-bid-stage {
+    border: 1px solid var(--smpl-danger-line) !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline .stage-column.no-bid-stage::before {
+    content: '';
+    position: absolute;
+    z-index: 13;
+    inset: 0 auto 0 0;
+    width: 3px;
+    border-radius: 12px 0 0 12px;
+    background: var(--smpl-danger) !important;
+}
+
+body #pipeline .stage-column.no-bid-stage .stage-header,
+body #pipeline .stage-column.no-bid-stage .stage-body {
+    background: var(--smpl-paper) !important;
+}
+
+body #pipeline .stage-column.no-bid-stage .stage-title :where(h3, i) {
+    color: var(--smpl-danger) !important;
+}
+
+body #pipeline .stage-header,
+body #pipeline .stage-column:not(.no-bid-stage) .stage-header,
+body #pipeline .new-orders-column-header {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    min-height: 64px !important;
+    padding: 10px 12px !important;
+    border-bottom: 1px solid var(--smpl-line) !important;
+    background: var(--smpl-paper) !important;
+}
+
+body #pipeline .new-orders-column {
+    border-style: solid !important;
+    border-color: var(--smpl-line) !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline .new-orders-column-title,
+body #pipeline .new-orders-column-title i {
+    color: var(--smpl-ink) !important;
+}
+
+body #pipeline .stage-column:not(.no-bid-stage) .stage-body {
+    min-height: 0 !important;
+    padding: 10px !important;
+    background: var(--smpl-surface) !important;
+}
+
+body #pipeline :where(.record-card, .new-order-card) {
+    margin-bottom: 9px !important;
+    padding: 12px !important;
+    overflow: visible !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+}
+
+body #pipeline :where(.stage-actions, .record-actions) > .icon-btn,
+body #pipeline .pipeline-overflow > summary.icon-btn,
+body #pipeline .new-order-pickup-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+}
+
+body #pipeline .record-actions {
+    gap: 3px !important;
+    opacity: 1 !important;
+}
+
+body #pipeline .new-orders-column .count-badge.pipeline-new-orders-badge {
+    color: var(--smpl-ink) !important;
+    border-color: var(--smpl-line) !important;
+    background: var(--smpl-surface) !important;
+}
+
+@media (max-width: 720px) {
+    body #pipeline :where(.stage-actions, .record-actions) > .icon-btn,
+    body #pipeline .pipeline-overflow > summary.icon-btn,
+    body #pipeline .new-order-pickup-btn {
+        min-width: 44px !important;
+        min-height: 44px !important;
     }
 }

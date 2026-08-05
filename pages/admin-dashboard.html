@@ -51,8 +51,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
     <link rel="stylesheet" href="../assets/css/smplfix-shell.css?v=20260806-search-polish">
-    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260806-pipeline-search-polish">
-    <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=20260806-fluid-sections">
+    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260806-pipeline-card-clean">
+    <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=20260806-pipeline-board-ux">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
 </head>
 <body>
@@ -2084,9 +2084,23 @@
                         </select>
                     </label>
                 </div>
-                <div class="stages-container" id="stagesContainer">
-                    <!-- Stages will be dynamically loaded here -->
+                <div class="pipeline-board-shell" id="pipelineBoardShell" data-can-scroll-left="false" data-can-scroll-right="false">
+                    <div class="pipeline-board-toolbar" aria-label="Pipeline board navigation">
+                        <p><i class="fas fa-arrows-left-right" aria-hidden="true"></i> Scroll through stages</p>
+                        <div class="pipeline-board-nav">
+                            <button type="button" id="pipelineScrollPrevious" onclick="scrollPipelineRail(-1)" aria-label="Show previous pipeline stage" disabled>
+                                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" id="pipelineScrollNext" onclick="scrollPipelineRail(1)" aria-label="Show next pipeline stage" disabled>
+                                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="stages-container" id="stagesContainer" role="region" aria-label="Pipeline stages" tabindex="0">
+                        <!-- Stages will be dynamically loaded here -->
+                    </div>
                 </div>
+                <div id="pipelineLiveStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
             </div>
         </section>
 
@@ -4630,7 +4644,7 @@
     <script src="../assets/js/file-upload.js"></script>
     <script src="../assets/js/form-required-fields.js"></script>
     <script src="../assets/js/security-utils.js"></script>
-    <script src="../assets/js/pipeline-mongodb.js?v=20260804-stage-details"></script>
+    <script src="../assets/js/pipeline-mongodb.js?v=20260806-board-ux"></script>
     <script src="../assets/js/pipeline-drag-fix.js"></script>
     <script src="../assets/js/accounting-system.js"></script>
     <script src="../assets/js/calendar.js"></script>

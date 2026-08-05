@@ -99,17 +99,114 @@ body #dashboard.dashboard-overview :where(
     .executive-health-grid,
     .mini-charts-grid,
     .top-performance-grid,
-    .business-intelligence-grid,
     .financial-grid,
-    .service-category-grid,
-    .top-customers-grid
+    .service-category-grid
 ) {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)) !important;
 }
 
-body #dashboard.dashboard-overview :where(.dashboard-grid, .orders-overview-grid) {
+body #dashboard.dashboard-overview .dashboard-grid {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)) !important;
+}
+
+/* Orders overview keeps its vertical hierarchy: KPIs first, analytics below. */
+body #dashboard.dashboard-overview .orders-overview-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 14px !important;
+}
+
+body #dashboard.dashboard-overview .orders-overview-metric-row {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+}
+
+body #dashboard.dashboard-overview .orders-overview-detail-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+}
+
+body #dashboard.dashboard-overview .orders-overview-metric-tile {
+    align-self: stretch !important;
+    min-height: 116px !important;
+    height: auto !important;
+}
+
+/* Performance intelligence keeps four equal summaries above one full-width table. */
+body #dashboard.dashboard-overview .business-intelligence-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    align-items: start !important;
+    gap: 12px !important;
+}
+
+body #dashboard.dashboard-overview .business-intelligence-card {
+    min-width: 0 !important;
+    height: auto !important;
+    align-self: stretch !important;
+}
+
+body #dashboard.dashboard-overview .business-intelligence-card.wide {
+    grid-column: 1 / -1 !important;
+}
+
+body #dashboard.dashboard-overview .business-intelligence-card :where(
+    .executive-card-head,
+    .metric-stack,
+    .metric-stack-row,
+    .service-performance-table
+) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+body #dashboard.dashboard-overview .business-intelligence-card .metric-stack-row > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Top customers is one report flow: summaries, ranking list, then its action. */
+body #dashboard.dashboard-overview .top-customers-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 16px !important;
+}
+
+body #dashboard.dashboard-overview .top-customers-summary {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+}
+
+body #dashboard.dashboard-overview :where(
+    .top-customers-summary,
+    .top-customers-list,
+    .top-customers-actions,
+    .top-customer-card,
+    .top-customer-main,
+    .top-customer-info,
+    .top-customer-stats
+) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+body #dashboard.dashboard-overview .top-customers-actions {
+    width: 100% !important;
+    min-height: 0 !important;
+    justify-content: flex-end !important;
+}
+
+body #dashboard.dashboard-overview .top-customers-toggle {
+    min-width: 0 !important;
 }
 
 body #dashboard.dashboard-overview .executive-command-split {
@@ -301,9 +398,9 @@ body #pipeline #stagesContainer.stages-container {
 }
 
 body #pipeline #stagesContainer.stages-container > .stage-column {
-    flex: 0 0 clamp(270px, 23cqi, 300px) !important;
-    min-width: clamp(270px, 23cqi, 300px) !important;
-    max-width: clamp(270px, 23cqi, 300px) !important;
+    flex: 0 0 clamp(300px, 26cqi, 320px) !important;
+    min-width: clamp(300px, 26cqi, 320px) !important;
+    max-width: clamp(300px, 26cqi, 320px) !important;
 }
 
 /* Accounting and reports. */
@@ -370,6 +467,22 @@ body #settings .settings-grid {
 
 /* Container breakpoints respond to the space left after the sidebar. */
 @container dashboard-section (max-width: 1180px) {
+    body #dashboard.dashboard-overview .business-intelligence-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body #dashboard.dashboard-overview .top-customers-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body #dashboard.dashboard-overview :is(.orders-overview-metric-row, .orders-overview-detail-grid) {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body #dashboard.dashboard-overview :is(.orders-trend-card, .orders-recent-priority-card) {
+        grid-column: span 2 !important;
+    }
+
     body #dashboard.dashboard-overview .executive-command-split,
     :is(body #workflow-overview, body .workflow-stage-section) .workflow-overview-grid,
     :is(body #workflow-overview, body .workflow-stage-section) :where(.incoming-action-grid, .outgoing-draft-layout, .scheduling-workspace, .closeout-workspace),
@@ -394,6 +507,30 @@ body #settings .settings-grid {
 }
 
 @container dashboard-section (max-width: 820px) {
+    body #dashboard.dashboard-overview .top-customer-card {
+        grid-template-columns: 42px minmax(0, 1fr) !important;
+    }
+
+    body #dashboard.dashboard-overview .top-customer-stats {
+        grid-column: 1 / -1 !important;
+    }
+
+    body #dashboard.dashboard-overview .top-customer-chevron {
+        display: none !important;
+    }
+
+    body #dashboard.dashboard-overview .orders-overview-metric-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body #dashboard.dashboard-overview .orders-overview-detail-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body #dashboard.dashboard-overview :is(.orders-trend-card, .orders-recent-priority-card) {
+        grid-column: auto !important;
+    }
+
     .content-section > :where(.page-header, .reports-header, .smpl-section-header),
     .content-section :where(.record-detail-header, .vendor-review-detail-header) {
         grid-template-columns: minmax(0, 1fr) !important;
@@ -445,6 +582,23 @@ body #settings .settings-grid {
 }
 
 @container dashboard-section (max-width: 560px) {
+    body #dashboard.dashboard-overview .business-intelligence-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body #dashboard.dashboard-overview :is(.top-customers-summary, .top-customer-stats) {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body #dashboard.dashboard-overview .top-customers-actions,
+    body #dashboard.dashboard-overview .top-customers-toggle {
+        width: 100% !important;
+    }
+
+    body #dashboard.dashboard-overview .orders-overview-metric-row {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
     body #dashboard.dashboard-overview :where(
         .kpi-board-metrics,
         .executive-health-grid,

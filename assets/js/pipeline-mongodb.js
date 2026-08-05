@@ -53,6 +53,7 @@ let pipelineAutoScrollVelocity = 0;
 let pipelineAutoScrollActive = false;
 let pipelineAutoScrollZones = null;
 let pipelinePointerDrag = null;
+let pipelineSuppressCardOpenUntil = 0;
 
 const PIPELINE_AUTO_SCROLL_EDGE_PX = 96;
 const PIPELINE_AUTO_SCROLL_MAX_STEP = 30;
@@ -66,6 +67,50 @@ function clampPipelineAutoScroll(value, min, max) {
 function getPipelineScrollContainer() {
     return document.getElementById('stagesContainer');
 }
+
+function announcePipelineStatus(message) {
+    const liveStatus = document.getElementById('pipelineLiveStatus');
+    if (!liveStatus) return;
+    liveStatus.textContent = '';
+    window.requestAnimationFrame(() => {
+        liveStatus.textContent = message || '';
+    });
+}
+
+function updatePipelineRailControls() {
+    const container = getPipelineScrollContainer();
+    const shell = document.getElementById('pipelineBoardShell');
+    if (!container || !shell) return;
+
+    const canScrollLeft = container.scrollLeft > 2;
+    const canScrollRight = container.scrollLeft + container.clientWidth < container.scrollWidth - 2;
+    shell.dataset.canScrollLeft = String(canScrollLeft);
+    shell.dataset.canScrollRight = String(canScrollRight);
+
+    const previous = document.getElementById('pipelineScrollPrevious');
+    const next = document.getElementById('pipelineScrollNext');
+    if (previous) previous.disabled = !canScrollLeft;
+    if (next) next.disabled = !canScrollRight;
+}
+
+function bindPipelineRailControls() {
+    const container = getPipelineScrollContainer();
+    if (!container || container.dataset.railControlsBound === '1') return;
+    container.dataset.railControlsBound = '1';
+    container.addEventListener('scroll', updatePipelineRailControls, { passive: true });
+    window.addEventListener('resize', updatePipelineRailControls, { passive: true });
+}
+
+function scrollPipelineRail(direction) {
+    const container = getPipelineScrollContainer();
+    const firstColumn = container?.querySelector('.stage-column');
+    if (!container || !firstColumn) return;
+    const gap = parseFloat(window.getComputedStyle(container).columnGap || window.getComputedStyle(container).gap) || 12;
+    container.scrollBy({ left: direction * (firstColumn.getBoundingClientRect().width + gap), behavior: 'smooth' });
+    window.setTimeout(updatePipelineRailControls, 280);
+}
+
+window.scrollPipelineRail = scrollPipelineRail;
 
 function ensurePipelineHorizontalScrollLayout() {
     const container = getPipelineScrollContainer();
@@ -90,10 +135,13 @@ function ensurePipelineHorizontalScrollLayout() {
     });
 
     container.querySelectorAll('.stage-column').forEach((column) => {
-        column.style.flex = '0 0 300px';
-        column.style.minWidth = '300px';
+        column.style.flex = '0 0 320px';
+        column.style.minWidth = '320px';
         column.style.maxWidth = '320px';
     });
+
+    bindPipelineRailControls();
+    window.requestAnimationFrame(updatePipelineRailControls);
 }
 
 function getPipelineAutoScrollContainers() {
@@ -431,8 +479,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Load all data from MongoDB
 async function loadDataFromDB() {
+    const stagesContainer = document.getElementById('stagesContainer');
     try {
         window.AppLogger?.debug('Loading pipeline data from database...');
+        if (stagesContainer && !stagesContainer.querySelector('.stage-column')) {
+            stagesContainer.setAttribute('aria-busy', 'true');
+            stagesContainer.innerHTML = `
+                <div class="pipeline-board-state pipeline-board-state--loading" role="status">
+                    <span class="pipeline-state-spinner" aria-hidden="true"></span>
+                    <strong>Loading pipeline</strong>
+                    <p>Preparing stages and records.</p>
+                </div>`;
+        }
         
         // Fetch all data in parallel - NO loading overlay for speed
         const [stagesData, recordsData, ordersData, employeesData] = await Promise.all([
@@ -470,17 +528,18 @@ async function loadDataFromDB() {
         applyPipelineFilters({ render: false });
         loadStages();
         loadNewOrdersSuggestions();
+        stagesContainer?.setAttribute('aria-busy', 'false');
     } catch (error) {
         console.error('Error loading data:', error);
-        const stagesContainer = document.getElementById('stagesContainer');
         if (stagesContainer) {
+            stagesContainer.setAttribute('aria-busy', 'false');
             stagesContainer.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ef4444; margin-bottom: 16px;"></i>
-                    <div style="color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 8px;">Failed to Load Pipeline</div>
-                    <div style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">${error.message}</div>
-                    <button onclick="loadDataFromDB()" class="btn-primary" style="padding: 10px 20px;">
-                        <i class="fas fa-redo"></i> Retry
+                <div class="pipeline-board-state pipeline-board-state--error" role="alert">
+                    <span class="pipeline-stage-state-icon" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></span>
+                    <strong>Failed to load pipeline</strong>
+                    <p>${escapeHtml(error.message)}</p>
+                    <button type="button" onclick="loadDataFromDB()" class="pipeline-state-action">
+                        <i class="fas fa-rotate-right" aria-hidden="true"></i> Retry
                     </button>
                 </div>
             `;
@@ -531,6 +590,7 @@ function bindPipelineStagesContainerOnce(container) {
 }
 
 function shouldIgnorePipelinePointerDrag(target) {
+    if (target.closest('.record-card-open, .new-order-card-open')) return false;
     return target.closest('button, .record-actions, .icon-btn, input, textarea, select, a');
 }
 
@@ -643,7 +703,8 @@ function updatePipelinePointerRailScroll(state) {
 function cleanupPipelinePointerDrag() {
     if (!pipelinePointerDrag) return;
 
-    const { card, originalDraggable, ghost } = pipelinePointerDrag;
+    const { card, originalDraggable, ghost, active } = pipelinePointerDrag;
+    if (active) pipelineSuppressCardOpenUntil = Date.now() + 350;
     if (pipelinePointerDrag.railScrollFrame) {
         cancelAnimationFrame(pipelinePointerDrag.railScrollFrame);
     }
@@ -679,6 +740,13 @@ function refreshPipelineStageBodies(stageIds) {
     syncPickedPipelineUI();
 }
 
+function setPipelineRecordBusy(recordId, busy) {
+    const card = document.querySelector(`.record-card[data-record-id="${recordId}"]`);
+    if (!card) return;
+    card.classList.toggle('is-moving', busy);
+    card.setAttribute('aria-busy', String(busy));
+}
+
 function updatePipelineDescriptionToggles(root = document) {
     root.querySelectorAll('.record-description-block').forEach((block) => {
         const desc = block.querySelector('.record-description');
@@ -695,6 +763,11 @@ function pipelinePointerDragStart(event) {
 
     const card = event.target.closest('.record-card, .new-order-card');
     if (!card || shouldIgnorePipelinePointerDrag(event.target)) return;
+    if (card.dataset.workflowManaged === 'true') {
+        window.showToast?.('Advance this Order through Workflow Center.', 'warning');
+        announcePipelineStatus('This Order is workflow managed and cannot be moved from the Pipeline.');
+        return;
+    }
 
     const rect = card.getBoundingClientRect();
     pipelinePointerDrag = {
@@ -778,12 +851,86 @@ document.addEventListener('click', (event) => {
     }
 }, true);
 
+function closePipelineOverflow(details, { restoreFocus = false } = {}) {
+    if (!details) return;
+    const trigger = details.querySelector('summary');
+    details.open = false;
+    trigger?.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) trigger?.focus();
+}
+
+function closeOtherPipelineOverflows(activeDetails) {
+    document.querySelectorAll('.pipeline-overflow[open]').forEach((details) => {
+        if (details !== activeDetails) closePipelineOverflow(details);
+    });
+}
+
+document.addEventListener('click', (event) => {
+    const summary = event.target.closest?.('.pipeline-overflow > summary');
+    if (summary) {
+        const details = summary.parentElement;
+        closeOtherPipelineOverflows(details);
+        window.requestAnimationFrame(() => summary.setAttribute('aria-expanded', String(details.open)));
+        return;
+    }
+    if (!event.target.closest?.('.pipeline-overflow')) closeOtherPipelineOverflows(null);
+});
+
+document.addEventListener('keydown', (event) => {
+    const details = event.target.closest?.('.pipeline-overflow');
+    if (!details) return;
+    const trigger = details.querySelector('summary');
+    const items = [...details.querySelectorAll('[role="menuitem"]:not(:disabled)')];
+    const itemIndex = items.indexOf(document.activeElement);
+
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closePipelineOverflow(details, { restoreFocus: true });
+        return;
+    }
+    if (event.target === trigger && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+        event.preventDefault();
+        details.open = true;
+        trigger.setAttribute('aria-expanded', 'true');
+        (event.key === 'ArrowDown' ? items[0] : items.at(-1))?.focus();
+        return;
+    }
+    if (itemIndex >= 0 && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        let nextIndex = itemIndex;
+        if (event.key === 'ArrowDown') nextIndex = (itemIndex + 1) % items.length;
+        if (event.key === 'ArrowUp') nextIndex = (itemIndex - 1 + items.length) % items.length;
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = items.length - 1;
+        items[nextIndex]?.focus();
+    }
+});
+
+function openPipelineCardDetails(card) {
+    if (!card || Date.now() < pipelineSuppressCardOpenUntil) return;
+    if (card.classList.contains('new-order-card')) {
+        const orderId = card.dataset.orderId;
+        if (orderId && typeof window.showOrderDetail === 'function') window.showOrderDetail(orderId, true);
+        return;
+    }
+
+    const recordId = card.dataset.recordId;
+    const record = records.find((item) => item._id === recordId);
+    if (!record) return;
+    if (record.orderId && typeof window.showOrderDetail === 'function') {
+        window.showOrderDetail(record.orderId, true);
+    } else {
+        viewRecord(recordId);
+    }
+}
+
 function pipelineStagesContainerDragStart(e) {
     const card = e.target.closest('.record-card, .new-order-card');
     if (!card) return;
     if (card.dataset.workflowManaged === 'true') {
         e.preventDefault();
         window.showToast?.('Advance this Order through Workflow Center.', 'warning');
+        announcePipelineStatus('This Order is workflow managed and cannot be moved from the Pipeline.');
         return;
     }
     
@@ -830,10 +977,24 @@ function pipelineStagesContainerDragEnd(e) {
 }
 
 function pipelineStagesContainerClick(e) {
+    const cardOpenBtn = e.target.closest('.record-card-open, .new-order-card-open');
+    if (cardOpenBtn) {
+        e.stopPropagation();
+        openPipelineCardDetails(cardOpenBtn.closest('.record-card, .new-order-card'));
+        return;
+    }
+
     const pickupBtn = e.target.closest('.record-pickup-btn');
     if (pickupBtn) {
         e.stopPropagation();
         pickUpPipelineRecord(pickupBtn.dataset.recordId);
+        return;
+    }
+
+    const newOrderPickupBtn = e.target.closest('.new-order-pickup-btn');
+    if (newOrderPickupBtn) {
+        e.stopPropagation();
+        pickUpPipelineNewOrder(newOrderPickupBtn.dataset.orderId);
         return;
     }
 
@@ -854,6 +1015,7 @@ function pipelineStagesContainerClick(e) {
     const editStageBtn = e.target.closest('.edit-stage-btn');
     if (editStageBtn) {
         e.stopPropagation();
+        closePipelineOverflow(editStageBtn.closest('.pipeline-overflow'));
         editStage(editStageBtn.dataset.stageId);
         return;
     }
@@ -861,6 +1023,7 @@ function pipelineStagesContainerClick(e) {
     const deleteStageBtn = e.target.closest('.delete-stage-btn');
     if (deleteStageBtn) {
         e.stopPropagation();
+        closePipelineOverflow(deleteStageBtn.closest('.pipeline-overflow'));
         deleteStage(deleteStageBtn.dataset.stageId);
         return;
     }
@@ -868,6 +1031,7 @@ function pipelineStagesContainerClick(e) {
     const editBtn = e.target.closest('.record-edit-btn');
     if (editBtn) {
         e.stopPropagation();
+        closePipelineOverflow(editBtn.closest('.pipeline-overflow'));
         editRecord(editBtn.dataset.recordId);
         return;
     }
@@ -894,6 +1058,7 @@ function pipelineStagesContainerClick(e) {
     const deleteBtn = e.target.closest('.record-delete-btn');
     if (deleteBtn) {
         e.stopPropagation();
+        closePipelineOverflow(deleteBtn.closest('.pipeline-overflow'));
         deleteRecord(deleteBtn.dataset.recordId);
         return;
     }
@@ -941,20 +1106,53 @@ function pickUpPipelineRecord(recordId) {
     if (window.showToast) {
         window.showToast(`Picked up ${pickedPipelineItem.label}. Scroll and choose "Place here".`, 'info');
     }
+    announcePipelineStatus(`Picked up ${pickedPipelineItem.label}. Choose a destination stage.`);
 
+    syncPickedPipelineUI();
+}
+
+function pickUpPipelineNewOrder(orderId) {
+    const order = newOrders.find((item) => item._id === orderId);
+    if (!order) return;
+    pickedPipelineItem = {
+        type: 'order',
+        id: order._id,
+        fromStageId: null,
+        label: order.orderId || order.customer?.name || order.customer || 'New order'
+    };
+    announcePipelineStatus(`Picked up ${pickedPipelineItem.label}. Choose a destination stage.`);
+    window.showToast?.(`Picked up ${pickedPipelineItem.label}. Choose "Place here".`, 'info');
+    loadNewOrdersSuggestions();
     syncPickedPipelineUI();
 }
 
 function cancelPickedPipelineItem() {
+    const cancelledType = pickedPipelineItem?.type;
     pickedPipelineItem = null;
+    if (cancelledType === 'order') loadNewOrdersSuggestions();
     syncPickedPipelineUI();
     if (window.showToast) {
         window.showToast('Pickup cancelled', 'info');
     }
+    announcePipelineStatus('Pipeline move cancelled.');
 }
 
 async function placePickedPipelineItem(stageId) {
     if (!pickedPipelineItem || !stageId) return;
+
+    if (pickedPipelineItem.type === 'order') {
+        const order = newOrders.find((item) => item._id === pickedPipelineItem.id);
+        const pickedLabel = pickedPipelineItem.label;
+        if (!order) {
+            cancelPickedPipelineItem();
+            return;
+        }
+        pickedPipelineItem = null;
+        syncPickedPipelineUI({ placingStageId: stageId });
+        await createPipelineRecordFromOrder(order, stageId);
+        announcePipelineStatus(`${pickedLabel} added to the selected stage.`);
+        return;
+    }
 
     if (pickedPipelineItem.type === 'record') {
         if (pickedPipelineItem.fromStageId === stageId) {
@@ -991,6 +1189,7 @@ async function placePickedPipelineItem(stageId) {
         if (window.showToast) {
             window.showToast(`${pickedLabel} moved`, 'success');
         }
+        announcePipelineStatus(`${pickedLabel} moved successfully.`);
     }
 }
 
@@ -1116,6 +1315,9 @@ function createStageColumn(stage) {
         column.style.border = '2px dashed #dc2626';
     }
     column.dataset.stageId = stage._id;
+    const stageHeadingId = `pipeline-stage-${String(stage._id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+    column.setAttribute('role', 'group');
+    column.setAttribute('aria-labelledby', stageHeadingId);
     
     const stageHeader = document.createElement('div');
     stageHeader.className = 'stage-header';
@@ -1124,23 +1326,30 @@ function createStageColumn(stage) {
     }
     stageHeader.innerHTML = `
         <div class="stage-title">
-            <h3 style="${stage.isNoBid ? 'color: white;' : ''}">
-                ${stage.isNoBid ? '<i class="fas fa-ban" style="margin-right: 6px;"></i>' : ''}${stage.name}
+            <h3 id="${stageHeadingId}" title="${escapeHtml(stage.name)}" style="${stage.isNoBid ? 'color: white;' : ''}">
+                ${stage.isNoBid ? '<i class="fas fa-ban" aria-hidden="true"></i>' : ''}${escapeHtml(stage.name)}
             </h3>
+        </div>
+        <div class="stage-controls">
+            <div class="stage-count">
+                <span class="count-badge" aria-label="${count} ${count === 1 ? 'record' : 'records'}" style="${stage.isNoBid ? 'background: rgba(255,255,255,0.2); color: white;' : ''}">${count}</span>
+            </div>
             <div class="stage-actions">
                 ${canPlacePickedItem ? `
-                    <button type="button" class="place-picked-btn" data-stage-id="${stage._id}" title="Place picked card here">
+                    <button type="button" class="place-picked-btn" data-stage-id="${stage._id}" aria-label="Place picked card in ${escapeHtml(stage.name)}" title="Place picked card here">
                         <i class="fas fa-download" aria-hidden="true"></i>
                         <span>Place here</span>
                     </button>
                 ` : ''}
-                <button type="button" class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" title="Expand Stage"><i class="fas fa-expand-alt"></i></button>
-                <button type="button" class="icon-btn edit-stage-btn" data-stage-id="${stage._id}" title="Edit Stage"><i class="fas fa-edit"></i></button>
-                <button type="button" class="icon-btn delete delete-stage-btn" data-stage-id="${stage._id}" title="Delete Stage"><i class="fas fa-trash"></i></button>
+                <button type="button" class="icon-btn expand-stage-btn" data-stage-id="${stage._id}" aria-label="Expand ${escapeHtml(stage.name)} stage" title="Expand stage"><i class="fas fa-expand-alt" aria-hidden="true"></i></button>
+                <details class="pipeline-overflow stage-overflow">
+                    <summary class="icon-btn stage-more-btn" aria-label="More actions for ${escapeHtml(stage.name)}" aria-expanded="false" title="More stage actions"><i class="fas fa-ellipsis-vertical" aria-hidden="true"></i></summary>
+                    <div class="pipeline-overflow-menu" role="menu" aria-label="${escapeHtml(stage.name)} stage actions">
+                        <button type="button" role="menuitem" class="edit-stage-btn" data-stage-id="${stage._id}"><i class="fas fa-pen" aria-hidden="true"></i><span>Edit stage</span></button>
+                        <button type="button" role="menuitem" class="delete-stage-btn danger" data-stage-id="${stage._id}"><i class="fas fa-trash" aria-hidden="true"></i><span>Delete stage</span></button>
+                    </div>
+                </details>
             </div>
-        </div>
-        <div class="stage-count">
-            <span class="count-badge" style="${stage.isNoBid ? 'background: rgba(255,255,255,0.2); color: white;' : ''}">${count}</span>
         </div>
     `;
     
@@ -1182,15 +1391,39 @@ function createStageColumn(stage) {
     return column;
 }
 
+function renderPipelineEmptyState({ type = 'empty', title, message, action = '' }) {
+    const icons = {
+        empty: 'fa-inbox',
+        filtered: 'fa-filter-circle-xmark',
+        success: 'fa-check'
+    };
+    return `
+        <div class="pipeline-stage-state pipeline-stage-state--${type}" role="status">
+            <span class="pipeline-stage-state-icon" aria-hidden="true"><i class="fas ${icons[type] || icons.empty}"></i></span>
+            <strong>${escapeHtml(title)}</strong>
+            <p>${escapeHtml(message)}</p>
+            ${action}
+        </div>
+    `;
+}
+
 // Render records
 function renderRecords(stageId) {
     const stageRecords = filteredRecords.filter(r => r.stageId === stageId);
     if (stageRecords.length === 0) {
         const allRecordsInStage = records.filter(r => r.stageId === stageId).length;
         if (hasActivePipelineFilters() && allRecordsInStage > 0) {
-            return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No matching records</div>';
+            return renderPipelineEmptyState({
+                type: 'filtered',
+                title: 'No matching records',
+                message: 'Try another search or employee filter.',
+                action: '<button type="button" class="pipeline-state-action" onclick="clearPipelineFilters()">Clear filters</button>'
+            });
         }
-        return '<div style="text-align:center; color:#999; padding:20px; font-size:13px;">No records yet</div>';
+        return renderPipelineEmptyState({
+            title: 'No records yet',
+            message: 'Orders moved to this stage will appear here.'
+        });
     }
     
     // Get employee names from cache (instant lookup, no API calls)
@@ -1216,26 +1449,32 @@ function renderRecords(stageId) {
         const isPicked = pickedPipelineItem?.type === 'record' && pickedPipelineItem.id === record._id;
         const workflowManaged = record.stageSource === 'workflow' || record.stageSource === 'payment';
         const workflowLabel = String(record.workflowStatus || '').replaceAll('_', ' ');
+        const accessibleLabel = `Open ${displayTitle || 'pipeline record'} details`;
         return `
-        <div class="record-card ${isPicked ? 'picked-up' : ''}" data-record-id="${record._id}" data-workflow-managed="${workflowManaged ? 'true' : 'false'}">
+        <article class="record-card ${isPicked ? 'picked-up' : ''}" data-record-id="${record._id}" data-workflow-managed="${workflowManaged ? 'true' : 'false'}" aria-busy="false">
+            <button type="button" class="record-card-open" data-record-id="${record._id}" aria-label="${escapeHtml(accessibleLabel)}"></button>
             <div class="record-header">
                 <div class="record-title${titleClass}" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</div>
                 <div class="record-actions">
                     ${isPicked ? `
-                        <button class="icon-btn record-cancel-pickup-btn cancel-picked-btn" data-record-id="${record._id}" title="Cancel pickup"><i class="fas fa-times"></i></button>
+                        <button type="button" class="icon-btn record-cancel-pickup-btn cancel-picked-btn" data-record-id="${record._id}" aria-label="Cancel moving ${escapeHtml(displayTitle)}" title="Cancel move"><i class="fas fa-times" aria-hidden="true"></i></button>
                     ` : ''}
                     ${pickedPipelineItem || workflowManaged ? '' : `
-                        <button class="icon-btn record-pickup-btn" data-record-id="${record._id}" title="Pick up card"><i class="fas fa-hand-paper"></i></button>
+                        <button type="button" class="icon-btn record-pickup-btn" data-record-id="${record._id}" aria-label="Move ${escapeHtml(displayTitle)}" title="Move card"><i class="fas fa-hand-paper" aria-hidden="true"></i></button>
                     `}
-                    <button class="icon-btn record-view-btn" data-record-id="${record._id}" title="View Details"><i class="fas fa-eye"></i></button>
-                    <button class="icon-btn record-edit-btn" data-record-id="${record._id}" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="icon-btn delete record-delete-btn" data-record-id="${record._id}" title="Delete"><i class="fas fa-trash"></i></button>
+                    <details class="pipeline-overflow record-overflow">
+                        <summary class="icon-btn record-more-btn" aria-label="More actions for ${escapeHtml(displayTitle)}" aria-expanded="false" title="More record actions"><i class="fas fa-ellipsis-vertical" aria-hidden="true"></i></summary>
+                        <div class="pipeline-overflow-menu" role="menu" aria-label="${escapeHtml(displayTitle)} actions">
+                            <button type="button" role="menuitem" class="record-edit-btn" data-record-id="${record._id}"><i class="fas fa-pen" aria-hidden="true"></i><span>Edit record</span></button>
+                            <button type="button" role="menuitem" class="record-delete-btn danger" data-record-id="${record._id}"><i class="fas fa-trash" aria-hidden="true"></i><span>Delete record</span></button>
+                        </div>
+                    </details>
                 </div>
             </div>
-            ${record.customerName ? `<div class="record-info"><i class="fas fa-user"></i> ${record.customerName}</div>` : ''}
-            ${workflowManaged && workflowLabel ? `<div class="record-info"><span class="status-badge status-active"><i class="fas fa-route" aria-hidden="true"></i> ${workflowLabel}</span></div>` : ''}
-            ${record.email ? `<div class="record-info"><i class="fas fa-envelope"></i> ${record.email}</div>` : ''}
-            ${record.phone ? `<div class="record-info"><i class="fas fa-phone"></i> ${record.phone}</div>` : ''}
+            ${record.customerName ? `<div class="record-info record-customer"><i class="fas fa-user" aria-hidden="true"></i><span>${escapeHtml(record.customerName)}</span></div>` : ''}
+            ${workflowManaged ? `<div class="record-workflow-state"><i class="fas fa-route" aria-hidden="true"></i><span>${escapeHtml(workflowLabel || 'Workflow managed')}</span></div>` : ''}
+            ${record.email ? `<div class="record-info"><i class="fas fa-envelope" aria-hidden="true"></i><span>${escapeHtml(record.email)}</span></div>` : ''}
+            ${record.phone ? `<div class="record-info"><i class="fas fa-phone" aria-hidden="true"></i><span>${escapeHtml(record.phone)}</span></div>` : ''}
             ${budget ? `<div class="record-info"><i class="fas fa-dollar-sign"></i> ${budget}</div>` : ''}
             ${record.description ? renderRecordDescriptionHtml(record.description) : ''}
             <div class="record-footer">
@@ -1243,7 +1482,7 @@ function renderRecords(stageId) {
                 <span class="priority-badge priority-${record.priority}">${record.priority}</span>
                 <span class="record-time">${formatTime(record.createdAt)}</span>
             </div>
-        </div>
+        </article>
     `}).join('');
 }
 
@@ -1786,6 +2025,7 @@ async function drop(event) {
         const filteredRecord = filteredRecords.find(r => r._id === record._id);
         if (filteredRecord) filteredRecord.stageId = newStageId;
         refreshPipelineStageBodies([oldStageId, newStageId]);
+        setPipelineRecordBusy(record._id, true);
         
         try {
             // Update the pipeline record stage
@@ -1832,10 +2072,14 @@ async function drop(event) {
             if (touchesPaidStage && typeof refreshPayments === 'function') {
                 refreshPayments();
             }
+            setPipelineRecordBusy(record._id, false);
+            announcePipelineStatus(`${record.orderIdDisplay || record.customerName || 'Record'} moved to ${newStageName}.`);
         } catch (error) {
             record.stageId = oldStageId;
             if (filteredRecord) filteredRecord.stageId = oldStageId;
             refreshPipelineStageBodies([oldStageId, newStageId]);
+            setPipelineRecordBusy(record._id, false);
+            announcePipelineStatus(`Move failed. ${record.orderIdDisplay || record.customerName || 'Record'} returned to ${oldStageName}.`);
             console.error('Error moving record:', error);
             alert('Error moving record: ' + error.message);
         }
@@ -2053,11 +2297,13 @@ function applyPipelineFilters({ render = true } = {}) {
 function filterPipelineRecords(query) {
     searchQuery = String(query || '').toLowerCase().trim();
     applyPipelineFilters();
+    announcePipelineStatus(`${filteredRecords.length} pipeline ${filteredRecords.length === 1 ? 'record' : 'records'} shown.`);
 }
 
 function filterPipelineByEmployee(employeeId) {
     pipelineEmployeeFilter = employeeId || 'all';
     applyPipelineFilters();
+    announcePipelineStatus(`${filteredRecords.length} pipeline ${filteredRecords.length === 1 ? 'record' : 'records'} shown.`);
 }
 
 function clearPipelineSearch() {
@@ -2065,6 +2311,20 @@ function clearPipelineSearch() {
     if (searchInput) searchInput.value = '';
     filterPipelineRecords('');
 }
+
+function clearPipelineFilters() {
+    const searchInput = document.getElementById('pipelineSearchInput');
+    const employeeFilter = document.getElementById('pipelineEmployeeFilter');
+    if (searchInput) searchInput.value = '';
+    if (employeeFilter) employeeFilter.value = 'all';
+    searchQuery = '';
+    pipelineEmployeeFilter = 'all';
+    applyPipelineFilters();
+    announcePipelineStatus('Pipeline filters cleared.');
+    searchInput?.focus();
+}
+
+window.clearPipelineFilters = clearPipelineFilters;
 
 function updateSearchStats() {
     const totalRecordsEl = document.getElementById('totalRecords');
@@ -2288,6 +2548,13 @@ async function expandStage(stageId) {
     modal.addEventListener('click', (event) => {
         if (event.target === modal) closeExpandedStage();
     });
+
+    document.querySelectorAll('.new-order-card').forEach((card) => {
+        const isPicked = hasPickedItem && pickedPipelineItem.type === 'order' && pickedPipelineItem.id === card.dataset.orderId;
+        card.classList.toggle('picked-up', isPicked);
+        const pickupBtn = card.querySelector('.new-order-pickup-btn');
+        if (pickupBtn) pickupBtn.hidden = hasPickedItem;
+    });
     modal._escapeHandler = (event) => {
         if (event.key === 'Escape') closeExpandedStage();
     };
@@ -2334,18 +2601,22 @@ window.editRecordFromExpanded = editRecordFromExpanded;
 function createNewOrdersSuggestionColumn() {
     const column = document.createElement('div');
     column.className = 'stage-column new-orders-column';
+    column.setAttribute('role', 'group');
+    column.setAttribute('aria-labelledby', 'pipelineNewOrdersHeading');
     
     const header = document.createElement('div');
     header.className = 'stage-header new-orders-column-header';
     header.innerHTML = `
         <div class="stage-title">
-            <h3 class="new-orders-column-title">
+            <h3 class="new-orders-column-title" id="pipelineNewOrdersHeading">
                 <i class="fas fa-plus-circle" aria-hidden="true"></i>
                 New orders
             </h3>
         </div>
-        <div class="stage-count">
-            <span class="count-badge pipeline-new-orders-badge">${newOrders.length}</span>
+        <div class="stage-controls">
+            <div class="stage-count">
+                <span class="count-badge pipeline-new-orders-badge" aria-label="${newOrders.length} new ${newOrders.length === 1 ? 'order' : 'orders'}">${newOrders.length}</span>
+            </div>
         </div>
     `;
     
@@ -2361,13 +2632,11 @@ function createNewOrdersSuggestionColumn() {
 
 function renderNewOrders() {
     if (newOrders.length === 0) {
-        return `
-            <div class="pipeline-new-orders-empty" role="status">
-                <i class="fas fa-check-circle" aria-hidden="true"></i>
-                <div class="pipeline-new-orders-empty-title">All caught up</div>
-                <div class="pipeline-new-orders-empty-hint">No new orders to add to the pipeline.</div>
-            </div>
-        `;
+        return renderPipelineEmptyState({
+            type: 'success',
+            title: 'All caught up',
+            message: 'No new orders to add to the pipeline.'
+        });
     }
     
     const visible = newOrders.slice(0, NEW_ORDERS_DEFAULT_VISIBLE);
@@ -2509,25 +2778,31 @@ function renderOrderCard(order) {
     const amount = order.amount ? `$${parseFloat(order.amount).toLocaleString()}` : '';
     const timeAgo = formatTime(order.createdAt);
     const priority = order.priority || 'medium';
+    const orderLabel = order.orderId || '#' + order._id.substring(0, 8).toUpperCase();
+    const isPicked = pickedPipelineItem?.type === 'order' && pickedPipelineItem.id === order._id;
     
     return `
-        <div class="new-order-card" data-order-id="${order._id}">
+        <article class="new-order-card ${isPicked ? 'picked-up' : ''}" data-order-id="${order._id}" aria-busy="false">
+            <button type="button" class="new-order-card-open" data-order-id="${order._id}" aria-label="Open ${escapeHtml(orderLabel)} details"></button>
             <div class="new-order-card-grip" aria-hidden="true">
                 <i class="fas fa-grip-vertical"></i>
             </div>
             <div class="new-order-card-head">
-                <div class="new-order-card-title">${customerName}</div>
-                <div class="new-order-card-id">${order.orderId || '#' + order._id.substring(0, 8).toUpperCase()}</div>
+                <div>
+                    <div class="new-order-card-title">${escapeHtml(customerName)}</div>
+                    <div class="new-order-card-id">${escapeHtml(orderLabel)}</div>
+                </div>
+                ${pickedPipelineItem ? '' : `<button type="button" class="icon-btn new-order-pickup-btn" data-order-id="${order._id}" aria-label="Move ${escapeHtml(orderLabel)}" title="Move order"><i class="fas fa-hand-paper" aria-hidden="true"></i></button>`}
             </div>
             <div class="new-order-card-meta">
                 <div class="new-order-card-row">
                     <i class="fas fa-wrench" aria-hidden="true"></i>
-                    <span>${order.service || 'Service not specified'}</span>
+                    <span>${escapeHtml(order.service || 'Service not specified')}</span>
                 </div>
                 ${order.customer?.email ? `
                     <div class="new-order-card-row">
                         <i class="fas fa-envelope" aria-hidden="true"></i>
-                        <span>${order.customer.email}</span>
+                        <span>${escapeHtml(order.customer.email)}</span>
                     </div>
                 ` : ''}
                 ${amount ? `
@@ -2541,8 +2816,8 @@ function renderOrderCard(order) {
                 <span class="priority-badge priority-${priority}">${priority}</span>
                 <span class="new-order-card-time">${timeAgo}</span>
             </div>
-            <div class="new-order-card-hint">Drag to a stage</div>
-        </div>
+            <div class="new-order-card-hint">Drag or choose Move</div>
+        </article>
     `;
 }
 

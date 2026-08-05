@@ -32,7 +32,7 @@ test('pipeline owns horizontal scrolling without widening the page', () => {
   assert.match(components, /#pipeline \.pipeline-page\s*\{\s*overflow:\s*visible\s*!important;/);
   assert.match(components, /@media \(max-width: 1180px\)[\s\S]*?pipeline-header-bar\.smpl-section-header[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(html, /class="pipeline-search-field" for="pipelineSearchInput"[\s\S]*?<span>Search pipeline<\/span>/);
-  assert.match(html, /smplfix-components\.css\?v=20260806-pipeline-search-polish/);
+  assert.match(html, /smplfix-components\.css\?v=20260806-pipeline-card-clean/);
   assert.match(components, /#pipeline \.pipeline-filter-bar[\s\S]*?padding:\s*0\s*!important;[\s\S]*?border:\s*0\s*!important;/);
   assert.match(components, /#pipeline \.pipeline-search-bar input\[type="search"\][\s\S]*?border:\s*0\s*!important;[\s\S]*?background:\s*transparent\s*!important;/);
 });
@@ -40,8 +40,8 @@ test('pipeline owns horizontal scrolling without widening the page', () => {
 test('dashboard loads cache-busted responsive styles in cascade order', () => {
   const html = read('pages/admin-dashboard.html');
   const shellIndex = html.indexOf('smplfix-shell.css?v=20260806-search-polish');
-  const componentsIndex = html.indexOf('smplfix-components.css?v=20260806-pipeline-search-polish');
-  const responsiveIndex = html.indexOf('dashboard-responsive.css?v=20260806-fluid-sections');
+  const componentsIndex = html.indexOf('smplfix-components.css?v=20260806-pipeline-card-clean');
+  const responsiveIndex = html.indexOf('dashboard-responsive.css?v=20260806-pipeline-board-ux');
   const layoutIndex = html.indexOf('smplfix-layout.css?v=20260806-fluid-layout');
   assert.ok(shellIndex > -1);
   assert.ok(componentsIndex > shellIndex);
@@ -64,6 +64,38 @@ test('global search palette has polished, accessible navigation states', () => {
   assert.match(ux, /aria-selected/);
   assert.match(ux, /aria-activedescendant/);
   assert.match(ux, /setActiveCommandItem/);
+});
+
+test('Orders overview keeps KPI and analytics rows separate at every container size', () => {
+  const html = read('pages/admin-dashboard.html');
+  const responsive = read('assets/css/dashboard-responsive.css');
+  assert.match(html, /dashboard-responsive\.css\?v=20260806-pipeline-board-ux/);
+  assert.match(responsive, /\.orders-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)\s*!important;[\s\S]*?align-items:\s*start\s*!important;/);
+  assert.match(responsive, /\.orders-overview-metric-row\s*\{[\s\S]*?repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(responsive, /\.orders-overview-detail-grid\s*\{[\s\S]*?repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(responsive, /@container dashboard-section \(max-width: 1180px\)[\s\S]*?\.orders-overview-metric-row, \.orders-overview-detail-grid[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(responsive, /@container dashboard-section \(max-width: 820px\)[\s\S]*?\.orders-overview-detail-grid[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(responsive, /@container dashboard-section \(max-width: 560px\)[\s\S]*?\.orders-overview-metric-row[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
+});
+
+test('Performance intelligence uses a full-width four-card row and dedicated service row', () => {
+  const html = read('pages/admin-dashboard.html');
+  const responsive = read('assets/css/dashboard-responsive.css');
+  assert.match(html, /dashboard-responsive\.css\?v=20260806-pipeline-board-ux/);
+  assert.match(responsive, /\.business-intelligence-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)\s*!important;[\s\S]*?align-items:\s*start\s*!important;/);
+  assert.match(responsive, /\.business-intelligence-card\.wide\s*\{\s*grid-column:\s*1 \/ -1\s*!important;/);
+  assert.match(responsive, /@container dashboard-section \(max-width: 1180px\)[\s\S]*?\.business-intelligence-grid[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(responsive, /@container dashboard-section \(max-width: 560px\)[\s\S]*?\.business-intelligence-grid[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
+});
+
+test('Top customers keeps summary, ranked list, and action in one responsive report flow', () => {
+  const html = read('pages/admin-dashboard.html');
+  const responsive = read('assets/css/dashboard-responsive.css');
+  assert.match(html, /dashboard-responsive\.css\?v=20260806-pipeline-board-ux/);
+  assert.match(responsive, /\.top-customers-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)\s*!important;[\s\S]*?align-items:\s*start\s*!important;/);
+  assert.match(responsive, /\.top-customers-summary\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(responsive, /@container dashboard-section \(max-width: 1180px\)[\s\S]*?\.top-customers-summary[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(responsive, /@container dashboard-section \(max-width: 560px\)[\s\S]*?\.top-customers-summary, \.top-customer-stats[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
 });
 
 test('final responsive stylesheet covers nested workspaces and every dialog family', () => {
