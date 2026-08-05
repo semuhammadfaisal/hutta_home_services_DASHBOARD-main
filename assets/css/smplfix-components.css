@@ -2717,6 +2717,8 @@ body #pipeline .record-card:focus-within::before {
 }
 
 body #pipeline .record-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
     align-items: center !important;
     gap: 8px !important;
     margin-bottom: 11px !important;
@@ -2729,7 +2731,19 @@ body #pipeline .record-title {
     white-space: nowrap !important;
 }
 
+body #pipeline .record-title.record-title--order-id {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    font-family: var(--smpl-font-mono) !important;
+    font-size: 11px !important;
+    letter-spacing: -0.025em !important;
+}
+
 body #pipeline .record-actions {
+    width: auto !important;
+    min-width: 0 !important;
+    justify-content: flex-end !important;
     gap: 2px !important;
     opacity: 0.42;
     transition: opacity 140ms ease;
@@ -2743,6 +2757,10 @@ body #pipeline .record-card:focus-within .record-actions {
 body #pipeline .record-actions .icon-btn {
     width: 25px !important;
     height: 25px !important;
+    min-width: 25px !important;
+    min-height: 25px !important;
+    padding: 0 !important;
+    flex: 0 0 25px !important;
     border-radius: 6px !important;
     font-size: 10px !important;
 }

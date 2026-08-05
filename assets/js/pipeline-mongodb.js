@@ -1212,13 +1212,14 @@ function renderRecords(stageId) {
         }
         const budget = record.budget ? `$${parseFloat(record.budget).toLocaleString()}` : '';
         const displayTitle = record.orderIdDisplay || record.customerName;
+        const titleClass = record.orderIdDisplay ? ' record-title--order-id' : '';
         const isPicked = pickedPipelineItem?.type === 'record' && pickedPipelineItem.id === record._id;
         const workflowManaged = record.stageSource === 'workflow' || record.stageSource === 'payment';
         const workflowLabel = String(record.workflowStatus || '').replaceAll('_', ' ');
         return `
         <div class="record-card ${isPicked ? 'picked-up' : ''}" data-record-id="${record._id}" data-workflow-managed="${workflowManaged ? 'true' : 'false'}">
             <div class="record-header">
-                <div class="record-title">${displayTitle}</div>
+                <div class="record-title${titleClass}" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</div>
                 <div class="record-actions">
                     ${isPicked ? `
                         <button class="icon-btn record-cancel-pickup-btn cancel-picked-btn" data-record-id="${record._id}" title="Cancel pickup"><i class="fas fa-times"></i></button>
