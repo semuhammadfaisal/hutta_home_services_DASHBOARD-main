@@ -275,6 +275,9 @@ test('public onboarding UI provides guided progress, secure metadata, and upload
   assert.match(cssSource, /prefers-reduced-motion/);
   assert.match(cssSource, /\.upload-field\.has-files/);
   assert.match(cssSource, /\.field-error/);
+  assert.match(cssSource, /\.sidebar-card-heading[^}]*width:\s*calc\(100% \+ 36px\)/s);
+  assert.match(cssSource, /\.assigned-category div > strong[^}]*color:\s*#fff\s*!important/s);
+  assert.match(cssSource, /\.secure-session[^}]*background:\s*#171719\s*!important/s);
   const legacyBlue = /#(?:175cd3|0056b8|004494|1d4ed8|2563eb|3b82f6|dbeafe|eff6ff|b2ccff)|rgba\(\s*23\s*,\s*92\s*,\s*211/i;
   assert.doesNotMatch(baseCssSource, legacyBlue);
   assert.doesNotMatch(cssSource, legacyBlue);
