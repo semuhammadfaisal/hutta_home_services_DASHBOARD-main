@@ -177,8 +177,13 @@ test('vendor onboarding invitation uses the responsive SMPLFix email design', ()
   assert.match(html, /Private one-time link/);
   assert.match(html, /Professional Home Services Management Platform/);
   assert.match(html, /@media only screen and \(max-width:620px\)/);
+  assert.match(html, /@media only screen and \(max-width:420px\)/);
+  assert.match(html, /Space Grotesk/);
+  assert.match(html, /Space Mono/);
+  assert.match(html, /class="vendor-wrap" width="720"/);
   assert.match(html, /M&amp;W &lt;Services&gt;/);
   assert.match(html, /Welcome &lt;team&gt;<br>Bring documents\./);
+  assert.doesNotMatch(html, /class="vendor-hero-icon"|>VO<|categoryInitial/);
   assert.doesNotMatch(html, /#0056b8|#075eb8|#1d4ed8|#2563eb|#3b82f6/i);
 });
 

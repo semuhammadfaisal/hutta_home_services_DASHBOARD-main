@@ -163,7 +163,6 @@ const vendorInvitationEmailShell = ({ companyName, categoryLabel, formUrl, expir
   const changesRequested = purpose === 'changes_requested';
   const recipientName = escapeHtml(companyName || 'Vendor');
   const category = escapeHtml(categoryLabel || 'General Services');
-  const categoryInitial = escapeHtml(String(categoryLabel || 'Service').trim().charAt(0).toUpperCase() || 'S');
   const secureUrl = escapeHtml(formUrl);
   const expiry = escapeHtml(new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }));
   const replyAddress = escapeHtml(EMAIL_REPLY_TO);
@@ -192,33 +191,31 @@ const vendorInvitationEmailShell = ({ companyName, categoryLabel, formUrl, expir
   <meta name="supported-color-schemes" content="light">
   <title>${heading} ${headingAccent}</title>
   <style>
-    body{margin:0!important;padding:0!important;background:#f3f2ee;color:#0b0b0c;font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@700&display=swap');
+    body{margin:0!important;padding:0!important;background:#f3f2ee;color:#0b0b0c;font-family:"Space Grotesk","Avenir Next",Avenir,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
     table{border-collapse:collapse;border-spacing:0}img{border:0;display:block;outline:none;text-decoration:none}a{text-decoration:none}
     .vendor-preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
-    .vendor-page{width:100%;background:#f3f2ee}.vendor-page-pad{padding:32px 12px}.vendor-wrap{width:100%;max-width:680px;overflow:hidden;border:1px solid #dfddd6;border-radius:14px;background:#fff;box-shadow:0 12px 38px rgba(11,11,12,.10)}
-    .vendor-mobile-stack{display:table-cell}.vendor-cta{display:inline-block;padding:14px 21px;border:1px solid #0b0b0c;border-radius:8px;background:#0b0b0c;color:#fff!important;font-size:14px;line-height:1.2;font-weight:800}
-    @media only screen and (max-width:620px){.vendor-page-pad{padding:8px 4px}.vendor-wrap{border-radius:10px}.vendor-header{padding:22px 22px!important}.vendor-header-tagline{display:none!important}.vendor-hero{padding:34px 24px 24px!important}.vendor-hero-icon{display:none!important}.vendor-content{padding-left:24px!important;padding-right:24px!important}.vendor-cta{display:block!important;text-align:center!important}.vendor-footer-brand,.vendor-footer-copy{display:block!important;width:100%!important;padding:0!important}.vendor-footer-copy{padding-top:18px!important;border-left:0!important}.vendor-footer-logo{margin:0!important}}
+    .vendor-page{width:100%;background:#f3f2ee}.vendor-page-pad{padding:36px 16px}.vendor-wrap{width:100%;max-width:720px;overflow:hidden;border:1px solid #dfddd6;border-radius:14px;background:#fff;box-shadow:0 12px 38px rgba(11,11,12,.10)}
+    .vendor-mono{font-family:"Space Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace!important}.vendor-cta{display:inline-block;padding:14px 21px;border:1px solid #0b0b0c;border-radius:8px;background:#0b0b0c;color:#fff!important;font-size:14px;line-height:1.2;font-weight:800}
+    @media only screen and (max-width:760px){.vendor-page-pad{padding:18px 10px}.vendor-wrap{max-width:100%}}
+    @media only screen and (max-width:620px){.vendor-page-pad{padding:8px 4px}.vendor-wrap{border-radius:10px}.vendor-header{padding:20px 22px!important}.vendor-header-tagline{display:none!important}.vendor-hero{padding:32px 24px 24px!important}.vendor-title{font-size:32px!important}.vendor-content{padding-left:24px!important;padding-right:24px!important}.vendor-cta{display:block!important;text-align:center!important}.vendor-footer-brand,.vendor-footer-copy{display:block!important;width:100%!important;padding:0!important}.vendor-footer-copy{padding-top:18px!important;border-left:0!important}.vendor-footer-logo{margin:0!important}}
+    @media only screen and (max-width:420px){.vendor-header{padding:18px!important}.vendor-header-logo{width:124px!important}.vendor-hero{padding:28px 18px 22px!important}.vendor-title{font-size:27px!important;line-height:1.08!important}.vendor-content{padding-left:18px!important;padding-right:18px!important}.vendor-category{padding:17px!important}.vendor-cta{padding:14px 16px!important}.vendor-footer{padding-left:18px!important;padding-right:18px!important}}
   </style>
 </head>
 <body>
   <div class="vendor-preheader">${escapeHtml(preheader)}</div>
   <table role="presentation" class="vendor-page" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr><td class="vendor-page-pad" align="center">
-      <table role="presentation" class="vendor-wrap" width="680" cellpadding="0" cellspacing="0" border="0">
+      <table role="presentation" class="vendor-wrap" width="720" cellpadding="0" cellspacing="0" border="0">
         <tr><td class="vendor-header" style="padding:24px 34px;background:#0b0b0c">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-            <td valign="middle"><img src="${reversedLogoUrl}" width="142" alt="smplfix" style="width:142px;max-width:100%;height:auto"></td>
-            <td class="vendor-header-tagline" valign="middle" align="right" style="color:#f4f4f2;font-family:'Courier New',monospace;font-size:10px;line-height:1.4;letter-spacing:.20em;text-transform:uppercase">YOUR PROPERTY, HANDLED.</td>
+            <td valign="middle"><img class="vendor-header-logo" src="${reversedLogoUrl}" width="142" alt="smplfix" style="width:142px;max-width:100%;height:auto"></td>
+            <td class="vendor-header-tagline vendor-mono" valign="middle" align="right" style="color:#f4f4f2;font-family:'Space Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:10px;line-height:1.4;letter-spacing:.20em;text-transform:uppercase">YOUR PROPERTY, HANDLED.</td>
           </tr></table>
         </td></tr>
         <tr><td class="vendor-hero" style="padding:42px 48px 30px;background:#fff">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-            <td valign="middle">
-              <p style="margin:0 0 14px;color:#63715f;font-family:'Courier New',monospace;font-size:11px;line-height:1.3;font-weight:800;letter-spacing:.18em">${eyebrow}</p>
-              <h1 style="margin:0;color:#0b0b0c;font-size:38px;line-height:1.05;font-weight:800;letter-spacing:-.035em">${heading}<br><span style="color:#667864">${headingAccent}</span></h1>
-            </td>
-            <td class="vendor-hero-icon" width="92" valign="middle" align="right"><div style="display:inline-block;width:68px;height:68px;border:1px solid #dddcd5;border-radius:12px;background:#f7f7f3;color:#667864;font-family:'Courier New',monospace;font-size:22px;line-height:68px;font-weight:800;text-align:center">VO</div></td>
-          </tr></table>
+          <p class="vendor-mono" style="margin:0 0 14px;color:#63715f;font-family:'Space Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:11px;line-height:1.3;font-weight:800;letter-spacing:.18em">${eyebrow}</p>
+          <h1 class="vendor-title" style="margin:0;color:#0b0b0c;font-family:'Space Grotesk','Avenir Next',Avenir,'Segoe UI',Arial,sans-serif;font-size:40px;line-height:1.05;font-weight:700;letter-spacing:-.035em">${heading}<br><span style="color:#667864">${headingAccent}</span></h1>
         </td></tr>
         <tr><td style="padding:0 48px"><div style="height:1px;background:#e3e1db;font-size:0;line-height:0">&nbsp;</div></td></tr>
         <tr><td class="vendor-content" style="padding:34px 48px 24px;background:#fff">
@@ -227,8 +224,7 @@ const vendorInvitationEmailShell = ({ companyName, categoryLabel, formUrl, expir
         </td></tr>
         <tr><td class="vendor-content" style="padding:0 48px 28px;background:#fff">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dfddd6;border-radius:10px;background:#faf9f6"><tr>
-            <td width="74" style="padding:20px 0 20px 22px" valign="middle"><div style="width:48px;height:48px;border-radius:50%;background:#edf0e9;color:#364235;font-family:'Courier New',monospace;font-size:20px;line-height:48px;font-weight:800;text-align:center">${categoryInitial}</div></td>
-            <td style="padding:20px 22px 20px 10px" valign="middle"><p style="margin:0 0 7px;color:#5d615b;font-family:'Courier New',monospace;font-size:10px;line-height:1.3;font-weight:800;letter-spacing:.15em">ASSIGNED SERVICE CATEGORY</p><p style="margin:0;color:#0b0b0c;font-size:20px;line-height:1.25;font-weight:800">${category}</p></td>
+            <td class="vendor-category" style="padding:21px 24px" valign="middle"><p class="vendor-mono" style="margin:0 0 7px;color:#5d615b;font-family:'Space Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:10px;line-height:1.3;font-weight:800;letter-spacing:.15em">ASSIGNED SERVICE CATEGORY</p><p style="margin:0;color:#0b0b0c;font-family:'Space Grotesk','Avenir Next',Avenir,'Segoe UI',Arial,sans-serif;font-size:20px;line-height:1.25;font-weight:700">${category}</p></td>
           </tr></table>
         </td></tr>
         ${message}
@@ -240,7 +236,7 @@ const vendorInvitationEmailShell = ({ companyName, categoryLabel, formUrl, expir
           </tr></table>
         </td></tr>
         <tr><td style="padding:0 40px;background:#fff"><div style="height:1px;background:#e3e1db;font-size:0;line-height:0">&nbsp;</div></td></tr>
-        <tr><td style="padding:24px 48px 14px;background:#fff">
+        <tr><td class="vendor-footer" style="padding:24px 48px 14px;background:#fff">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
             <td class="vendor-footer-brand" width="150" valign="middle"><img class="vendor-footer-logo" src="${inkLogoUrl}" width="112" alt="smplfix" style="width:112px;max-width:100%;height:auto"></td>
             <td class="vendor-footer-copy" valign="middle" style="padding-left:22px;border-left:1px solid #dfddd6;color:#3f3f42;font-size:11px;line-height:1.7">Professional Home Services Management Platform<br>Questions? Reply to this email or contact <a href="mailto:${replyAddress}" style="color:#4d614c;font-weight:700">${replyAddress}</a>.</td>
