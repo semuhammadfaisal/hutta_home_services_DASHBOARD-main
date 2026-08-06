@@ -1,1 +1,58 @@
-.vendor-review-nav-badge{margin-left:auto;min-width:21px;padding:2px 6px;border-radius:999px;background:#dc2626;color:#fff;font-size: 12px;font-weight:800;text-align:center}.vendor-reviews-workspace .page-header,.vendor-review-detail-header{align-items:flex-start}.vendor-review-eyebrow{margin:0 0 5px;color:#2563eb;font-size: 12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.vendor-review-lead{margin:5px 0 0;color:#64748b}.vendor-review-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.vendor-review-stats button{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;color:#475569;text-align:left;cursor:pointer}.vendor-review-stats button.active{border-color:#2563eb;background:#eff6ff;box-shadow:0 0 0 2px rgba(37,99,235,.08)}.vendor-review-stats strong{font-size:24px;color:#0f172a}.vendor-review-stats span{font-size:13px;font-weight:700}.vendor-review-toolbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:14px}.vendor-review-search{display:flex;align-items:center;gap:9px;min-width:min(440px,100%);padding:0 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#64748b}.vendor-review-search input{width:100%;padding:11px 0;border:0;outline:0}.vendor-review-table-wrap{overflow:auto;border:1px solid #dbe4f0;border-radius:12px;background:#fff}.vendor-review-table{width:100%;min-width:1050px;border-collapse:collapse}.vendor-review-table th,.vendor-review-table td{padding:12px;border-bottom:1px solid #edf2f7;text-align:left;font-size:13px;vertical-align:middle}.vendor-review-table th{background:#f8fafc;color:#64748b;font-size: 12px;text-transform:uppercase}.vendor-review-company strong,.vendor-review-company span{display:block}.vendor-review-company span{margin-top:3px;color:#64748b;font-size: 12px}.vendor-review-missing{font-weight:750;color:#b45309}.vendor-review-missing.complete{color:#15803d}.vendor-review-pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px}.vendor-review-detail-actions{display:flex;gap:8px;flex-wrap:wrap}.vendor-review-detail-actions button{padding:10px 14px;border:0;border-radius:8px;font-weight:800;cursor:pointer}.vendor-review-detail-actions .approve{background:#15803d;color:#fff}.vendor-review-detail-actions .changes{background:#d97706;color:#fff}.vendor-review-detail-actions .reject{background:#b91c1c;color:#fff}.vendor-review-detail-alert{margin:12px 0;padding:12px;border:1px solid #fca5a5;border-radius:9px;background:#fef2f2;color:#991b1b}.vendor-review-detail-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.vendor-review-card{padding:18px;border:1px solid #dbe4f0;border-radius:12px;background:#fff}.vendor-review-card.full{grid-column:1/-1}.vendor-review-card h2{margin:0 0 14px;color:#0f172a;font-size:17px}.vendor-review-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.vendor-review-field{padding:10px;border-radius:8px;background:#f8fafc}.vendor-review-field span,.vendor-review-field strong{display:block}.vendor-review-field span{margin-bottom:4px;color:#64748b;font-size: 12px;text-transform:uppercase}.vendor-review-field strong{color:#1e293b;word-break:break-word}.vendor-review-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}.vendor-review-list li{padding:9px;border-radius:8px;background:#f8fafc;color:#334155}.vendor-review-checklist{display:flex;gap:8px;flex-wrap:wrap}.vendor-review-checklist span{padding:6px 9px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;color:#166534;font-size:12px}.vendor-review-checklist span.missing{border-color:#fcd34d;background:#fffbeb;color:#92400e}.vendor-review-history{display:grid;gap:9px}.vendor-review-history article{padding:10px;border-left:3px solid #93c5fd;background:#f8fafc}.vendor-review-history strong,.vendor-review-history small{display:block}.vendor-review-history small{margin-top:4px;color:#64748b}.vendor-review-tax{display:flex;align-items:center;gap:8px}.vendor-review-tax button{border:0;border-radius:6px;background:#dbeafe;color:#1d4ed8;padding:5px 8px;cursor:pointer;font-weight:700}@media(max-width:900px){.vendor-review-stats,.vendor-review-detail-content{grid-template-columns:1fr}.vendor-review-card.full{grid-column:auto}.vendor-review-toolbar{align-items:stretch;flex-direction:column}.vendor-review-search{min-width:0}.vendor-review-fields{grid-template-columns:1fr}.vendor-review-detail-header{gap:14px}.vendor-review-detail-actions{width:100%}.vendor-review-detail-actions button{flex:1}}
+.vendor-review-nav-badge { margin-left: auto; min-width: 21px; padding: 2px 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 12px; font-weight: 800; text-align: center; }
+.vendor-reviews-workspace .page-header, .vendor-review-detail-header { align-items: flex-start; }
+.vendor-review-eyebrow { margin: 0 0 5px; color: #0b0b0c; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.vendor-review-lead { margin: 5px 0 0; color: #666668; }
+.vendor-review-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+.vendor-review-stats button { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid #dedede; border-radius: 12px; background: #fff; color: #4f4f52; text-align: left; cursor: pointer; }
+.vendor-review-stats button.active { border-color: #0b0b0c; background: #f3f3f1; box-shadow: 0 0 0 2px rgba(11, 11, 12, .08); }
+.vendor-review-stats strong { color: #0b0b0c; font-size: 24px; }
+.vendor-review-stats span { font-size: 13px; font-weight: 700; }
+.vendor-review-toolbar { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.vendor-review-search { display: flex; align-items: center; gap: 9px; min-width: min(440px, 100%); padding: 0 12px; border: 1px solid #c8c8c8; border-radius: 9px; background: #fff; color: #666668; }
+.vendor-review-search input { width: 100%; padding: 11px 0; border: 0; outline: 0; }
+.vendor-review-table-wrap { overflow: auto; border: 1px solid #dedede; border-radius: 12px; background: #fff; }
+.vendor-review-table { width: 100%; min-width: 1050px; border-collapse: collapse; }
+.vendor-review-table th, .vendor-review-table td { padding: 12px; border-bottom: 1px solid #ececec; text-align: left; vertical-align: middle; font-size: 13px; }
+.vendor-review-table th { background: #f7f7f6; color: #666668; font-size: 12px; text-transform: uppercase; }
+.vendor-review-company strong, .vendor-review-company span { display: block; }
+.vendor-review-company span { margin-top: 3px; color: #666668; font-size: 12px; }
+.vendor-review-missing { color: #b45309; font-weight: 750; }
+.vendor-review-missing.complete { color: #15803d; }
+.vendor-review-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 14px; }
+.vendor-review-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.vendor-review-detail-actions button { padding: 10px 14px; border: 0; border-radius: 8px; font-weight: 800; cursor: pointer; }
+.vendor-review-detail-actions .approve { background: #15803d; color: #fff; }
+.vendor-review-detail-actions .changes { background: #d97706; color: #fff; }
+.vendor-review-detail-actions .reject { background: #b91c1c; color: #fff; }
+.vendor-review-detail-alert { margin: 12px 0; padding: 12px; border: 1px solid #fca5a5; border-radius: 9px; background: #fef2f2; color: #991b1b; }
+.vendor-review-detail-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.vendor-review-card { padding: 18px; border: 1px solid #dedede; border-radius: 12px; background: #fff; }
+.vendor-review-card.full { grid-column: 1 / -1; }
+.vendor-review-card h2 { margin: 0 0 14px; color: #0b0b0c; font-size: 17px; }
+.vendor-review-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.vendor-review-field { padding: 10px; border-radius: 8px; background: #f7f7f6; }
+.vendor-review-field span, .vendor-review-field strong { display: block; }
+.vendor-review-field span { margin-bottom: 4px; color: #666668; font-size: 12px; text-transform: uppercase; }
+.vendor-review-field strong { color: #242426; word-break: break-word; }
+.vendor-review-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.vendor-review-list li { padding: 9px; border-radius: 8px; background: #f7f7f6; color: #333336; }
+.vendor-review-checklist { display: flex; flex-wrap: wrap; gap: 8px; }
+.vendor-review-checklist span { padding: 6px 9px; border: 1px solid #86efac; border-radius: 8px; background: #f0fdf4; color: #166534; font-size: 12px; }
+.vendor-review-checklist span.missing { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+.vendor-review-history { display: grid; gap: 9px; }
+.vendor-review-history article { padding: 10px; border-left: 3px solid #0b0b0c; background: #f7f7f6; }
+.vendor-review-history strong, .vendor-review-history small { display: block; }
+.vendor-review-history small { margin-top: 4px; color: #666668; }
+.vendor-review-tax { display: flex; align-items: center; gap: 8px; }
+.vendor-review-tax button { padding: 5px 8px; border: 1px solid #0b0b0c; border-radius: 6px; background: #fff; color: #0b0b0c; font-weight: 700; cursor: pointer; }
+
+@media (max-width: 900px) {
+  .vendor-review-stats, .vendor-review-detail-content { grid-template-columns: 1fr; }
+  .vendor-review-card.full { grid-column: auto; }
+  .vendor-review-toolbar { align-items: stretch; flex-direction: column; }
+  .vendor-review-search { min-width: 0; }
+  .vendor-review-fields { grid-template-columns: 1fr; }
+  .vendor-review-detail-header { gap: 14px; }
+  .vendor-review-detail-actions { width: 100%; }
+  .vendor-review-detail-actions button { flex: 1; }
+}

@@ -250,6 +250,96 @@ const vendorInvitationEmailShell = ({ companyName, categoryLabel, formUrl, expir
 </html>`;
 };
 
+const vendorLifecycleEmailShell = ({
+  eyebrow = 'VENDOR ONBOARDING',
+  title,
+  titleAccent,
+  recipientName,
+  intro,
+  content = '',
+  ctaUrl,
+  ctaLabel,
+  preheader,
+  tone = 'neutral'
+}) => {
+  const replyAddress = escapeHtml(EMAIL_REPLY_TO);
+  const reversedLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-reversed.png'));
+  const inkLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-ink.png'));
+  const accentColors = {
+    success: { ink: '#4d614c', soft: '#eef2eb', border: '#cfd8ca' },
+    warning: { ink: '#765817', soft: '#fbf6e8', border: '#e8d8ae' },
+    danger: { ink: '#9b2c2c', soft: '#fff1f0', border: '#efc8c4' },
+    neutral: { ink: '#667864', soft: '#f3f4f0', border: '#d9dcd4' }
+  };
+  const palette = accentColors[tone] || accentColors.neutral;
+  const safeTitle = escapeHtml(title || 'Vendor Onboarding');
+  const safeAccent = escapeHtml(titleAccent || 'Update');
+  const greeting = recipientName
+    ? `<p style="margin:0 0 20px;color:#0b0b0c;font-size:18px;line-height:1.35;font-weight:800">Hello ${escapeHtml(recipientName)},</p>`
+    : '';
+  const action = ctaUrl && ctaLabel
+    ? `<tr><td class="vendor-content" style="padding:0 48px 28px;background:#fff"><a class="vendor-cta" href="${escapeHtml(ctaUrl)}" target="_blank">${escapeHtml(ctaLabel)}&nbsp;&nbsp;&rsaquo;</a></td></tr>`
+    : '';
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${safeTitle} ${safeAccent}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@700&display=swap');
+    body{margin:0!important;padding:0!important;background:#f3f2ee;color:#0b0b0c;font-family:"Space Grotesk","Avenir Next",Avenir,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+    table{border-collapse:collapse;border-spacing:0}img{border:0;display:block;outline:none;text-decoration:none}a{text-decoration:none}
+    .vendor-preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
+    .vendor-page{width:100%;background:#f3f2ee}.vendor-page-pad{padding:36px 16px}.vendor-wrap{width:100%;max-width:720px;overflow:hidden;border:1px solid #dfddd6;border-radius:14px;background:#fff;box-shadow:0 12px 38px rgba(11,11,12,.10)}
+    .vendor-mono{font-family:"Space Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace!important}.vendor-cta{display:inline-block;padding:14px 21px;border:1px solid #0b0b0c;border-radius:8px;background:#0b0b0c;color:#fff!important;font-size:14px;line-height:1.2;font-weight:800}
+    @media only screen and (max-width:760px){.vendor-page-pad{padding:18px 10px}.vendor-wrap{max-width:100%}}
+    @media only screen and (max-width:620px){.vendor-page-pad{padding:8px 4px}.vendor-wrap{border-radius:10px}.vendor-header{padding:20px 22px!important}.vendor-header-tagline{display:none!important}.vendor-hero{padding:32px 24px 24px!important}.vendor-title{font-size:32px!important}.vendor-content{padding-left:24px!important;padding-right:24px!important}.vendor-cta{display:block!important;text-align:center!important}.vendor-footer-brand,.vendor-footer-copy{display:block!important;width:100%!important;padding:0!important}.vendor-footer-copy{padding-top:18px!important;border-left:0!important}.vendor-footer-logo{margin:0!important}}
+    @media only screen and (max-width:420px){.vendor-header{padding:18px!important}.vendor-header-logo{width:124px!important}.vendor-hero{padding:28px 18px 22px!important}.vendor-title{font-size:27px!important;line-height:1.08!important}.vendor-content{padding-left:18px!important;padding-right:18px!important}.vendor-cta{padding:14px 16px!important}.vendor-footer{padding-left:18px!important;padding-right:18px!important}}
+  </style>
+</head>
+<body>
+  <div class="vendor-preheader">${escapeHtml(preheader || `${safeTitle} ${safeAccent}`)}</div>
+  <table role="presentation" class="vendor-page" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td class="vendor-page-pad" align="center">
+      <table role="presentation" class="vendor-wrap" width="720" cellpadding="0" cellspacing="0" border="0">
+        <tr><td class="vendor-header" style="padding:24px 34px;background:#0b0b0c">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td valign="middle"><img class="vendor-header-logo" src="${reversedLogoUrl}" width="142" alt="smplfix" style="width:142px;max-width:100%;height:auto"></td>
+            <td class="vendor-header-tagline vendor-mono" valign="middle" align="right" style="color:#f4f4f2;font-family:'Space Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:10px;line-height:1.4;letter-spacing:.20em;text-transform:uppercase">YOUR PROPERTY, HANDLED.</td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="vendor-hero" style="padding:42px 48px 30px;background:#fff">
+          <p class="vendor-mono" style="margin:0 0 14px;color:${palette.ink};font-family:'Space Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace;font-size:11px;line-height:1.3;font-weight:800;letter-spacing:.18em">${escapeHtml(eyebrow)}</p>
+          <h1 class="vendor-title" style="margin:0;color:#0b0b0c;font-family:'Space Grotesk','Avenir Next',Avenir,'Segoe UI',Arial,sans-serif;font-size:40px;line-height:1.05;font-weight:700;letter-spacing:-.035em">${safeTitle}<br><span style="color:${palette.ink}">${safeAccent}</span></h1>
+        </td></tr>
+        <tr><td style="padding:0 48px"><div style="height:1px;background:#e3e1db;font-size:0;line-height:0">&nbsp;</div></td></tr>
+        <tr><td class="vendor-content" style="padding:34px 48px 24px;background:#fff">
+          ${greeting}
+          <p style="margin:0;color:#28282b;font-size:16px;line-height:1.65">${escapeHtml(intro || '')}</p>
+        </td></tr>
+        <tr><td class="vendor-content" style="padding:0 48px 28px;background:#fff">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${palette.border};border-left:4px solid ${palette.ink};border-radius:9px;background:${palette.soft}"><tr><td style="padding:20px 22px;color:#28282b;font-size:14px;line-height:1.65">${content}</td></tr></table>
+        </td></tr>
+        ${action}
+        <tr><td style="padding:0 40px;background:#fff"><div style="height:1px;background:#e3e1db;font-size:0;line-height:0">&nbsp;</div></td></tr>
+        <tr><td class="vendor-footer" style="padding:24px 48px 14px;background:#fff">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td class="vendor-footer-brand" width="150" valign="middle"><img class="vendor-footer-logo" src="${inkLogoUrl}" width="112" alt="smplfix" style="width:112px;max-width:100%;height:auto"></td>
+            <td class="vendor-footer-copy" valign="middle" style="padding-left:22px;border-left:1px solid #dfddd6;color:#3f3f42;font-size:11px;line-height:1.7">Professional Home Services Management Platform<br>Questions? Reply to this email or contact <a href="mailto:${replyAddress}" style="color:#4d614c;font-weight:700">${replyAddress}</a>.</td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="vendor-content" style="padding:8px 48px 28px;background:#fff;color:#858589;font-size:10px;line-height:1.55">This message was sent by smplfix. Do not forward private links or sensitive information.</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+};
+
 const sendPasswordResetEmail = async (email, resetToken) => {
   const resetUrl = buildPublicUrl(`/pages/reset-password.html?token=${encodeURIComponent(resetToken)}`);
   return deliverEmail({
@@ -315,14 +405,16 @@ const sendVendorInvitationEmail = async ({ email, companyName, categoryLabel, to
 const sendVendorSubmissionReceivedEmail = ({ email, companyName }) => deliverEmail({
   to: email,
   subject: 'Vendor application received',
-  html: emailShell('Application Received', `
-    <p>Hello ${escapeHtml(companyName || 'Vendor')},</p>
-    <p>We received your vendor application and documents. Our team will review the submission and contact you if anything else is needed.</p>
-    <div class="notice">
-      <p><strong>No action is required right now.</strong></p>
-      <p>Your documents are retained securely for review and audit history.</p>
-    </div>
-  `, { preheader: 'Your Hutta vendor application was received.' })
+  html: vendorLifecycleEmailShell({
+    eyebrow: 'SUBMISSION CONFIRMED',
+    title: 'Application',
+    titleAccent: 'Received',
+    recipientName: companyName || 'Vendor',
+    intro: 'We received your vendor application and documents. Our team will review the submission and contact you if anything else is needed.',
+    content: '<p style="margin:0 0 5px;color:#0b0b0c;font-weight:800">No action is required right now.</p><p style="margin:0">Your documents are retained securely for review and audit history.</p>',
+    preheader: 'Your smplfix vendor application was received.',
+    tone: 'success'
+  })
 });
 
 const sendVendorDecisionEmail = ({ email, companyName, action, message, token, expiresAt, categoryLabel }) => {
@@ -333,16 +425,17 @@ const sendVendorDecisionEmail = ({ email, companyName, action, message, token, e
   return deliverEmail({
     to: email,
     subject: approved ? 'Your vendor application is approved' : 'Update on your vendor application',
-    html: emailShell(approved ? 'Vendor Application Approved' : 'Vendor Application Update', `
-      <p>Hello ${escapeHtml(companyName || 'Vendor')},</p>
-      <p>${approved ? 'Your vendor application has been approved. Welcome to the Hutta Home Services vendor network.' : 'Our team has completed its review of your vendor application.'}</p>
-      ${message ? `<p><strong>Message from our team:</strong><br>${escapeHtml(message)}</p>` : ''}
-      <div class="${approved ? 'notice' : 'panel'}">
-        <p><strong>${approved ? 'Approved vendor status' : 'Application retained for review history'}</strong></p>
-        <p>${approved ? 'Your vendor profile is now active in our system.' : 'Your submitted information and documents remain securely retained.'}</p>
-      </div>
-    `, {
-      preheader: approved ? 'Your Hutta vendor application has been approved.' : 'There is an update on your Hutta vendor application.'
+    html: vendorLifecycleEmailShell({
+      eyebrow: approved ? 'WELCOME TO THE NETWORK' : 'APPLICATION DECISION',
+      title: 'Vendor Application',
+      titleAccent: approved ? 'Approved' : 'Update',
+      recipientName: companyName || 'Vendor',
+      intro: approved
+        ? 'Your vendor application has been approved. Welcome to the smplfix vendor network.'
+        : 'Our team has completed its review of your vendor application.',
+      content: `${message ? `<p style="margin:0 0 14px"><strong style="color:#0b0b0c">Message from our team:</strong><br>${escapeHtml(message).replace(/\r?\n/g, '<br>')}</p>` : ''}<p style="margin:0 0 5px;color:#0b0b0c;font-weight:800">${approved ? 'Approved vendor status' : 'Application retained for review history'}</p><p style="margin:0">${approved ? 'Your vendor profile is now active in our system.' : 'Your submitted information and documents remain securely retained.'}</p>`,
+      preheader: approved ? 'Your smplfix vendor application has been approved.' : 'There is an update on your smplfix vendor application.',
+      tone: approved ? 'success' : 'danger'
     })
   });
 };
@@ -354,15 +447,17 @@ const sendStaffVendorSubmissionEmail = ({ emails, companyName, vendorId }) => {
     to: emails,
     subject: `Vendor application submitted: ${companyName}`,
     text: `${companyName} submitted a vendor application.\n\nReview vendor: ${reviewUrl}\nVendor reference: ${vendorId}`,
-    html: emailShell('Vendor Submission Ready for Review', `
-      <p><strong>${escapeHtml(companyName)}</strong> submitted a vendor application.</p>
-      <div class="panel">
-        <p class="credential-label">Vendor Reference</p>
-        <p><strong>${escapeHtml(vendorId)}</strong></p>
-      </div>
-      <p><a class="btn" href="${reviewUrl}">Review Vendor</a></p>
-      <p class="muted">Vendor reference: ${escapeHtml(vendorId)}</p>
-    `, { preheader: `${companyName} submitted a vendor application for review.` })
+    html: vendorLifecycleEmailShell({
+      eyebrow: 'STAFF REVIEW',
+      title: 'Vendor Submission',
+      titleAccent: 'Ready for Review',
+      intro: `${companyName || 'A vendor'} submitted a vendor application and it is ready for review.`,
+      content: `<p class="vendor-mono" style="margin:0 0 6px;color:#5d615b;font-family:'Space Mono','SFMono-Regular',Consolas,monospace;font-size:10px;font-weight:800;letter-spacing:.13em">VENDOR REFERENCE</p><p style="margin:0;color:#0b0b0c;font-size:16px;font-weight:800">${escapeHtml(vendorId)}</p>`,
+      ctaUrl: reviewUrl,
+      ctaLabel: 'Review Vendor',
+      preheader: `${companyName} submitted a vendor application for review.`,
+      tone: 'neutral'
+    })
   });
 };
 
@@ -383,19 +478,23 @@ const sendStaffVendorReviewUpdateEmail = ({ emails, companyName, vendorId, vendo
   const detail = deliveryError
     ? `Delivery issue: ${deliveryError}`
     : message || 'No additional message was provided.';
+  const dangerActions = new Set(['rejected', 'invitation_delivery_failed', 'confirmation_delivery_failed', 'decision_delivery_failed']);
+  const tone = dangerActions.has(action) ? 'danger' : action === 'approved' ? 'success' : action === 'changes_requested' ? 'warning' : 'neutral';
   return deliverEmail({
     to: recipients,
     subject: `${title}: ${companyName || vendorEmail || 'Vendor'}`,
     text: `${title}\n\nVendor: ${companyName || 'Vendor'}\n${vendorEmail ? `Vendor email: ${vendorEmail}\n` : ''}${detail}\n\nReview dashboard: ${reviewUrl}${vendorId ? `\nVendor reference: ${vendorId}` : ''}`,
-    html: emailShell(title, `
-      <p><strong>${escapeHtml(companyName || 'Vendor')}</strong> has a vendor onboarding update.</p>
-      <div class="panel">
-        ${vendorEmail ? `<p><strong>Vendor email:</strong> ${escapeHtml(vendorEmail)}</p>` : ''}
-        <p>${escapeHtml(detail)}</p>
-      </div>
-      <p><a class="btn" href="${reviewUrl}">Open Vendor Reviews</a></p>
-      ${vendorId ? `<p class="muted">Vendor reference: ${escapeHtml(vendorId)}</p>` : ''}
-    `, { preheader: `${title} for ${companyName || vendorEmail || 'a vendor'}.` })
+    html: vendorLifecycleEmailShell({
+      eyebrow: 'STAFF NOTIFICATION',
+      title: 'Vendor Onboarding',
+      titleAccent: title,
+      intro: `${companyName || 'A vendor'} has a vendor onboarding update.`,
+      content: `${vendorEmail ? `<p style="margin:0 0 8px"><strong style="color:#0b0b0c">Vendor email:</strong> ${escapeHtml(vendorEmail)}</p>` : ''}<p style="margin:0 0 8px">${escapeHtml(detail).replace(/\r?\n/g, '<br>')}</p>${vendorId ? `<p class="vendor-mono" style="margin:14px 0 0;color:#5d615b;font-family:'Space Mono','SFMono-Regular',Consolas,monospace;font-size:10px;font-weight:800;letter-spacing:.10em">REFERENCE&nbsp;&nbsp;${escapeHtml(vendorId)}</p>` : ''}`,
+      ctaUrl: reviewUrl,
+      ctaLabel: 'Open Vendor Reviews',
+      preheader: `${title} for ${companyName || vendorEmail || 'a vendor'}.`,
+      tone
+    })
   });
 };
 
@@ -641,6 +740,7 @@ module.exports = {
   deliverEmail,
   getEmailDeliveryStatus,
   vendorInvitationEmailShell,
+  vendorLifecycleEmailShell,
   sendPasswordResetEmail,
   sendWelcomeEmail,
   sendVendorInvitationEmail,

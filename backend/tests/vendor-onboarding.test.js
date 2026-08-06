@@ -7,7 +7,7 @@ const VendorInvitation = require('../models/VendorInvitation');
 const { encryptTaxId, decryptTaxId, maskedTaxId } = require('../utils/taxIdCrypto');
 const onboardingRoute = require('../routes/vendorOnboarding');
 const { buildPublicUrl, getPublicAppUrl } = require('../utils/publicAppUrl');
-const { getEmailDeliveryStatus, vendorInvitationEmailShell } = require('../utils/emailService');
+const { getEmailDeliveryStatus, vendorInvitationEmailShell, vendorLifecycleEmailShell } = require('../utils/emailService');
 
 const internals = onboardingRoute._test;
 
@@ -145,15 +145,19 @@ test('generic email templates keep the existing Hutta shell with Resend and Gmai
   assert.match(emailSource, /Resend|nodemailer|smtp\.gmail\.com|EMAIL_PASSWORD/i);
   for (const sender of [
     'sendPasswordResetEmail',
-    'sendWelcomeEmail',
+    'sendWelcomeEmail'
+  ]) {
+    assert.match(emailSource, new RegExp(`${sender}[\\s\\S]*emailShell\\(`));
+  }
+  assert.match(emailSource, /sendVendorInvitationEmail[\s\S]*vendorInvitationEmailShell\(/);
+  for (const sender of [
     'sendVendorSubmissionReceivedEmail',
     'sendVendorDecisionEmail',
     'sendStaffVendorSubmissionEmail',
     'sendStaffVendorReviewUpdateEmail'
   ]) {
-    assert.match(emailSource, new RegExp(`${sender}[\\s\\S]*emailShell\\(`));
+    assert.match(emailSource, new RegExp(`${sender}[\\s\\S]*vendorLifecycleEmailShell\\(`));
   }
-  assert.match(emailSource, /sendVendorInvitationEmail[\s\S]*vendorInvitationEmailShell\(/);
 });
 
 test('vendor onboarding invitation uses the responsive SMPLFix email design', () => {
@@ -184,6 +188,36 @@ test('vendor onboarding invitation uses the responsive SMPLFix email design', ()
   assert.match(html, /M&amp;W &lt;Services&gt;/);
   assert.match(html, /Welcome &lt;team&gt;<br>Bring documents\./);
   assert.doesNotMatch(html, /class="vendor-hero-icon"|>VO<|categoryInitial/);
+  assert.doesNotMatch(html, /#0056b8|#075eb8|#1d4ed8|#2563eb|#3b82f6/i);
+});
+
+test('remaining vendor onboarding emails use the responsive SMPLFix lifecycle design', () => {
+  const html = vendorLifecycleEmailShell({
+    eyebrow: 'STAFF REVIEW',
+    title: 'Vendor Submission',
+    titleAccent: 'Ready for Review',
+    recipientName: 'M&W <Services>',
+    intro: 'A vendor application is ready.',
+    content: '<p style="margin:0">Vendor reference: SAFE-123</p>',
+    ctaUrl: 'https://example.com/review?tab=vendor-reviews&next=1',
+    ctaLabel: 'Review Vendor',
+    preheader: 'Review the submitted vendor application.',
+    tone: 'success'
+  });
+
+  assert.match(html, /class="vendor-header"[^>]*background:#0b0b0c/);
+  assert.match(html, /smplfix-logo-reversed\.png/);
+  assert.match(html, /smplfix-logo-ink\.png/);
+  assert.match(html, /YOUR PROPERTY, HANDLED\./);
+  assert.match(html, /Vendor Submission[\s\S]*Ready for Review/);
+  assert.match(html, /Review Vendor/);
+  assert.match(html, /Professional Home Services Management Platform/);
+  assert.match(html, /@media only screen and \(max-width:620px\)/);
+  assert.match(html, /@media only screen and \(max-width:420px\)/);
+  assert.match(html, /Space Grotesk/);
+  assert.match(html, /Space Mono/);
+  assert.match(html, /class="vendor-wrap" width="720"/);
+  assert.match(html, /M&amp;W &lt;Services&gt;/);
   assert.doesNotMatch(html, /#0056b8|#075eb8|#1d4ed8|#2563eb|#3b82f6/i);
 });
 
@@ -305,7 +339,7 @@ test('vendor management forms use the monochrome SMPLFix system responsively', (
 
   assert.match(pageSource, /vendor-onboarding-admin\.css\?v=20260807-vendor-management-2/);
   assert.match(pageSource, /vendor-modal-onboarding-polish\.css\?v=20260807-vendor-management-3/);
-  assert.match(pageSource, /vendor-automation-branding\.css\?v=20260807-vendor-management-2/);
+  assert.match(pageSource, /vendor-automation-branding\.css\?v=20260807-vendor-reviews-monochrome/);
   assert.match(pageSource, /id="vendorModal"[^>]*role="dialog"[^>]*aria-modal="true"/);
   assert.match(modalCss, /#vendorModal \.vendor-entry-mode-switch > button\.active/);
   assert.match(modalCss, /#vendorModal :is\(\.btn-add-field, \.vendor-section-header-row \.btn-add-field\)[^{]*\{[^}]*color: var\(--smpl-paper, #fff\) !important;[^}]*background: var\(--vendor-modal-ink\) !important;/s);
@@ -319,6 +353,27 @@ test('vendor management forms use the monochrome SMPLFix system responsively', (
   assert.doesNotMatch(automationCss, /--vendor-auto-blue/);
   assert.match(adminCss, /\.vendor-entry-mode-switch button\.active[^}]*background: var\(--vendor-admin-ink/);
   assert.match(adminCss, /\.onboarding-status-badge\.pending_review[^}]*background: var\(--vendor-admin-surface/);
+});
+
+test('vendor reviews and application details use the monochrome SMPLFix brand', () => {
+  const pageSource = fs.readFileSync(path.join(__dirname, '../../pages/admin-dashboard.html'), 'utf8');
+  const reviewCss = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-reviews.css'), 'utf8');
+  const polishCss = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-reviews-polish.css'), 'utf8');
+  const detailCss = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-review-detail-polish.css'), 'utf8');
+  const automationCss = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-automation-branding.css'), 'utf8');
+  const combinedCss = [reviewCss, polishCss, detailCss, automationCss].join('\n');
+  const legacyBlue = /blue|#(?:0056b8|175cd3|1849a9|1d4ed8|2563eb|3b82f6|60a5fa|84adff|93c5fd|b2ccff|bfdbfe|dbeafe|eaf2ff|eff6ff|f5f8ff|f8faff)|rgba\(\s*(?:23\s*,\s*92\s*,\s*211|37\s*,\s*99\s*,\s*235)/i;
+
+  assert.match(pageSource, /vendor-reviews\.css\?v=20260807-vendor-reviews-monochrome/);
+  assert.match(pageSource, /vendor-reviews-polish\.css\?v=20260807-vendor-reviews-monochrome/);
+  assert.match(pageSource, /vendor-review-detail-polish\.css\?v=20260807-vendor-reviews-monochrome/);
+  assert.doesNotMatch(combinedCss, legacyBlue);
+  assert.match(polishCss, /--review-brand:\s*#0b0b0c/);
+  assert.match(polishCss, /\.vendor-review-stats button\.active[^}]*border-color:\s*#0b0b0c/s);
+  assert.match(polishCss, /\.onboarding-status-badge\.pending_review[^}]*color:\s*#0b0b0c\s*!important/s);
+  assert.match(detailCss, /\.vendor-review-overview::before[^}]*background:\s*#0b0b0c/s);
+  assert.match(detailCss, /\.vendor-decision-message textarea:focus[^}]*border-color:\s*#0b0b0c/s);
+  assert.match(detailCss, /\.vendor-decision-impact::before[^}]*background:\s*#0b0b0c/s);
 });
 
 test('vendor invite supports an optional update recipient email for staff updates', () => {

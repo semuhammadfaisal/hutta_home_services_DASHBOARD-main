@@ -1,12 +1,12 @@
 /* Final production polish for Vendor Reviews. Loaded after the base review styles. */
 .vendor-reviews-workspace {
-  --review-blue: #175cd3;
-  --review-blue-soft: #eff6ff;
-  --review-ink: #101828;
-  --review-muted: #667085;
-  --review-border: #e4e7ec;
+  --review-brand: #0b0b0c;
+  --review-brand-soft: #f3f3f1;
+  --review-ink: #0b0b0c;
+  --review-muted: #666668;
+  --review-border: #e3e3e3;
   --review-surface: #ffffff;
-  --review-soft: #f8fafc;
+  --review-soft: #f7f7f6;
   padding-bottom: 40px;
 }
 
@@ -16,7 +16,7 @@
   min-height: 118px;
   margin-bottom: 18px !important;
   padding: 24px 26px !important;
-  border: 1px solid #dce6f5 !important;
+  border: 1px solid #dedede !important;
   background: #fff !important;
   box-shadow: 0 8px 28px rgba(16, 24, 40, .06) !important;
 }
@@ -25,7 +25,7 @@
   position: absolute;
   inset: 0 0 0 auto;
   width: 8px;
-  background: var(--review-blue);
+  background: var(--review-brand);
   content: "";
 }
 
@@ -45,7 +45,7 @@
 
 .vendor-review-eyebrow {
   margin: 0 0 6px !important;
-  color: var(--review-blue) !important;
+  color: var(--review-brand) !important;
   font-size: 12px !important;
   font-weight: 800 !important;
   letter-spacing: .13em !important;
@@ -95,7 +95,7 @@
 }
 
 .vendor-review-stats button:hover {
-  border-color: #b8c7dc;
+  border-color: #bdbdbd;
   box-shadow: 0 10px 24px rgba(16, 24, 40, .08);
   transform: translateY(-2px);
 }
@@ -105,14 +105,14 @@
 .vendor-review-filter-label select:focus-visible,
 .vendor-review-table button:focus-visible,
 .vendor-review-detail-actions button:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, .2);
+  outline: 3px solid rgba(11, 11, 12, .18);
   outline-offset: 2px;
 }
 
 .vendor-review-stats button.active {
-  border-color: #84adff;
-  background: #f8fbff;
-  box-shadow: inset 0 0 0 1px #84adff, 0 10px 24px rgba(23, 92, 211, .08);
+  border-color: #0b0b0c;
+  background: #f7f7f6;
+  box-shadow: inset 0 0 0 1px #0b0b0c, 0 10px 24px rgba(11, 11, 12, .08);
 }
 
 .vendor-review-stat-icon {
@@ -125,7 +125,7 @@
   font-size: 16px;
 }
 
-.vendor-review-stat-icon.pending { background: #eaf2ff; color: #175cd3 !important; }
+.vendor-review-stat-icon.pending { background: #ededeb; color: #0b0b0c !important; }
 .vendor-review-stat-icon.changes { background: #fff4e5; color: #b54708 !important; }
 .vendor-review-stat-icon.rejected { background: #feeceb; color: #b42318 !important; }
 
@@ -141,7 +141,7 @@
 }
 
 .vendor-review-stat-copy > span {
-  color: #344054 !important;
+  color: #3f3f42 !important;
   font-size: 13px;
   font-weight: 750;
 }
@@ -152,7 +152,7 @@
 }
 
 .vendor-review-stat-arrow {
-  color: #98a2b3;
+  color: #858589;
   font-size: 12px;
   transition: transform .18s ease;
 }
@@ -177,7 +177,7 @@
   gap: 16px;
   margin-bottom: 16px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid #ececec;
 }
 
 .vendor-invitation-head-actions {
@@ -199,7 +199,7 @@
   z-index: 40;
   width: min(280px, calc(100vw - 32px));
   padding: 6px;
-  border: 1px solid #d0d5dd;
+  border: 1px solid #c8c8c8;
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 16px 36px rgba(16, 24, 40, .16);
@@ -220,7 +220,7 @@
 
 .vendor-clear-menu button:hover,
 .vendor-clear-menu button:focus {
-  background: #f2f4f7;
+  background: #f3f3f1;
   outline: none;
 }
 
@@ -253,10 +253,10 @@
   align-items: center;
   gap: 7px;
   padding: 6px 9px;
-  border: 1px solid #d0d5dd;
+  border: 1px solid #c8c8c8;
   border-radius: 999px;
   background: var(--review-soft);
-  color: #475467 !important;
+  color: #555558 !important;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -275,16 +275,16 @@
   gap: 9px;
   min-width: 0;
   padding: 0 13px;
-  border: 1px solid #d0d5dd;
+  border: 1px solid #c8c8c8;
   border-radius: 9px;
   background: #fff;
-  color: #667085;
+  color: #666668;
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 
 .vendor-review-search:focus-within {
-  border-color: #84adff;
-  box-shadow: 0 0 0 3px rgba(23, 92, 211, .08);
+  border-color: #0b0b0c;
+  box-shadow: 0 0 0 3px rgba(11, 11, 12, .1);
 }
 
 .vendor-review-search input {
@@ -297,7 +297,7 @@
   outline: 0;
 }
 
-.vendor-review-search input::placeholder { color: #98a2b3; }
+.vendor-review-search input::placeholder { color: #858589; }
 
 .vendor-review-filter-label {
   display: flex;
@@ -314,7 +314,7 @@
 .vendor-review-table-wrap,
 .vendor-invitations-table-wrap {
   overflow: auto;
-  border: 1px solid #eaecf0;
+  border: 1px solid #ececec;
   border-radius: 10px;
   background: #fff;
   scrollbar-width: thin;
@@ -336,9 +336,9 @@
   top: 0;
   z-index: 1;
   padding: 11px 13px;
-  border-bottom: 1px solid #e4e7ec;
-  background: #f8fafc;
-  color: #667085 !important;
+  border-bottom: 1px solid #e3e3e3;
+  background: #f7f7f6;
+  color: #666668 !important;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .055em;
@@ -350,8 +350,8 @@
 .vendor-review-table td,
 .vendor-invitations-table td {
   padding: 13px;
-  border-bottom: 1px solid #f0f2f5;
-  color: #344054;
+  border-bottom: 1px solid #eeeeec;
+  color: #3f3f42;
   font-size: 12px;
   vertical-align: middle;
 }
@@ -359,7 +359,7 @@
 .vendor-review-table tbody tr,
 .vendor-invitations-table tbody tr { transition: background-color .15s ease; }
 .vendor-review-table tbody tr:hover,
-.vendor-invitations-table tbody tr:hover { background: #f9fbfd; }
+.vendor-invitations-table tbody tr:hover { background: #f7f7f6; }
 .vendor-review-table tbody tr:last-child td,
 .vendor-invitations-table tbody tr:last-child td { border-bottom: 0; }
 
@@ -370,12 +370,12 @@
 
 .vendor-review-company span {
   margin-top: 4px;
-  color: #98a2b3 !important;
+  color: #858589 !important;
   font-size: 12px;
 }
 
 .vendor-review-email {
-  color: var(--review-blue) !important;
+  color: var(--review-brand) !important;
   font-weight: 650;
   text-decoration: none;
 }
@@ -388,10 +388,10 @@
   max-width: 180px;
   padding: 4px 8px;
   overflow: hidden;
-  border: 1px solid #d0d5dd;
+  border: 1px solid #c8c8c8;
   border-radius: 999px;
-  background: #f8fafc;
-  color: #344054 !important;
+  background: #f7f7f6;
+  color: #3f3f42 !important;
   font-size: 12px;
   font-weight: 750;
   text-overflow: ellipsis;
@@ -399,9 +399,9 @@
 }
 
 .vendor-review-requested {
-  border-color: #b2ccff;
-  background: #eff6ff;
-  color: #175cd3 !important;
+  border-color: #bdbdbd;
+  background: #f3f3f1;
+  color: #0b0b0c !important;
 }
 
 .vendor-review-missing {
@@ -419,12 +419,12 @@
 .vendor-review-table .btn-secondary {
   min-height: 32px;
   padding: 6px 10px !important;
-  border-color: #b2ccff !important;
-  color: var(--review-blue) !important;
+  border-color: #0b0b0c !important;
+  color: var(--review-brand) !important;
   font-size: 12px;
 }
 
-.vendor-review-table .btn-secondary:hover { background: var(--review-blue-soft) !important; }
+.vendor-review-table .btn-secondary:hover { background: var(--review-brand-soft) !important; }
 
 .vendor-review-open {
   display: inline-flex !important;
@@ -443,21 +443,21 @@
   justify-content: center;
   min-height: 190px;
   padding: 28px;
-  color: #667085;
+  color: #666668;
   text-align: center;
 }
 
 .vendor-review-loading strong,
-.vendor-review-empty strong { margin-top: 10px; color: #344054 !important; font-size: 13px; }
+.vendor-review-empty strong { margin-top: 10px; color: #3f3f42 !important; font-size: 13px; }
 .vendor-review-loading small,
-.vendor-review-empty p { margin: 5px 0 0 !important; color: #98a2b3 !important; font-size: 12px; }
-.vendor-review-empty > span { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; background: #f2f4f7; color: #667085 !important; font-size: 17px; }
+.vendor-review-empty p { margin: 5px 0 0 !important; color: #858589 !important; font-size: 12px; }
+.vendor-review-empty > span { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; background: #f3f3f1; color: #666668 !important; font-size: 17px; }
 
 .vendor-review-spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid #dbeafe;
-  border-top-color: var(--review-blue);
+  border: 3px solid #dedede;
+  border-top-color: var(--review-brand);
   border-radius: 50%;
   animation: vendor-review-spin .75s linear infinite;
 }
@@ -481,7 +481,7 @@
   letter-spacing: .015em;
 }
 
-.onboarding-status-badge.pending_review { border-color: #b2ccff; background: #eff6ff; color: #175cd3 !important; }
+.onboarding-status-badge.pending_review { border-color: #bdbdbd; background: #f3f3f1; color: #0b0b0c !important; }
 .onboarding-status-badge.changes_requested { border-color: #fedf89; background: #fffaeb; color: #b54708 !important; }
 .onboarding-status-badge.rejected { border-color: #fecdca; background: #fef3f2; color: #b42318 !important; }
 .invite-status.sent,.invite-status.submitted { color: #067647 !important; }
@@ -502,9 +502,9 @@
 .vendor-review-pagination .btn-secondary:disabled { opacity: .45; cursor: not-allowed; }
 
 .vendor-review-invitations { margin-top: 18px !important; }
-.vendor-onboarding-eyebrow { color: var(--review-blue) !important; }
-.invitation-actions button { width: 30px; height: 30px; padding: 0 !important; border-color: #d0d5dd !important; color: #475467 !important; }
-.invitation-actions button:hover { border-color: #84adff !important; background: var(--review-blue-soft) !important; color: var(--review-blue) !important; }
+.vendor-onboarding-eyebrow { color: var(--review-brand) !important; }
+.invitation-actions button { width: 30px; height: 30px; padding: 0 !important; border-color: #c8c8c8 !important; color: #555558 !important; }
+.invitation-actions button:hover { border-color: #0b0b0c !important; background: var(--review-brand-soft) !important; color: var(--review-brand) !important; }
 
 .vendor-email-delivery-warning {
   display: flex;
@@ -587,24 +587,24 @@
 }
 
 .vendor-review-card.full { grid-column: 1 / -1; }
-.vendor-review-card h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px !important; padding-bottom: 11px; border-bottom: 1px solid #edf0f4; font-size: 15px !important; }
-.vendor-review-card h2 i { color: var(--review-blue); font-size: 13px; }
+.vendor-review-card h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px !important; padding-bottom: 11px; border-bottom: 1px solid #ececec; font-size: 15px !important; }
+.vendor-review-card h2 i { color: var(--review-brand); font-size: 13px; }
 .vendor-review-fields { gap: 9px; }
 
 .vendor-review-field {
   min-width: 0;
   padding: 10px 11px;
-  border: 1px solid #eef1f5;
+  border: 1px solid #eeeeec;
   border-radius: 8px;
-  background: #fafbfc;
+  background: #fafaf8;
 }
 
-.vendor-review-field span { margin-bottom: 4px; color: #667085 !important; font-size: 12px; font-weight: 750; letter-spacing: .04em; }
-.vendor-review-field strong { color: #1d2939 !important; font-size: 12px; line-height: 1.45; }
-.vendor-review-list li { border: 1px solid #eef1f5; background: #fafbfc; font-size: 12px; }
+.vendor-review-field span { margin-bottom: 4px; color: #666668 !important; font-size: 12px; font-weight: 750; letter-spacing: .04em; }
+.vendor-review-field strong { color: #242426 !important; font-size: 12px; line-height: 1.45; }
+.vendor-review-list li { border: 1px solid #eeeeec; background: #fafaf8; font-size: 12px; }
 .vendor-review-checklist span { font-weight: 700; }
-.vendor-review-history article { border: 1px solid #eef1f5; border-left: 3px solid #84adff; border-radius: 0 8px 8px 0; background: #fafbfc; font-size: 12px; }
-.vendor-review-tax button { min-height: 27px; border: 1px solid #b2ccff; background: #eff6ff; color: var(--review-blue) !important; }
+.vendor-review-history article { border: 1px solid #eeeeec; border-left: 3px solid #0b0b0c; border-radius: 0 8px 8px 0; background: #fafaf8; font-size: 12px; }
+.vendor-review-tax button { min-height: 27px; border: 1px solid #0b0b0c; background: #fff; color: var(--review-brand) !important; }
 
 @media (max-width: 1100px) {
   .vendor-review-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

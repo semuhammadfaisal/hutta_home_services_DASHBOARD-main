@@ -260,7 +260,7 @@
 #vendor-reviews .vendor-review-table td,
 #vendor-reviews .vendor-invitations-table td {
   padding: 10px 12px;
-  color: #344054;
+  color: #3f3f42;
   font-size: 13px;
 }
 
@@ -343,7 +343,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #64748b;
+  color: #666668;
   font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
