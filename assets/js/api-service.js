@@ -269,6 +269,10 @@ class APIService {
         return response;
     }
 
+    async getProfile() {
+        return this.request('/auth/profile');
+    }
+
     async logout() {
         try {
             await this.request('/auth/logout', { method: 'POST' });

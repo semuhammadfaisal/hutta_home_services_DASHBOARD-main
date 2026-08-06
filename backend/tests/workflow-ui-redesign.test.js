@@ -140,7 +140,7 @@ test('workflow controls remain contained across desktop, tablet, and mobile layo
   assert.match(secureCss, /Public-page layout integrity/);
   assert.match(secureCss, /overflow-wrap:anywhere/);
   assert.match(secureCss, /@media\(max-width:560px\)/);
-  assert.match(html, /workflow-reference\.css\?v=20260725-quote-compliance/);
+  assert.match(html, /workflow-reference\.css\?v=20260806-workflow-monochrome/);
 });
 
 test('Workflow Center buttons provide pointer and keyboard interaction feedback', () => {
@@ -156,7 +156,75 @@ test('Workflow Center buttons provide pointer and keyboard interaction feedback'
   assert.match(css, /@keyframes workflow-button-ripple/);
   assert.match(css, /@media\(hover:hover\)/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(html, /workflow-hub\.js\?v=20260804-headers/);
+  assert.match(html, /workflow-hub\.js\?v=20260806-activity-clean/);
+});
+
+test('Workflow Center overview follows the monochrome SMPLFix brand system', () => {
+  const components = read('assets/css/smplfix-components.css');
+  const hub = read('assets/js/workflow-hub.js');
+  const html = read('pages/admin-dashboard.html');
+
+  assert.match(components, /Workflow Center: SMPLFix brand alignment and overview hierarchy/);
+  assert.match(components, /#workflow-overview \.workflow-kpi-grid\s*\{[\s\S]*?repeat\(5, minmax\(0, 1fr\)\)/);
+  assert.match(components, /\.workflow-tab\[aria-selected="true"\][\s\S]*?background:\s*var\(--smpl-ink\)/);
+  assert.match(components, /#workflow-overview \.workflow-overview-grid\s*\{[\s\S]*?minmax\(0, 1\.65fr\)/);
+  assert.match(components, /\.workflow-attention-empty \.workflow-empty-art[\s\S]*?background:\s*var\(--smpl-ink\)/);
+  assert.match(components, /workflow-attention-filters button > span[\s\S]*?width:\s*16px/);
+  assert.match(components, /workflow-attention-empty \.workflow-empty-art\.success[\s\S]*?background:\s*var\(--smpl-ink\)\s*!important/);
+  assert.match(components, /workflow-panel-icon > i[\s\S]*?color:\s*var\(--smpl-paper\)\s*!important/);
+  assert.match(hub, /workflow-empty-art success" aria-hidden="true"><i class="fas fa-check"/);
+  assert.match(components, /workflow-attention-filters button\[aria-selected="true"\] > span[\s\S]*?color:\s*var\(--smpl-ink\)\s*!important/);
+  assert.match(components, /workflow-activity-list::before\s*\{[\s\S]*?content:\s*none\s*!important/);
+  assert.doesNotMatch(hub, /<span class="workflow-activity-dot">/);
+  assert.match(html, /smplfix-components\.css\?v=20260806-profile-ui/);
+  assert.match(html, /workflow-hub\.js\?v=20260806-activity-clean/);
+});
+
+test('all six Workflow Center stages share the final branded inner-workspace system', () => {
+  const components = read('assets/css/smplfix-components.css');
+  const html = read('pages/admin-dashboard.html');
+
+  assert.match(components, /Workflow Center inner stages: one branded system across stages 1-6/);
+  assert.match(components, /\.workflow-stage-section > \.workflow-header[\s\S]*?border-bottom:\s*1px solid var\(--smpl-line\)\s*!important/);
+  assert.match(components, /\.workflow-stage-section \.workflow-summary\s*\{[\s\S]*?repeat\(auto-fit, minmax\(180px, 1fr\)\)/);
+  assert.match(components, /\.workflow-stage-section :where\([\s\S]*?\.workflow-request-card,[\s\S]*?\.closeout-order-card[\s\S]*?border-left-color:\s*var\(--smpl-line\)\s*!important/);
+  assert.match(components, /\.workflow-stage-section \.workflow-journey-step\.current[\s\S]*?background:\s*var\(--smpl-ink\)\s*!important/);
+  assert.match(components, /@media \(max-width: 520px\)[\s\S]*?\.workflow-stage-section \.workflow-filterbar/);
+  assert.equal((html.match(/class="content-section[^\"]*workflow-stage-section" data-workflow-stage="[1-6]"/g) || []).length, 6);
+});
+
+test('Workflow Center feature styles contain no legacy blue palette or blue-dominant colors', () => {
+  const files = [
+    'assets/css/workflow-center.css',
+    'assets/css/incoming-quotes.css',
+    'assets/css/outgoing-quotes.css',
+    'assets/css/customer-approvals.css',
+    'assets/css/scheduling.css',
+    'assets/css/closeout.css',
+    'assets/css/workflow-redesign.css',
+    'assets/css/workflow-reference.css'
+  ];
+  const css = files.map(read).join('\n');
+  const components = read('assets/css/smplfix-components.css');
+  const workflowComponents = components.slice(
+    components.indexOf('/* Workflow Center: SMPLFix brand alignment'),
+    components.indexOf('/* Mini charts: compact SMPLFix analytics cards.')
+  );
+  const legacyToken = /--(?:wf|wfr|co|schedule|oq)-blue(?:-dark|-soft)?|var\(--(?:wf|wfr|co|schedule|oq)-blue(?:-dark|-soft)?\)/i;
+  assert.doesNotMatch(css, legacyToken);
+  assert.doesNotMatch(workflowComponents, legacyToken);
+
+  const isBlueDominant = (red, green, blue) => blue > red + 8 && blue > green + 3;
+  const blueHex = [...css.matchAll(/#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})\b/gi)]
+    .filter(match => isBlueDominant(
+      Number.parseInt(match[1], 16),
+      Number.parseInt(match[2], 16),
+      Number.parseInt(match[3], 16)
+    ));
+  const blueRgb = [...css.matchAll(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/gi)]
+    .filter(match => isBlueDominant(Number(match[1]), Number(match[2]), Number(match[3])));
+  assert.deepEqual(blueHex.map(match => match[0]), []);
+  assert.deepEqual(blueRgb.map(match => match[0]), []);
 });
 
 test('reference overview omits New Request and exposes KPI, attention, activity, and relative-time interactions', () => {

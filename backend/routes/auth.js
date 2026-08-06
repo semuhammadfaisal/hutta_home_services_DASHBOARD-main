@@ -20,6 +20,50 @@ const noteOwnerModels = [
   require('../models/Project')
 ];
 
+const PROFILE_LIMITS = Object.freeze({
+  firstName: 80,
+  lastName: 80,
+  email: 254,
+  phone: 40,
+  department: 100,
+  avatarBytes: 512 * 1024
+});
+
+function profileError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function normalizeProfileText(value, fieldName, maxLength, { required = false } = {}) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (required && !normalized) throw profileError(`${fieldName} is required`);
+  if (normalized.length > maxLength) {
+    throw profileError(`${fieldName} must be ${maxLength} characters or fewer`);
+  }
+  return normalized;
+}
+
+function normalizeProfileAvatar(value) {
+  if (value === '' || value === null) return '';
+  if (typeof value !== 'string') throw profileError('Profile photo is invalid');
+
+  const match = value.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (!match) throw profileError('Profile photo must be a PNG, JPEG, or WebP image');
+
+  const encoded = match[2].replace(/\s/g, '');
+  if (!encoded || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
+    throw profileError('Profile photo data is invalid');
+  }
+
+  const imageBuffer = Buffer.from(encoded, 'base64');
+  if (!imageBuffer.length || imageBuffer.length > PROFILE_LIMITS.avatarBytes) {
+    throw profileError('Profile photo must be 512 KB or smaller');
+  }
+
+  return `data:image/${match[1].toLowerCase()};base64,${encoded}`;
+}
+
 function getUserPayload(user) {
   return {
     id: user._id,
@@ -147,31 +191,58 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+// Read the current profile from the database instead of relying on cached browser data.
+router.get('/profile', authenticateToken, (req, res) => {
+  res.set('Cache-Control', 'no-store').json({ user: getUserPayload(req.authUser) });
+});
+
 // Update profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { email, firstName, lastName, phone, department, avatar } = req.body;
-
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const email = normalizeProfileText(req.body.email, 'Email address', PROFILE_LIMITS.email, { required: true }).toLowerCase();
+    const firstName = normalizeProfileText(req.body.firstName, 'First name', PROFILE_LIMITS.firstName, { required: true });
+    const lastName = normalizeProfileText(req.body.lastName, 'Last name', PROFILE_LIMITS.lastName, { required: true });
+    const phone = normalizeProfileText(req.body.phone, 'Phone number', PROFILE_LIMITS.phone);
+    const department = normalizeProfileText(req.body.department, 'Department', PROFILE_LIMITS.department);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw profileError('Enter a valid email address');
+    }
+
     const previousEmail = user.email;
-    user.email = String(email || '').trim().toLowerCase();
-    user.firstName = String(firstName || '').trim();
-    user.lastName = String(lastName || '').trim();
+    if (email !== previousEmail) {
+      const currentPassword = String(req.body.currentPassword || '');
+      if (!currentPassword || !(await user.comparePassword(currentPassword))) {
+        throw profileError('Current password is required to change your email address');
+      }
+    }
+
+    user.email = email;
+    user.firstName = firstName;
+    user.lastName = lastName;
     user.phone = phone;
     user.department = department;
-    user.avatar = avatar;
+    if (Object.prototype.hasOwnProperty.call(req.body, 'avatar')) {
+      user.avatar = normalizeProfileAvatar(req.body.avatar);
+    }
     await user.save();
 
     await syncNoteAuthorNames(user, previousEmail);
 
-    res.json({ message: 'Profile updated successfully', user: getUserPayload(user) });
+    res.set('Cache-Control', 'no-store').json({
+      message: 'Profile updated successfully',
+      user: getUserPayload(user)
+    });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({ message: 'Email already registered' });
+      return res.status(409).json({ message: 'Email already registered' });
+    }
+    if (error.statusCode || error.name === 'ValidationError') {
+      return res.status(error.statusCode || 400).json({ message: error.message });
     }
     console.error('Profile update error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -253,11 +324,14 @@ router.post('/change-password', authenticateToken, async (req, res, next) => {
   try {
     const currentPassword = String(req.body.currentPassword || '');
     const newPassword = String(req.body.newPassword || '');
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return res.status(400).json({ message: 'New password must be between 8 and 128 characters' });
     }
     if (!(await req.authUser.comparePassword(currentPassword))) {
       return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+    if (await req.authUser.comparePassword(newPassword)) {
+      return res.status(400).json({ message: 'New password must be different from your current password' });
     }
 
     req.authUser.password = newPassword;

@@ -7,7 +7,7 @@ const VendorInvitation = require('../models/VendorInvitation');
 const { encryptTaxId, decryptTaxId, maskedTaxId } = require('../utils/taxIdCrypto');
 const onboardingRoute = require('../routes/vendorOnboarding');
 const { buildPublicUrl, getPublicAppUrl } = require('../utils/publicAppUrl');
-const { getEmailDeliveryStatus } = require('../utils/emailService');
+const { getEmailDeliveryStatus, vendorInvitationEmailShell } = require('../utils/emailService');
 
 const internals = onboardingRoute._test;
 
@@ -131,7 +131,7 @@ test('email configuration prefers the verified Hutta Resend sender and retains G
   }
 });
 
-test('email templates keep the legacy Hutta corporate shell with Resend and Gmail delivery', () => {
+test('generic email templates keep the existing Hutta shell with Resend and Gmail delivery', () => {
   const emailSource = fs.readFileSync(path.join(__dirname, '../utils/emailService.js'), 'utf8');
   assert.doesNotMatch(emailSource, /class="logo"|logo-card|LOGO_CONTENT_ID/);
   assert.doesNotMatch(emailSource, /class="hero-mark"/);
@@ -146,7 +146,6 @@ test('email templates keep the legacy Hutta corporate shell with Resend and Gmai
   for (const sender of [
     'sendPasswordResetEmail',
     'sendWelcomeEmail',
-    'sendVendorInvitationEmail',
     'sendVendorSubmissionReceivedEmail',
     'sendVendorDecisionEmail',
     'sendStaffVendorSubmissionEmail',
@@ -154,6 +153,33 @@ test('email templates keep the legacy Hutta corporate shell with Resend and Gmai
   ]) {
     assert.match(emailSource, new RegExp(`${sender}[\\s\\S]*emailShell\\(`));
   }
+  assert.match(emailSource, /sendVendorInvitationEmail[\s\S]*vendorInvitationEmailShell\(/);
+});
+
+test('vendor onboarding invitation uses the responsive SMPLFix email design', () => {
+  const html = vendorInvitationEmailShell({
+    companyName: 'M&W <Services>',
+    categoryLabel: 'Plumbing & Drainage',
+    formUrl: 'https://example.com/vendor#token=secret',
+    expiresAt: '2026-08-13T20:05:38.000Z',
+    personalMessage: 'Welcome <team>\nBring documents.',
+    purpose: 'initial'
+  });
+
+  assert.match(html, /class="vendor-header"[^>]*background:#0b0b0c/);
+  assert.match(html, /smplfix-logo-reversed\.png/);
+  assert.match(html, /smplfix-logo-ink\.png/);
+  assert.match(html, /YOUR PROPERTY, HANDLED\./);
+  assert.match(html, /Vendor Onboarding[\s\S]*Invitation/);
+  assert.match(html, /ASSIGNED SERVICE CATEGORY/);
+  assert.match(html, /Plumbing &amp; Drainage/);
+  assert.match(html, /Open Secure Vendor Form/);
+  assert.match(html, /Private one-time link/);
+  assert.match(html, /Professional Home Services Management Platform/);
+  assert.match(html, /@media only screen and \(max-width:620px\)/);
+  assert.match(html, /M&amp;W &lt;Services&gt;/);
+  assert.match(html, /Welcome &lt;team&gt;<br>Bring documents\./);
+  assert.doesNotMatch(html, /#0056b8|#075eb8|#1d4ed8|#2563eb|#3b82f6/i);
 });
 
 test('onboarding route and UI include approval, change, rejection, resend, and revoke workflows', () => {
@@ -244,6 +270,31 @@ test('vendor modal keeps manual and invite experiences mutually exclusive', () =
   assert.match(adminSource, /inviteForm\.hidden = manual/);
   assert.match(adminSource, /aria-selected/);
   assert.match(cssSource, /#vendorModal \[hidden\] \{ display: none !important; \}/);
+});
+
+test('vendor management forms use the monochrome SMPLFix system responsively', () => {
+  const pageSource = fs.readFileSync(path.join(__dirname, '../../pages/admin-dashboard.html'), 'utf8');
+  const modalCss = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-modal-onboarding-polish.css'), 'utf8');
+  const automationCss = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-automation-branding.css'), 'utf8');
+  const adminCss = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-onboarding-admin.css'), 'utf8');
+  const legacyBlue = /#(?:175cd3|0056b8|004494|1d4ed8|eef4ff|eff6ff|b2ccff)|rgba\(\s*23\s*,\s*92\s*,\s*211/i;
+
+  assert.match(pageSource, /vendor-onboarding-admin\.css\?v=20260807-vendor-management-2/);
+  assert.match(pageSource, /vendor-modal-onboarding-polish\.css\?v=20260807-vendor-management-3/);
+  assert.match(pageSource, /vendor-automation-branding\.css\?v=20260807-vendor-management-2/);
+  assert.match(pageSource, /id="vendorModal"[^>]*role="dialog"[^>]*aria-modal="true"/);
+  assert.match(modalCss, /#vendorModal \.vendor-entry-mode-switch > button\.active/);
+  assert.match(modalCss, /#vendorModal :is\(\.btn-add-field, \.vendor-section-header-row \.btn-add-field\)[^{]*\{[^}]*color: var\(--smpl-paper, #fff\) !important;[^}]*background: var\(--vendor-modal-ink\) !important;/s);
+  assert.match(modalCss, /#vendorModal #vendorForm > :is\(\.form-section, \.vendor-compliance-section\)/);
+  assert.match(modalCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(modalCss, /@media \(max-width: 620px\)/);
+  assert.doesNotMatch(modalCss, legacyBlue);
+  assert.doesNotMatch(automationCss, legacyBlue);
+  assert.doesNotMatch(adminCss, legacyBlue);
+  assert.doesNotMatch(modalCss, /--vendor-modal-blue/);
+  assert.doesNotMatch(automationCss, /--vendor-auto-blue/);
+  assert.match(adminCss, /\.vendor-entry-mode-switch button\.active[^}]*background: var\(--vendor-admin-ink/);
+  assert.match(adminCss, /\.onboarding-status-badge\.pending_review[^}]*background: var\(--vendor-admin-surface/);
 });
 
 test('vendor invite supports an optional update recipient email for staff updates', () => {

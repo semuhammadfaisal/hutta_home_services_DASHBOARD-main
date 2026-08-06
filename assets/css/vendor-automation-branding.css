@@ -8,21 +8,19 @@
 #vendorModal,
 .vendor-decision-overlay,
 .onboarding-shell {
-  --vendor-auto-blue: #0056b8;
-  --vendor-auto-blue-hover: #004494;
-  --vendor-auto-blue-soft: #eef5ff;
-  --vendor-auto-ink: #101828;
-  --vendor-auto-muted: #667085;
-  --vendor-auto-subtle: #98a2b3;
-  --vendor-auto-border: #e3e8ef;
-  --vendor-auto-border-strong: #cbd5e1;
-  --vendor-auto-surface: #ffffff;
-  --vendor-auto-soft: #f8fafc;
+  --vendor-auto-brand: var(--smpl-ink, #0b0b0c);
+  --vendor-auto-ink: var(--smpl-ink, #0b0b0c);
+  --vendor-auto-muted: var(--smpl-muted, #666668);
+  --vendor-auto-subtle: #858589;
+  --vendor-auto-border: var(--smpl-line, #e3e3e3);
+  --vendor-auto-border-strong: var(--smpl-line-strong, #c8c8c8);
+  --vendor-auto-surface: var(--smpl-paper, #ffffff);
+  --vendor-auto-soft: var(--smpl-surface, #f7f7f6);
   --vendor-auto-success: #12805c;
   --vendor-auto-warning: #b54708;
   --vendor-auto-danger: #b42318;
   --vendor-auto-radius: 10px;
-  --vendor-auto-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 24px rgba(16, 24, 40, .05);
+  --vendor-auto-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 10px 24px rgb(0 0 0 / .05);
   color: var(--vendor-auto-ink);
   font-family: var(--smpl-font-ui);
   font-size: 15px;
@@ -60,7 +58,7 @@
 #vendorModal .vendor-modal-eyebrow,
 .vendor-decision-overlay .vendor-review-eyebrow,
 .onboarding-shell :is(.eyebrow, .section-eyebrow, .state-eyebrow) {
-  color: var(--vendor-auto-blue) !important;
+  color: var(--vendor-auto-brand) !important;
   font-size: 12px !important;
   font-weight: 800;
   letter-spacing: .1em;
@@ -319,9 +317,9 @@
 }
 
 #vendor-reviews .invitation-actions button:hover {
-  border-color: #175cd3;
-  color: #175cd3;
-  box-shadow: 0 8px 18px rgba(23, 92, 211, .12);
+  border-color: var(--smpl-ink, #0b0b0c);
+  color: var(--smpl-ink, #0b0b0c);
+  box-shadow: 0 8px 18px rgb(0 0 0 / .12);
 }
 
 #vendor-reviews .vendor-review-open .fa-arrow-right {

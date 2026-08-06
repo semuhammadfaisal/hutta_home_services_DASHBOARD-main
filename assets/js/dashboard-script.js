@@ -4443,10 +4443,39 @@ async function refreshOrders() {
 // Settings Management Functions
 let currentSettings = null;
 
+function setSettingsState(message = 'Ready', tone = '') {
+    const target = document.getElementById('settingsSaveState');
+    if (!target) return;
+    const dot = document.createElement('span');
+    dot.setAttribute('aria-hidden', 'true');
+    target.replaceChildren(dot, document.createTextNode(String(message)));
+    target.dataset.tone = tone;
+}
+
+function setSettingsBusy(isBusy) {
+    const container = document.querySelector('#settings .settings-container');
+    const saveButton = document.getElementById('settingsSaveButton');
+    const resetButton = document.getElementById('settingsResetButton');
+    container?.setAttribute('aria-busy', String(isBusy));
+    if (saveButton) saveButton.disabled = isBusy;
+    if (resetButton) resetButton.disabled = isBusy;
+}
+
+function syncRefreshIntervalControl() {
+    const autoRefresh = document.getElementById('dashboardAutoRefresh');
+    const interval = document.getElementById('dashboardRefreshInterval');
+    if (!autoRefresh || !interval) return;
+    interval.disabled = !autoRefresh.checked;
+    interval.setAttribute('aria-disabled', String(!autoRefresh.checked));
+}
+
 async function loadSettings() {
+    setSettingsBusy(true);
+    setSettingsState('Loading…');
     try {
         currentSettings = await window.APIService.getSettings();
         populateSettingsForm(currentSettings);
+        setSettingsState('All changes saved', 'success');
     } catch (error) {
         console.error('Failed to load settings:', error);
         // Create default settings object
@@ -4474,6 +4503,10 @@ async function loadSettings() {
             }
         };
         populateSettingsForm(currentSettings);
+        setSettingsState('Could not load saved settings', 'error');
+        showToast('Saved settings could not be loaded. Review the defaults before saving.', 'error');
+    } finally {
+        setSettingsBusy(false);
     }
 }
 
@@ -4493,6 +4526,7 @@ function populateSettingsForm(settings) {
     document.getElementById('dashboardDefaultView').value = settings.dashboard?.defaultView || 'table';
     document.getElementById('dashboardAutoRefresh').checked = settings.dashboard?.autoRefresh ?? true;
     document.getElementById('dashboardRefreshInterval').value = settings.dashboard?.refreshInterval || 30;
+    syncRefreshIntervalControl();
     
     // Company
     document.getElementById('companyName').value = settings.company?.name || '';
@@ -4505,7 +4539,10 @@ function populateSettingsForm(settings) {
     applyTheme(settings.theme || 'light');
 }
 
-async function saveSettings() {
+async function saveSettings(event) {
+    event?.preventDefault();
+    const form = document.getElementById('settingsForm');
+    if (!form?.reportValidity()) return;
     const settingsData = {
         theme: document.getElementById('settingsTheme').value,
         language: document.getElementById('settingsLanguage').value,
@@ -4522,24 +4559,28 @@ async function saveSettings() {
             refreshInterval: parseInt(document.getElementById('dashboardRefreshInterval').value)
         },
         company: {
-            name: document.getElementById('companyName').value,
-            address: document.getElementById('companyAddress').value,
-            phone: document.getElementById('companyPhone').value,
-            email: document.getElementById('companyEmail').value,
-            website: document.getElementById('companyWebsite').value
+            name: document.getElementById('companyName').value.trim(),
+            address: document.getElementById('companyAddress').value.trim(),
+            phone: document.getElementById('companyPhone').value.trim(),
+            email: document.getElementById('companyEmail').value.trim().toLowerCase(),
+            website: document.getElementById('companyWebsite').value.trim()
         }
     };
-    
+
+    setSettingsBusy(true);
+    setSettingsState('Saving…');
     try {
-        await window.APIService.updateSettings(settingsData);
-        currentSettings = { ...currentSettings, ...settingsData };
+        currentSettings = await window.APIService.updateSettings(settingsData);
         
         // Apply theme immediately
         applyTheme(settingsData.theme);
-        
-        showToast('Changes saved.', 'success');
+        setSettingsState('All changes saved', 'success');
+        showToast('Settings saved successfully.', 'success');
     } catch (error) {
+        setSettingsState('Settings were not saved', 'error');
         showToast('Failed to save settings: ' + error.message, 'error');
+    } finally {
+        setSettingsBusy(false);
     }
 }
 
@@ -4548,18 +4589,24 @@ async function resetSettings() {
         return;
     }
     
+    setSettingsBusy(true);
+    setSettingsState('Restoring defaults…');
     try {
         const defaultSettings = await window.APIService.resetSettings();
         currentSettings = defaultSettings;
         populateSettingsForm(defaultSettings);
+        setSettingsState('Defaults restored', 'success');
         showToast('Settings reset to defaults.', 'success');
     } catch (error) {
+        setSettingsState('Defaults could not be restored', 'error');
         showToast('Failed to reset settings: ' + error.message, 'error');
+    } finally {
+        setSettingsBusy(false);
     }
 }
 
 function applyTheme(theme) {
-    document.body.className = theme === 'dark' ? 'dark-theme' : '';
+    document.body.classList.toggle('dark-theme', theme === 'dark');
     
     // Store theme preference in localStorage for immediate application
     localStorage.setItem('theme', theme);
@@ -4567,6 +4614,11 @@ function applyTheme(theme) {
 
 // Load settings when settings section is shown
 function loadSettingsSection() {
+    const autoRefresh = document.getElementById('dashboardAutoRefresh');
+    if (autoRefresh && autoRefresh.dataset.settingsBound !== 'true') {
+        autoRefresh.dataset.settingsBound = 'true';
+        autoRefresh.addEventListener('change', syncRefreshIntervalControl);
+    }
     loadSettings();
 }
 
@@ -10125,131 +10177,277 @@ function filterOrdersImmediate() {
 window.filterOrders = filterOrdersDebounced;
 
 // Profile and settings functions
-function showProfile() {
+let profileSnapshot = null;
+let profilePendingAvatar;
+let profileReturnFocus = null;
+
+const PROFILE_ROLE_LABELS = Object.freeze({
+    admin: 'Administrator',
+    manager: 'Manager',
+    account_rep: 'Account representative',
+    pending: 'Pending access'
+});
+
+function profileAvatarFallback(firstName = 'A') {
+    const initial = String(firstName).trim().charAt(0).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'A';
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Crect width='160' height='160' rx='80' fill='%230B0B0C'/%3E%3Ctext x='80' y='84' dominant-baseline='middle' text-anchor='middle' font-family='Arial,sans-serif' font-size='72' font-weight='700' fill='white'%3E${initial}%3C/text%3E%3C/svg%3E`;
+}
+
+function setProfileState(targetId, message = '', tone = '') {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    target.textContent = message;
+    target.dataset.tone = tone;
+}
+
+function populateProfileForm(user) {
+    if (!user) return;
+    document.getElementById('firstName').value = user.firstName || '';
+    document.getElementById('lastName').value = user.lastName || '';
+    document.getElementById('profileEmail').value = user.email || '';
+    document.getElementById('phone').value = user.phone || '';
+    document.getElementById('department').value = user.department || '';
+    document.getElementById('profileRoleLabel').textContent = PROFILE_ROLE_LABELS[user.role] || 'Workspace member';
+    document.getElementById('profileAvatar').src = user.avatar || profileAvatarFallback(user.firstName);
+    document.getElementById('profileAvatarRemove').disabled = !user.avatar;
+    document.getElementById('profileEmailPassword').value = '';
+    document.getElementById('profileEmailPasswordGroup').hidden = true;
+    profilePendingAvatar = undefined;
+    profileSnapshot = {
+        email: String(user.email || '').trim().toLowerCase(),
+        avatar: user.avatar || ''
+    };
+}
+
+function syncProfileSession(user) {
+    window.AuthSession.user = { ...(window.AuthSession.user || {}), ...user };
+    updateUserInfo({ user: window.AuthSession.user });
+}
+
+function updateEmailConfirmationVisibility() {
+    const email = document.getElementById('profileEmail');
+    const group = document.getElementById('profileEmailPasswordGroup');
+    const password = document.getElementById('profileEmailPassword');
+    if (!email || !group || !password) return;
+    const changed = Boolean(profileSnapshot) && email.value.trim().toLowerCase() !== profileSnapshot.email;
+    group.hidden = !changed;
+    password.required = changed;
+    if (!changed) password.value = '';
+}
+
+function initializeProfileModal() {
     const modal = document.getElementById('profileModal');
-    const sessionData = SessionManager.getUserInfo();
-    
-    if (!modal) return;
-    
-    if (sessionData && sessionData.user) {
-        const user = sessionData.user;
-        const profileEmail = document.getElementById('profileEmail');
-        const firstName = document.getElementById('firstName');
-        const lastName = document.getElementById('lastName');
-        const phone = document.getElementById('phone');
-        const role = document.getElementById('role');
-        const department = document.getElementById('department');
-        const profileAvatar = document.getElementById('profileAvatar');
-        
-        if (profileEmail) profileEmail.value = user.email || '';
-        if (firstName) firstName.value = user.firstName || '';
-        if (lastName) lastName.value = user.lastName || '';
-        if (phone) phone.value = user.phone || '';
-        if (role) role.value = user.role || 'administrator';
-        if (department) department.value = user.department || '';
-        
-        // Set avatar with fallback
-        if (profileAvatar) {
-            if (user.avatar) {
-                profileAvatar.src = user.avatar;
-            } else {
-                const firstLetter = (user.firstName || 'A').charAt(0).toUpperCase();
-                profileAvatar.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%230B0B0C'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk,Arial,sans-serif' font-size='50' font-weight='600' fill='white'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
-            }
+    if (!modal || modal.dataset.initialized === 'true') return;
+    modal.dataset.initialized = 'true';
+    document.getElementById('profileEmail')?.addEventListener('input', updateEmailConfirmationVisibility);
+    document.getElementById('firstName')?.addEventListener('input', event => {
+        if (profilePendingAvatar === '') document.getElementById('profileAvatar').src = profileAvatarFallback(event.target.value);
+    });
+    document.getElementById('profileAvatarInput')?.addEventListener('change', handleProfileAvatarSelection);
+    modal.addEventListener('click', event => {
+        if (event.target === modal && modal.dataset.busy !== 'true') closeProfileModal();
+    });
+    modal.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && modal.dataset.busy !== 'true') {
+            event.preventDefault();
+            closeProfileModal();
+            return;
         }
-    }
-    
+        if (event.key !== 'Tab') return;
+        const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]):not([type="hidden"]), [tabindex]:not([tabindex="-1"])')]
+            .filter(element => !element.closest('[hidden]'));
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+}
+
+async function showProfile() {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    initializeProfileModal();
+    profileReturnFocus = document.activeElement;
+    document.body.classList.add('profile-modal-open');
     modal.classList.add('show');
+    modal.setAttribute('aria-busy', 'true');
+    setProfileState('profileSaveState', 'Loading…');
+    document.getElementById('profilePasswordForm')?.reset();
+
+    const cachedUser = SessionManager.getUserInfo()?.user || window.AuthSession.user;
+    if (cachedUser) populateProfileForm(cachedUser);
+
+    try {
+        const response = await window.APIService.getProfile();
+        populateProfileForm(response.user);
+        syncProfileSession(response.user);
+        setProfileState('profileSaveState');
+        requestAnimationFrame(() => document.getElementById('firstName')?.focus());
+    } catch (error) {
+        console.error('Profile load error:', error);
+        setProfileState('profileSaveState', 'Could not refresh account data', 'error');
+        showToast(`Could not load your profile: ${error.message}`, 'error');
+    } finally {
+        modal.removeAttribute('aria-busy');
+    }
 }
 
 function closeProfileModal() {
     const modal = document.getElementById('profileModal');
+    if (!modal) return;
     modal.classList.remove('show');
+    document.body.classList.remove('profile-modal-open');
+    modal.removeAttribute('aria-busy');
+    modal.dataset.busy = 'false';
+    document.getElementById('profileForm')?.reset();
+    document.getElementById('profilePasswordForm')?.reset();
+    profileSnapshot = null;
+    profilePendingAvatar = undefined;
+    if (profileReturnFocus?.isConnected) profileReturnFocus.focus();
 }
 
-async function saveProfile() {
-    const firstName = document.getElementById('firstName').value;
-    const lastName = document.getElementById('lastName').value;
-    const email = document.getElementById('profileEmail').value;
-    const phone = document.getElementById('phone').value;
-    const role = document.getElementById('role').value;
-    const department = document.getElementById('department').value;
-    const avatar = document.getElementById('profileAvatar').src;
+async function saveProfile(event) {
+    event?.preventDefault();
+    const form = document.getElementById('profileForm');
+    const modal = document.getElementById('profileModal');
+    const button = document.getElementById('profileSaveButton');
+    if (!form?.reportValidity() || !profileSnapshot || modal?.dataset.busy === 'true') return;
+
+    const payload = {
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        email: document.getElementById('profileEmail').value.trim().toLowerCase(),
+        phone: document.getElementById('phone').value.trim(),
+        department: document.getElementById('department').value.trim()
+    };
+    if (payload.email !== profileSnapshot.email) {
+        payload.currentPassword = document.getElementById('profileEmailPassword').value;
+    }
+    if (profilePendingAvatar !== undefined) payload.avatar = profilePendingAvatar;
+
+    modal.dataset.busy = 'true';
+    button.disabled = true;
+    setProfileState('profileSaveState', 'Saving…');
+    try {
+        const response = await window.APIService.updateProfile(payload);
+        populateProfileForm(response.user);
+        syncProfileSession(response.user);
+        setProfileState('profileSaveState', 'Saved', 'success');
+        showToast('Profile saved successfully.', 'success');
+    } catch (error) {
+        console.error('Profile update error:', error);
+        setProfileState('profileSaveState', error.message, 'error');
+        showToast(`Profile was not saved: ${error.message}`, 'error');
+    } finally {
+        modal.dataset.busy = 'false';
+        button.disabled = false;
+    }
+}
+
+async function changeProfilePassword(event) {
+    event?.preventDefault();
+    const form = document.getElementById('profilePasswordForm');
+    const button = document.getElementById('profilePasswordButton');
     const currentPassword = document.getElementById('currentPassword').value;
     const newPassword = document.getElementById('newPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
-    if ((currentPassword || newPassword || confirmPassword) &&
-        (!currentPassword || newPassword.length < 8 || newPassword !== confirmPassword)) {
-        showToast('Enter the current password and matching new passwords of at least 8 characters', 'error');
+    if (!form?.reportValidity()) return;
+    if (newPassword !== confirmPassword) {
+        document.getElementById('confirmPassword').setCustomValidity('Passwords do not match');
+        form.reportValidity();
+        document.getElementById('confirmPassword').setCustomValidity('');
         return;
     }
-    
-    // Get current user info
-    const sessionData = SessionManager.getUserInfo();
-    if (!sessionData) {
-        alert('Session expired. Please login again.');
-        return;
-    }
-    
+
+    button.disabled = true;
+    setProfileState('profilePasswordState', 'Updating…');
     try {
-        const response = await window.APIService.updateProfile({
-            email, firstName, lastName, phone, department, avatar
-        });
-        sessionData.user = {
-            ...sessionData.user,
-            email: response.user.email,
-            firstName: response.user.firstName,
-            lastName: response.user.lastName,
-            phone: response.user.phone,
-            department: response.user.department,
-            avatar: response.user.avatar
-        };
-        window.AuthSession.user = sessionData.user;
-        updateUserInfo(sessionData);
-
-        if (currentPassword || newPassword || confirmPassword) {
-            await window.APIService.changePassword(currentPassword, newPassword);
-            window.APIService.clearSession();
-            window.location.replace('/pages/login.html');
-            return;
-        }
-
-        showToast('Changes saved.', 'success');
-        closeProfileModal();
+        await window.APIService.changePassword(currentPassword, newPassword);
+        setProfileState('profilePasswordState', 'Password updated', 'success');
+        window.APIService.clearSession();
+        window.location.replace('/pages/login.html?passwordChanged=1');
     } catch (error) {
-        console.error('Profile update error:', error);
-        showToast('Failed to update profile: ' + error.message, 'error');
+        setProfileState('profilePasswordState', error.message, 'error');
+        showToast(`Password was not changed: ${error.message}`, 'error');
+        button.disabled = false;
     }
-    
-    // Clear password fields
-    document.getElementById('currentPassword').value = '';
-    document.getElementById('newPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
 }
 
 function uploadAvatar() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            // Check file size (limit to 2MB)
-            if (file.size > 2 * 1024 * 1024) {
-                showToast('Image size must be less than 2MB', 'error');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64 = e.target.result;
-                document.getElementById('profileAvatar').src = base64;
-                document.getElementById('adminAvatar').src = base64;
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+    const input = document.getElementById('profileAvatarInput');
+    if (!input) return;
+    input.value = '';
     input.click();
+}
+
+function removeProfileAvatar() {
+    profilePendingAvatar = '';
+    document.getElementById('profileAvatar').src = profileAvatarFallback(document.getElementById('firstName').value);
+    document.getElementById('profileAvatarRemove').disabled = true;
+    setProfileState('profileSaveState', 'Photo will be removed when you save');
+}
+
+function resizeProfileAvatar(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('The selected image could not be read'));
+        reader.onload = () => {
+            const image = new Image();
+            image.onerror = () => reject(new Error('The selected image is not valid'));
+            image.onload = () => {
+                const size = Math.min(image.naturalWidth, image.naturalHeight);
+                const canvas = document.createElement('canvas');
+                canvas.width = 320;
+                canvas.height = 320;
+                const context = canvas.getContext('2d');
+                context.drawImage(
+                    image,
+                    (image.naturalWidth - size) / 2,
+                    (image.naturalHeight - size) / 2,
+                    size,
+                    size,
+                    0,
+                    0,
+                    320,
+                    320
+                );
+                resolve(canvas.toDataURL('image/jpeg', 0.86));
+            };
+            image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function handleProfileAvatarSelection(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+        showToast('Choose a PNG, JPEG, or WebP image.', 'error');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Choose an image smaller than 5 MB.', 'error');
+        return;
+    }
+    try {
+        const avatar = await resizeProfileAvatar(file);
+        if (Math.ceil((avatar.split(',')[1]?.length || 0) * 0.75) > 512 * 1024) {
+            throw new Error('The resized profile photo is too large');
+        }
+        profilePendingAvatar = avatar;
+        document.getElementById('profileAvatar').src = avatar;
+        document.getElementById('profileAvatarRemove').disabled = false;
+        setProfileState('profileSaveState', 'Photo ready to save');
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
 }
 
 function showSettings() {
@@ -11073,6 +11271,8 @@ window.showProfile = showProfile;
 window.closeProfileModal = closeProfileModal;
 window.saveProfile = saveProfile;
 window.uploadAvatar = uploadAvatar;
+window.removeProfileAvatar = removeProfileAvatar;
+window.changeProfilePassword = changeProfilePassword;
 window.showSettings = showSettings;
 
 let workflowStatusRefreshTimer = null;

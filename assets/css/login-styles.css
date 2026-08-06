@@ -620,6 +620,7 @@ img.brand-logo {
 }
 
 .submit-btn > .submit-btn__arrow,
+.submit-btn > .submit-btn__success-icon,
 .submit-btn > .submit-btn__spinner,
 .submit-btn > i {
     position: static;
@@ -634,6 +635,13 @@ img.brand-logo {
     font-size: 11px;
     line-height: 1;
     transform: none;
+}
+
+.submit-btn > :where(.submit-btn__arrow, .submit-btn__success-icon) {
+    font-family: var(--auth-font);
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .submit-btn:hover:not(:disabled) {

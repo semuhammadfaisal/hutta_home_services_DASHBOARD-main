@@ -202,7 +202,7 @@ test('Stage 6 payment settings use an accessible customer-facing configuration w
   const html = read('pages/admin-dashboard.html');
   const ui = read('assets/js/closeout.js');
   const css = read('assets/css/closeout.css');
-  assert.match(html, /closeout\.css\?v=20260727-customer-engagement/);
+  assert.match(html, /closeout\.css\?v=20260806-workflow-monochrome/);
   assert.match(ui, /aria-labelledby/);
   assert.match(ui, /closeout-settings-notice/);
   assert.match(ui, /closeout-method-card/);

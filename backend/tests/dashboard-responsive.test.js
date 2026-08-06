@@ -32,7 +32,7 @@ test('pipeline owns horizontal scrolling without widening the page', () => {
   assert.match(components, /#pipeline \.pipeline-page\s*\{\s*overflow:\s*visible\s*!important;/);
   assert.match(components, /@media \(max-width: 1180px\)[\s\S]*?pipeline-header-bar\.smpl-section-header[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(html, /class="pipeline-search-field" for="pipelineSearchInput"[\s\S]*?<span>Search pipeline<\/span>/);
-  assert.match(html, /smplfix-components\.css\?v=20260806-pipeline-card-clean/);
+  assert.match(html, /smplfix-components\.css\?v=20260806-profile-ui/);
   assert.match(components, /#pipeline \.pipeline-filter-bar[\s\S]*?padding:\s*0\s*!important;[\s\S]*?border:\s*0\s*!important;/);
   assert.match(components, /#pipeline \.pipeline-search-bar input\[type="search"\][\s\S]*?border:\s*0\s*!important;[\s\S]*?background:\s*transparent\s*!important;/);
 });
@@ -40,7 +40,7 @@ test('pipeline owns horizontal scrolling without widening the page', () => {
 test('dashboard loads cache-busted responsive styles in cascade order', () => {
   const html = read('pages/admin-dashboard.html');
   const shellIndex = html.indexOf('smplfix-shell.css?v=20260806-search-polish');
-  const componentsIndex = html.indexOf('smplfix-components.css?v=20260806-pipeline-card-clean');
+  const componentsIndex = html.indexOf('smplfix-components.css?v=20260806-profile-ui');
   const responsiveIndex = html.indexOf('dashboard-responsive.css?v=20260806-pipeline-board-ux');
   const layoutIndex = html.indexOf('smplfix-layout.css?v=20260806-fluid-layout');
   assert.ok(shellIndex > -1);
@@ -64,6 +64,24 @@ test('global search palette has polished, accessible navigation states', () => {
   assert.match(ux, /aria-selected/);
   assert.match(ux, /aria-activedescendant/);
   assert.match(ux, /setActiveCommandItem/);
+});
+
+test('Settings uses the responsive SMPLFix workspace and safe interaction states', () => {
+  const html = read('pages/admin-dashboard.html');
+  const settings = read('assets/css/settings.css');
+  const dashboard = read('assets/js/dashboard-script.js');
+  const markup = html.slice(html.indexOf('<section id="settings"'), html.indexOf('<!-- Calendar Section -->'));
+  assert.match(html, /settings\.css\?v=20260806-settings-ui/);
+  assert.match(html, /dashboard-script\.js\?v=20260806-settings-ui/);
+  assert.match(markup, /id="settingsForm" class="settings-workspace" onsubmit="saveSettings\(event\)"/);
+  assert.match(markup, /id="settingsSaveState" role="status" aria-live="polite"/);
+  assert.match(markup, /class="settings-toggle-control" aria-hidden="true"/);
+  assert.match(settings, /#settings \.settings-container[\s\S]*?grid-template-columns: minmax\(300px, 0\.9fr\) minmax\(440px, 1\.35fr\)/);
+  assert.match(settings, /@media \(max-width: 1100px\)[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(settings, /input:checked \+ \.settings-toggle-control/);
+  assert.match(dashboard, /document\.body\.classList\.toggle\('dark-theme', theme === 'dark'\)/);
+  assert.doesNotMatch(dashboard, /document\.body\.className = theme/);
+  assert.match(dashboard, /syncRefreshIntervalControl/);
 });
 
 test('Orders overview keeps KPI and analytics rows separate at every container size', () => {

@@ -159,6 +159,101 @@ const emailShell = (title, content, options = {}) => {
   </html>`;
 };
 
+const vendorInvitationEmailShell = ({ companyName, categoryLabel, formUrl, expiresAt, personalMessage, purpose = 'initial' }) => {
+  const changesRequested = purpose === 'changes_requested';
+  const recipientName = escapeHtml(companyName || 'Vendor');
+  const category = escapeHtml(categoryLabel || 'General Services');
+  const categoryInitial = escapeHtml(String(categoryLabel || 'Service').trim().charAt(0).toUpperCase() || 'S');
+  const secureUrl = escapeHtml(formUrl);
+  const expiry = escapeHtml(new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }));
+  const replyAddress = escapeHtml(EMAIL_REPLY_TO);
+  const reversedLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-reversed.png'));
+  const inkLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-ink.png'));
+  const eyebrow = changesRequested ? 'APPLICATION UPDATE' : 'INVITATION';
+  const heading = changesRequested ? 'Vendor Application' : 'Vendor Onboarding';
+  const headingAccent = changesRequested ? 'Updates' : 'Invitation';
+  const intro = changesRequested
+    ? 'We reviewed your submission and need a few updates. Use the private link below to revise your vendor information.'
+    : 'We\'ve invited you to complete our secure vendor onboarding form and join the smplfix network.';
+  const cta = changesRequested ? 'Update Vendor Application' : 'Open Secure Vendor Form';
+  const preheader = changesRequested
+    ? 'Updates are requested for your secure smplfix vendor application.'
+    : 'Complete your secure smplfix vendor onboarding invitation.';
+  const message = personalMessage
+    ? `<tr><td style="padding:0 48px 26px"><p style="margin:0 0 8px;color:#0b0b0c;font-size:15px;line-height:1.45;font-weight:800">Message from our team:</p><p style="margin:0;color:#3f3f42;font-size:15px;line-height:1.65">${escapeHtml(personalMessage).replace(/\r?\n/g, '<br>')}</p></td></tr>`
+    : '';
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${heading} ${headingAccent}</title>
+  <style>
+    body{margin:0!important;padding:0!important;background:#f3f2ee;color:#0b0b0c;font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+    table{border-collapse:collapse;border-spacing:0}img{border:0;display:block;outline:none;text-decoration:none}a{text-decoration:none}
+    .vendor-preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
+    .vendor-page{width:100%;background:#f3f2ee}.vendor-page-pad{padding:32px 12px}.vendor-wrap{width:100%;max-width:680px;overflow:hidden;border:1px solid #dfddd6;border-radius:14px;background:#fff;box-shadow:0 12px 38px rgba(11,11,12,.10)}
+    .vendor-mobile-stack{display:table-cell}.vendor-cta{display:inline-block;padding:14px 21px;border:1px solid #0b0b0c;border-radius:8px;background:#0b0b0c;color:#fff!important;font-size:14px;line-height:1.2;font-weight:800}
+    @media only screen and (max-width:620px){.vendor-page-pad{padding:8px 4px}.vendor-wrap{border-radius:10px}.vendor-header{padding:22px 22px!important}.vendor-header-tagline{display:none!important}.vendor-hero{padding:34px 24px 24px!important}.vendor-hero-icon{display:none!important}.vendor-content{padding-left:24px!important;padding-right:24px!important}.vendor-cta{display:block!important;text-align:center!important}.vendor-footer-brand,.vendor-footer-copy{display:block!important;width:100%!important;padding:0!important}.vendor-footer-copy{padding-top:18px!important;border-left:0!important}.vendor-footer-logo{margin:0!important}}
+  </style>
+</head>
+<body>
+  <div class="vendor-preheader">${escapeHtml(preheader)}</div>
+  <table role="presentation" class="vendor-page" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td class="vendor-page-pad" align="center">
+      <table role="presentation" class="vendor-wrap" width="680" cellpadding="0" cellspacing="0" border="0">
+        <tr><td class="vendor-header" style="padding:24px 34px;background:#0b0b0c">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td valign="middle"><img src="${reversedLogoUrl}" width="142" alt="smplfix" style="width:142px;max-width:100%;height:auto"></td>
+            <td class="vendor-header-tagline" valign="middle" align="right" style="color:#f4f4f2;font-family:'Courier New',monospace;font-size:10px;line-height:1.4;letter-spacing:.20em;text-transform:uppercase">YOUR PROPERTY, HANDLED.</td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="vendor-hero" style="padding:42px 48px 30px;background:#fff">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td valign="middle">
+              <p style="margin:0 0 14px;color:#63715f;font-family:'Courier New',monospace;font-size:11px;line-height:1.3;font-weight:800;letter-spacing:.18em">${eyebrow}</p>
+              <h1 style="margin:0;color:#0b0b0c;font-size:38px;line-height:1.05;font-weight:800;letter-spacing:-.035em">${heading}<br><span style="color:#667864">${headingAccent}</span></h1>
+            </td>
+            <td class="vendor-hero-icon" width="92" valign="middle" align="right"><div style="display:inline-block;width:68px;height:68px;border:1px solid #dddcd5;border-radius:12px;background:#f7f7f3;color:#667864;font-family:'Courier New',monospace;font-size:22px;line-height:68px;font-weight:800;text-align:center">VO</div></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:0 48px"><div style="height:1px;background:#e3e1db;font-size:0;line-height:0">&nbsp;</div></td></tr>
+        <tr><td class="vendor-content" style="padding:34px 48px 24px;background:#fff">
+          <p style="margin:0 0 20px;color:#0b0b0c;font-size:18px;line-height:1.35;font-weight:800">Hello ${recipientName},</p>
+          <p style="margin:0;color:#28282b;font-size:16px;line-height:1.65">${intro}</p>
+        </td></tr>
+        <tr><td class="vendor-content" style="padding:0 48px 28px;background:#fff">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dfddd6;border-radius:10px;background:#faf9f6"><tr>
+            <td width="74" style="padding:20px 0 20px 22px" valign="middle"><div style="width:48px;height:48px;border-radius:50%;background:#edf0e9;color:#364235;font-family:'Courier New',monospace;font-size:20px;line-height:48px;font-weight:800;text-align:center">${categoryInitial}</div></td>
+            <td style="padding:20px 22px 20px 10px" valign="middle"><p style="margin:0 0 7px;color:#5d615b;font-family:'Courier New',monospace;font-size:10px;line-height:1.3;font-weight:800;letter-spacing:.15em">ASSIGNED SERVICE CATEGORY</p><p style="margin:0;color:#0b0b0c;font-size:20px;line-height:1.25;font-weight:800">${category}</p></td>
+          </tr></table>
+        </td></tr>
+        ${message}
+        <tr><td class="vendor-content" style="padding:0 48px 26px;background:#fff"><a class="vendor-cta" href="${secureUrl}" target="_blank">${cta}&nbsp;&nbsp;&rsaquo;</a></td></tr>
+        <tr><td class="vendor-content" style="padding:0 48px 34px;background:#fff">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d9dcd4;border-left:4px solid #667864;border-radius:9px;background:#fafaf7"><tr>
+            <td width="58" valign="top" style="padding:18px 0 18px 18px"><div style="width:38px;height:38px;border-radius:50%;background:#e9eee5;color:#4d614c;font-family:'Courier New',monospace;font-size:15px;line-height:38px;font-weight:800;text-align:center">1x</div></td>
+            <td style="padding:18px 20px 18px 8px"><p style="margin:0 0 4px;color:#0b0b0c;font-size:14px;line-height:1.35;font-weight:800">Private one-time link</p><p style="margin:0;color:#3f3f42;font-size:13px;line-height:1.6">This link expires ${expiry} Arizona time.<br>Please do not forward it.</p></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:0 40px;background:#fff"><div style="height:1px;background:#e3e1db;font-size:0;line-height:0">&nbsp;</div></td></tr>
+        <tr><td style="padding:24px 48px 14px;background:#fff">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td class="vendor-footer-brand" width="150" valign="middle"><img class="vendor-footer-logo" src="${inkLogoUrl}" width="112" alt="smplfix" style="width:112px;max-width:100%;height:auto"></td>
+            <td class="vendor-footer-copy" valign="middle" style="padding-left:22px;border-left:1px solid #dfddd6;color:#3f3f42;font-size:11px;line-height:1.7">Professional Home Services Management Platform<br>Questions? Reply to this email or contact <a href="mailto:${replyAddress}" style="color:#4d614c;font-weight:700">${replyAddress}</a>.</td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="vendor-content" style="padding:8px 48px 28px;background:#fff;color:#858589;font-size:10px;line-height:1.55">This message was sent by smplfix. Do not forward private links or sensitive information.</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+};
+
 const sendPasswordResetEmail = async (email, resetToken) => {
   const resetUrl = buildPublicUrl(`/pages/reset-password.html?token=${encodeURIComponent(resetToken)}`);
   return deliverEmail({
@@ -212,30 +307,12 @@ const sendWelcomeEmail = async (email, password, firstName) => {
 
 const sendVendorInvitationEmail = async ({ email, companyName, categoryLabel, token, expiresAt, personalMessage, purpose = 'initial' }) => {
   const formUrl = buildPublicUrl('/pages/vendor-onboarding.html', `token=${encodeURIComponent(token)}`);
-  const greeting = companyName ? `Hello ${escapeHtml(companyName)},` : 'Hello,';
-  const changeCopy = purpose === 'changes_requested'
-    ? '<p>We reviewed your submission and need a few updates. Use the secure link below to revise your information.</p>'
-    : '<p>Hutta Home Services has invited you to complete our secure vendor onboarding form.</p>';
-  const subject = purpose === 'changes_requested' ? 'Updates requested for your vendor application' : 'Complete your Hutta Home Services vendor onboarding';
+  const subject = purpose === 'changes_requested' ? 'Updates requested for your vendor application' : 'Your smplfix vendor onboarding invitation';
   return deliverEmail({
     to: email,
     subject,
-    text: `${companyName ? `Hello ${companyName},` : 'Hello,'}\n\n${purpose === 'changes_requested' ? 'We reviewed your submission and need a few updates.' : 'Hutta Home Services has invited you to complete our secure vendor onboarding form.'}\n\nAssigned service category: ${categoryLabel}\n${personalMessage ? `\nMessage from our team: ${personalMessage}\n` : ''}\nOpen the secure form: ${formUrl}\n\nThis one-time link expires ${new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })} Arizona time. Do not forward it.`,
-    html: emailShell(purpose === 'changes_requested' ? 'Vendor Application Updates' : 'Vendor Onboarding Invitation', `
-      <p>${greeting}</p>${changeCopy}
-      <div class="panel">
-        <p class="credential-label">Assigned Service Category</p>
-        <p><strong>${escapeHtml(categoryLabel)}</strong></p>
-      </div>
-      ${personalMessage ? `<p><strong>Message from our team:</strong><br>${escapeHtml(personalMessage)}</p>` : ''}
-      <p><a class="btn" href="${formUrl}">${purpose === 'changes_requested' ? 'Update Application' : 'Open Secure Vendor Form'}</a></p>
-      <div class="notice">
-        <p><strong>Private one-time link</strong></p>
-        <p>This link expires ${escapeHtml(new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }))} Arizona time. Please do not forward it.</p>
-      </div>
-    `, {
-      preheader: purpose === 'changes_requested' ? 'Updates are requested for your Hutta vendor application.' : 'Complete your secure Hutta vendor onboarding form.'
-    })
+    text: `${companyName ? `Hello ${companyName},` : 'Hello Vendor,'}\n\n${purpose === 'changes_requested' ? 'We reviewed your submission and need a few updates.' : 'You have been invited to complete the secure smplfix vendor onboarding form.'}\n\nAssigned service category: ${categoryLabel || 'General Services'}\n${personalMessage ? `\nMessage from our team: ${personalMessage}\n` : ''}\nOpen the secure form: ${formUrl}\n\nThis private one-time link expires ${new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })} Arizona time. Do not forward it.`,
+    html: vendorInvitationEmailShell({ companyName, categoryLabel, formUrl, expiresAt, personalMessage, purpose })
   });
 };
 
@@ -567,6 +644,7 @@ const sendStaffPaymentProofEmail = ({ recipients, customerName, proofReference, 
 module.exports = {
   deliverEmail,
   getEmailDeliveryStatus,
+  vendorInvitationEmailShell,
   sendPasswordResetEmail,
   sendWelcomeEmail,
   sendVendorInvitationEmail,

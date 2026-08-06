@@ -130,7 +130,7 @@ class LoginManager {
     showSuccess() {
         const loginBtn = document.getElementById('loginBtn');
         if (loginBtn) {
-            loginBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>&nbsp;Signed in';
+            loginBtn.innerHTML = '<span class="submit-btn__success-icon" aria-hidden="true">&#10003;</span><span>Signed in</span>';
             loginBtn.classList.add('is-success');
         }
     }

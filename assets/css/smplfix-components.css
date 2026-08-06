@@ -1954,6 +1954,1919 @@ body #pipeline .pipeline-state-spinner {
     }
 }
 
+/* Profile Settings — authoritative SMPLFix account workspace */
+body #profileModal {
+    z-index: 12000;
+    padding: clamp(12px, 2.5vw, 32px);
+    background: rgb(11 11 12 / 0.62) !important;
+    backdrop-filter: blur(5px);
+}
+
+body #profileModal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+body.profile-modal-open {
+    overflow: hidden !important;
+}
+
+body #profileModal .profile-settings-dialog {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: min(920px, calc(100vw - 48px)) !important;
+    max-width: 920px !important;
+    max-height: calc(100dvh - 32px);
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--smpl-line-strong);
+    border-radius: 18px;
+    background: var(--smpl-paper);
+    box-shadow: 0 30px 80px rgb(0 0 0 / 0.24);
+}
+
+body #profileModal .profile-settings-header {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    min-width: 0;
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--smpl-line);
+    background: var(--smpl-paper);
+}
+
+body #profileModal .profile-settings-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--smpl-muted);
+    font: 700 10px/1 var(--font-mono, monospace);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+body #profileModal .profile-settings-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin: 0;
+    color: var(--smpl-ink);
+    font-size: clamp(22px, 3vw, 28px);
+    line-height: 1.1;
+}
+
+body #profileModal .profile-title-icon {
+    display: inline-grid;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--smpl-paper);
+    background: var(--smpl-ink);
+    font-size: 15px;
+}
+
+body #profileModal .profile-settings-header p {
+    margin: 8px 0 0 47px;
+    color: var(--smpl-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+body #profileModal .modal-close {
+    display: inline-grid;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: var(--smpl-ink);
+    background: transparent;
+}
+
+body #profileModal .modal-close:hover,
+body #profileModal .modal-close:focus-visible {
+    border-color: var(--smpl-line-strong);
+    background: var(--smpl-surface);
+}
+
+body #profileModal .profile-settings-body {
+    display: grid;
+    min-width: 0;
+    gap: 14px;
+    padding: 20px 28px 24px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: var(--smpl-surface);
+    scrollbar-color: var(--smpl-ink) transparent;
+    scrollbar-width: thin;
+}
+
+body #profileModal .profile-settings-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+body #profileModal .profile-settings-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body #profileModal .profile-settings-body::-webkit-scrollbar-thumb {
+    border: 2px solid var(--smpl-surface);
+    border-radius: 999px;
+    background: var(--smpl-ink);
+}
+
+body #profileModal .profile-identity-card,
+body #profileModal .profile-settings-panel {
+    min-width: 0;
+    border: 1px solid var(--smpl-line);
+    border-radius: 14px;
+    background: var(--smpl-paper);
+}
+
+body #profileModal .profile-identity-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    padding: 18px;
+}
+
+body #profileModal .profile-avatar-section,
+body #profileModal .avatar-container {
+    width: 76px;
+    height: 76px;
+    margin: 0;
+}
+
+body #profileModal #profileAvatar {
+    display: block;
+    width: 76px;
+    height: 76px;
+    object-fit: cover;
+    border: 3px solid var(--smpl-paper);
+    border-radius: 50%;
+    background: var(--smpl-ink);
+    box-shadow: 0 0 0 1px var(--smpl-line-strong);
+}
+
+body #profileModal .profile-photo-copy {
+    min-width: 0;
+}
+
+body #profileModal .profile-photo-copy h3,
+body #profileModal .profile-panel-heading h3 {
+    margin: 0;
+    color: var(--smpl-ink);
+    font-size: 15px;
+    line-height: 1.3;
+}
+
+body #profileModal .profile-photo-copy p,
+body #profileModal .profile-panel-heading p {
+    margin: 4px 0 0;
+    color: var(--smpl-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+body #profileModal .profile-photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+body #profileModal .profile-photo-actions .btn-secondary,
+body #profileModal .profile-text-button {
+    min-height: 34px;
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+body #profileModal .profile-text-button {
+    border: 1px solid transparent;
+    color: var(--smpl-muted);
+    background: transparent;
+}
+
+body #profileModal .profile-text-button:hover:not(:disabled) {
+    color: var(--smpl-ink);
+    border-color: var(--smpl-line);
+}
+
+body #profileModal .profile-text-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+body #profileModal .profile-role-summary {
+    display: grid;
+    min-width: 172px;
+    gap: 4px;
+    padding: 13px 15px;
+    border-left: 1px solid var(--smpl-line);
+}
+
+body #profileModal .profile-role-summary span,
+body #profileModal .profile-role-summary small {
+    color: var(--smpl-muted);
+    font-size: 10px;
+}
+
+body #profileModal .profile-role-summary span {
+    font-family: var(--font-mono, monospace);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+body #profileModal .profile-role-summary strong {
+    color: var(--smpl-ink);
+    font-size: 14px;
+}
+
+body #profileModal .profile-settings-panel {
+    padding: 18px;
+}
+
+body #profileModal .profile-panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--smpl-line);
+}
+
+body #profileModal .profile-save-state {
+    flex: 0 1 auto;
+    max-width: 290px;
+    color: var(--smpl-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: right;
+}
+
+body #profileModal .profile-save-state[data-tone="success"] { color: var(--smpl-success); }
+body #profileModal .profile-save-state[data-tone="error"] { color: var(--smpl-danger); }
+
+body #profileModal .profile-form,
+body #profileModal .password-form,
+body #profileModal .form-group {
+    min-width: 0;
+}
+
+body #profileModal .profile-form,
+body #profileModal .password-form {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+body #profileModal .profile-form-grid,
+body #profileModal .profile-password-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
+}
+
+body #profileModal .profile-password-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body #profileModal .form-group {
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    margin: 0;
+}
+
+body #profileModal .form-group[hidden] {
+    display: none !important;
+}
+
+body #profileModal .form-group label {
+    margin: 0;
+    color: var(--smpl-ink);
+    font: 700 11px/1.3 var(--font-sans, sans-serif);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+body #profileModal .form-group input {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    padding: 0 13px;
+    border: 1px solid var(--smpl-line-strong);
+    border-radius: 9px;
+    color: var(--smpl-ink);
+    background: var(--smpl-paper);
+    font-size: 13px;
+    max-width: none !important;
+    box-sizing: border-box;
+}
+
+body #profileModal .form-group input:hover {
+    border-color: var(--smpl-muted);
+}
+
+body #profileModal .form-group input:focus {
+    border-color: var(--smpl-ink);
+    outline: 3px solid rgb(11 11 12 / 0.12);
+    box-shadow: none;
+}
+
+body #profileModal .form-group small {
+    min-height: 15px;
+    color: var(--smpl-muted);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+body #profileModal .profile-security-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+body #profileModal .profile-security-actions .btn-secondary {
+    width: auto !important;
+    min-width: 168px;
+    padding-inline: 18px;
+    color: var(--smpl-paper);
+    border-color: var(--smpl-ink);
+    background: var(--smpl-ink);
+}
+
+body #profileModal .profile-security-actions .btn-secondary:hover,
+body #profileModal .profile-security-actions .btn-secondary:focus-visible {
+    color: var(--smpl-paper);
+    background: var(--smpl-ink-soft, #262626);
+}
+
+body #profileModal .profile-security-actions button,
+body #profileModal .profile-settings-footer button {
+    min-height: 40px;
+    border-radius: 9px;
+}
+
+body #profileModal .profile-settings-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 28px;
+    border-top: 1px solid var(--smpl-line);
+    background: var(--smpl-paper);
+}
+
+body #profileModal [disabled] {
+    cursor: wait;
+}
+
+body #profileModal[aria-busy="true"] .profile-settings-body {
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+@media (max-width: 720px) {
+    body #profileModal {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    body #profileModal .profile-settings-dialog {
+        width: 100%;
+        max-height: 94dvh;
+        border-width: 1px 0 0;
+        border-radius: 18px 18px 0 0;
+    }
+
+    body #profileModal.show {
+        align-items: flex-end;
+    }
+
+    body #profileModal .profile-settings-header,
+    body #profileModal .profile-settings-body,
+    body #profileModal .profile-settings-footer {
+        padding-inline: 18px;
+    }
+
+    body #profileModal .profile-settings-header p {
+        margin-left: 0;
+    }
+
+    body #profileModal .profile-identity-card {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    body #profileModal .profile-role-summary {
+        grid-column: 1 / -1;
+        min-width: 0;
+        padding: 12px 0 0;
+        border-top: 1px solid var(--smpl-line);
+        border-left: 0;
+    }
+
+    body #profileModal .profile-form-grid,
+    body #profileModal .profile-password-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body #profileModal .profile-settings-footer button {
+        flex: 1 1 0;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 430px) {
+    body #profileModal .profile-identity-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    body #profileModal .profile-avatar-section,
+    body #profileModal .profile-photo-actions {
+        justify-self: center;
+    }
+
+    body #profileModal .profile-role-summary {
+        text-align: left;
+    }
+
+    body #profileModal .profile-panel-heading {
+        display: grid;
+    }
+
+    body #profileModal .profile-save-state {
+        max-width: none;
+        text-align: left;
+    }
+}
+
+/* Workflow Center: SMPLFix brand alignment and overview hierarchy. */
+body :is(#workflow-overview, .workflow-stage-section) {
+    --wfr-ink: var(--smpl-ink);
+    --wfr-text: var(--smpl-text-muted);
+    --wfr-muted: var(--smpl-text-muted);
+    --wfr-line: var(--smpl-line);
+    --wfr-surface: var(--smpl-paper);
+    --wfr-canvas: var(--smpl-surface);
+    --wfr-radius: 12px;
+    --wfr-shadow: none;
+    --wf-ink: var(--smpl-ink);
+    --wf-muted: var(--smpl-text-muted);
+    --wf-border: var(--smpl-line);
+    --wf-surface: var(--smpl-paper);
+    --wf-canvas: var(--smpl-surface);
+    color: var(--smpl-ink);
+}
+
+body #workflow-overview .workflow-reference-shell {
+    gap: 16px;
+}
+
+body #workflow-overview .workflow-kpi-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+
+body #workflow-overview .workflow-kpi-card {
+    min-height: 112px;
+    padding: 16px;
+    gap: 13px;
+    overflow: hidden;
+    border: 1px solid var(--smpl-line);
+    border-radius: 12px;
+    background: var(--smpl-paper);
+    box-shadow: none;
+    transform: none;
+}
+
+body #workflow-overview .workflow-kpi-card::before {
+    content: none;
+}
+
+body #workflow-overview .workflow-kpi-icon,
+body #workflow-overview .workflow-kpi-card[class*="tone-"] .workflow-kpi-icon {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+    color: var(--smpl-ink);
+    border: 1px solid var(--smpl-line);
+    border-radius: 10px;
+    background: var(--smpl-surface);
+    font-size: 15px;
+}
+
+body #workflow-overview .workflow-kpi-copy {
+    gap: 2px;
+}
+
+body #workflow-overview .workflow-kpi-copy > span {
+    color: var(--smpl-text-muted);
+    font: 700 10px/1.3 var(--smpl-font-mono);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+body #workflow-overview .workflow-kpi-copy strong {
+    color: var(--smpl-ink);
+    font: 700 26px/1 var(--smpl-font-ui);
+    letter-spacing: -.035em;
+}
+
+body #workflow-overview .workflow-kpi-copy small {
+    min-width: 0;
+    color: var(--smpl-text-muted);
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+body #workflow-overview .workflow-kpi-copy small.is-clear {
+    color: var(--smpl-success);
+}
+
+@media (hover: hover) {
+    body #workflow-overview .workflow-kpi-card:hover {
+        border-color: var(--smpl-ink);
+        background: var(--smpl-surface);
+        box-shadow: none;
+        transform: none;
+    }
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tabs {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(145px, 1fr));
+    gap: 0;
+    padding: 4px;
+    overflow-x: auto;
+    border: 1px solid var(--smpl-line);
+    border-radius: 12px;
+    background: var(--smpl-paper);
+    box-shadow: none;
+    scrollbar-width: thin;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    min-width: 145px;
+    min-height: 52px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    color: var(--smpl-text-muted);
+    border: 0;
+    border-right: 1px solid var(--smpl-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab:last-child {
+    border-right-color: transparent;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab > i {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    color: currentColor;
+    border-radius: 7px;
+    background: var(--smpl-surface);
+    font-size: 11px;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab span,
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab strong {
+    min-width: 0;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab strong {
+    overflow: hidden;
+    margin: 0;
+    color: inherit;
+    font: 700 11px/1.25 var(--smpl-font-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab small {
+    overflow: hidden;
+    margin-top: 2px;
+    color: inherit;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab-count {
+    min-width: 22px;
+    min-height: 22px;
+    padding: 3px 6px;
+    color: var(--smpl-text-muted);
+    border: 1px solid var(--smpl-line);
+    border-radius: 999px;
+    background: var(--smpl-surface);
+    font: 700 9px/1.5 var(--smpl-font-mono);
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab[aria-selected="true"] {
+    color: var(--smpl-paper);
+    border-color: var(--smpl-ink);
+    border-radius: 9px;
+    background: var(--smpl-ink);
+    box-shadow: none;
+}
+
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab[aria-selected="true"] > i,
+body :is(#workflow-overview, .workflow-stage-section) .workflow-tab[aria-selected="true"] .workflow-tab-count {
+    color: var(--smpl-paper);
+    border-color: #3b3b3e;
+    background: #2a2a2c;
+}
+
+body #workflow-overview .workflow-overview-grid {
+    grid-template-columns: minmax(0, 1.65fr) minmax(340px, .75fr);
+    align-items: start;
+    gap: 14px;
+}
+
+body #workflow-overview .workflow-overview-panel {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--smpl-line);
+    border-radius: 12px;
+    background: var(--smpl-paper);
+    box-shadow: none;
+}
+
+body #workflow-overview .workflow-panel-head {
+    min-height: 78px;
+    padding: 16px 18px 13px;
+    border-bottom: 1px solid var(--smpl-line);
+}
+
+body #workflow-overview .workflow-panel-head h2 {
+    gap: 9px;
+    margin: 0 0 4px;
+    color: var(--smpl-ink);
+    font-size: 15px;
+}
+
+body #workflow-overview .workflow-panel-head p {
+    margin: 0;
+    color: var(--smpl-text-muted);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+body #workflow-overview .workflow-panel-icon,
+body #workflow-overview .workflow-panel-icon.danger,
+body #workflow-overview .workflow-panel-icon.info {
+    width: 28px;
+    height: 28px;
+    color: var(--smpl-paper);
+    border-radius: 8px;
+    background: var(--smpl-ink);
+    font-size: 10px;
+}
+
+body #workflow-overview .workflow-attention-pill {
+    min-height: 26px;
+    padding: 4px 9px;
+    color: var(--smpl-danger);
+    border: 1px solid var(--smpl-danger-line);
+    background: var(--smpl-danger-bg);
+    font: 700 9px/1.2 var(--smpl-font-mono);
+}
+
+body #workflow-overview .workflow-attention-pill.is-zero {
+    color: var(--smpl-success);
+    border-color: var(--smpl-success-line);
+    background: var(--smpl-success-bg);
+}
+
+body #workflow-overview .workflow-attention-filters {
+    max-width: calc(100% - 36px);
+    margin: 12px 18px;
+    padding: 3px;
+    gap: 2px;
+    border-color: var(--smpl-line);
+    border-radius: 9px;
+    background: var(--smpl-surface);
+}
+
+body #workflow-overview .workflow-attention-filters button {
+    min-width: 76px;
+    min-height: 34px;
+    padding: 6px 10px;
+    color: var(--smpl-text-muted);
+    border-radius: 7px;
+    font-size: 9px;
+}
+
+body #workflow-overview .workflow-attention-filters button[aria-selected="true"] {
+    color: var(--smpl-paper);
+    border-color: var(--smpl-ink);
+    background: var(--smpl-ink);
+    box-shadow: none;
+}
+
+body #workflow-overview .workflow-attention-filters button[aria-selected="true"] span {
+    color: var(--smpl-ink);
+    background: var(--smpl-paper);
+}
+
+body #workflow-overview .workflow-attention-list,
+body #workflow-overview .workflow-activity-list {
+    padding-right: 18px;
+    padding-left: 18px;
+}
+
+body #workflow-overview .workflow-attention-empty {
+    min-height: 176px;
+    margin-bottom: 16px;
+    padding: 24px 16px;
+    border-color: var(--smpl-soft);
+    border-radius: 10px;
+    background: var(--smpl-surface);
+}
+
+body #workflow-overview .workflow-attention-empty .workflow-empty-art {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 8px;
+    color: var(--smpl-paper);
+    border-radius: 50%;
+    background: var(--smpl-ink);
+    box-shadow: none;
+    transform: none;
+    font-size: 15px;
+}
+
+body #workflow-overview .workflow-attention-empty .workflow-empty-art i {
+    transform: none;
+}
+
+body #workflow-overview .workflow-attention-empty strong {
+    color: var(--smpl-ink);
+    font-size: 12px;
+}
+
+body #workflow-overview .workflow-attention-empty p {
+    margin-top: 3px !important;
+    color: var(--smpl-text-muted) !important;
+    font-size: 9px !important;
+}
+
+body #workflow-overview .workflow-activity-list::before {
+    background: var(--smpl-line);
+}
+
+body #workflow-overview .workflow-activity-list .workflow-recent-item {
+    min-height: 56px;
+    border-bottom-color: var(--smpl-line);
+    background: var(--smpl-paper);
+}
+
+body #workflow-overview .workflow-activity-list .workflow-recent-item:hover {
+    background: var(--smpl-surface);
+}
+
+body #workflow-overview .workflow-activity-list .workflow-recent-item > .workflow-activity-dot {
+    color: var(--smpl-paper);
+    background: var(--smpl-ink);
+    box-shadow: 0 0 0 1px var(--smpl-line);
+}
+
+body #workflow-overview .workflow-activity-list .workflow-recent-item.tone-success > .workflow-activity-dot {
+    background: var(--smpl-success);
+}
+
+body #workflow-overview .workflow-activity-list .workflow-recent-item.tone-warning > .workflow-activity-dot,
+body #workflow-overview .workflow-activity-list .workflow-recent-item.tone-danger > .workflow-activity-dot {
+    background: var(--smpl-danger);
+}
+
+body #workflow-overview .workflow-stage-badge {
+    color: var(--smpl-text-muted);
+    border: 1px solid var(--smpl-line);
+    background: var(--smpl-surface);
+}
+
+body #workflow-overview .workflow-activity-list .workflow-stage-badge[class*="stage-"] {
+    color: var(--smpl-text-muted);
+}
+
+body #workflow-overview :where(.workflow-kpi-card, .workflow-tab, .workflow-attention-filters button, .workflow-recent-item):focus-visible {
+    outline: 2px solid var(--smpl-ink);
+    outline-offset: 2px;
+}
+
+@media (max-width: 1320px) {
+    body #workflow-overview .workflow-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body #workflow-overview .workflow-overview-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 820px) {
+    body #workflow-overview .workflow-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body :is(#workflow-overview, .workflow-stage-section) .workflow-tabs {
+        grid-template-columns: repeat(7, 150px);
+        scroll-snap-type: x proximity;
+    }
+
+    body :is(#workflow-overview, .workflow-stage-section) .workflow-tab {
+        min-width: 150px;
+        scroll-snap-align: start;
+    }
+}
+
+@media (max-width: 560px) {
+    body #workflow-overview .workflow-reference-shell {
+        gap: 12px;
+    }
+
+    body #workflow-overview .workflow-kpi-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    body #workflow-overview .workflow-kpi-card {
+        min-height: 86px;
+        padding: 13px;
+    }
+
+    body #workflow-overview .workflow-panel-head {
+        align-items: flex-start;
+        min-height: 0;
+        padding: 14px;
+    }
+
+    body #workflow-overview .workflow-attention-filters {
+        max-width: calc(100% - 28px);
+        margin: 10px 14px;
+    }
+
+    body #workflow-overview .workflow-attention-list,
+    body #workflow-overview .workflow-activity-list {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+}
+
+/* Workflow overview micro-polish: compact counts and reliable monochrome icons. */
+body #workflow-overview .workflow-attention-filters button {
+    gap: 5px;
+}
+
+body #workflow-overview .workflow-attention-filters button > span {
+    display: inline-grid;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--smpl-line);
+    color: var(--smpl-text-muted);
+    font: 700 7px/1 var(--smpl-font-mono);
+}
+
+body #workflow-overview .workflow-attention-filters button[aria-selected="true"] > span {
+    background: var(--smpl-paper) !important;
+    color: var(--smpl-ink) !important;
+}
+
+body #workflow-overview .workflow-attention-empty .workflow-empty-art.success {
+    display: grid !important;
+    width: 40px !important;
+    height: 40px !important;
+    place-items: center !important;
+    color: var(--smpl-paper) !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: var(--smpl-ink) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+body #workflow-overview .workflow-attention-empty .workflow-empty-art.success > i {
+    color: var(--smpl-paper) !important;
+    font-size: 14px !important;
+    transform: none !important;
+}
+
+body #workflow-overview .workflow-panel-icon,
+body #workflow-overview .workflow-panel-icon.info,
+body #workflow-overview .workflow-panel-icon.danger {
+    display: inline-grid !important;
+    width: 28px !important;
+    height: 28px !important;
+    place-items: center !important;
+    color: var(--smpl-paper) !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: var(--smpl-ink) !important;
+    background-image: none !important;
+}
+
+body #workflow-overview .workflow-panel-icon > i {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    color: var(--smpl-paper) !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+}
+
+body #workflow-overview .workflow-activity-list::before {
+    content: none !important;
+}
+
+body #workflow-overview .workflow-activity-list .workflow-recent-item {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+    gap: 12px !important;
+    padding: 10px 0 !important;
+}
+
+body #workflow-overview .workflow-activity-list .workflow-recent-item > .workflow-stage-badge {
+    grid-column: 2 !important;
+    align-self: center !important;
+}
+
+@media (max-width: 620px) {
+    body #workflow-overview .workflow-activity-list .workflow-recent-item {
+        grid-template-columns: minmax(0, 1fr) max-content !important;
+    }
+
+    body #workflow-overview .workflow-activity-list .workflow-stage-badge {
+        grid-column: 2 !important;
+    }
+}
+
+/* Workflow Center inner stages: one branded system across stages 1-6. */
+body .workflow-stage-section {
+    container-type: inline-size;
+    padding-bottom: 48px;
+}
+
+body .workflow-stage-section > .workflow-header {
+    min-height: 0 !important;
+    margin: 0 0 14px !important;
+    padding: 0 0 14px !important;
+    overflow: visible !important;
+    color: var(--smpl-ink) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--smpl-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section > .workflow-header::after {
+    content: none !important;
+}
+
+body .workflow-stage-section > .workflow-header > div:first-child {
+    display: block;
+    min-width: 0;
+}
+
+body .workflow-stage-section > .workflow-header h1 {
+    margin: 0 0 5px !important;
+    color: var(--smpl-ink) !important;
+    font: 700 clamp(24px, 2.2vw, 32px)/1.08 var(--smpl-font-ui) !important;
+    letter-spacing: -.035em !important;
+}
+
+body .workflow-stage-section > .workflow-header p {
+    max-width: 760px;
+    margin: 0 !important;
+    overflow: visible !important;
+    color: var(--smpl-text-muted) !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+}
+
+body .workflow-stage-section :where(.workflow-stage-header-actions, .closeout-header-actions) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+body .workflow-stage-section :where(.btn-primary, button[type="submit"]:not(.btn-secondary)) {
+    color: var(--smpl-paper) !important;
+    border-color: var(--smpl-ink) !important;
+    background: var(--smpl-ink) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section :where(.btn-secondary, .btn-refresh, .workflow-filter-clear) {
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-soft) !important;
+    background: var(--smpl-paper) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section :where(.btn-primary, .btn-secondary, .btn-refresh, .workflow-filter-clear) {
+    min-height: 38px !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    font: 700 10px/1.2 var(--smpl-font-ui) !important;
+}
+
+@media (hover: hover) {
+    body .workflow-stage-section :where(.btn-primary, button[type="submit"]:not(.btn-secondary)):hover:not(:disabled) {
+        color: var(--smpl-paper) !important;
+        border-color: var(--smpl-ink-hover) !important;
+        background: var(--smpl-ink-hover) !important;
+        transform: none !important;
+    }
+
+    body .workflow-stage-section :where(.btn-secondary, .btn-refresh, .workflow-filter-clear):hover:not(:disabled) {
+        color: var(--smpl-ink) !important;
+        border-color: var(--smpl-ink) !important;
+        background: var(--smpl-surface) !important;
+        transform: none !important;
+    }
+}
+
+body .workflow-stage-section .workflow-shared-chrome {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 14px;
+}
+
+body .workflow-stage-section .workflow-filterbar {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.5fr) repeat(3, minmax(130px, .55fr)) minmax(145px, .55fr) auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 10px;
+    gap: 8px;
+    border: 1px solid var(--smpl-line);
+    border-radius: 12px;
+    background: var(--smpl-paper);
+    box-shadow: none;
+}
+
+body .workflow-stage-section .workflow-filterbar :where(input, select) {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 11px;
+    color: var(--smpl-ink);
+    border: 1px solid var(--smpl-soft);
+    border-radius: 8px;
+    background: var(--smpl-paper);
+    font: 500 11px/1.2 var(--smpl-font-ui);
+    box-shadow: none;
+}
+
+body .workflow-stage-section .workflow-search input {
+    padding-left: 36px;
+}
+
+body .workflow-stage-section .workflow-search > i {
+    left: 13px;
+    color: var(--smpl-text-muted);
+}
+
+body .workflow-stage-section .workflow-filterbar :where(input, select):focus {
+    outline: 2px solid var(--smpl-ink);
+    outline-offset: 1px;
+    border-color: var(--smpl-ink);
+}
+
+body .workflow-stage-section .workflow-summary {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: 10px !important;
+    margin: 0 0 14px !important;
+}
+
+body .workflow-stage-section .workflow-summary > div {
+    display: grid !important;
+    min-width: 0 !important;
+    min-height: 86px !important;
+    align-content: center !important;
+    gap: 5px !important;
+    padding: 14px 16px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section .workflow-summary > div::before {
+    content: none !important;
+}
+
+body .workflow-stage-section .workflow-summary strong {
+    color: var(--smpl-ink) !important;
+    font: 700 25px/1 var(--smpl-font-ui) !important;
+    letter-spacing: -.035em !important;
+}
+
+body .workflow-stage-section .workflow-summary span {
+    margin: 0 !important;
+    color: var(--smpl-text-muted) !important;
+    font: 700 9px/1.35 var(--smpl-font-mono) !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+}
+
+body .workflow-stage-section .incoming-start-panel,
+body .workflow-stage-section .outgoing-toolbar {
+    margin: 0 0 14px !important;
+    padding: 12px 14px !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section .incoming-start-panel {
+    display: grid !important;
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, .65fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+body .workflow-stage-section .incoming-start-panel > div {
+    min-width: 0;
+}
+
+body .workflow-stage-section .incoming-start-panel strong,
+body .workflow-stage-section .incoming-start-panel span {
+    display: block;
+}
+
+body .workflow-stage-section .incoming-start-panel strong {
+    margin-bottom: 3px;
+    font-size: 12px;
+}
+
+body .workflow-stage-section .incoming-start-panel span {
+    color: var(--smpl-text-muted);
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+body .workflow-stage-section .incoming-start-panel select {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    border: 1px solid var(--smpl-soft);
+    border-radius: 8px;
+    background: var(--smpl-paper);
+}
+
+body .workflow-stage-section :where(
+    .workflow-request-list,
+    .incoming-order-list,
+    .outgoing-order-list,
+    .approval-order-list,
+    .scheduling-list,
+    .closeout-order-list
+) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-content: start !important;
+    gap: 10px !important;
+    min-width: 0 !important;
+}
+
+body .workflow-stage-section :where(
+    .workflow-request-card,
+    .incoming-order-card,
+    .outgoing-order-card,
+    .approval-card,
+    .scheduling-card,
+    .closeout-order-card
+) {
+    min-width: 0 !important;
+    padding: 16px !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-left-color: var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+body .workflow-stage-section :where(
+    .workflow-request-card,
+    .incoming-order-card,
+    .outgoing-order-card,
+    .approval-card,
+    .scheduling-card,
+    .closeout-order-card
+)::before {
+    content: none !important;
+}
+
+@media (hover: hover) {
+    body .workflow-stage-section :where(
+        .workflow-request-card,
+        .incoming-order-card,
+        .outgoing-order-card,
+        .approval-card,
+        .scheduling-card,
+        .closeout-order-card
+    ):hover {
+        border-color: var(--smpl-soft) !important;
+        background: var(--smpl-surface) !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+}
+
+body .workflow-stage-section :where(
+    .workflow-request-card,
+    .incoming-order-card,
+    .outgoing-order-card,
+    .approval-card,
+    .scheduling-card,
+    .closeout-order-card
+) :where(h2, h3, h4, strong) {
+    color: var(--smpl-ink);
+}
+
+body .workflow-stage-section :where(
+    .workflow-card-actions,
+    .incoming-primary-actions,
+    .incoming-form-actions,
+    .outgoing-actions,
+    .approval-actions,
+    .schedule-submit-bar,
+    .closeout-submit-bar,
+    .closeout-actions
+) {
+    display: flex !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+body .workflow-stage-section :where(.workflow-empty, .incoming-empty, .outgoing-empty, .approval-empty, .scheduling-empty, .closeout-empty) {
+    display: grid !important;
+    min-height: 180px !important;
+    place-items: center !important;
+    align-content: center !important;
+    gap: 8px !important;
+    padding: 24px !important;
+    color: var(--smpl-text-muted) !important;
+    border: 1px dashed var(--smpl-soft) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-surface) !important;
+    text-align: center !important;
+}
+
+body .workflow-stage-section :where(.workflow-empty, .incoming-empty, .outgoing-empty, .approval-empty, .scheduling-empty, .closeout-empty) > i {
+    display: grid !important;
+    width: 38px !important;
+    height: 38px !important;
+    place-items: center !important;
+    color: var(--smpl-paper) !important;
+    border-radius: 50% !important;
+    background: var(--smpl-ink) !important;
+    font-size: 14px !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-workspace,
+    .outgoing-workspace,
+    .approval-workspace,
+    .scheduling-workspace,
+    .closeout-workspace,
+    .workflow-unified-workspace
+) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section :where(
+    .workflow-workspace-back,
+    .outgoing-back-link,
+    .scheduling-back-link,
+    .closeout-back-link
+) {
+    display: inline-flex !important;
+    position: static !important;
+    width: max-content !important;
+    max-width: 100% !important;
+    min-height: 36px !important;
+    align-items: center !important;
+    gap: 7px !important;
+    margin: 0 0 10px !important;
+    padding: 7px 10px !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 8px !important;
+    background: var(--smpl-paper) !important;
+    box-shadow: none !important;
+    font: 700 10px/1.2 var(--smpl-font-ui) !important;
+    text-decoration: none !important;
+}
+
+body .workflow-stage-section :where(
+    .workflow-local-heading,
+    .workflow-order-context,
+    .incoming-workspace-head,
+    .outgoing-workspace-hero,
+    .approval-workspace-head,
+    .scheduling-head,
+    .closeout-workspace-head
+) {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    gap: 14px !important;
+    margin: 0 0 12px !important;
+    padding: 15px 16px !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section :where(
+    .workflow-local-heading,
+    .workflow-order-context,
+    .incoming-workspace-head,
+    .outgoing-workspace-hero,
+    .approval-workspace-head,
+    .scheduling-head,
+    .closeout-workspace-head
+) > div {
+    min-width: 0;
+}
+
+body .workflow-stage-section :where(
+    .outgoing-workspace-icon,
+    .scheduling-workspace-icon,
+    .closeout-workspace-icon
+) {
+    display: grid !important;
+    width: 40px !important;
+    height: 40px !important;
+    place-items: center !important;
+    color: var(--smpl-paper) !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: var(--smpl-ink) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section :where(
+    .outgoing-workspace-icon,
+    .scheduling-workspace-icon,
+    .closeout-workspace-icon
+) > i {
+    color: var(--smpl-paper) !important;
+}
+
+body .workflow-stage-section :where(
+    .outgoing-workspace-stage,
+    .scheduling-stage-label,
+    .closeout-stage-label,
+    .workflow-chip.info
+) {
+    display: inline-flex !important;
+    min-height: 26px !important;
+    align-items: center !important;
+    padding: 4px 9px !important;
+    color: var(--smpl-paper) !important;
+    border: 1px solid var(--smpl-ink) !important;
+    border-radius: 999px !important;
+    background: var(--smpl-ink) !important;
+    font: 700 8px/1.2 var(--smpl-font-mono) !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+}
+
+body .workflow-stage-section :where(
+    .workflow-local-heading,
+    .workflow-order-context,
+    .incoming-workspace-head,
+    .outgoing-workspace-hero,
+    .approval-workspace-head,
+    .scheduling-head,
+    .closeout-workspace-head
+) :where(h2, h3) {
+    margin: 2px 0 4px !important;
+    color: var(--smpl-ink) !important;
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+}
+
+body .workflow-stage-section :where(
+    .workflow-local-heading,
+    .workflow-order-context,
+    .incoming-workspace-head,
+    .outgoing-workspace-hero,
+    .approval-workspace-head,
+    .scheduling-head,
+    .closeout-workspace-head
+) :where(p, small) {
+    margin: 0 !important;
+    color: var(--smpl-text-muted) !important;
+    font-size: 10px !important;
+    line-height: 1.4 !important;
+}
+
+body .workflow-stage-section .workflow-journey {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(150px, 1fr)) !important;
+    min-width: 0 !important;
+    margin: 0 0 12px !important;
+    padding: 5px !important;
+    gap: 5px !important;
+    overflow-x: auto !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section .workflow-journey-step {
+    min-width: 150px !important;
+    min-height: 58px !important;
+    padding: 10px 10px 10px 38px !important;
+    color: var(--smpl-text-muted) !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+}
+
+body .workflow-stage-section .workflow-journey-step::before {
+    left: 10px !important;
+    top: 50% !important;
+    width: 20px !important;
+    height: 20px !important;
+    color: var(--smpl-text-muted) !important;
+    background: var(--smpl-line) !important;
+    box-shadow: none !important;
+    transform: translateY(-50%) !important;
+}
+
+body .workflow-stage-section .workflow-journey-step.current {
+    color: var(--smpl-paper) !important;
+    border-color: var(--smpl-ink) !important;
+    background: var(--smpl-ink) !important;
+}
+
+body .workflow-stage-section .workflow-journey-step.current::before {
+    color: var(--smpl-ink) !important;
+    background: var(--smpl-paper) !important;
+}
+
+body .workflow-stage-section .workflow-journey-step.completed {
+    color: var(--smpl-success) !important;
+    border-color: var(--smpl-success-line) !important;
+    background: var(--smpl-success-bg) !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-panel,
+    .outgoing-panel,
+    .approval-panel,
+    .scheduling-panel,
+    .closeout-panel,
+    .workflow-panel,
+    .workflow-intake-health,
+    .workflow-intake-checklist
+) {
+    min-width: 0 !important;
+    padding: 16px !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-left-color: var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-panel-heading,
+    .outgoing-panel-head,
+    .schedule-panel-heading,
+    .closeout-panel-title,
+    .closeout-form-heading
+) {
+    display: flex !important;
+    min-width: 0 !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-panel-heading,
+    .schedule-panel-heading,
+    .closeout-panel-title,
+    .closeout-form-heading
+) > span:first-child {
+    display: grid !important;
+    flex: 0 0 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    place-items: center !important;
+    color: var(--smpl-paper) !important;
+    border: 0 !important;
+    border-radius: 9px !important;
+    background: var(--smpl-ink) !important;
+    background-image: none !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-panel-heading,
+    .schedule-panel-heading,
+    .closeout-panel-title,
+    .closeout-form-heading
+) > span:first-child i {
+    color: var(--smpl-paper) !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-panel-heading,
+    .schedule-panel-heading,
+    .closeout-panel-title,
+    .closeout-form-heading
+) > div {
+    min-width: 0;
+}
+
+body .workflow-stage-section :where(.incoming-panel, .outgoing-panel, .approval-panel, .scheduling-panel, .closeout-panel) h3 {
+    margin: 0 0 4px !important;
+    color: var(--smpl-ink) !important;
+    font-size: 14px !important;
+    line-height: 1.3 !important;
+}
+
+body .workflow-stage-section :where(.incoming-panel, .outgoing-panel, .approval-panel, .scheduling-panel, .closeout-panel) p {
+    color: var(--smpl-text-muted) !important;
+    line-height: 1.45 !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-action-grid,
+    .outgoing-draft-layout,
+    .scheduling-workspace-layout,
+    .closeout-grid,
+    #customerApprovalDetails
+) {
+    min-width: 0 !important;
+    gap: 12px !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-form-grid,
+    .incoming-invite-fields,
+    .outgoing-form-grid,
+    .schedule-grid,
+    .closeout-form,
+    .form-grid
+) {
+    min-width: 0 !important;
+    gap: 12px !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-form-grid,
+    .incoming-invite-fields,
+    .outgoing-form-grid,
+    .schedule-grid,
+    .closeout-form,
+    .form-grid
+) > * {
+    min-width: 0 !important;
+}
+
+body .workflow-stage-section label {
+    color: var(--smpl-ink) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+}
+
+body .workflow-stage-section label > small {
+    color: var(--smpl-text-muted) !important;
+    font-size: 8px !important;
+    font-weight: 500 !important;
+}
+
+body .workflow-stage-section :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    width: 100% !important;
+    min-width: 0 !important;
+    color: var(--smpl-ink) !important;
+    border: 1px solid var(--smpl-soft) !important;
+    border-radius: 8px !important;
+    background: var(--smpl-paper) !important;
+    box-shadow: none !important;
+    font: 500 11px/1.35 var(--smpl-font-ui) !important;
+}
+
+body .workflow-stage-section :where(input:not([type="checkbox"]):not([type="radio"]), select) {
+    min-height: 42px !important;
+    padding: 0 11px !important;
+}
+
+body .workflow-stage-section textarea {
+    min-height: 92px !important;
+    padding: 10px 11px !important;
+    resize: vertical !important;
+}
+
+body .workflow-stage-section :where(input, select, textarea):focus {
+    outline: 2px solid var(--smpl-ink) !important;
+    outline-offset: 1px !important;
+    border-color: var(--smpl-ink) !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-workspace-tabs,
+    .workflow-decision-timeline
+) {
+    position: static !important;
+    min-width: 0 !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-surface) !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section .incoming-workspace-tab[aria-selected="true"] {
+    color: var(--smpl-paper) !important;
+    background: var(--smpl-ink) !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section :where(.incoming-table-wrap, .table-wrap, .table-container) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: auto !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 9px !important;
+    background: var(--smpl-paper) !important;
+}
+
+body .workflow-stage-section table {
+    color: var(--smpl-ink) !important;
+    border-collapse: collapse !important;
+    background: var(--smpl-paper) !important;
+}
+
+body .workflow-stage-section th {
+    color: var(--smpl-text-muted) !important;
+    background: var(--smpl-surface) !important;
+    font: 700 8px/1.3 var(--smpl-font-mono) !important;
+    letter-spacing: .04em !important;
+}
+
+body .workflow-stage-section :where(th, td) {
+    border-bottom: 1px solid var(--smpl-line) !important;
+}
+
+body .workflow-stage-section :where(
+    .incoming-primary-actions,
+    .incoming-form-actions,
+    .outgoing-actions,
+    .approval-actions,
+    .schedule-submit-bar,
+    .closeout-submit-bar,
+    .workflow-sticky-actions
+) {
+    position: static !important;
+    margin-top: 14px !important;
+    padding: 11px !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 9px !important;
+    background: var(--smpl-surface) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+body .workflow-stage-section details {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--smpl-line) !important;
+    border-radius: 10px !important;
+    background: var(--smpl-paper) !important;
+    box-shadow: none !important;
+}
+
+body .workflow-stage-section details > summary {
+    min-height: 48px !important;
+    padding: 11px 13px !important;
+    color: var(--smpl-ink) !important;
+    background: var(--smpl-paper) !important;
+    cursor: pointer !important;
+}
+
+body .workflow-stage-section :where(.workflow-clickable, button, a, summary):focus-visible {
+    outline: 2px solid var(--smpl-ink) !important;
+    outline-offset: 2px !important;
+}
+
+@media (max-width: 1180px) {
+    body .workflow-stage-section .workflow-filterbar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body .workflow-stage-section .workflow-search {
+        grid-column: 1 / -1;
+    }
+
+    body .workflow-stage-section .incoming-start-panel {
+        grid-template-columns: minmax(0, 1fr) minmax(220px, .75fr);
+    }
+
+    body .workflow-stage-section .incoming-start-panel > div {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 900px) {
+    body .workflow-stage-section :where(
+        .incoming-action-grid,
+        .outgoing-draft-layout,
+        .scheduling-workspace-layout,
+        .closeout-grid,
+        #customerApprovalDetails
+    ) {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body .workflow-stage-section :where(.scheduling-workspace-aside, .closeout-aside, .outgoing-readiness) {
+        position: static !important;
+    }
+}
+
+@media (max-width: 700px) {
+    body .workflow-stage-section > .workflow-header {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        align-items: start !important;
+        gap: 12px !important;
+    }
+
+    body .workflow-stage-section :where(.workflow-stage-header-actions, .closeout-header-actions) {
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
+
+    body .workflow-stage-section .workflow-filterbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body .workflow-stage-section .workflow-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body .workflow-stage-section .incoming-start-panel {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body .workflow-stage-section .incoming-start-panel > div {
+        grid-column: auto;
+    }
+
+    body .workflow-stage-section :where(
+        .workflow-local-heading,
+        .workflow-order-context,
+        .incoming-workspace-head,
+        .outgoing-workspace-hero,
+        .approval-workspace-head,
+        .scheduling-head,
+        .closeout-workspace-head
+    ) {
+        grid-template-columns: auto minmax(0, 1fr) !important;
+        align-items: start !important;
+    }
+
+    body .workflow-stage-section :where(
+        .outgoing-workspace-stage,
+        .scheduling-stage-label,
+        .closeout-stage-label,
+        .workflow-local-heading > button,
+        .incoming-workspace-head > button,
+        .approval-workspace-head > button
+    ) {
+        grid-column: 1 / -1 !important;
+        justify-self: start !important;
+    }
+}
+
+@media (max-width: 520px) {
+    body .workflow-stage-section {
+        padding-right: 0 !important;
+        padding-left: 0 !important;
+    }
+
+    body .workflow-stage-section .workflow-filterbar,
+    body .workflow-stage-section .workflow-summary {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body .workflow-stage-section .workflow-search {
+        grid-column: auto;
+    }
+
+    body .workflow-stage-section :where(
+        .workflow-local-heading,
+        .workflow-order-context,
+        .incoming-workspace-head,
+        .outgoing-workspace-hero,
+        .approval-workspace-head,
+        .scheduling-head,
+        .closeout-workspace-head
+    ) {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body .workflow-stage-section :where(
+        .outgoing-workspace-icon,
+        .scheduling-workspace-icon,
+        .closeout-workspace-icon
+    ) {
+        width: 36px !important;
+        height: 36px !important;
+    }
+
+    body .workflow-stage-section :where(
+        .workflow-card-actions,
+        .incoming-primary-actions,
+        .incoming-form-actions,
+        .outgoing-actions,
+        .approval-actions,
+        .schedule-submit-bar,
+        .closeout-submit-bar,
+        .closeout-actions,
+        .workflow-sticky-actions
+    ) > * {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     body #pipeline *,
     body #pipeline *::before,

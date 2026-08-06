@@ -49,11 +49,59 @@ test('browser authentication contains no bearer-token persistence or transmissio
   assert.match(clientFiles, /AuthReady/);
 });
 
+test('login submit control uses dependency-free visible action and success icons', () => {
+  const loginPage = read('pages/login.html');
+  const loginScript = read('assets/js/login-script.js');
+  const loginStyles = read('assets/css/login-styles.css');
+
+  assert.match(loginPage, /class="submit-btn__arrow" aria-hidden="true">&#8594;<\/span>/);
+  assert.match(loginScript, /class="submit-btn__success-icon" aria-hidden="true">&#10003;<\/span>/);
+  assert.match(loginStyles, /\.submit-btn > :where\(\.submit-btn__arrow, \.submit-btn__success-icon\)/);
+});
+
 test('signup creates inactive pending approval requests and validates requested roles', () => {
   const authRoute = read('backend/routes/auth.js');
   assert.match(authRoute, /\['admin', 'manager', 'account_rep'\]\.includes\(requestedRole\)/);
   assert.match(authRoute, /role:\s*'pending'/);
   assert.match(authRoute, /isActive:\s*false/);
+});
+
+test('profile settings are database-backed, validated, and cannot self-escalate roles', () => {
+  const authRoute = read('backend/routes/auth.js');
+  const userModel = read('backend/models/User.js');
+  assert.match(authRoute, /router\.get\('\/profile', authenticateToken/);
+  assert.match(authRoute, /router\.put\('\/profile', authenticateToken/);
+  assert.match(authRoute, /User\.findById\(req\.user\.userId\)/);
+  assert.match(authRoute, /Current password is required to change your email address/);
+  assert.match(authRoute, /function normalizeProfileAvatar\(value\)/);
+  assert.match(authRoute, /png\|jpeg\|webp/);
+  assert.match(authRoute, /avatarBytes:\s*512 \* 1024/);
+  assert.doesNotMatch(authRoute, /user\.role\s*=\s*req\.body/);
+  assert.match(userModel, /firstName: \{ type: String, required: true, trim: true, maxlength: 80 \}/);
+  assert.match(userModel, /department: \{ type: String, trim: true, maxlength: 100 \}/);
+});
+
+test('profile modal loads fresh data and separates profile and password transactions', () => {
+  const html = read('pages/admin-dashboard.html');
+  const api = read('assets/js/api-service.js');
+  const dashboard = read('assets/js/dashboard-script.js');
+  const styles = read('assets/css/smplfix-components.css');
+  const profileMarkup = html.slice(html.indexOf('<!-- Profile Modal -->'), html.indexOf('<!-- Pipeline Modals -->'));
+
+  assert.match(profileMarkup, /role="dialog" aria-modal="true"/);
+  assert.match(profileMarkup, /id="profileForm" onsubmit="saveProfile\(event\)"/);
+  assert.match(profileMarkup, /id="profilePasswordForm" onsubmit="changeProfilePassword\(event\)"/);
+  assert.match(profileMarkup, /id="profileRoleLabel"/);
+  assert.doesNotMatch(profileMarkup, /<select id="role"/);
+  assert.match(api, /async getProfile\(\)[\s\S]*?request\('\/auth\/profile'\)/);
+  assert.match(dashboard, /await window\.APIService\.getProfile\(\)/);
+  assert.match(dashboard, /profilePendingAvatar !== undefined/);
+  assert.match(dashboard, /window\.APIService\.changePassword\(currentPassword, newPassword\)/);
+  assert.match(styles, /authoritative SMPLFix account workspace/);
+  assert.match(styles, /body #profileModal \.profile-form,[\s\S]*?display: block !important/);
+  assert.match(styles, /width: min\(920px, calc\(100vw - 48px\)\) !important/);
+  assert.match(dashboard, /document\.body\.classList\.add\('profile-modal-open'\)/);
+  assert.match(html, /dashboard-script\.js\?v=20260806-settings-ui/);
 });
 
 test('sensitive modules and notification mutations have server-side ownership checks', () => {

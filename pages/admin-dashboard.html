@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="../assets/css/forms.css">
     <link rel="stylesheet" href="../assets/css/notifications.css">
     <link rel="stylesheet" href="../assets/css/reports.css">
-    <link rel="stylesheet" href="../assets/css/settings.css">
+    <link rel="stylesheet" href="../assets/css/settings.css?v=20260806-settings-ui">
     <link rel="stylesheet" href="../assets/css/pipeline.css">
     <link rel="stylesheet" href="../assets/css/accounting-styles.css">
     <link rel="stylesheet" href="../assets/css/calendar.css">
@@ -33,26 +33,26 @@
     <link rel="stylesheet" href="../assets/css/payment-detail.css">
     <link rel="stylesheet" href="../assets/css/security-utils.css">
     <link rel="stylesheet" href="../assets/css/premium-saas-overhaul.css">
-    <link rel="stylesheet" href="../assets/css/vendor-onboarding-admin.css">
     <link rel="stylesheet" href="../assets/css/vendor-email-delivery.css">
     <link rel="stylesheet" href="../assets/css/vendor-reviews.css">
     <link rel="stylesheet" href="../assets/css/vendor-reviews-polish.css">
-    <link rel="stylesheet" href="../assets/css/vendor-modal-onboarding-polish.css">
     <link rel="stylesheet" href="../assets/css/vendor-review-detail-polish.css">
-    <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css">
-    <link rel="stylesheet" href="../assets/css/workflow-center.css">
-    <link rel="stylesheet" href="../assets/css/incoming-quotes.css?v=20260725-quote-table-clean">
-    <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20260725-sent-summary">
-    <link rel="stylesheet" href="../assets/css/customer-approvals.css">
-    <link rel="stylesheet" href="../assets/css/scheduling.css?v=20260725-scheduling-workspace-v2">
-    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260723-workflow-interactions">
-    <link rel="stylesheet" href="../assets/css/workflow-reference.css?v=20260725-quote-compliance">
-    <link rel="stylesheet" href="../assets/css/closeout.css?v=20260727-customer-engagement">
+    <link rel="stylesheet" href="../assets/css/workflow-center.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/incoming-quotes.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/customer-approvals.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/scheduling.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/workflow-reference.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/closeout.css?v=20260806-workflow-monochrome">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
     <link rel="stylesheet" href="../assets/css/smplfix-shell.css?v=20260806-search-polish">
-    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260806-pipeline-card-clean">
+    <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260806-profile-ui">
     <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=20260806-pipeline-board-ux">
+    <link rel="stylesheet" href="../assets/css/vendor-onboarding-admin.css?v=20260807-vendor-management-2">
+    <link rel="stylesheet" href="../assets/css/vendor-modal-onboarding-polish.css?v=20260807-vendor-management-3">
+    <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css?v=20260807-vendor-management-2">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
 </head>
 <body>
@@ -2961,15 +2961,21 @@
                     <p class="smpl-section-description">Manage workspace preferences and defaults.</p>
                 </div>
                 <div class="settings-actions smpl-section-header-actions">
-                    <button class="btn-secondary" onclick="resetSettings()">Reset to Default</button>
-                    <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+                    <span class="settings-save-state" id="settingsSaveState" role="status" aria-live="polite"><span aria-hidden="true"></span> Ready</span>
+                    <button type="button" class="btn-secondary" id="settingsResetButton" onclick="resetSettings()"><i class="fas fa-rotate-left" aria-hidden="true"></i> Reset defaults</button>
+                    <button type="submit" class="btn-primary" id="settingsSaveButton" form="settingsForm"><i class="fas fa-check" aria-hidden="true"></i> Save settings</button>
                 </div>
             </header>
-            
-            <div class="settings-container">
+
+            <form id="settingsForm" class="settings-workspace" onsubmit="saveSettings(event)">
+            <div class="settings-container" aria-busy="false">
                 <!-- User Preferences -->
-                <div class="settings-section">
-                    <h2>User Preferences</h2>
+                <section class="settings-section settings-preferences" aria-labelledby="settingsPreferencesTitle">
+                    <div class="settings-section-heading">
+                        <span class="settings-section-icon" aria-hidden="true"><i class="fas fa-sliders"></i></span>
+                        <div><h2 id="settingsPreferencesTitle">Workspace preferences</h2><p>Choose how the dashboard looks and formats information for you.</p></div>
+                        <span class="settings-section-tag">Personal</span>
+                    </div>
                     <div class="settings-grid">
                         <div class="setting-item">
                             <label for="settingsTheme">Theme</label>
@@ -2977,6 +2983,7 @@
                                 <option value="light">Light</option>
                                 <option value="dark">Dark</option>
                             </select>
+                            <small>Applied immediately after saving.</small>
                         </div>
                         <div class="setting-item">
                             <label for="settingsLanguage">Language</label>
@@ -2985,6 +2992,7 @@
                                 <option value="es">Spanish</option>
                                 <option value="fr">French</option>
                             </select>
+                            <small>Controls dashboard interface language.</small>
                         </div>
                         <div class="setting-item">
                             <label for="settingsTimezone">Timezone</label>
@@ -2995,44 +3003,45 @@
                                 <option value="America/Phoenix" selected>Arizona Time (MST, GMT-7)</option>
                                 <option value="America/Los_Angeles">Pacific Time</option>
                             </select>
+                            <small>Used for dates, schedules, and reports.</small>
                         </div>
                     </div>
-                </div>
+                </section>
                 
                 <!-- Notifications -->
-                <div class="settings-section">
-                    <h2>Notification Preferences</h2>
-                    <div class="settings-grid">
-                        <div class="setting-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="notificationsEmail">
-                                <span class="checkmark"></span>
-                                Email Notifications
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="notificationsPush">
-                                <span class="checkmark"></span>
-                                Push Notifications
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="notificationsSms">
-                                <span class="checkmark"></span>
-                                SMS Notifications
-                            </label>
-                        </div>
+                <section class="settings-section settings-notifications" aria-labelledby="settingsNotificationsTitle">
+                    <div class="settings-section-heading">
+                        <span class="settings-section-icon" aria-hidden="true"><i class="fas fa-bell"></i></span>
+                        <div><h2 id="settingsNotificationsTitle">Notifications</h2><p>Control how operational updates reach you.</p></div>
                     </div>
-                </div>
+                    <div class="settings-toggle-list">
+                        <label class="settings-toggle">
+                            <span class="settings-toggle-copy"><strong>Email notifications</strong><small>Important activity and daily updates.</small></span>
+                                <input type="checkbox" id="notificationsEmail">
+                            <span class="settings-toggle-control" aria-hidden="true"></span>
+                        </label>
+                        <label class="settings-toggle">
+                            <span class="settings-toggle-copy"><strong>Push notifications</strong><small>Browser alerts while you are working.</small></span>
+                                <input type="checkbox" id="notificationsPush">
+                            <span class="settings-toggle-control" aria-hidden="true"></span>
+                        </label>
+                        <label class="settings-toggle">
+                            <span class="settings-toggle-copy"><strong>SMS notifications</strong><small>Time-sensitive updates sent by text.</small></span>
+                                <input type="checkbox" id="notificationsSms">
+                            <span class="settings-toggle-control" aria-hidden="true"></span>
+                        </label>
+                    </div>
+                </section>
                 
                 <!-- Dashboard Settings -->
-                <div class="settings-section">
-                    <h2>Dashboard Settings</h2>
+                <section class="settings-section settings-dashboard" aria-labelledby="settingsDashboardTitle">
+                    <div class="settings-section-heading">
+                        <span class="settings-section-icon" aria-hidden="true"><i class="fas fa-table-columns"></i></span>
+                        <div><h2 id="settingsDashboardTitle">Dashboard behavior</h2><p>Set list density, default layouts, and refresh timing.</p></div>
+                    </div>
                     <div class="settings-grid">
                         <div class="setting-item">
-                            <label for="dashboardItemsPerPage">Items Per Page</label>
+                            <label for="dashboardItemsPerPage">Items per page</label>
                             <select id="dashboardItemsPerPage" autocomplete="off">
                                 <option value="5">5</option>
                                 <option value="10">10</option>
@@ -3041,76 +3050,85 @@
                             </select>
                         </div>
                         <div class="setting-item">
-                            <label for="dashboardDefaultView">Default View</label>
+                            <label for="dashboardDefaultView">Default view</label>
                             <select id="dashboardDefaultView" autocomplete="off">
                                 <option value="table">Table</option>
                                 <option value="grid">Grid</option>
                             </select>
                         </div>
-                        <div class="setting-item">
-                            <label class="checkbox-label">
+                        <div class="setting-item setting-toggle-item">
+                            <label class="settings-toggle settings-toggle-compact">
+                                <span class="settings-toggle-copy"><strong>Auto refresh</strong><small>Keep dashboard data current.</small></span>
                                 <input type="checkbox" id="dashboardAutoRefresh">
-                                <span class="checkmark"></span>
-                                Auto Refresh
+                                <span class="settings-toggle-control" aria-hidden="true"></span>
                             </label>
                         </div>
                         <div class="setting-item">
-                            <label for="dashboardRefreshInterval">Refresh Interval (seconds)</label>
+                            <label for="dashboardRefreshInterval">Refresh interval</label>
                             <input type="number" id="dashboardRefreshInterval" min="10" max="300" value="30" autocomplete="off">
+                            <small>Between 10 and 300 seconds.</small>
                         </div>
                     </div>
-                </div>
+                </section>
                 
                 <!-- Company Information -->
-                <div class="settings-section">
-                    <h2>Company Information</h2>
+                <section class="settings-section settings-company" aria-labelledby="settingsCompanyTitle">
+                    <div class="settings-section-heading">
+                        <span class="settings-section-icon" aria-hidden="true"><i class="fas fa-building"></i></span>
+                        <div><h2 id="settingsCompanyTitle">Company information</h2><p>Maintain the business details used throughout the workspace.</p></div>
+                        <span class="settings-section-tag">Workspace</span>
+                    </div>
                     <div class="settings-grid">
                         <div class="setting-item full-width">
-                            <label for="companyName">Company Name</label>
-                            <input type="text" id="companyName" placeholder="smplfix" autocomplete="name">
+                            <label for="companyName">Company name</label>
+                            <input type="text" id="companyName" maxlength="160" placeholder="smplfix" autocomplete="organization">
                         </div>
                         <div class="setting-item full-width">
                             <label for="companyAddress">Address</label>
-                            <textarea id="companyAddress" rows="3" placeholder="Company address..." autocomplete="street-address"></textarea>
+                            <textarea id="companyAddress" rows="3" maxlength="500" placeholder="Company address..." autocomplete="street-address"></textarea>
                         </div>
                         <div class="setting-item">
                             <label for="companyPhone">Phone</label>
-                            <input type="tel" id="companyPhone" placeholder="+1 (555) 123-4567" autocomplete="tel">
+                            <input type="tel" id="companyPhone" maxlength="40" placeholder="+1 (555) 123-4567" autocomplete="tel">
                         </div>
                         <div class="setting-item">
                             <label for="companyEmail">Email</label>
-                            <input type="email" id="companyEmail" placeholder="info@company.com" autocomplete="email">
+                            <input type="email" id="companyEmail" maxlength="254" placeholder="info@company.com" autocomplete="email">
                         </div>
                         <div class="setting-item full-width">
                             <label for="companyWebsite">Website</label>
-                            <input type="url" id="companyWebsite" placeholder="https://www.company.com" autocomplete="url">
+                            <input type="url" id="companyWebsite" maxlength="300" placeholder="https://www.company.com" autocomplete="url">
                         </div>
                     </div>
-                </div>
+                </section>
                 
                 <!-- System Information -->
-                <div class="settings-section">
-                    <h2>System Information</h2>
+                <section class="settings-section settings-system" aria-labelledby="settingsSystemTitle">
+                    <div class="settings-section-heading">
+                        <span class="settings-section-icon" aria-hidden="true"><i class="fas fa-server"></i></span>
+                        <div><h2 id="settingsSystemTitle">System information</h2><p>Current application and infrastructure status.</p></div>
+                    </div>
                     <div class="system-info">
                         <div class="info-item">
-                            <span class="info-label">Application Version:</span>
-                            <span class="info-value">1.0.0</span>
+                            <span class="info-item-icon" aria-hidden="true"><i class="fas fa-code-branch"></i></span>
+                            <span class="info-copy"><span class="info-label">Application version</span><span class="info-value">1.0.0</span></span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Database Status:</span>
-                            <span class="info-value status-connected">Connected</span>
+                            <span class="info-item-icon status-connected" aria-hidden="true"><i class="fas fa-check"></i></span>
+                            <span class="info-copy"><span class="info-label">Database status</span><span class="info-value status-connected">Connected</span></span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Last Backup:</span>
-                            <span class="info-value">Never</span>
+                            <span class="info-item-icon" aria-hidden="true"><i class="fas fa-clock-rotate-left"></i></span>
+                            <span class="info-copy"><span class="info-label">Last backup</span><span class="info-value">Never</span></span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Server Uptime:</span>
-                            <span class="info-value">Running</span>
+                            <span class="info-item-icon" aria-hidden="true"><i class="fas fa-signal"></i></span>
+                            <span class="info-copy"><span class="info-label">Server status</span><span class="info-value">Running</span></span>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
+            </form>
         </section>
 
         <!-- Calendar Section -->
@@ -3658,15 +3676,15 @@
     </div>
 
     <!-- Vendor Modal -->
-    <div class="modal-overlay" id="vendorModal" data-vendor-mode="manual">
-        <div class="modal-content vendor-modal">
+    <div class="modal-overlay" id="vendorModal" data-vendor-mode="manual" role="dialog" aria-modal="true" aria-labelledby="vendorModalTitle" aria-describedby="vendorModalSubtitle">
+        <div class="modal-content vendor-modal" tabindex="-1">
             <div class="modal-header vendor-modal-header">
                 <div class="vendor-modal-heading">
                     <span class="vendor-modal-heading-icon" id="vendorModalHeadingIcon" aria-hidden="true"><i class="fas fa-user-plus"></i></span>
                     <div><span class="vendor-modal-eyebrow" id="vendorModalEyebrow">Vendor Management</span><h2 id="vendorModalTitle">Add New Vendor</h2><p id="vendorModalSubtitle">Create a complete vendor profile directly in the dashboard.</p></div>
                 </div>
                 <button type="button" class="modal-close" onclick="closeVendorModal()" aria-label="Close vendor form">
-                    <i class="fas fa-times"></i>
+                    <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
             
@@ -4028,86 +4046,115 @@
     </div>
 
     <!-- Profile Modal -->
-    <div class="modal-overlay" id="profileModal">
-        <div class="modal-content profile-modal">
-            <div class="modal-header">
-                <h2><i class="fas fa-user"></i> Profile Settings</h2>
+    <div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle" aria-describedby="profileModalDescription">
+        <div class="modal-content profile-modal profile-settings-dialog" tabindex="-1">
+            <div class="modal-header profile-settings-header">
+                <div>
+                    <span class="profile-settings-eyebrow">Your account</span>
+                    <h2 id="profileModalTitle"><span class="profile-title-icon" aria-hidden="true"><i class="fas fa-user"></i></span> Profile settings</h2>
+                    <p id="profileModalDescription">Keep your account details and sign-in security up to date.</p>
+                </div>
                 <button type="button" class="modal-close" onclick="closeProfileModal()" aria-label="Close profile settings">
-                    <i class="fas fa-times"></i>
+                    <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
-            
-            <div class="modal-body">
-                <div class="profile-section">
+
+            <div class="modal-body profile-settings-body">
+                <section class="profile-identity-card" aria-labelledby="profilePhotoHeading">
                     <div class="profile-avatar-section">
                         <div class="avatar-container">
-                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%230B0B0C'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk,Arial,sans-serif' font-size='50' font-weight='600' fill='white'%3EA%3C/text%3E%3C/svg%3E" alt="Administrator profile" id="profileAvatar">
-                            <button type="button" class="avatar-upload-btn" onclick="uploadAvatar()" aria-label="Upload profile photo">
-                                <i class="fas fa-camera"></i>
-                            </button>
+                            <img src="" alt="Profile photo" id="profileAvatar">
                         </div>
                     </div>
-                    
-                    <form class="profile-form" id="profileForm">
-                        <div class="form-row">
+                    <div class="profile-photo-copy">
+                        <h3 id="profilePhotoHeading">Profile photo</h3>
+                        <p>Use a square PNG, JPEG, or WebP. We resize it securely before saving.</p>
+                        <div class="profile-photo-actions">
+                            <button type="button" class="btn-secondary" onclick="uploadAvatar()"><i class="fas fa-camera" aria-hidden="true"></i> Choose photo</button>
+                            <button type="button" class="profile-text-button" id="profileAvatarRemove" onclick="removeProfileAvatar()">Remove</button>
+                        </div>
+                        <input type="file" id="profileAvatarInput" accept="image/png,image/jpeg,image/webp" hidden>
+                    </div>
+                    <div class="profile-role-summary">
+                        <span>Workspace role</span>
+                        <strong id="profileRoleLabel">—</strong>
+                        <small>Managed by an administrator</small>
+                    </div>
+                </section>
+
+                <section class="profile-settings-panel" aria-labelledby="profileDetailsHeading">
+                    <div class="profile-panel-heading">
+                        <div>
+                            <h3 id="profileDetailsHeading">Personal details</h3>
+                            <p>These details appear across your workspace activity.</p>
+                        </div>
+                        <span class="profile-save-state" id="profileSaveState" role="status" aria-live="polite"></span>
+                    </div>
+                    <form class="profile-form" id="profileForm" onsubmit="saveProfile(event)">
+                        <div class="profile-form-grid">
                             <div class="form-group">
-                                <label for="firstName">First Name</label>
-                                <input type="text" id="firstName" name="firstName" value="Admin" required autocomplete="given-name">
+                                <label for="firstName">First name <span aria-hidden="true">*</span></label>
+                                <input type="text" id="firstName" name="firstName" required maxlength="80" autocomplete="given-name">
                             </div>
                             <div class="form-group">
-                                <label for="lastName">Last Name</label>
-                                <input type="text" id="lastName" name="lastName" value="User" required autocomplete="family-name">
+                                <label for="lastName">Last name <span aria-hidden="true">*</span></label>
+                                <input type="text" id="lastName" name="lastName" required maxlength="80" autocomplete="family-name">
+                            </div>
+                            <div class="form-group profile-email-field">
+                                <label for="profileEmail">Email address <span aria-hidden="true">*</span></label>
+                                <input type="email" id="profileEmail" name="email" required maxlength="254" autocomplete="email" aria-describedby="profileEmailHelp">
+                                <small id="profileEmailHelp">Changing your sign-in email requires your current password.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Phone number</label>
+                                <input type="tel" id="phone" name="phone" maxlength="40" autocomplete="tel" placeholder="Add a phone number">
+                            </div>
+                            <div class="form-group profile-email-password" id="profileEmailPasswordGroup" hidden>
+                                <label for="profileEmailPassword">Current password</label>
+                                <input type="password" id="profileEmailPassword" autocomplete="current-password" maxlength="128" placeholder="Confirm this email change">
+                            </div>
+                            <div class="form-group">
+                                <label for="department">Department</label>
+                                <input type="text" id="department" name="department" maxlength="100" autocomplete="organization-title" placeholder="Add a department">
                             </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="profileEmail">Email Address</label>
-                            <input type="email" id="profileEmail" name="email" value="admin@smplfix.com" required autocomplete="email">
+                    </form>
+                </section>
+
+                <section class="profile-settings-panel profile-security-panel" aria-labelledby="profileSecurityHeading">
+                    <div class="profile-panel-heading">
+                        <div>
+                            <h3 id="profileSecurityHeading"><i class="fas fa-lock" aria-hidden="true"></i> Password &amp; security</h3>
+                            <p>Updating your password signs you out on every device.</p>
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="phone">Phone Number</label>
-                            <input type="tel" id="phone" name="phone" value="+1 (555) 123-4567" autocomplete="tel">
+                        <span class="profile-save-state" id="profilePasswordState" role="status" aria-live="polite"></span>
+                    </div>
+                    <form class="password-form" id="profilePasswordForm" onsubmit="changeProfilePassword(event)">
+                        <div class="profile-password-grid">
+                            <div class="form-group">
+                                <label for="currentPassword">Current password</label>
+                                <input type="password" id="currentPassword" autocomplete="current-password" minlength="8" maxlength="128" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">New password</label>
+                                <input type="password" id="newPassword" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="newPasswordHelp">
+                                <small id="newPasswordHelp">Use 8–128 characters.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm new password</label>
+                                <input type="password" id="confirmPassword" autocomplete="new-password" minlength="8" maxlength="128" required>
+                            </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="role">Role</label>
-                            <select id="role" name="role" autocomplete="name">
-                                <option value="administrator">Administrator</option>
-                                <option value="manager">Manager</option>
-                                <option value="supervisor">Supervisor</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="department">Department</label>
-                            <input type="text" id="department" name="department" value="Operations" autocomplete="name">
+                        <div class="profile-security-actions">
+                            <button type="submit" class="btn-secondary" id="profilePasswordButton"><i class="fas fa-key" aria-hidden="true"></i> Update password</button>
                         </div>
                     </form>
-                </div>
-                
-                <div class="password-section">
-                    <h3><i class="fas fa-lock"></i> Change Password</h3>
-                    <form class="password-form" id="passwordForm">
-                        <div class="form-group">
-                            <label for="currentPassword">Current Password</label>
-                            <input type="password" id="currentPassword" name="currentPassword" placeholder="Enter current password" autocomplete="current-password">
-                        </div>
-                        <div class="form-group">
-                            <label for="newPassword">New Password</label>
-                            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" autocomplete="new-password">
-                        </div>
-                        <div class="form-group">
-                            <label for="confirmPassword">Confirm New Password</label>
-                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm new password" autocomplete="new-password">
-                        </div>
-                    </form>
-                </div>
+                </section>
             </div>
-            
-            <div class="modal-footer">
+
+            <div class="modal-footer profile-settings-footer">
                 <button type="button" class="btn-secondary" onclick="closeProfileModal()">Cancel</button>
-                <button type="button" class="btn-primary" onclick="saveProfile()">Save Changes</button>
+                <button type="submit" class="btn-primary" id="profileSaveButton" form="profileForm"><i class="fas fa-check" aria-hidden="true"></i> Save profile</button>
             </div>
         </div>
     </div>
@@ -4635,7 +4682,7 @@
     </div>
 
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20260725-reference-center"></script>
+    <script src="../assets/js/api-service.js?v=20260806-profile-sync"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
     <script src="../assets/js/custom-fields.js"></script>
@@ -4650,13 +4697,13 @@
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260804-users-rebrand"></script>
+    <script src="../assets/js/dashboard-script.js?v=20260806-settings-ui"></script>
     <script src="../assets/js/incoming-quotes.js?v=20260725-quote-table-polish"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
     <script src="../assets/js/closeout.js?v=20260727-customer-engagement"></script>
-    <script src="../assets/js/workflow-hub.js?v=20260804-headers"></script>
+    <script src="../assets/js/workflow-hub.js?v=20260806-activity-clean"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js?v=20260806-search-polish"></script>
