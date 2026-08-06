@@ -12,20 +12,20 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="../assets/css/vendor-onboarding.css">
-  <link rel="stylesheet" href="../assets/css/vendor-onboarding-polish.css">
-  <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css">
+  <link rel="stylesheet" href="../assets/css/vendor-onboarding.css?v=20260807-smplfix">
+  <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css?v=20260807-smplfix">
   <link rel="stylesheet" href="../assets/css/secure-pages-minimal.css?v=20260725">
   <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
   <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260804-final">
-    <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
+  <link rel="stylesheet" href="../assets/css/vendor-onboarding-polish.css?v=20260807-smplfix">
+  <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
 </head>
-<body>
+<body class="vendor-onboarding-page">
   <div class="onboarding-page-accent" aria-hidden="true"></div>
   <main class="onboarding-shell">
     <header class="onboarding-header">
       <div class="onboarding-brand">
-        <div class="brand-logo"><img src="../assets/images/smplfix-logo-ink.png" alt="smplfix" width="624" height="368" decoding="async" fetchpriority="high"></div>
+        <div class="brand-logo"><img src="../assets/images/smplfix-logo-reversed.png" alt="smplfix" width="696" height="400" decoding="async" fetchpriority="high"></div>
         <div><p class="eyebrow">smplfix</p><h1>Secure Vendor Onboarding</h1></div>
       </div>
       <div class="secure-session"><span aria-hidden="true">●</span><div><strong>Private session</strong><small>Encrypted submission</small></div></div>
@@ -44,9 +44,9 @@
     <form id="onboardingForm" class="onboarding-form hidden" novalidate>
       <nav class="form-progress" aria-label="Onboarding form progress">
         <div class="progress-heading"><div><span>Application progress</span><strong id="progressLabel">Step 1 of 4</strong></div><span id="progressPercent">25%</span></div>
-        <div class="progress-track" aria-hidden="true"><span id="formProgressBar"></span></div>
+        <div class="progress-track" role="progressbar" aria-labelledby="progressLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25"><span id="formProgressBar"></span></div>
         <div class="progress-steps">
-          <a href="#section-company" class="active" data-progress-step="1"><span>1</span><strong>Company</strong></a>
+          <a href="#section-company" class="active" data-progress-step="1" aria-current="step"><span>1</span><strong>Company</strong></a>
           <a href="#section-business" data-progress-step="2"><span>2</span><strong>Business</strong></a>
           <a href="#section-license" data-progress-step="3"><span>3</span><strong>License</strong></a>
           <a href="#section-documents" data-progress-step="4"><span>4</span><strong>Documents</strong></a>
@@ -131,6 +131,6 @@
 
     <footer class="onboarding-footer"><span>smplfix</span><span>Secure Vendor Onboarding</span></footer>
   </main>
-  <script src="../assets/js/vendor-onboarding.js"></script>
+  <script src="../assets/js/vendor-onboarding.js?v=20260807-smplfix"></script>
 </body>
 </html>

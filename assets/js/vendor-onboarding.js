@@ -80,6 +80,7 @@
     const current = Math.max(1, Math.min(4, Number(step) || 1));
     const percent = current * 25;
     $('formProgressBar').style.width = `${percent}%`;
+    $('formProgressBar').parentElement.setAttribute('aria-valuenow', String(percent));
     $('progressLabel').textContent = `Step ${current} of 4`;
     $('progressPercent').textContent = `${percent}%`;
     document.querySelectorAll('[data-progress-step]').forEach(link => {

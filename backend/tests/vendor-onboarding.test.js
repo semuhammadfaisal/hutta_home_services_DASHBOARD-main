@@ -250,18 +250,34 @@ test('vendor review queue is separate from the approved vendor list and decision
 test('public onboarding UI provides guided progress, secure metadata, and upload safeguards', () => {
   const pageSource = fs.readFileSync(path.join(__dirname, '../../pages/vendor-onboarding.html'), 'utf8');
   const clientSource = fs.readFileSync(path.join(__dirname, '../../assets/js/vendor-onboarding.js'), 'utf8');
+  const baseCssSource = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-onboarding.css'), 'utf8');
   const cssSource = fs.readFileSync(path.join(__dirname, '../../assets/css/vendor-onboarding-polish.css'), 'utf8');
   assert.match(pageSource, /name="robots" content="noindex,nofollow,noarchive"/);
   assert.match(pageSource, /name="referrer" content="no-referrer"/);
   assert.equal((pageSource.match(/data-form-step=/g) || []).length, 4);
   assert.match(pageSource, /id="formProgressBar"/);
+  assert.match(pageSource, /class="progress-track" role="progressbar"/);
+  assert.match(pageSource, /aria-valuenow="25"/);
   assert.match(pageSource, /id="categoryInlineDisplay"/);
+  assert.match(pageSource, /class="vendor-onboarding-page"/);
+  assert.match(pageSource, /smplfix-logo-reversed\.png/);
+  assert.ok(pageSource.indexOf('vendor-onboarding-polish.css') > pageSource.indexOf('smplfix-components.css'));
+  assert.ok(pageSource.indexOf('smplfix-layout.css') > pageSource.indexOf('vendor-onboarding-polish.css'));
   assert.match(clientSource, /MAX_FILE_BYTES/);
   assert.match(clientSource, /MAX_BATCH_BYTES/);
   assert.match(clientSource, /updateFileSelection/);
   assert.match(clientSource, /focusFirstInvalid/);
+  assert.match(clientSource, /setAttribute\('aria-valuenow'/);
   assert.match(cssSource, /\.onboarding-layout/);
-  assert.match(cssSource, /@media \(max-width:680px\)/);
+  assert.match(cssSource, /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(290px,\s*330px\)/);
+  assert.match(cssSource, /@media \(max-width:\s*680px\)/);
+  assert.match(cssSource, /@media \(max-width:\s*420px\)/);
+  assert.match(cssSource, /prefers-reduced-motion/);
+  assert.match(cssSource, /\.upload-field\.has-files/);
+  assert.match(cssSource, /\.field-error/);
+  const legacyBlue = /#(?:175cd3|0056b8|004494|1d4ed8|2563eb|3b82f6|dbeafe|eff6ff|b2ccff)|rgba\(\s*23\s*,\s*92\s*,\s*211/i;
+  assert.doesNotMatch(baseCssSource, legacyBlue);
+  assert.doesNotMatch(cssSource, legacyBlue);
 });
 
 test('vendor modal keeps manual and invite experiences mutually exclusive', () => {
