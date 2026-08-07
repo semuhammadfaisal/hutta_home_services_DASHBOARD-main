@@ -3,6 +3,7 @@ const { buildPublicUrl, getPublicAppUrl } = require('./publicAppUrl');
 const nodemailer = require('nodemailer');
 const Resend = require('resend').Resend;
 const REQUIRED_SENDER_ADDRESS = 'sales@huttas.com';
+const DISPLAY_SUPPORT_ADDRESS = 'sales@smplfix.com';
 const EMAIL_USER = String(process.env.EMAIL_USER || '').trim();
 const EMAIL_PASSWORD = String(process.env.EMAIL_PASSWORD || '').trim();
 const EMAIL_FROM = String(process.env.EMAIL_FROM || `Hutta Home Services <${REQUIRED_SENDER_ADDRESS}>`).trim();
@@ -24,7 +25,7 @@ function getEmailDeliveryStatus() {
     ? 'resend'
     : (userConfigured && passwordConfigured ? 'gmail' : 'unconfigured');
   const warning = provider === 'unconfigured'
-    ? 'Email delivery requires a verified Hutta Resend sender or EMAIL_USER and EMAIL_PASSWORD for Gmail fallback.'
+    ? 'Email delivery requires the configured Resend sender or EMAIL_USER and EMAIL_PASSWORD for Gmail fallback.'
     : null;
   return {
     provider,
@@ -90,42 +91,45 @@ const escapeHtml = (value) => String(value || '')
 
 const emailShell = (title, content, options = {}) => {
   const preheader = escapeHtml(options.preheader || title);
-  const subtitle = escapeHtml(options.subtitle || 'Hutta Home Services');
-  const replyAddress = escapeHtml(EMAIL_REPLY_TO);
+  const subtitle = escapeHtml(options.subtitle || 'Professional Home Services Management Platform');
+  const supportAddress = escapeHtml(DISPLAY_SUPPORT_ADDRESS);
+  const reversedLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-reversed.png'));
+  const inkLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-ink.png'));
   return `
   <!doctype html><html lang="en">
   <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
     <style>
-      body{margin:0!important;padding:0!important;background:#f2f5f8;color:#17263a;font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
-      table{border-collapse:collapse;border-spacing:0}a{color:#075eb8}
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@700&display=swap');
+      body{margin:0!important;padding:0!important;background:#f3f2ee;color:#0b0b0c;font-family:"Space Grotesk","Avenir Next",Avenir,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+      table{border-collapse:collapse;border-spacing:0}img{border:0;display:block;outline:none;text-decoration:none}a{color:#0b0b0c}
       .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
-      .page{width:100%;background:#f2f5f8}.page-pad{padding:28px 12px}
-      .wrap{width:100%;max-width:600px;background:#fff;border:1px solid #dce4ec;border-radius:12px;overflow:hidden}
-      .brand{height:4px;background:#075eb8;font-size:0;line-height:0}
-      .head{padding:28px 34px 23px;background:#ffffff;border-bottom:1px solid #e5ebf1;text-align:left}
-      .wordmark{margin:0 0 24px;color:#075eb8;font-size:18px;line-height:1;font-weight:800;letter-spacing:-.02em}
-      h1{margin:0;color:#0056b8;font-size:25px;line-height:1.25;font-weight:800;letter-spacing:-.02em}
-      .subtitle{margin:7px 0 0;color:#6b7a8e;font-size:12px;line-height:1.5}
-      .body{padding:28px 34px 30px;background:#fff;color:#3d4d61;font-size:15px;line-height:1.65}
-      .body p{margin:0 0 15px}.body strong{color:#17263a}
-      .btn{display:inline-block;margin:12px 0 20px;padding:12px 20px;border-radius:7px;background:#075eb8;color:#fff!important;text-decoration:none;font-weight:700;font-size:14px}
+      .page{width:100%;background:#f3f2ee}.page-pad{padding:36px 16px}
+      .wrap{width:100%;max-width:720px;background:#fff;border:1px solid #dfddd6;border-radius:14px;overflow:hidden;box-shadow:0 12px 38px rgba(11,11,12,.10)}
+      .brand{padding:24px 34px;background:#0b0b0c}
+      .head{padding:38px 48px 28px;background:#fff;border-bottom:1px solid #e3e1db;text-align:left}
+      h1{margin:0;color:#0b0b0c;font-size:36px;line-height:1.1;font-weight:700;letter-spacing:-.035em}
+      .subtitle{margin:10px 0 0;color:#5d615b;font-family:"Space Mono","SFMono-Regular",Consolas,monospace;font-size:10px;line-height:1.5;font-weight:700;letter-spacing:.10em;text-transform:uppercase}
+      .body{padding:30px 48px 34px;background:#fff;color:#3f3f42;font-size:15px;line-height:1.65}
+      .body p{margin:0 0 15px}.body strong{color:#0b0b0c}
+      .btn{display:inline-block;margin:12px 0 20px;padding:13px 20px;border:1px solid #0b0b0c;border-radius:8px;background:#0b0b0c;color:#fff!important;text-decoration:none;font-weight:800;font-size:14px}
       .panel,.notice,.warning{margin:18px 0;padding:15px 17px;border-radius:8px}
-      .panel{border:1px solid #dce5ee;background:#f7f9fb}
-      .notice{border-left:3px solid #075eb8;background:#eff6fd;color:#334a65}
+      .panel{border:1px solid #dfddd6;background:#faf9f6}
+      .notice{border:1px solid #d9dcd4;border-left:4px solid #667864;background:#fafaf7;color:#3f3f42}
       .warning{border-left:3px solid #bd6b17;background:#fff7ed;color:#7a4217}
       .panel p:last-child,.notice p:last-child,.warning p:last-child{margin-bottom:0}
-      .muted{color:#718096;font-size:12px;line-height:1.55}
-      .link-box{margin:10px 0;padding:11px 12px;border:1px solid #dce5ee;border-radius:6px;background:#fff;color:#075eb8;font-size:12px;line-height:1.45;word-break:break-all}
-      .credential-grid{margin:18px 0;border:1px solid #dce5ee;border-radius:8px;overflow:hidden;background:#fff}
-      .credential-row{padding:14px 16px;border-bottom:1px solid #e6ecf2}.credential-row:last-child{border-bottom:0}
-      .credential-label{margin:0 0 5px;color:#6b7a8e;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-      .credential-value{margin:0;color:#17263a!important;font-family:"Courier New",monospace;font-size:14px;font-weight:700;word-break:break-all;text-decoration:none!important}
-      .foot{padding:20px 30px;background:#f7f9fb;border-top:1px solid #e1e8ef;color:#718096;font-size:11px;line-height:1.55;text-align:left}
-      .foot strong{display:block;margin-bottom:4px;color:#17263a;font-size:12px}.foot a{color:#075eb8;text-decoration:none}
-      .legal{padding-top:10px;color:#8a97a8;font-size:9px;line-height:1.45}
-      @media only screen and (max-width:600px){.page-pad{padding:10px 6px}.head{padding:24px 21px 20px}.body{padding:24px 21px}.foot{padding:18px 21px}h1{font-size:22px}.btn{display:block;text-align:center}.wrap{border-radius:9px}}
+      .muted{color:#707074;font-size:12px;line-height:1.55}
+      .link-box{margin:10px 0;padding:11px 12px;border:1px solid #dfddd6;border-radius:6px;background:#fff;color:#0b0b0c;font-size:12px;line-height:1.45;word-break:break-all}
+      .credential-grid{margin:18px 0;border:1px solid #dfddd6;border-radius:8px;overflow:hidden;background:#fff}
+      .credential-row{padding:14px 16px;border-bottom:1px solid #e3e1db}.credential-row:last-child{border-bottom:0}
+      .credential-label{margin:0 0 5px;color:#5d615b;font-family:"Space Mono","SFMono-Regular",Consolas,monospace;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+      .credential-value{margin:0;color:#0b0b0c!important;font-family:"Space Mono","SFMono-Regular",Consolas,monospace;font-size:13px;font-weight:700;word-break:break-all;text-decoration:none!important}
+      .foot{padding:24px 48px 14px;background:#fff;border-top:1px solid #e3e1db;color:#3f3f42;font-size:11px;line-height:1.7;text-align:left}
+      .foot a{color:#4d614c;text-decoration:none;font-weight:700}.legal{padding:8px 48px 28px;background:#fff;color:#858589;font-size:10px;line-height:1.55}
+      @media only screen and (max-width:760px){.page-pad{padding:18px 10px}.wrap{max-width:100%}}
+      @media only screen and (max-width:620px){.page-pad{padding:8px 4px}.brand{padding:20px 22px}.brand-tagline{display:none!important}.head{padding:30px 24px 24px}.body{padding:26px 24px}.foot{padding:22px 24px 12px}.legal{padding:8px 24px 24px}h1{font-size:29px}.btn{display:block;text-align:center}.wrap{border-radius:10px}.footer-brand,.footer-copy{display:block!important;width:100%!important;padding:0!important}.footer-copy{padding-top:18px!important;border-left:0!important}}
+      @media only screen and (max-width:420px){.brand{padding:18px}.brand-logo{width:124px!important}.head{padding:27px 18px 21px}.body{padding:24px 18px}.foot{padding-left:18px;padding-right:18px}.legal{padding-left:18px;padding-right:18px}h1{font-size:26px}}
     </style>
   </head>
   <body>
@@ -133,11 +137,15 @@ const emailShell = (title, content, options = {}) => {
     <table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td class="page-pad" align="center">
-          <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0">
-            <tr><td class="brand">&nbsp;</td></tr>
+          <table role="presentation" class="wrap" width="720" cellpadding="0" cellspacing="0" border="0">
+            <tr><td class="brand">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td valign="middle"><img class="brand-logo" src="${reversedLogoUrl}" width="142" alt="smplfix" style="width:142px;max-width:100%;height:auto"></td>
+                <td class="brand-tagline" valign="middle" align="right" style="color:#f4f4f2;font-family:'Space Mono','SFMono-Regular',Consolas,monospace;font-size:10px;line-height:1.4;letter-spacing:.20em;text-transform:uppercase">YOUR PROPERTY, HANDLED.</td>
+              </tr></table>
+            </td></tr>
             <tr>
               <td class="head">
-                <p class="wordmark">Huttas</p>
                 <h1>${escapeHtml(title)}</h1>
                 <p class="subtitle">${subtitle}</p>
               </td>
@@ -145,12 +153,13 @@ const emailShell = (title, content, options = {}) => {
             <tr><td class="body">${content}</td></tr>
             <tr>
               <td class="foot">
-                <strong>Hutta Home Services</strong>
-                Professional Home Services Management Platform<br>
-                Questions? Reply to this email or contact <a href="mailto:${replyAddress}">${replyAddress}</a>.
-                <div class="legal">This message was sent by Hutta Home Services. Do not forward private links or account credentials.</div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                  <td class="footer-brand" width="150" valign="middle"><img src="${inkLogoUrl}" width="112" alt="smplfix" style="width:112px;max-width:100%;height:auto"></td>
+                  <td class="footer-copy" valign="middle" style="padding-left:22px;border-left:1px solid #dfddd6">Professional Home Services Management Platform<br>Questions? Reply to this email or contact <a href="mailto:${supportAddress}">${supportAddress}</a>.</td>
+                </tr></table>
               </td>
             </tr>
+            <tr><td class="legal">This message was sent by smplfix. Do not forward private links or account credentials.</td></tr>
           </table>
         </td>
       </tr>
@@ -165,7 +174,7 @@ const vendorInvitationEmailShell = ({ companyName, categoryLabel, formUrl, expir
   const category = escapeHtml(categoryLabel || 'General Services');
   const secureUrl = escapeHtml(formUrl);
   const expiry = escapeHtml(new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' }));
-  const replyAddress = escapeHtml(EMAIL_REPLY_TO);
+  const replyAddress = escapeHtml(DISPLAY_SUPPORT_ADDRESS);
   const reversedLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-reversed.png'));
   const inkLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-ink.png'));
   const eyebrow = changesRequested ? 'APPLICATION UPDATE' : 'INVITATION';
@@ -262,7 +271,7 @@ const vendorLifecycleEmailShell = ({
   preheader,
   tone = 'neutral'
 }) => {
-  const replyAddress = escapeHtml(EMAIL_REPLY_TO);
+  const replyAddress = escapeHtml(DISPLAY_SUPPORT_ADDRESS);
   const reversedLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-reversed.png'));
   const inkLogoUrl = escapeHtml(buildPublicUrl('/assets/images/smplfix-logo-ink.png'));
   const accentColors = {
@@ -345,10 +354,10 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   return deliverEmail({
     to: email,
     subject: 'Password Reset Request',
-    text: `Hello,\n\nYou requested to reset your password for your Hutta Home Services account.\n\nReset password: ${resetUrl}\n\nThis link will expire in 1 hour. If you did not request this, please ignore this email.`,
+    text: `Hello,\n\nYou requested to reset your password for your smplfix account.\n\nReset password: ${resetUrl}\n\nThis link will expire in 1 hour. If you did not request this, please ignore this email.`,
     html: emailShell('Password Reset Request', `
       <p>Hello,</p>
-      <p>You requested to reset your password for your Hutta Home Services dashboard account.</p>
+      <p>You requested to reset your password for your smplfix dashboard account.</p>
       <p><a class="btn" href="${resetUrl}">Reset Password</a></p>
       <div class="panel">
         <p><strong>Copy link if the button does not open:</strong></p>
@@ -358,7 +367,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
         <p><strong>This secure link expires in 1 hour.</strong></p>
         <p>If you did not request this password reset, you can safely ignore this email.</p>
       </div>
-    `, { preheader: 'Reset your Hutta Home Services dashboard password.' })
+    `, { preheader: 'Reset your smplfix dashboard password.' })
   });
 };
 
@@ -366,11 +375,11 @@ const sendWelcomeEmail = async (email, password, firstName) => {
   const loginUrl = getPublicAppUrl();
   return deliverEmail({
     to: email,
-    subject: 'Welcome to Hutta Home Services - Your Account Details',
-    text: `Hello ${firstName || 'there'},\n\nWelcome to Hutta Home Services.\n\nEmail: ${email}\nPassword: ${password}\n\nLogin: ${loginUrl}\n\nPlease change your password after your first login.`,
-    html: emailShell('Welcome to Hutta Home Services', `
+    subject: 'Welcome to smplfix - Your Account Details',
+    text: `Hello ${firstName || 'there'},\n\nWelcome to smplfix.\n\nEmail: ${email}\nPassword: ${password}\n\nLogin: ${loginUrl}\n\nPlease change your password after your first login.`,
+    html: emailShell('Welcome to smplfix', `
       <p>Hello ${escapeHtml(firstName || 'there')},</p>
-      <p>Your Hutta Home Services dashboard account has been created. Use the credentials below to sign in.</p>
+      <p>Your smplfix dashboard account has been created. Use the credentials below to sign in.</p>
       <div class="credential-grid">
         <div class="credential-row">
           <p class="credential-label">Email Address</p>
@@ -386,8 +395,8 @@ const sendWelcomeEmail = async (email, password, firstName) => {
         <p><strong>Security recommendation</strong></p>
         <p>Please change this temporary password after your first login.</p>
       </div>
-      <p class="muted">If you have questions or need access help, contact your Hutta Home Services administrator.</p>
-    `, { preheader: 'Your Hutta Home Services dashboard login credentials are ready.' })
+      <p class="muted">If you have questions or need access help, contact your smplfix administrator.</p>
+    `, { preheader: 'Your smplfix dashboard login credentials are ready.' })
   });
 };
 
@@ -507,7 +516,7 @@ const sendWebsiteRequestConfirmationEmail = ({ recipients, requestReference, cus
   text: `Hello ${customerName},\n\nWe received your service request. Reference: ${requestReference}\nEmail: ${email}\nPhone: ${phone}\nService details: ${serviceDetails || 'Not provided'}\n\n${completionUrl ? `Complete your service request so we can begin collecting vendor quotes: ${completionUrl}\n${expiryText ? `This private link expires ${expiryText} Arizona time.\n` : ''}` : ''}\nThis message confirms receipt and is not a quote or scheduling confirmation.`,
   html: emailShell('Request Received', `
     <p>Hello ${escapeHtml(customerName)},</p>
-    <p>Thank you for contacting Hutta Home Services. We received your request and our team will contact you.</p>
+    <p>Thank you for contacting smplfix. We received your request and our team will contact you.</p>
     <div class="panel">
       <p class="credential-label">Request Reference</p>
       <p><strong>${escapeHtml(requestReference)}</strong></p>
@@ -553,10 +562,10 @@ const sendVendorQuoteInvitationEmail = ({ recipients, token, quoteReference, req
   return deliverEmail({
     to: recipients,
     subject: `${revision ? 'Revision requested' : 'Quote requested'}: ${requestReference}`,
-    text: `Hello ${vendorName || 'Vendor'},\n\nHutta Home Services ${revision ? 'requested a revision to' : 'invited you to submit'} quote ${quoteReference} for ${service}.\n${personalMessage ? `\nMessage: ${personalMessage}\n` : ''}\nOpen secure quote form: ${formUrl}\n\nThe one-time link expires ${new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })} Arizona time.`,
+    text: `Hello ${vendorName || 'Vendor'},\n\nsmplfix ${revision ? 'requested a revision to' : 'invited you to submit'} quote ${quoteReference} for ${service}.\n${personalMessage ? `\nMessage: ${personalMessage}\n` : ''}\nOpen secure quote form: ${formUrl}\n\nThe one-time link expires ${new Date(expiresAt).toLocaleString('en-US', { timeZone: 'America/Phoenix' })} Arizona time.`,
     html: emailShell(title, `
       <p>Hello ${escapeHtml(vendorName || 'Vendor')},</p>
-      <p>Hutta Home Services ${revision ? 'requested an updated version of' : 'invited you to submit'} a quote for <strong>${escapeHtml(service)}</strong>.</p>
+      <p>smplfix ${revision ? 'requested an updated version of' : 'invited you to submit'} a quote for <strong>${escapeHtml(service)}</strong>.</p>
       <div class="panel"><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Quote:</strong> ${escapeHtml(quoteReference)}</p></div>
       ${personalMessage ? `<p><strong>Message from our team:</strong><br>${escapeHtml(personalMessage)}</p>` : ''}
       <p><a class="btn" href="${formUrl}">Open Secure Quote Form</a></p>
@@ -594,11 +603,11 @@ const sendCustomerOutgoingQuoteEmail = ({ recipients, token, customerName, quote
   const quoteUrl = buildPublicUrl(`/pages/customer-quote.html?token=${encodeURIComponent(token)}`);
   return deliverEmail({
     to: recipients,
-    subject: `Your Hutta service quote - ${quoteReference}`,
+    subject: `Your smplfix service quote - ${quoteReference}`,
     text: `Hello ${customerName || 'Customer'},\n\nYour service quote ${quoteReference} for request ${requestReference} is ready. Total: $${Number(customerTotal || 0).toFixed(2)}. Valid through ${new Date(validUntil).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' })}.\n\nReview, approve, request changes, or download your quote: ${quoteUrl}\n\nApproval does not confirm scheduling.`,
     html: emailShell('Your Service Quote Is Ready', `
       <p>Hello ${escapeHtml(customerName || 'Customer')},</p>
-      <p>Your Hutta Home Services quote is ready to review and download.</p>
+      <p>Your smplfix quote is ready to review and download.</p>
       <div class="panel"><p><strong>Quote:</strong> ${escapeHtml(quoteReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Total:</strong> $${escapeHtml(Number(customerTotal || 0).toFixed(2))}</p><p><strong>Valid through:</strong> ${escapeHtml(new Date(validUntil).toLocaleDateString('en-US', { timeZone: 'America/Phoenix' }))}</p></div>
       <p><a class="btn" href="${quoteUrl}">View Secure Quote</a></p>
       <div class="notice"><p>Use the secure quote page to approve or request changes. Approval does not confirm scheduling.</p></div>
@@ -668,7 +677,7 @@ const sendVendorCompletionLinkEmail = ({ recipients, completionToken, vendorName
 const sendVendorCompletionConfirmationEmail = ({ recipients, vendorName, completionReference, service, completedAt }) => deliverEmail({to:recipients,subject:`Completion received — ${completionReference}`,text:`Hello ${vendorName},\n\nCompletion for ${service} was recorded on ${scheduleTime(completedAt)} Arizona time.`,html:emailShell('Completion Received',`<p>Hello ${escapeHtml(vendorName)},</p><p>The completion and photo evidence were recorded.</p><div class="panel"><p><strong>Completion:</strong> ${escapeHtml(completionReference)}</p><p><strong>Service:</strong> ${escapeHtml(service)}</p><p><strong>Completed:</strong> ${escapeHtml(scheduleTime(completedAt))} Arizona time</p></div>`)});
 const paymentInstructionsHtml = snapshot => {
   const methods = (snapshot?.paymentMethods || []).filter(method => method.enabled !== false);
-  if (!methods.length) return `<p class="muted">Contact ${escapeHtml(EMAIL_REPLY_TO)} for payment instructions.</p>`;
+  if (!methods.length) return `<p class="muted">Contact ${escapeHtml(DISPLAY_SUPPORT_ADDRESS)} for payment instructions.</p>`;
   return methods.map(method => `<p><strong>${escapeHtml(method.label)}:</strong><br>${escapeHtml(method.instructions).replace(/\n/g,'<br>')}</p>`).join('');
 };
 const sendCustomerCompletionSatisfactionEmail = ({
@@ -719,7 +728,7 @@ const sendCustomerCompletionSatisfactionEmail = ({
       ${evidence}
       <div class="panel"><p><strong>Invoice:</strong> ${escapeHtml(invoiceNumber)}</p><p><strong>Amount due:</strong> $${escapeHtml(Number(amount||0).toFixed(2))}</p>${paymentInstructionsHtml(paymentInstructions)}</div>
       <p><a class="btn" href="${url}">Review Work &amp; Complete Closeout</a></p>
-      <p class="muted">The secure page contains the complete before-and-after gallery. Payment proof is reviewed separately by the Hutta Home Services team.</p>
+      <p class="muted">The secure page contains the complete before-and-after gallery. Payment proof is reviewed separately by the smplfix team.</p>
     `,{preheader:`Review completed work for ${requestReference}.`}),
     attachments
   });

@@ -596,7 +596,7 @@
       const ready = status.provider === 'resend' || status.provider === 'gmail';
       banner.classList.toggle('is-ready', ready);
       banner.innerHTML = ready
-        ? `<strong><i class="fas fa-circle-check"></i> Email delivery ready</strong>${escapeHtml(status.provider === 'resend' ? 'Resend' : 'Gmail')} is sending from ${escapeHtml(status.sender || 'the configured Hutta mailbox')} with replies routed to ${escapeHtml(status.replyTo || 'the Hutta team')}.`
+        ? `<strong><i class="fas fa-circle-check"></i> Email delivery ready</strong>${escapeHtml(status.provider === 'resend' ? 'Resend' : 'Gmail')} is sending from ${escapeHtml(status.sender || 'the configured sender')} with replies routed to ${escapeHtml(status.replyTo || 'the operations team')}.`
         : `<strong><i class="fas fa-triangle-exclamation"></i> Email delivery unavailable</strong>${escapeHtml(status.warning || 'Email delivery is not fully configured.')}`;
       banner.hidden = false;
     } catch (error) {

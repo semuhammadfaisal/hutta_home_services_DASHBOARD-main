@@ -99,7 +99,7 @@ test('public links always use HTTPS and reject localhost or private origins', ()
   }
 });
 
-test('email configuration prefers the verified Hutta Resend sender and retains Gmail fallback', () => {
+test('email delivery retains the existing Resend sender and Gmail fallback', () => {
   const previous = {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
@@ -123,7 +123,7 @@ test('email configuration prefers the verified Hutta Resend sender and retains G
 
     delete process.env.EMAIL_PASSWORD;
     assert.equal(getEmailDeliveryStatus().provider, 'unconfigured');
-    assert.match(getEmailDeliveryStatus().warning, /verified Hutta Resend sender/);
+    assert.match(getEmailDeliveryStatus().warning, /configured Resend sender/);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
@@ -131,18 +131,25 @@ test('email configuration prefers the verified Hutta Resend sender and retains G
   }
 });
 
-test('generic email templates keep the existing Hutta shell with Resend and Gmail delivery', () => {
+test('generic email templates use SMPLFix presentation without changing delivery transport', () => {
   const emailSource = fs.readFileSync(path.join(__dirname, '../utils/emailService.js'), 'utf8');
   assert.doesNotMatch(emailSource, /class="logo"|logo-card|LOGO_CONTENT_ID/);
   assert.doesNotMatch(emailSource, /class="hero-mark"/);
   assert.match(emailSource, /table role="presentation" class="page"/);
-  assert.match(emailSource, /\.head\{[^}]*background:#ffffff/);
-  assert.match(emailSource, /h1\{[^}]*color:#0056b8/);
-  assert.match(emailSource, /<p class="wordmark">Huttas<\/p>/);
+  assert.match(emailSource, /\.brand\{[^}]*background:#0b0b0c/);
+  assert.match(emailSource, /h1\{[^}]*color:#0b0b0c/);
+  assert.match(emailSource, /smplfix-logo-reversed\.png/);
+  assert.match(emailSource, /smplfix-logo-ink\.png/);
+  assert.match(emailSource, /YOUR PROPERTY, HANDLED\./);
+  assert.match(emailSource, /DISPLAY_SUPPORT_ADDRESS = 'sales@smplfix\.com'/);
   assert.match(emailSource, /Professional Home Services Management Platform/);
   assert.match(emailSource, /Hutta Home Services <\$\{REQUIRED_SENDER_ADDRESS\}>/);
+  assert.match(emailSource, /REQUIRED_SENDER_ADDRESS = 'sales@huttas\.com'/);
   assert.match(emailSource, /process\.env\.EMAIL_REPLY_TO/);
   assert.match(emailSource, /Resend|nodemailer|smtp\.gmail\.com|EMAIL_PASSWORD/i);
+  assert.equal((emailSource.match(/Hutta Home Services/g) || []).length, 2);
+  assert.equal((emailSource.match(/sales@huttas\.com/g) || []).length, 1);
+  assert.doesNotMatch(emailSource, /Your Hutta service quote|Thank you for contacting Hutta Home Services|Hutta Home Services team/);
   for (const sender of [
     'sendPasswordResetEmail',
     'sendWelcomeEmail'
@@ -180,6 +187,7 @@ test('vendor onboarding invitation uses the responsive SMPLFix email design', ()
   assert.match(html, /Open Secure Vendor Form/);
   assert.match(html, /Private one-time link/);
   assert.match(html, /Professional Home Services Management Platform/);
+  assert.match(html, /sales@smplfix\.com/);
   assert.match(html, /@media only screen and \(max-width:620px\)/);
   assert.match(html, /@media only screen and \(max-width:420px\)/);
   assert.match(html, /Space Grotesk/);
@@ -189,6 +197,7 @@ test('vendor onboarding invitation uses the responsive SMPLFix email design', ()
   assert.match(html, /Welcome &lt;team&gt;<br>Bring documents\./);
   assert.doesNotMatch(html, /class="vendor-hero-icon"|>VO<|categoryInitial/);
   assert.doesNotMatch(html, /#0056b8|#075eb8|#1d4ed8|#2563eb|#3b82f6/i);
+  assert.doesNotMatch(html, /Hutta Home Services|Huttas|sales@huttas\.com/i);
 });
 
 test('remaining vendor onboarding emails use the responsive SMPLFix lifecycle design', () => {
@@ -212,6 +221,7 @@ test('remaining vendor onboarding emails use the responsive SMPLFix lifecycle de
   assert.match(html, /Vendor Submission[\s\S]*Ready for Review/);
   assert.match(html, /Review Vendor/);
   assert.match(html, /Professional Home Services Management Platform/);
+  assert.match(html, /sales@smplfix\.com/);
   assert.match(html, /@media only screen and \(max-width:620px\)/);
   assert.match(html, /@media only screen and \(max-width:420px\)/);
   assert.match(html, /Space Grotesk/);
@@ -219,6 +229,7 @@ test('remaining vendor onboarding emails use the responsive SMPLFix lifecycle de
   assert.match(html, /class="vendor-wrap" width="720"/);
   assert.match(html, /M&amp;W &lt;Services&gt;/);
   assert.doesNotMatch(html, /#0056b8|#075eb8|#1d4ed8|#2563eb|#3b82f6/i);
+  assert.doesNotMatch(html, /Hutta Home Services|Huttas|sales@huttas\.com/i);
 });
 
 test('onboarding route and UI include approval, change, rejection, resend, and revoke workflows', () => {
@@ -230,6 +241,9 @@ test('onboarding route and UI include approval, change, rejection, resend, and r
   assert.match(routeSource, /status: 'processing'/);
   assert.match(routeSource, /invitationId/);
   assert.match(adminSource, /vendorEmailDeliveryWarning/);
+  assert.match(adminSource, /the configured sender/);
+  assert.match(adminSource, /the operations team/);
+  assert.doesNotMatch(adminSource, /configured Hutta mailbox|Hutta team/);
 });
 
 test('missing public files cannot trigger nested login redirect loops', () => {
