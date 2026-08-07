@@ -140,7 +140,7 @@ test('record detail pages fill the content rail and use explicit responsive colu
   assert.match(layout, /@container dashboard-section \(max-width: 560px\)[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
 });
 
-test('every full browser page loads the shared fluid layout before any final form layer', () => {
+test('every full browser page loads the shared fluid layout before final form and icon layers', () => {
   const htmlFiles = [
     'index.html',
     ...fs.readdirSync(path.join(root, 'pages'))
@@ -156,11 +156,20 @@ test('every full browser page loads the shared fluid layout before any final for
     assert.ok(styles.length > 0, `${file} has no stylesheets`);
     const layoutIndex = styles.findIndex((href) => /smplfix-layout\.css\?v=20260806-fluid-layout$/.test(href));
     assert.ok(layoutIndex > -1, `${file} must load the fluid layout`);
+    const iconIndex = styles.findIndex((href) => /smplfix-icons\.css\?v=20260807-icon-reliability$/.test(href));
     if (html.includes('<form')) {
-      assert.match(styles.at(-1), /smplfix-forms\.css\?v=20260807-form-rebrand$/, `${file} must load the form system last`);
-      assert.ok(styles.length - 1 > layoutIndex, `${file} must load forms after layout`);
+      const formIndex = styles.findIndex((href) => /smplfix-forms\.css\?v=20260807-customer-backdrop$/.test(href));
+      assert.ok(formIndex > layoutIndex, `${file} must load forms after layout`);
+      if (iconIndex > -1) {
+        assert.ok(iconIndex > formIndex, `${file} must load icons after forms`);
+        assert.equal(iconIndex, styles.length - 1, `${file} must load the icon layer last`);
+      } else {
+        assert.equal(formIndex, styles.length - 1, `${file} must load the form system last when no icon layer is needed`);
+      }
     } else {
-      assert.equal(layoutIndex, styles.length - 1, `${file} must load the fluid layout last`);
+      const expectedLastIndex = iconIndex > -1 ? iconIndex : layoutIndex;
+      assert.equal(expectedLastIndex, styles.length - 1, `${file} must load its final shared layer last`);
+      if (iconIndex > -1) assert.ok(iconIndex > layoutIndex, `${file} must load icons after layout`);
     }
   }
 });

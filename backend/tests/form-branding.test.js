@@ -6,7 +6,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '../..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
-test('every full form page loads the authoritative SMPLFix form layer last', () => {
+test('every full form page loads the authoritative SMPLFix form layer after feature styles', () => {
   const pages = fs.readdirSync(path.join(root, 'pages'))
     .filter((name) => name.endsWith('.html'))
     .map((name) => `pages/${name}`)
@@ -19,7 +19,13 @@ test('every full form page loads the authoritative SMPLFix form layer last', () 
   for (const file of pages) {
     const styles = [...read(file).matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi)]
       .map((match) => match[1]);
-    assert.match(styles.at(-1), /smplfix-forms\.css\?v=20260807-form-rebrand$/, `${file} must load the form system last`);
+    const formIndex = styles.findIndex((href) => /smplfix-forms\.css\?v=20260807-customer-backdrop$/.test(href));
+    assert.ok(formIndex > -1, `${file} must load the form system`);
+    const trailingStyles = styles.slice(formIndex + 1);
+    assert.ok(
+      trailingStyles.every((href) => /smplfix-icons\.css\?v=20260807-icon-reliability$/.test(href)),
+      `${file} may only load the final icon reliability layer after the form system`
+    );
   }
 });
 
@@ -32,6 +38,7 @@ test('shared form system is monochrome, responsive, and covers interaction state
   assert.match(css, /:focus-visible/);
   assert.match(css, /:user-invalid/);
   assert.match(css, /input\[type="file"\]::file-selector-button/);
+  assert.match(css, /\.form-group > label i\s*\{[\s\S]*?color:\s*var\(--smpl-form-ink\)\s*!important/);
   assert.match(css, /@media \(max-width: 820px\)/);
   assert.match(css, /@media \(max-width: 620px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
@@ -62,6 +69,18 @@ test('Customer Add and Edit share an accessible branded form workspace', () => {
   assert.match(customFields, /className = 'custom-field-group smpl-repeat-item'/);
   const customerCustomFieldSource = customFields.match(/function addCustomerCustomField[\s\S]*?\/\/ Remove custom field/)[0];
   assert.doesNotMatch(customerCustomFieldSource, /value="\$\{(?:name|value)\}"/);
+});
+
+test('Customer workspace keeps full-width sections and responsive internal grids', () => {
+  const css = read('assets/css/smplfix-forms.css');
+  assert.match(css, /#customerModal #customerForm\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)\s*!important/);
+  assert.match(css, /#customerModal #customerForm > \*\s*\{[\s\S]*?grid-column:\s*1 \/ -1\s*!important/);
+  assert.match(css, /#customerModal \.smpl-form-section:first-child \.smpl-form-grid-3\s*\{[\s\S]*?minmax\(280px, 2fr\)/);
+  assert.match(css, /#customerModal \.smpl-form-section-pair\s*\{[\s\S]*?minmax\(0, 1\.15fr\)/);
+  assert.match(css, /\.smpl-repeat-list:empty\s*\{[\s\S]*?display:\s*none\s*!important/);
+  assert.match(css, /scrollbar-color:\s*#777771 transparent/);
+  assert.match(css, /body \.modal-overlay\[role="dialog"\]\s*\{[\s\S]*?background:\s*rgba\(11, 11, 12, 0\.44\)\s*!important/);
+  assert.match(css, /body \.modal-overlay\[role="dialog"\]\s*\{[\s\S]*?backdrop-filter:\s*none\s*!important/);
 });
 
 test('legacy shared custom-field controls no longer declare blue branding', () => {
