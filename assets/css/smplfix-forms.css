@@ -1,0 +1,473 @@
+/*
+ * Authoritative SMPLFix form system.
+ * Loaded last on every form-bearing surface so controls, dialogs, and generated
+ * fields share one monochrome brand language without changing form behavior.
+ */
+
+:root {
+  --smpl-form-ink: var(--smpl-ink, #0b0b0c);
+  --smpl-form-paper: var(--smpl-paper, #ffffff);
+  --smpl-form-surface: var(--smpl-surface, #f6f6f4);
+  --smpl-form-surface-strong: #eeeeeb;
+  --smpl-form-border: #d8d8d3;
+  --smpl-form-border-strong: #a9a9a3;
+  --smpl-form-muted: #666661;
+  --smpl-form-success: #147a55;
+  --smpl-form-warning: #9a6500;
+  --smpl-form-danger: #b42318;
+  --smpl-form-radius: 10px;
+  --smpl-form-dialog-radius: 14px;
+  --smpl-form-control-height: 44px;
+  --smpl-form-focus: 0 0 0 3px rgba(11, 11, 12, 0.14);
+}
+
+/* Universal control geometry */
+:where(form, .modal-content, .settings-workspace) :where(.form-group, .field, .input-group, .form-field) {
+  min-width: 0;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(label, .display-label, .field-label) {
+  color: var(--smpl-form-ink);
+  font-weight: 650;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--smpl-form-control-height);
+  color: var(--smpl-form-ink);
+  border: 1px solid var(--smpl-form-border-strong);
+  border-radius: 8px;
+  background: var(--smpl-form-paper);
+  box-shadow: none;
+  font: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+:where(form, .modal-content, .settings-workspace) textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input, select, textarea)::placeholder {
+  color: #85857f;
+  opacity: 1;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover:not(:disabled) {
+  border-color: #777771;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input, select, textarea, button):focus {
+  outline: none;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea, button):focus-visible {
+  border-color: var(--smpl-form-ink);
+  box-shadow: var(--smpl-form-focus);
+  outline: none;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input, select, textarea):disabled,
+:where(form, .modal-content, .settings-workspace) :where(input, select, textarea)[readonly] {
+  color: #62625d;
+  border-color: var(--smpl-form-border);
+  background: var(--smpl-form-surface);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input, select, textarea):user-invalid {
+  border-color: var(--smpl-form-danger);
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input, select, textarea):user-invalid:focus-visible {
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.13);
+}
+
+:where(form, .modal-content, .settings-workspace) :where(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--smpl-form-ink);
+}
+
+:where(form, .modal-content, .settings-workspace) :where(small, .help-text, .field-help, .form-help) {
+  color: var(--smpl-form-muted) !important;
+}
+
+.required-mark,
+.optional-mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  margin-left: 5px;
+  padding: 2px 6px;
+  color: var(--smpl-form-muted);
+  border: 1px solid var(--smpl-form-border);
+  border-radius: 999px;
+  background: var(--smpl-form-surface);
+  font-family: var(--smpl-font-mono, "Space Mono", monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.required-mark { color: var(--smpl-form-ink); }
+
+/* Buttons and generated field actions */
+:where(.modal-content, form, .settings-workspace) :where(.btn-primary, button.primary, button[type="submit"]),
+:where(.modal-footer) .btn-primary,
+.btn-add-field {
+  min-height: 40px;
+  color: var(--smpl-form-paper) !important;
+  border: 1px solid var(--smpl-form-ink) !important;
+  border-radius: 8px;
+  background: var(--smpl-form-ink) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  font-weight: 700;
+  transform: none !important;
+}
+
+:where(.modal-content, form, .settings-workspace) :where(.btn-primary, button.primary, button[type="submit"]):hover:not(:disabled),
+:where(.modal-footer) .btn-primary:hover:not(:disabled),
+.btn-add-field:hover:not(:disabled) {
+  color: var(--smpl-form-paper) !important;
+  border-color: #29292c !important;
+  background: #29292c !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+:where(.modal-content, form, .settings-workspace) :where(.btn-secondary, button.secondary, button[type="reset"]),
+:where(.modal-footer) .btn-secondary {
+  min-height: 40px;
+  color: var(--smpl-form-ink) !important;
+  border: 1px solid var(--smpl-form-border-strong) !important;
+  border-radius: 8px;
+  background: var(--smpl-form-paper) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  font-weight: 650;
+  transform: none !important;
+}
+
+:where(.modal-content, form, .settings-workspace) :where(.btn-secondary, button.secondary, button[type="reset"]):hover:not(:disabled),
+:where(.modal-footer) .btn-secondary:hover:not(:disabled) {
+  color: var(--smpl-form-ink) !important;
+  border-color: var(--smpl-form-ink) !important;
+  background: var(--smpl-form-surface) !important;
+  transform: none !important;
+}
+
+:where(.modal-content, form, .settings-workspace) button:disabled {
+  color: #8a8a84 !important;
+  border-color: var(--smpl-form-border) !important;
+  background: var(--smpl-form-surface-strong) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.btn-add-field {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: auto;
+  margin: 0;
+  padding: 8px 11px;
+  font-size: 12px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.btn-add-field i { color: currentColor !important; transform: none !important; }
+
+.smpl-remove-field,
+:where(.modal-content) :where(.btn-remove-field, .btn-remove-email, .btn-remove-phone, .btn-remove-address) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  color: var(--smpl-form-danger) !important;
+  border: 1px solid #efc4bf !important;
+  border-radius: 8px;
+  background: #fff7f6 !important;
+  box-shadow: none !important;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.smpl-remove-field:hover,
+:where(.modal-content) :where(.btn-remove-field, .btn-remove-email, .btn-remove-phone, .btn-remove-address):hover {
+  color: #ffffff !important;
+  border-color: var(--smpl-form-danger) !important;
+  background: var(--smpl-form-danger) !important;
+}
+
+/* Search selects, uploads, previews, and shared generated fields */
+.searchable-select input[type="text"]:focus,
+.search-input-container input:focus {
+  border-color: var(--smpl-form-ink) !important;
+  background: var(--smpl-form-paper) !important;
+  box-shadow: var(--smpl-form-focus) !important;
+  transform: none !important;
+}
+
+.select-dropdown {
+  border-color: var(--smpl-form-ink) !important;
+  box-shadow: 0 12px 28px rgba(11, 11, 12, 0.12) !important;
+}
+
+.select-option.selected {
+  color: var(--smpl-form-paper) !important;
+  background: var(--smpl-form-ink) !important;
+}
+
+.select-option:not(.selected):hover { background: var(--smpl-form-surface) !important; }
+.select-option:not(.selected) i { color: var(--smpl-form-ink) !important; }
+.select-dropdown::-webkit-scrollbar-thumb { background: #777771 !important; }
+
+:where(form, .modal-content) input[type="file"] {
+  min-height: 52px;
+  padding: 8px;
+  color: var(--smpl-form-muted);
+  border: 1px dashed var(--smpl-form-border-strong) !important;
+  border-radius: 8px !important;
+  background: var(--smpl-form-surface) !important;
+}
+
+:where(form, .modal-content) input[type="file"]::file-selector-button {
+  min-height: 34px;
+  margin-right: 10px;
+  padding: 6px 10px;
+  color: var(--smpl-form-paper);
+  border: 1px solid var(--smpl-form-ink);
+  border-radius: 6px;
+  background: var(--smpl-form-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+:where(form, .modal-content) input[type="file"]:hover {
+  border-color: var(--smpl-form-ink) !important;
+  background: #fbfbfa !important;
+}
+
+.docs-preview { min-width: 0; }
+.doc-item { color: var(--smpl-form-ink) !important; background: var(--smpl-form-surface-strong) !important; }
+.doc-item i { color: var(--smpl-form-ink) !important; }
+.doc-item .remove-doc { color: var(--smpl-form-danger) !important; }
+
+/* Shared modal workspace */
+.modal-overlay > .modal-content {
+  min-width: 0;
+  color: var(--smpl-form-ink);
+  border: 1px solid var(--smpl-form-border);
+  background: var(--smpl-form-paper);
+  box-shadow: 0 24px 64px rgba(11, 11, 12, 0.18);
+}
+
+.modal-overlay > .modal-content > :where(.modal-header, .modal-footer) {
+  border-color: var(--smpl-form-border);
+  background: var(--smpl-form-paper);
+}
+
+.modal-overlay > .modal-content > .modal-body { background: var(--smpl-form-surface); }
+
+.modal-close {
+  min-width: 40px;
+  min-height: 40px;
+  color: var(--smpl-form-ink) !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.modal-close:hover { border-color: var(--smpl-form-border) !important; background: var(--smpl-form-surface) !important; }
+
+#customerModal .customer-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(calc(100vw - 32px), 1040px) !important;
+  max-width: 1040px !important;
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+  border-radius: var(--smpl-form-dialog-radius);
+}
+
+.smpl-form-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+}
+
+.smpl-form-heading,
+.smpl-form-section-heading {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.smpl-form-heading { gap: 12px; }
+.smpl-form-heading > div,
+.smpl-form-section-heading > div { min-width: 0; }
+
+.smpl-form-heading-icon,
+.smpl-form-section-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: var(--smpl-form-paper);
+  background: var(--smpl-form-ink);
+}
+
+.smpl-form-heading-icon { width: 42px; height: 42px; border-radius: 10px; font-size: 17px; }
+.smpl-form-section-icon { width: 34px; height: 34px; border-radius: 8px; font-size: 13px; }
+
+.smpl-form-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--smpl-form-muted);
+  font-family: var(--smpl-font-mono, "Space Mono", monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.smpl-form-heading h2 { margin: 0; font-size: clamp(21px, 2vw, 27px); line-height: 1.15; }
+.smpl-form-heading p { margin: 5px 0 0; color: var(--smpl-form-muted); font-size: 13px; line-height: 1.45; }
+
+.smpl-form-dialog-body {
+  min-height: 0;
+  padding: 16px !important;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.smpl-form-workspace { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+
+.smpl-form-section {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--smpl-form-border);
+  border-radius: 10px;
+  background: var(--smpl-form-paper);
+}
+
+.smpl-form-section-heading { gap: 10px; margin-bottom: 14px; }
+.smpl-form-section-heading h3 { margin: 1px 0 0; color: var(--smpl-form-ink); font-size: 14px; line-height: 1.25; }
+.smpl-form-section-heading p { margin: 3px 0 0; color: var(--smpl-form-muted); font-size: 11px; line-height: 1.4; }
+.smpl-form-section-heading-action { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; }
+
+.smpl-form-grid { display: grid; min-width: 0; gap: 12px; }
+.smpl-form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.smpl-form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.smpl-form-span-2 { grid-column: span 2; }
+.smpl-form-section-pair { align-items: stretch; }
+.smpl-form-section-pair > .smpl-form-section { height: 100%; }
+
+#customerModal :where(.form-group, .smpl-repeat-field) { margin: 0; min-width: 0; }
+#customerModal :where(.form-group, .smpl-repeat-field) > label,
+.smpl-field-heading > label,
+.smpl-repeat-item-heading > label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--smpl-form-ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.smpl-field-heading,
+.smpl-repeat-item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 7px;
+}
+
+.smpl-field-heading > label,
+.smpl-repeat-item-heading > label { margin: 0; }
+
+.smpl-repeat-list { display: grid; min-width: 0; gap: 8px; margin-top: 8px; }
+.smpl-repeat-list:empty { display: none; }
+
+.smpl-repeat-item {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--smpl-form-border);
+  border-radius: 8px;
+  background: var(--smpl-form-surface);
+}
+
+#customerCustomFieldsContainer .custom-field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  margin: 0;
+}
+
+.smpl-file-field small { display: block; margin-top: 6px; }
+
+.smpl-form-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 20px;
+}
+
+.smpl-form-footer-hint { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; color: var(--smpl-form-muted); font-size: 11px; }
+.smpl-form-footer-actions { display: flex; flex: 0 0 auto; gap: 8px; }
+.smpl-form-footer-actions button { min-height: 40px; }
+
+/* Semantic feedback only */
+:where(form, .modal-content) :where(.success, .field-success, [data-tone="success"]) { color: var(--smpl-form-success); }
+:where(form, .modal-content) :where(.warning, .field-warning, [data-tone="warning"]) { color: var(--smpl-form-warning); }
+:where(form, .modal-content) :where(.error, .field-error, .validation-error, [data-tone="danger"]) { color: var(--smpl-form-danger); }
+
+@media (max-width: 820px) {
+  #customerModal .customer-modal { width: min(calc(100vw - 24px), 760px) !important; max-height: calc(100dvh - 24px); }
+  .smpl-form-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .smpl-form-grid-3 > .smpl-form-span-2 { grid-column: span 2; }
+  .smpl-form-section-pair { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 620px) {
+  :root { --smpl-form-control-height: 44px; }
+  #customerModal .customer-modal { width: calc(100vw - 16px) !important; max-height: calc(100dvh - 16px); border-radius: 10px; }
+  .smpl-form-dialog-header { padding: 16px; }
+  .smpl-form-heading-icon { width: 38px; height: 38px; }
+  .smpl-form-dialog-body { padding: 10px !important; }
+  .smpl-form-section { padding: 13px; }
+  .smpl-form-grid-2,
+  .smpl-form-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .smpl-form-grid-3 > .smpl-form-span-2 { grid-column: auto; }
+  .smpl-form-section-heading-action { grid-template-columns: auto minmax(0, 1fr); }
+  .smpl-form-section-heading-action > .btn-add-field { grid-column: 1 / -1; width: 100%; margin-top: 2px; min-height: 44px; }
+  #customerModal .smpl-field-heading { align-items: flex-start; flex-direction: column; }
+  #customerModal .smpl-field-heading .btn-add-field { width: 100%; min-height: 44px; }
+  #customerCustomFieldsContainer .custom-field-row { grid-template-columns: minmax(0, 1fr); }
+  .smpl-remove-field { width: 100%; min-height: 44px; }
+  .smpl-form-dialog-footer { align-items: stretch; flex-direction: column; padding: 12px; }
+  .smpl-form-footer-actions { flex-direction: column-reverse; }
+  .smpl-form-footer-actions button { width: 100%; min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(form, .modal-content, .settings-workspace) * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}

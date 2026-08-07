@@ -13,7 +13,7 @@
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    background: #3b82f6;
+    background: #0b0b0c;
     color: white;
     border: none;
     border-radius: 6px;
@@ -24,7 +24,7 @@
 }
 
 .btn-add-field:hover {
-    background: #2563eb;
+    background: #29292c;
 }
 
 .btn-add-field i {
@@ -67,8 +67,8 @@
 .custom-field-name:focus,
 .custom-field-value:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #0b0b0c;
+    box-shadow: 0 0 0 3px rgba(11, 11, 12, 0.14);
 }
 
 .custom-field-name::placeholder,

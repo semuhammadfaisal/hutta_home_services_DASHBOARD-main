@@ -401,7 +401,9 @@ test('vendor invite supports an optional update recipient email for staff update
   assert.ok(Vendor.schema.path('updateRecipientNotificationError'));
   assert.match(pageSource, /id="vendorInviteUpdateEmail"/);
   assert.match(pageSource, /Update Email/);
-  assert.match(adminSource, /prefillVendorUpdateEmail/);
+  assert.match(pageSource, /Notification Recipient/);
+  assert.match(pageSource, /placeholder="updates@company\.com"/);
+  assert.doesNotMatch(adminSource, /prefillVendorUpdateEmail|currentUserEmail\(\)/);
   assert.match(adminSource, /updateRecipientEmail: document\.getElementById\('vendorInviteUpdateEmail'\)/);
   assert.match(routeSource, /A valid update recipient email is required/);
   assert.match(routeSource, /mergeEmails\(users\.map\(user => user\.email\), \[invitation\.updateRecipientEmail\]\)/);

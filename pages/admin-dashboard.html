@@ -54,6 +54,7 @@
     <link rel="stylesheet" href="../assets/css/vendor-modal-onboarding-polish.css?v=20260807-vendor-management-3">
     <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css?v=20260807-vendor-reviews-monochrome">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
+    <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-form-rebrand">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -3698,7 +3699,7 @@
                         <div class="vendor-invite-card">
                             <div class="vendor-invite-fields">
                                 <div class="form-group vendor-invite-field full"><label for="vendorInviteEmail">Vendor Email <span class="required-mark">Required</span></label><div class="vendor-input-with-icon"><i class="fas fa-envelope"></i><input type="email" id="vendorInviteEmail" required autocomplete="email" placeholder="vendor@company.com"></div><small>The secure form and confirmations will be sent here.</small></div>
-                                <div class="form-group vendor-invite-field full"><label for="vendorInviteUpdateEmail">Your Email for Updates <span class="optional-mark">Optional</span></label><div class="vendor-input-with-icon"><i class="fas fa-bell"></i><input type="email" id="vendorInviteUpdateEmail" autocomplete="email" placeholder="you@company.com"></div><small>We’ll send vendor onboarding updates to this email.</small></div>
+                                <div class="form-group vendor-invite-field full"><label for="vendorInviteUpdateEmail">Notification Recipient <span class="optional-mark">Optional</span></label><div class="vendor-input-with-icon"><i class="fas fa-bell"></i><input type="email" id="vendorInviteUpdateEmail" autocomplete="email" placeholder="updates@company.com"></div><small>Enter an address only when someone should receive vendor onboarding updates.</small></div>
                                 <div class="form-group vendor-invite-field"><label for="vendorInviteCompanyName">Company Name <span class="optional-mark">Optional</span></label><div class="vendor-input-with-icon"><i class="fas fa-building"></i><input type="text" id="vendorInviteCompanyName" maxlength="160" autocomplete="organization" placeholder="Company or vendor name"></div></div>
                                 <div class="form-group vendor-invite-field"><label for="vendorInviteCategory">Assigned Category <span class="required-mark">Required</span></label><div class="vendor-input-with-icon"><i class="fas fa-tags"></i><select id="vendorInviteCategory" required><option value="">Select Category</option><option value="electrical">Electrical</option><option value="plumbing">Plumbing</option><option value="civil">Civil</option><option value="carpentry">Carpentry</option><option value="hvac">HVAC</option><option value="painting">Painting</option><option value="cleaning">Cleaning</option></select></div><small>The vendor can request a different category for review.</small></div>
                                 <div class="form-group vendor-invite-field full"><div class="vendor-field-label-row"><label for="vendorInviteMessage">Personal Message <span class="optional-mark">Optional</span></label><span id="vendorInviteMessageCount">0 / 1000</span></div><textarea id="vendorInviteMessage" maxlength="1000" rows="4" placeholder="Add a welcome note or instructions for the vendor..."></textarea></div>
@@ -3950,97 +3951,99 @@
     </div>
 
     <!-- Customer Modal -->
-    <div class="modal-overlay" id="customerModal">
-        <div class="modal-content customer-modal">
-            <div class="modal-header">
-                <h2 id="customerModalTitle">Add New Customer</h2>
+    <div class="modal-overlay" id="customerModal" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle" aria-describedby="customerModalDescription" aria-hidden="true">
+        <div class="modal-content customer-modal smpl-form-dialog" tabindex="-1">
+            <div class="modal-header smpl-form-dialog-header">
+                <div class="smpl-form-heading">
+                    <span class="smpl-form-heading-icon" aria-hidden="true"><i class="fas fa-user-plus"></i></span>
+                    <div>
+                        <span class="smpl-form-eyebrow" id="customerModalEyebrow">Customer record</span>
+                        <h2 id="customerModalTitle">Add New Customer</h2>
+                        <p id="customerModalDescription">Create a complete customer profile for orders, communication, and service history.</p>
+                    </div>
+                </div>
                 <button type="button" class="modal-close" onclick="closeCustomerModal()" aria-label="Close customer form">
-                    <i class="fas fa-times"></i>
+                    <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
-            
-            <div class="modal-body">
-                <form id="customerForm">
-                    <div class="form-group">
-                        <label for="customerNameField">Customer Name *</label>
-                        <input type="text" id="customerNameField" required autocomplete="name">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="customerEmailField">Email</label>
-                        <input type="email" id="customerEmailField" autocomplete="email">
-                        <button type="button" class="btn-add-field" onclick="addEmailAddress()">
-                            <i class="fas fa-plus"></i> Add Email
-                        </button>
-                    </div>
-                    
-                    <!-- Additional emails will be inserted here -->
-                    <div id="emailsContainer"></div>
-                    
-                    <div class="form-group">
-                        <label for="customerPhoneField">Phone</label>
-                        <input type="tel" id="customerPhoneField" autocomplete="tel">
-                        <button type="button" class="btn-add-field" onclick="addPhoneNumber()">
-                            <i class="fas fa-plus"></i> Add Phone
-                        </button>
-                    </div>
-                    
-                    <!-- Additional phones will be inserted here -->
-                    <div id="phonesContainer"></div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="customerType">Customer Type</label>
-                            <select id="customerType" autocomplete="off">
-                                <option value="one-time">One-time</option>
-                                <option value="recurring">Recurring</option>
-                            </select>
+
+            <div class="modal-body smpl-form-dialog-body">
+                <form id="customerForm" class="smpl-form-workspace" novalidate>
+                    <section class="smpl-form-section" aria-labelledby="customerIdentityHeading">
+                        <div class="smpl-form-section-heading">
+                            <span class="smpl-form-section-icon" aria-hidden="true"><i class="fas fa-address-card"></i></span>
+                            <div><h3 id="customerIdentityHeading">Customer identity</h3><p>Basic account information used throughout the workspace.</p></div>
                         </div>
-                        <div class="form-group">
-                            <label for="customerStatus">Status</label>
-                            <select id="customerStatus" autocomplete="off">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
+                        <div class="smpl-form-grid smpl-form-grid-3">
+                            <div class="form-group smpl-form-span-2">
+                                <label for="customerNameField">Customer name <span class="required-mark">Required</span></label>
+                                <input type="text" id="customerNameField" required maxlength="160" autocomplete="name" placeholder="Enter a person or company name">
+                            </div>
+                            <div class="form-group">
+                                <label for="customerType">Customer type</label>
+                                <select id="customerType" autocomplete="off"><option value="one-time">One-time</option><option value="recurring">Recurring</option></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="customerStatus">Status</label>
+                                <select id="customerStatus" autocomplete="off"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+                            </div>
                         </div>
+                    </section>
+
+                    <section class="smpl-form-section" aria-labelledby="customerContactHeading">
+                        <div class="smpl-form-section-heading">
+                            <span class="smpl-form-section-icon" aria-hidden="true"><i class="fas fa-address-book"></i></span>
+                            <div><h3 id="customerContactHeading">Contact information</h3><p>Add the primary contact details and any useful alternatives.</p></div>
+                        </div>
+                        <div class="smpl-form-grid smpl-form-grid-2">
+                            <div class="smpl-repeat-field">
+                                <div class="smpl-field-heading"><label for="customerEmailField">Primary email</label><button type="button" class="btn-add-field" onclick="addEmailAddress()"><i class="fas fa-plus" aria-hidden="true"></i> Add email</button></div>
+                                <input type="email" id="customerEmailField" autocomplete="email" placeholder="customer@company.com">
+                                <div id="emailsContainer" class="smpl-repeat-list" aria-live="polite"></div>
+                            </div>
+                            <div class="smpl-repeat-field">
+                                <div class="smpl-field-heading"><label for="customerPhoneField">Primary phone</label><button type="button" class="btn-add-field" onclick="addPhoneNumber()"><i class="fas fa-plus" aria-hidden="true"></i> Add phone</button></div>
+                                <input type="tel" id="customerPhoneField" autocomplete="tel" placeholder="Enter a phone number">
+                                <div id="phonesContainer" class="smpl-repeat-list" aria-live="polite"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="smpl-form-section" aria-labelledby="customerAddressHeading">
+                        <div class="smpl-form-section-heading smpl-form-section-heading-action">
+                            <span class="smpl-form-section-icon" aria-hidden="true"><i class="fas fa-location-dot"></i></span>
+                            <div><h3 id="customerAddressHeading">Service addresses</h3><p>Store one or more locations that can be selected on future orders.</p></div>
+                            <button type="button" class="btn-add-field" onclick="addPhysicalAddress()"><i class="fas fa-plus" aria-hidden="true"></i> Add address</button>
+                        </div>
+                        <div class="form-group"><label for="customerAddressField_0">Primary address</label><textarea id="customerAddressField_0" class="customer-address-field" rows="2" autocomplete="street-address" placeholder="Street, city, state, and ZIP code"></textarea></div>
+                        <div id="addressesContainer" class="smpl-repeat-list" aria-live="polite"></div>
+                    </section>
+
+                    <div class="smpl-form-grid smpl-form-grid-2 smpl-form-section-pair">
+                        <section class="smpl-form-section" aria-labelledby="customerNotesHeading">
+                            <div class="smpl-form-section-heading"><span class="smpl-form-section-icon" aria-hidden="true"><i class="fas fa-note-sticky"></i></span><div><h3 id="customerNotesHeading">Internal notes</h3><p>Context visible to your operations team.</p></div></div>
+                            <div class="form-group"><label for="customerNotes">Notes <span class="optional-mark">Optional</span></label><textarea id="customerNotes" rows="4" autocomplete="off" placeholder="Add helpful customer context"></textarea></div>
+                        </section>
+                        <section class="smpl-form-section" aria-labelledby="customerDocumentsHeading">
+                            <div class="smpl-form-section-heading"><span class="smpl-form-section-icon" aria-hidden="true"><i class="fas fa-paperclip"></i></span><div><h3 id="customerDocumentsHeading">Documents</h3><p>Agreements, contracts, photos, or supporting records.</p></div></div>
+                            <div class="form-group smpl-file-field"><label for="customerDocs">Choose files <span class="optional-mark">Optional</span></label><input type="file" id="customerDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><small>PDF, Word, TXT, JPG, or PNG.</small><div id="customerDocsPreview" class="docs-preview"></div></div>
+                        </section>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="customerAddressField_0">Address</label>
-                        <textarea id="customerAddressField_0" class="customer-address-field" rows="2" autocomplete="street-address"></textarea>
-                        <button type="button" class="btn-add-field" onclick="addPhysicalAddress()">
-                            <i class="fas fa-plus"></i> Add Address
-                        </button>
-                    </div>
-                    
-                    <!-- Additional addresses will be inserted here -->
-                    <div id="addressesContainer"></div>
-                    
-                    <div class="form-group">
-                        <label for="customerNotes">Notes</label>
-                        <textarea id="customerNotes" rows="3" autocomplete="off"></textarea>
-                    </div>
-                    
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label for="customerDocs"><i class="fas fa-file-upload"></i> Documents</label>
-                        <input type="file" id="customerDocs" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
-                        <small style="color: #6b7280; font-size: 12px;">Upload agreements, contracts, or other documents</small>
-                        <div id="customerDocsPreview" class="docs-preview"></div>
-                    </div>
-                    
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <span class="display-label">Custom Fields</span>
-                        <button type="button" class="btn-add-field" onclick="addCustomerCustomField()">
-                            <i class="fas fa-plus"></i> Add Field
-                        </button>
-                        <div id="customerCustomFieldsContainer"></div>
-                    </div>
+
+                    <section class="smpl-form-section" aria-labelledby="customerCustomFieldsHeading">
+                        <div class="smpl-form-section-heading smpl-form-section-heading-action">
+                            <span class="smpl-form-section-icon" aria-hidden="true"><i class="fas fa-list"></i></span>
+                            <div><h3 id="customerCustomFieldsHeading">Custom fields</h3><p>Capture additional information specific to your operation.</p></div>
+                            <button type="button" class="btn-add-field" onclick="addCustomerCustomField()"><i class="fas fa-plus" aria-hidden="true"></i> Add field</button>
+                        </div>
+                        <div id="customerCustomFieldsContainer" class="smpl-repeat-list" aria-live="polite"></div>
+                    </section>
                 </form>
             </div>
-            
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeCustomerModal()">Cancel</button>
-                <button type="button" class="btn-primary" onclick="saveCustomer()">Save Customer</button>
+
+            <div class="modal-footer smpl-form-dialog-footer">
+                <p class="smpl-form-footer-hint"><i class="fas fa-circle-info" aria-hidden="true"></i><span id="customerModalFooterHint">Customer details can be updated later.</span></p>
+                <div class="smpl-form-footer-actions"><button type="button" class="btn-secondary" onclick="closeCustomerModal()">Cancel</button><button type="button" class="btn-primary" id="customerModalSubmit" onclick="saveCustomer()"><i class="fas fa-check" aria-hidden="true"></i> Save customer</button></div>
             </div>
         </div>
     </div>
@@ -4685,7 +4688,7 @@
     <script src="../assets/js/api-service.js?v=20260806-profile-sync"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
-    <script src="../assets/js/custom-fields.js"></script>
+    <script src="../assets/js/custom-fields.js?v=20260807-form-rebrand"></script>
     <script src="../assets/js/csv-import.js"></script>
     <script src="../assets/js/login-script.js"></script>
     <script src="../assets/js/file-upload.js"></script>
@@ -4697,14 +4700,14 @@
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260806-settings-ui"></script>
+    <script src="../assets/js/dashboard-script.js?v=20260807-form-rebrand"></script>
     <script src="../assets/js/incoming-quotes.js?v=20260725-quote-table-polish"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
     <script src="../assets/js/closeout.js?v=20260727-customer-engagement"></script>
     <script src="../assets/js/workflow-hub.js?v=20260806-activity-clean"></script>
-    <script src="../assets/js/vendor-onboarding-admin.js?v=20260707-clear5"></script>
+    <script src="../assets/js/vendor-onboarding-admin.js?v=20260807-recipient1"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js?v=20260806-search-polish"></script>
     <script src="../assets/js/smplfix-shell.js?v=20260804-order-detail-header"></script>

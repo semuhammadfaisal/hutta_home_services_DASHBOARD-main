@@ -8664,27 +8664,46 @@ let addressCounter = 1;
 let emailCounter = 1;
 let phoneCounter = 1;
 
+function appendCustomerRepeatField(type, index, label, value = '') {
+    const config = {
+        email: { container: 'emailsContainer', group: 'email-group', data: 'emailIndex', prefix: 'customerEmailField_', input: 'input', inputType: 'email', inputClass: 'customer-email-field', remove: 'removeEmailAddress', icon: 'fa-envelope' },
+        phone: { container: 'phonesContainer', group: 'phone-group', data: 'phoneIndex', prefix: 'customerPhoneField_', input: 'input', inputType: 'tel', inputClass: 'customer-phone-field', remove: 'removePhoneNumber', icon: 'fa-phone' },
+        address: { container: 'addressesContainer', group: 'address-group', data: 'addressIndex', prefix: 'customerAddressField_', input: 'textarea', inputClass: 'customer-address-field', remove: 'removePhysicalAddress', icon: 'fa-location-dot' }
+    }[type];
+    if (!config) return;
+
+    const container = document.getElementById(config.container);
+    if (!container) return;
+
+    const group = document.createElement('div');
+    group.className = `${config.group} smpl-repeat-item`;
+    group.dataset[config.data] = String(index);
+
+    const heading = document.createElement('div');
+    heading.className = 'smpl-repeat-item-heading';
+    const fieldLabel = document.createElement('label');
+    fieldLabel.htmlFor = `${config.prefix}${index}`;
+    fieldLabel.innerHTML = `<i class="fas ${config.icon}" aria-hidden="true"></i> ${label}`;
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = `smpl-remove-field btn-remove-${type}`;
+    removeButton.setAttribute('aria-label', `Remove ${label.toLowerCase()}`);
+    removeButton.innerHTML = '<i class="fas fa-trash" aria-hidden="true"></i><span>Remove</span>';
+    removeButton.addEventListener('click', () => window[config.remove]?.(index));
+    heading.append(fieldLabel, removeButton);
+
+    const control = document.createElement(config.input);
+    control.id = `${config.prefix}${index}`;
+    control.className = config.inputClass;
+    if (config.inputType) control.type = config.inputType;
+    if (type === 'address') control.rows = 2;
+    control.value = value || '';
+    group.append(heading, control);
+    container.appendChild(group);
+}
+
 function addEmailAddress() {
-    const container = document.getElementById('emailsContainer');
-    const newEmailGroup = document.createElement('div');
-    newEmailGroup.className = 'email-group';
-    newEmailGroup.setAttribute('data-email-index', emailCounter);
-    newEmailGroup.style.marginTop = '20px';
-    newEmailGroup.style.paddingTop = '20px';
-    newEmailGroup.style.borderTop = '1px solid #e5e7eb';
-    newEmailGroup.style.position = 'relative';
-    
-    newEmailGroup.innerHTML = `
-        <button type="button" class="btn-remove-email" onclick="removeEmailAddress(${emailCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-            <i class="fas fa-times"></i> Remove
-        </button>
-        <div class="form-group">
-            <label for="customerEmailField_${emailCounter}">Email ${emailCounter + 2}</label>
-            <input type="email" id="customerEmailField_${emailCounter}" class="customer-email-field">
-        </div>
-    `;
-    
-    container.appendChild(newEmailGroup);
+    appendCustomerRepeatField('email', emailCounter, `Email ${emailCounter + 1}`);
     emailCounter++;
 }
 
@@ -8696,26 +8715,7 @@ function removeEmailAddress(index) {
 }
 
 function addPhoneNumber() {
-    const container = document.getElementById('phonesContainer');
-    const newPhoneGroup = document.createElement('div');
-    newPhoneGroup.className = 'phone-group';
-    newPhoneGroup.setAttribute('data-phone-index', phoneCounter);
-    newPhoneGroup.style.marginTop = '20px';
-    newPhoneGroup.style.paddingTop = '20px';
-    newPhoneGroup.style.borderTop = '1px solid #e5e7eb';
-    newPhoneGroup.style.position = 'relative';
-    
-    newPhoneGroup.innerHTML = `
-        <button type="button" class="btn-remove-phone" onclick="removePhoneNumber(${phoneCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-            <i class="fas fa-times"></i> Remove
-        </button>
-        <div class="form-group">
-            <label for="customerPhoneField_${phoneCounter}">Phone ${phoneCounter + 2}</label>
-            <input type="tel" id="customerPhoneField_${phoneCounter}" class="customer-phone-field">
-        </div>
-    `;
-    
-    container.appendChild(newPhoneGroup);
+    appendCustomerRepeatField('phone', phoneCounter, `Phone ${phoneCounter + 1}`);
     phoneCounter++;
 }
 
@@ -8727,29 +8727,9 @@ function removePhoneNumber(index) {
 }
 
 function addPhysicalAddress() {
-    const container = document.getElementById('addressesContainer');
     const currentIndex = addressCounter;
-    const newAddressGroup = document.createElement('div');
-    newAddressGroup.className = 'address-group';
-    newAddressGroup.setAttribute('data-address-index', currentIndex);
-    newAddressGroup.style.marginTop = '20px';
-    newAddressGroup.style.paddingTop = '20px';
-    newAddressGroup.style.borderTop = '1px solid #e5e7eb';
-    newAddressGroup.style.position = 'relative';
-    
-    const addressNumber = container.querySelectorAll('.address-group').length + 2;
-    
-    newAddressGroup.innerHTML = `
-        <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${currentIndex})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-            <i class="fas fa-times"></i> Remove
-        </button>
-        <div class="form-group">
-            <label for="customerAddressField_${currentIndex}">Address ${addressNumber}</label>
-            <textarea id="customerAddressField_${currentIndex}" class="customer-address-field" rows="2"></textarea>
-        </div>
-    `;
-    
-    container.appendChild(newAddressGroup);
+    const addressNumber = document.querySelectorAll('#addressesContainer .address-group').length + 2;
+    appendCustomerRepeatField('address', currentIndex, `Address ${addressNumber}`);
     addressCounter++;
 }
 
@@ -8768,6 +8748,9 @@ function showAddCustomerModal() {
     emailCounter = 1;
     phoneCounter = 1;
     document.getElementById('customerModalTitle').textContent = 'Add New Customer';
+    document.getElementById('customerModalEyebrow').textContent = 'Customer record';
+    document.getElementById('customerModalDescription').textContent = 'Create a complete customer profile for orders, communication, and service history.';
+    document.getElementById('customerModalSubmit').innerHTML = '<i class="fas fa-plus" aria-hidden="true"></i> Create customer';
     document.getElementById('customerForm').reset();
     renderNotesManager('customers', '', {}, 'customerNotes');
     
@@ -8784,6 +8767,7 @@ function showAddCustomerModal() {
     
     const customerModal = document.getElementById('customerModal');
     customerModal.style.display = '';
+    customerModal.setAttribute('aria-hidden', 'false');
     customerModal.classList.add('show');
 }
 
@@ -8793,6 +8777,9 @@ async function editCustomer(customerId) {
         const customer = await window.APIService.getCustomer(customerId);
         
         document.getElementById('customerModalTitle').textContent = 'Edit Customer';
+        document.getElementById('customerModalEyebrow').textContent = 'Customer record';
+        document.getElementById('customerModalDescription').textContent = 'Update contact details, service locations, documents, and account information.';
+        document.getElementById('customerModalSubmit').innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Save changes';
         
         // Populate basic fields
         document.getElementById('customerNameField').value = customer.name || '';
@@ -8830,25 +8817,7 @@ async function editCustomer(customerId) {
             for (let i = 1; i < customer.addresses.length; i++) {
                 const addr = customer.addresses[i];
                 const currentIndex = addressCounter;
-                const addressGroup = document.createElement('div');
-                addressGroup.className = 'address-group';
-                addressGroup.setAttribute('data-address-index', currentIndex);
-                addressGroup.style.marginTop = '20px';
-                addressGroup.style.paddingTop = '20px';
-                addressGroup.style.borderTop = '1px solid #e5e7eb';
-                addressGroup.style.position = 'relative';
-                
-                addressGroup.innerHTML = `
-                    <button type="button" class="btn-remove-address" onclick="removePhysicalAddress(${currentIndex})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-                        <i class="fas fa-times"></i> Remove
-                    </button>
-                    <div class="form-group">
-                        <label for="customerAddressField_${currentIndex}">Address ${i + 1}</label>
-                        <textarea id="customerAddressField_${currentIndex}" class="customer-address-field" rows="2">${addr.address || ''}</textarea>
-                    </div>
-                `;
-                
-                addressContainer.appendChild(addressGroup);
+                appendCustomerRepeatField('address', currentIndex, `Address ${i + 1}`, addr.address || '');
                 addressCounter++;
             }
         } else if (customer.address) {
@@ -8860,25 +8829,7 @@ async function editCustomer(customerId) {
         if (customer.emails && customer.emails.length > 1) {
             for (let i = 1; i < customer.emails.length; i++) {
                 const email = customer.emails[i];
-                const emailGroup = document.createElement('div');
-                emailGroup.className = 'email-group';
-                emailGroup.setAttribute('data-email-index', emailCounter);
-                emailGroup.style.marginTop = '20px';
-                emailGroup.style.paddingTop = '20px';
-                emailGroup.style.borderTop = '1px solid #e5e7eb';
-                emailGroup.style.position = 'relative';
-                
-                emailGroup.innerHTML = `
-                    <button type="button" class="btn-remove-email" onclick="removeEmailAddress(${emailCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-                        <i class="fas fa-times"></i> Remove
-                    </button>
-                    <div class="form-group">
-                        <label for="customerEmailField_${emailCounter}">Email ${i + 1}</label>
-                        <input type="email" id="customerEmailField_${emailCounter}" class="customer-email-field" value="${email.address || ''}">
-                    </div>
-                `;
-                
-                emailContainer.appendChild(emailGroup);
+                appendCustomerRepeatField('email', emailCounter, `Email ${i + 1}`, email.address || '');
                 emailCounter++;
             }
         }
@@ -8887,25 +8838,7 @@ async function editCustomer(customerId) {
         if (customer.phones && customer.phones.length > 1) {
             for (let i = 1; i < customer.phones.length; i++) {
                 const phone = customer.phones[i];
-                const phoneGroup = document.createElement('div');
-                phoneGroup.className = 'phone-group';
-                phoneGroup.setAttribute('data-phone-index', phoneCounter);
-                phoneGroup.style.marginTop = '20px';
-                phoneGroup.style.paddingTop = '20px';
-                phoneGroup.style.borderTop = '1px solid #e5e7eb';
-                phoneGroup.style.position = 'relative';
-                
-                phoneGroup.innerHTML = `
-                    <button type="button" class="btn-remove-phone" onclick="removePhoneNumber(${phoneCounter})" style="position: absolute; top: 5px; right: 0; background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; min-width: 80px; z-index: 10;">
-                        <i class="fas fa-times"></i> Remove
-                    </button>
-                    <div class="form-group">
-                        <label for="customerPhoneField_${phoneCounter}">Phone ${i + 1}</label>
-                        <input type="tel" id="customerPhoneField_${phoneCounter}" class="customer-phone-field" value="${phone.number || ''}">
-                    </div>
-                `;
-                
-                phoneContainer.appendChild(phoneGroup);
+                appendCustomerRepeatField('phone', phoneCounter, `Phone ${i + 1}`, phone.number || '');
                 phoneCounter++;
             }
         }
@@ -8922,6 +8855,7 @@ async function editCustomer(customerId) {
         window.existingCustomerDocs = Array.isArray(customer.documents) ? customer.documents : [];
         window.updateDocumentPreview?.('customer', 'customerDocsPreview');
         
+        document.getElementById('customerModal').setAttribute('aria-hidden', 'false');
         document.getElementById('customerModal').classList.add('show');
     } catch (error) {
         alert('Failed to load customer: ' + error.message);
@@ -9275,6 +9209,7 @@ async function deleteCurrentDetailCustomer() {
 
 function closeCustomerModal() {
     document.getElementById('customerModal').classList.remove('show');
+    document.getElementById('customerModal').setAttribute('aria-hidden', 'true');
     
     // Re-enable form inputs
     const inputs = document.querySelectorAll('#customerForm input, #customerForm select, #customerForm textarea');

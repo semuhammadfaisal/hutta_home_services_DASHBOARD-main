@@ -36,23 +36,25 @@ function addCustomerCustomField(name = '', value = '') {
     const fieldId = `customerCustomField_${customerCustomFieldCounter++}`;
     
     const fieldDiv = document.createElement('div');
-    fieldDiv.className = 'custom-field-group';
+    fieldDiv.className = 'custom-field-group smpl-repeat-item';
     fieldDiv.id = fieldId;
     fieldDiv.innerHTML = `
         <div class="form-row custom-field-row">
             <div class="form-group">
-                <label>Field Name</label>
-                <input type="text" class="custom-field-name" placeholder="e.g., Account Number" value="${name}">
+                <label for="${fieldId}_name">Field name</label>
+                <input type="text" id="${fieldId}_name" class="custom-field-name" placeholder="e.g., Account number">
             </div>
             <div class="form-group">
-                <label>Field Value</label>
-                <input type="text" class="custom-field-value" placeholder="Enter value" value="${value}">
+                <label for="${fieldId}_value">Field value</label>
+                <input type="text" id="${fieldId}_value" class="custom-field-value" placeholder="Enter value">
             </div>
-            <button type="button" class="btn-remove-field" onclick="removeCustomField('${fieldId}')" title="Remove field">
-                <i class="fas fa-times"></i>
+            <button type="button" class="btn-remove-field smpl-remove-field" onclick="removeCustomField('${fieldId}')" aria-label="Remove custom field">
+                <i class="fas fa-trash" aria-hidden="true"></i><span>Remove</span>
             </button>
         </div>
     `;
+    fieldDiv.querySelector('.custom-field-name').value = name;
+    fieldDiv.querySelector('.custom-field-value').value = value;
     
     container.appendChild(fieldDiv);
 }

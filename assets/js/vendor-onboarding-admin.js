@@ -23,16 +23,6 @@
     return includeTime ? date.toLocaleString() : date.toLocaleDateString();
   };
 
-  function currentUserEmail() {
-    return window.AuthSession?.user?.email || '';
-  }
-
-  function prefillVendorUpdateEmail(force = false) {
-    const input = document.getElementById('vendorInviteUpdateEmail');
-    if (!input) return;
-    if (force || !input.value) input.value = currentUserEmail();
-  }
-
   function activateReviewNavigation(section = 'vendor-reviews') {
     window.dashboard?.showSection?.(section);
     document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
@@ -425,7 +415,6 @@
       if (intro) intro.innerHTML = '<strong>Create vendor manually</strong><p>Enter the information you already have. Required fields are marked with an asterisk.</p>';
     } else {
       syncVendorInviteCategories();
-      prefillVendorUpdateEmail();
       updateVendorModalHeading({ title: 'Invite Vendor', subtitle: 'Send a secure form so the vendor can provide their own details and documents.', icon: 'fa-paper-plane' });
       if (footerHint) footerHint.textContent = 'The invitation link expires after seven days.';
     }
@@ -503,7 +492,6 @@
       result.classList.toggle('warning', failed);
       result.hidden = false;
       form.reset();
-      prefillVendorUpdateEmail(true);
       updateInviteMessageCount();
       await window.refreshVendorInvitations();
       window.showToast?.(text.textContent.trim(), failed ? 'warning' : 'success');

@@ -72,7 +72,7 @@ test('Settings uses the responsive SMPLFix workspace and safe interaction states
   const dashboard = read('assets/js/dashboard-script.js');
   const markup = html.slice(html.indexOf('<section id="settings"'), html.indexOf('<!-- Calendar Section -->'));
   assert.match(html, /settings\.css\?v=20260806-settings-ui/);
-  assert.match(html, /dashboard-script\.js\?v=20260806-settings-ui/);
+  assert.match(html, /dashboard-script\.js\?v=20260807-form-rebrand/);
   assert.match(markup, /id="settingsForm" class="settings-workspace" onsubmit="saveSettings\(event\)"/);
   assert.match(markup, /id="settingsSaveState" role="status" aria-live="polite"/);
   assert.match(markup, /class="settings-toggle-control" aria-hidden="true"/);
@@ -140,7 +140,7 @@ test('record detail pages fill the content rail and use explicit responsive colu
   assert.match(layout, /@container dashboard-section \(max-width: 560px\)[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
 });
 
-test('every full browser page loads the shared fluid layout last', () => {
+test('every full browser page loads the shared fluid layout before any final form layer', () => {
   const htmlFiles = [
     'index.html',
     ...fs.readdirSync(path.join(root, 'pages'))
@@ -154,7 +154,14 @@ test('every full browser page loads the shared fluid layout last', () => {
     const styles = [...html.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi)]
       .map((match) => match[1]);
     assert.ok(styles.length > 0, `${file} has no stylesheets`);
-    assert.match(styles.at(-1), /smplfix-layout\.css\?v=20260806-fluid-layout$/, `${file} must load the fluid layout last`);
+    const layoutIndex = styles.findIndex((href) => /smplfix-layout\.css\?v=20260806-fluid-layout$/.test(href));
+    assert.ok(layoutIndex > -1, `${file} must load the fluid layout`);
+    if (html.includes('<form')) {
+      assert.match(styles.at(-1), /smplfix-forms\.css\?v=20260807-form-rebrand$/, `${file} must load the form system last`);
+      assert.ok(styles.length - 1 > layoutIndex, `${file} must load forms after layout`);
+    } else {
+      assert.equal(layoutIndex, styles.length - 1, `${file} must load the fluid layout last`);
+    }
   }
 });
 
