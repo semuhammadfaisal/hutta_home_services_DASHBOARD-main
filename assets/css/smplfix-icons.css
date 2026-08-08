@@ -1,0 +1,72 @@
+/* SMPLFix icon reliability layer
+   Loaded last so feature CSS cannot hide or recolor action icons. */
+
+:root {
+  --smpl-icon-ink: var(--smpl-ink, #0b0b0c);
+  --smpl-icon-paper: var(--smpl-paper, #ffffff);
+  --smpl-icon-muted: var(--smpl-text-muted, #68686c);
+}
+
+:where(i.fa, i.fas, i.far, i.fab, i.fa-solid, i.fa-regular, i.fa-brands) {
+  display: inline-block;
+  flex: 0 0 auto;
+  min-width: 1em;
+  font-style: normal;
+  line-height: 1;
+  text-align: center;
+  vertical-align: -0.125em;
+}
+
+:where(
+  button,
+  [role="button"],
+  .btn,
+  [class^="btn-"],
+  [class*=" btn-"],
+  .icon-btn,
+  .action-btn,
+  .modal-close
+) :where(i.fa, i.fas, i.far, i.fab, i.fa-solid, i.fa-regular, i.fa-brands) {
+  color: inherit !important;
+  opacity: 1;
+}
+
+:where(
+  button,
+  [role="button"],
+  .btn,
+  [class^="btn-"],
+  [class*=" btn-"],
+  .icon-btn,
+  .action-btn,
+  .modal-close
+) svg {
+  flex: 0 0 auto;
+  color: inherit !important;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+:where(.form-group, .field, .form-field) > label :where(i.fa, i.fas, i.far, i.fa-solid, i.fa-regular) {
+  color: var(--smpl-icon-ink) !important;
+}
+
+:where(.btn-primary, button.primary, button[type="submit"]:not(.btn-secondary)) > :where(i, svg),
+:where(.smpl-form-heading-icon, .smpl-form-section-icon, .workflow-panel-icon) > :where(i, svg) {
+  color: currentColor !important;
+}
+
+:where(button, [role="button"], .btn, [class^="btn-"], [class*=" btn-"]):disabled :where(i, svg),
+:where(button, [role="button"], .btn, [class^="btn-"], [class*=" btn-"])[aria-disabled="true"] :where(i, svg) {
+  color: currentColor !important;
+  opacity: 0.72;
+}
+
+/* Font Awesome animation utilities must remain animated. */
+.fa-spin { animation: fa-spin 2s infinite linear !important; }
+.fa-pulse { animation: fa-spin 1s infinite steps(8) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-spin,
+  .fa-pulse { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}

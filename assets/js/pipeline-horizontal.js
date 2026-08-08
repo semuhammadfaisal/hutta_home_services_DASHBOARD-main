@@ -128,8 +128,8 @@ function createStageColumn(stage) {
         <div class="stage-title">
             <h3>${stage.name}</h3>
             <div class="stage-actions">
-                <button class="icon-btn" title="Edit Stage"><i class="fas fa-edit"></i></button>
-                <button class="icon-btn delete" title="Delete Stage"><i class="fas fa-trash"></i></button>
+                <button class="icon-btn" title="Edit Stage" aria-label="Edit stage"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                <button class="icon-btn delete" title="Delete Stage" aria-label="Delete stage"><i class="fas fa-trash" aria-hidden="true"></i></button>
             </div>
         </div>
         <div class="stage-count">
@@ -193,8 +193,8 @@ function createRecordCardHTML(record) {
             <div class="record-header">
                 <div class="record-title">${record.projectName}</div>
                 <div class="record-actions">
-                    <button class="icon-btn record-edit-btn" data-record-id="${record.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="icon-btn delete record-delete-btn" data-record-id="${record.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                    <button class="icon-btn record-edit-btn" data-record-id="${record.id}" title="Edit" aria-label="Edit record"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                    <button class="icon-btn delete record-delete-btn" data-record-id="${record.id}" title="Delete" aria-label="Delete record"><i class="fas fa-trash" aria-hidden="true"></i></button>
                 </div>
             </div>
             <div class="record-customer"><i class="fas fa-user"></i> ${record.customerName}</div>

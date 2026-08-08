@@ -209,7 +209,9 @@ img.brand-logo {
     min-height: 108px;
     padding: 16px 14px;
     flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
+    text-align: left;
 }
 
 .brand-proof article + article {
@@ -217,9 +219,11 @@ img.brand-logo {
 }
 
 .brand-proof i {
+    align-self: flex-start;
     margin-bottom: 12px;
     color: rgba(255, 255, 255, 0.72);
     font-size: 17px;
+    text-align: left;
 }
 
 .brand-proof strong {

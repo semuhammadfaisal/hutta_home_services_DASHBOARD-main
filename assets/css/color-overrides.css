@@ -25,7 +25,10 @@
 
 .btn-refresh i,
 .btn-primary i,
-.action-btn.view i,
+.action-btn.view i {
+    color: inherit !important;
+}
+
 .menu-item.active a i,
 .menu-item.active a span {
     color: var(--smpl-ink) !important;

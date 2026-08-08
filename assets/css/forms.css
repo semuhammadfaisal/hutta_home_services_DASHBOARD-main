@@ -182,7 +182,7 @@
 }
 
 .form-group label i {
-    color: #0056B8;
+    color: currentColor;
     font-size: 0.95rem;
 }
 

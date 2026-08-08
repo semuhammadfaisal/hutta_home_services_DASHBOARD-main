@@ -2024,9 +2024,13 @@ body #profileModal .profile-title-icon {
     height: 36px;
     place-items: center;
     border-radius: 10px;
-    color: var(--smpl-paper);
-    background: var(--smpl-ink);
+    color: var(--smpl-ink);
+    background: var(--smpl-surface);
     font-size: 15px;
+}
+
+body #profileModal .profile-title-icon i {
+    color: var(--smpl-ink);
 }
 
 body #profileModal .profile-settings-header p {

@@ -642,10 +642,10 @@ function loadJobsTable() {
             <td>$${job.netProfit.toFixed(2)}</td>
             <td><span class="status-badge ${job.status}">${job.status}</span></td>
             <td>
-                <button onclick="viewJobDetail('${job.id}')" class="btn-icon" title="View"><i class="fas fa-eye"></i></button>
-                <button onclick="editJob('${job.id}')" class="btn-icon" title="Edit"><i class="fas fa-edit"></i></button>
-                ${!job.contractorPaidDate ? `<button onclick="payContractor('${job.id}')" class="btn-icon" title="Pay Contractor"><i class="fas fa-money-bill-wave"></i></button>` : ''}
-                <button onclick="deleteJobConfirm('${job.id}')" class="btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                <button onclick="viewJobDetail('${job.id}')" class="btn-icon" title="View" aria-label="View job details"><i class="fas fa-eye" aria-hidden="true"></i></button>
+                <button onclick="editJob('${job.id}')" class="btn-icon" title="Edit" aria-label="Edit job"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                ${!job.contractorPaidDate ? `<button onclick="payContractor('${job.id}')" class="btn-icon" title="Pay Contractor" aria-label="Pay contractor"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></button>` : ''}
+                <button onclick="deleteJobConfirm('${job.id}')" class="btn-icon" title="Delete" aria-label="Delete job"><i class="fas fa-trash" aria-hidden="true"></i></button>
             </td>
         </tr>
     `;
@@ -670,7 +670,7 @@ function loadARTable() {
             <td><span class="reminder-badge ${reminderStatus.status}">${reminderStatus.message}</span></td>
             <td>${reminderStatus.days > 0 ? `${reminderStatus.days} days` : '-'}</td>
             <td>
-                ${reminderStatus.days > 0 ? `<button onclick="sendReminder('${ar.id}')" class="btn-icon" title="Send Reminder"><i class="fas fa-envelope"></i></button>` : ''}
+                ${reminderStatus.days > 0 ? `<button onclick="sendReminder('${ar.id}')" class="btn-icon" title="Send Reminder" aria-label="Send payment reminder"><i class="fas fa-envelope" aria-hidden="true"></i></button>` : ''}
             </td>
         </tr>
     `;

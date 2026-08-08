@@ -31,6 +31,10 @@
   font-weight: 650;
 }
 
+:where(form, .modal-content, .settings-workspace) .form-group > label i {
+  color: var(--smpl-form-ink) !important;
+}
+
 :where(form, .modal-content, .settings-workspace) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
   box-sizing: border-box;
   width: 100%;
@@ -266,6 +270,11 @@
 .doc-item .remove-doc { color: var(--smpl-form-danger) !important; }
 
 /* Shared modal workspace */
+body .modal-overlay[role="dialog"] {
+  background: rgba(11, 11, 12, 0.44) !important;
+  backdrop-filter: none !important;
+}
+
 .modal-overlay > .modal-content {
   min-width: 0;
   color: var(--smpl-form-ink);
@@ -296,9 +305,9 @@
 #customerModal .customer-modal {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  width: min(calc(100vw - 32px), 1040px) !important;
-  max-width: 1040px !important;
-  max-height: calc(100dvh - 32px);
+  width: min(calc(100vw - 40px), 1160px) !important;
+  max-width: 1160px !important;
+  max-height: calc(100dvh - 40px);
   overflow: hidden;
   border-radius: var(--smpl-form-dialog-radius);
 }
@@ -351,16 +360,36 @@
 
 .smpl-form-dialog-body {
   min-height: 0;
-  padding: 16px !important;
+  padding: 18px !important;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-color: #777771 transparent;
+  scrollbar-width: thin;
 }
+
+.smpl-form-dialog-body::-webkit-scrollbar { width: 9px; }
+.smpl-form-dialog-body::-webkit-scrollbar-track { background: transparent; }
+.smpl-form-dialog-body::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #777771; background-clip: padding-box; }
 
 .smpl-form-workspace { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 
+/* Defeat the retired generic modal grid: Customer sections own their layout. */
+#customerModal #customerForm {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 16px !important;
+}
+
+#customerModal #customerForm > * {
+  grid-column: 1 / -1 !important;
+  width: 100%;
+  min-width: 0;
+}
+
 .smpl-form-section {
   min-width: 0;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--smpl-form-border);
   border-radius: 10px;
   background: var(--smpl-form-paper);
@@ -377,6 +406,19 @@
 .smpl-form-span-2 { grid-column: span 2; }
 .smpl-form-section-pair { align-items: stretch; }
 .smpl-form-section-pair > .smpl-form-section { height: 100%; }
+
+#customerModal .smpl-form-section:first-child .smpl-form-grid-3 {
+  grid-template-columns: minmax(280px, 2fr) repeat(2, minmax(150px, 0.75fr));
+  align-items: end;
+}
+
+#customerModal .smpl-form-section:first-child .smpl-form-span-2 {
+  grid-column: auto;
+}
+
+#customerModal .smpl-form-section-pair {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+}
 
 #customerModal :where(.form-group, .smpl-repeat-field) { margin: 0; min-width: 0; }
 #customerModal :where(.form-group, .smpl-repeat-field) > label,
@@ -403,7 +445,13 @@
 .smpl-repeat-item-heading > label { margin: 0; }
 
 .smpl-repeat-list { display: grid; min-width: 0; gap: 8px; margin-top: 8px; }
-.smpl-repeat-list:empty { display: none; }
+.smpl-repeat-list:empty {
+  display: none !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
 
 .smpl-repeat-item {
   min-width: 0;
@@ -435,6 +483,26 @@
 .smpl-form-footer-actions { display: flex; flex: 0 0 auto; gap: 8px; }
 .smpl-form-footer-actions button { min-height: 40px; }
 
+#customerModal :where(.smpl-form-heading-icon, .smpl-form-section-icon) i {
+  color: var(--smpl-form-paper) !important;
+  font-size: inherit !important;
+  line-height: 1 !important;
+}
+
+#customerModal .smpl-form-section-heading-action > .btn-add-field {
+  align-self: center;
+}
+
+#customerModal :where(input:not([type="file"]), select) {
+  min-height: 46px;
+}
+
+#customerModal textarea { line-height: 1.5; }
+
+#customerModal .smpl-form-footer-actions .btn-primary {
+  min-width: 154px;
+}
+
 /* Semantic feedback only */
 :where(form, .modal-content) :where(.success, .field-success, [data-tone="success"]) { color: var(--smpl-form-success); }
 :where(form, .modal-content) :where(.warning, .field-warning, [data-tone="warning"]) { color: var(--smpl-form-warning); }
@@ -442,8 +510,11 @@
 
 @media (max-width: 820px) {
   #customerModal .customer-modal { width: min(calc(100vw - 24px), 760px) !important; max-height: calc(100dvh - 24px); }
-  .smpl-form-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .smpl-form-grid-3 > .smpl-form-span-2 { grid-column: span 2; }
+  .smpl-form-grid-3,
+  #customerModal .smpl-form-section:first-child .smpl-form-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .smpl-form-grid-3 > .smpl-form-span-2,
+  #customerModal .smpl-form-section:first-child .smpl-form-span-2 { grid-column: span 2; }
+  #customerModal .smpl-form-section-pair { grid-template-columns: minmax(0, 1fr); }
   .smpl-form-section-pair { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -455,8 +526,10 @@
   .smpl-form-dialog-body { padding: 10px !important; }
   .smpl-form-section { padding: 13px; }
   .smpl-form-grid-2,
-  .smpl-form-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .smpl-form-grid-3,
+  #customerModal .smpl-form-section:first-child .smpl-form-grid-3 { grid-template-columns: minmax(0, 1fr); }
   .smpl-form-grid-3 > .smpl-form-span-2 { grid-column: auto; }
+  #customerModal .smpl-form-section:first-child .smpl-form-span-2 { grid-column: auto; }
   .smpl-form-section-heading-action { grid-template-columns: auto minmax(0, 1fr); }
   .smpl-form-section-heading-action > .btn-add-field { grid-column: 1 / -1; width: 100%; margin-top: 2px; min-height: 44px; }
   #customerModal .smpl-field-heading { align-items: flex-start; flex-direction: column; }

@@ -131,11 +131,11 @@ const PipelineManager = {
                 </div>
                 ${canEdit ? `
                 <div class="stage-actions">
-                    <button class="stage-action-btn" onclick="PipelineManager.editStage(${stage.id})" title="Edit">
-                        <i class="fas fa-edit"></i>
+                    <button class="stage-action-btn" onclick="PipelineManager.editStage(${stage.id})" title="Edit" aria-label="Edit stage">
+                        <i class="fas fa-edit" aria-hidden="true"></i>
                     </button>
-                    <button class="stage-action-btn" onclick="PipelineManager.deleteStage(${stage.id})" title="Delete">
-                        <i class="fas fa-trash"></i>
+                    <button class="stage-action-btn" onclick="PipelineManager.deleteStage(${stage.id})" title="Delete" aria-label="Delete stage">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                 </div>
                 ` : ''}

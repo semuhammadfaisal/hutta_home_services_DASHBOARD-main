@@ -21,8 +21,8 @@ function addVendorCustomField(name = '', value = '') {
                 <label>Field Value</label>
                 <input type="text" class="custom-field-value" placeholder="Enter value" value="${value}">
             </div>
-            <button type="button" class="btn-remove-field" onclick="removeCustomField('${fieldId}')" title="Remove field">
-                <i class="fas fa-times"></i>
+            <button type="button" class="btn-remove-field" onclick="removeCustomField('${fieldId}')" title="Remove field" aria-label="Remove custom field">
+                <i class="fas fa-times" aria-hidden="true"></i>
             </button>
         </div>
     `;

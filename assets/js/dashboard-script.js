@@ -4183,11 +4183,11 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
                             </div>
                         </div>
                         <div class="document-actions">
-                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
-                                <i class="fas fa-download"></i>
+                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download" aria-label="Download document">
+                                <i class="fas fa-download" aria-hidden="true"></i>
                             </button>
-                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
-                                <i class="fas fa-eye"></i>
+                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View" aria-label="View document">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
@@ -4305,11 +4305,11 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
                             </div>
                         </div>
                         <div class="document-actions">
-                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
-                                <i class="fas fa-download"></i>
+                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download" aria-label="Download document">
+                                <i class="fas fa-download" aria-hidden="true"></i>
                             </button>
-                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
-                                <i class="fas fa-eye"></i>
+                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View" aria-label="View document">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
@@ -7219,11 +7219,11 @@ async function showEmployeeDetail(employeeId) {
                         </div>
                     </div>
                     <div class="document-actions">
-                        <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
-                            <i class="fas fa-download"></i>
+                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download" aria-label="Download document">
+                                <i class="fas fa-download" aria-hidden="true"></i>
                         </button>
-                        <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
-                            <i class="fas fa-eye"></i>
+                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View" aria-label="View document">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -7961,8 +7961,8 @@ function restoreVendorModalFromSnapshot(snapshot) {
                 <label for="vendorEmail_${index}">Email ${index + 1}</label>
                 <input type="email" id="vendorEmail_${index}" class="vendor-email-field" value="${escapePaymentHtml(email.address || '')}">
             </div>
-            <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${index})" title="Remove email">
-                <i class="fas fa-times"></i>
+            <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${index})" title="Remove email" aria-label="Remove email">
+                <i class="fas fa-times" aria-hidden="true"></i>
             </button>
         `;
         emailContainer.appendChild(emailGroup);
@@ -7979,8 +7979,8 @@ function restoreVendorModalFromSnapshot(snapshot) {
                 <label for="vendorPhone_${index}">Phone ${index + 1}</label>
                 <input type="tel" id="vendorPhone_${index}" class="vendor-phone-field" value="${escapePaymentHtml(phone.number || '')}">
             </div>
-            <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${index})" title="Remove phone">
-                <i class="fas fa-times"></i>
+            <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${index})" title="Remove phone" aria-label="Remove phone">
+                <i class="fas fa-times" aria-hidden="true"></i>
             </button>
         `;
         phoneContainer.appendChild(phoneGroup);
@@ -8001,8 +8001,8 @@ function restoreVendorModalFromSnapshot(snapshot) {
                         <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
                         <span style="font-size: 14px;">${escapePaymentHtml(doc.name || 'Document')}</span>
                     </div>
-                    <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${docIndex})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                        <i class="fas fa-trash"></i>
+                        <button type="button" class="btn-remove-doc" onclick="removeExistingVendorDoc(${docIndex})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;" aria-label="Remove document">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                 </div>
             `;
@@ -8112,8 +8112,8 @@ function addVendorEmail() {
             <label for="vendorEmail_${vendorEmailCounter}">Email ${vendorEmailCounter + 1}</label>
             <input type="email" id="vendorEmail_${vendorEmailCounter}" class="vendor-email-field">
         </div>
-        <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${vendorEmailCounter})" title="Remove email">
-            <i class="fas fa-times"></i>
+        <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${vendorEmailCounter})" title="Remove email" aria-label="Remove email">
+            <i class="fas fa-times" aria-hidden="true"></i>
         </button>
     `;
     
@@ -8139,8 +8139,8 @@ function addVendorPhone() {
             <label for="vendorPhone_${vendorPhoneCounter}">Phone ${vendorPhoneCounter + 1}</label>
             <input type="tel" id="vendorPhone_${vendorPhoneCounter}" class="vendor-phone-field">
         </div>
-        <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${vendorPhoneCounter})" title="Remove phone">
-            <i class="fas fa-times"></i>
+        <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${vendorPhoneCounter})" title="Remove phone" aria-label="Remove phone">
+            <i class="fas fa-times" aria-hidden="true"></i>
         </button>
     `;
     
@@ -8280,8 +8280,8 @@ async function editVendor(vendorId) {
                             <label for="vendorEmail_${index}">Email ${index + 1}</label>
                             <input type="email" id="vendorEmail_${index}" class="vendor-email-field" value="${email.address || ''}">
                         </div>
-                        <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${index})" title="Remove email">
-                            <i class="fas fa-times"></i>
+                        <button type="button" class="btn-remove-email vendor-remove-row-btn" onclick="removeVendorEmail(${index})" title="Remove email" aria-label="Remove email">
+                            <i class="fas fa-times" aria-hidden="true"></i>
                         </button>
                     `;
                     
@@ -8304,8 +8304,8 @@ async function editVendor(vendorId) {
                             <label for="vendorPhone_${index}">Phone ${index + 1}</label>
                             <input type="tel" id="vendorPhone_${index}" class="vendor-phone-field" value="${phone.number || ''}">
                         </div>
-                        <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${index})" title="Remove phone">
-                            <i class="fas fa-times"></i>
+                        <button type="button" class="btn-remove-phone vendor-remove-row-btn" onclick="removeVendorPhone(${index})" title="Remove phone" aria-label="Remove phone">
+                            <i class="fas fa-times" aria-hidden="true"></i>
                         </button>
                     `;
                     
@@ -8493,11 +8493,11 @@ function renderVendorsTable(vendors) {
         const actionsCell = isPending
             ? `<div class="vendor-actions vendor-actions-disabled"><span class="vendor-saving-action">Saving...</span></div>`
             : `<div class="vendor-actions">
-                    <button class="action-btn edit" onclick="editVendor('${vendor._id}')" title="Edit">
-                        <i class="fas fa-edit"></i>
+                    <button class="action-btn edit" onclick="editVendor('${vendor._id}')" title="Edit" aria-label="Edit vendor">
+                        <i class="fas fa-edit" aria-hidden="true"></i>
                     </button>
-                    <button class="action-btn delete" onclick="deleteVendor('${vendor._id}')" title="Delete">
-                        <i class="fas fa-trash"></i>
+                    <button class="action-btn delete" onclick="deleteVendor('${vendor._id}')" title="Delete" aria-label="Delete vendor">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                 </div>`;
         
@@ -9160,11 +9160,11 @@ async function showCustomerProfile(customerId) {
                         </div>
                     </div>
                     <div class="document-actions">
-                        <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
-                            <i class="fas fa-download"></i>
+                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download" aria-label="Download document">
+                                <i class="fas fa-download" aria-hidden="true"></i>
                         </button>
-                        <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
-                            <i class="fas fa-eye"></i>
+                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View" aria-label="View document">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -10569,11 +10569,11 @@ async function showVendorDetail(vendorId) {
                         </div>
                     </div>
                     <div class="document-actions">
-                        <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download">
-                            <i class="fas fa-download"></i>
+                            <button class="btn-icon" onclick="downloadDocument('${doc.url}')" title="Download" aria-label="Download document">
+                                <i class="fas fa-download" aria-hidden="true"></i>
                         </button>
-                        <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View">
-                            <i class="fas fa-eye"></i>
+                            <button class="btn-icon" onclick="viewDocument('${doc.url}')" title="View" aria-label="View document">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -10614,8 +10614,8 @@ async function showVendorDetail(vendorId) {
                             <span><i class="fas fa-calendar"></i> ${(order.scheduleDate || order.startDate) ? formatDisplayDate(order.scheduleDate || order.startDate) : 'N/A'}</span>
                         </div>
                     </div>
-                    <button class="btn-icon" onclick="viewOrder('${order._id}')" title="View Order">
-                        <i class="fas fa-eye"></i>
+                    <button class="btn-icon" onclick="viewOrder('${order._id}')" title="View Order" aria-label="View order">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
                     </button>
                 </div>
             `).join('');
@@ -10823,8 +10823,8 @@ function renderUsersTable(users) {
                             <option value="account_rep" ${user.role === 'account_rep' ? 'selected' : ''}>Account Rep</option>
                         </select>
                     `}
-                    <button class="action-btn delete" onclick="deleteUser('${user._id}')" title="Delete User">
-                        <i class="fas fa-trash"></i>
+                    <button class="action-btn delete" onclick="deleteUser('${user._id}')" title="Delete User" aria-label="Delete user">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                 </div>
             </td>

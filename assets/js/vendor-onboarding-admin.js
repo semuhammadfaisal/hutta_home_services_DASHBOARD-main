@@ -518,12 +518,12 @@
     const id = escapeHtml(invitation._id);
     const actions = [];
     if (!['submitted','revoked'].includes(invitation.displayStatus)) {
-      actions.push(`<button type="button" onclick="resendVendorInvitation('${id}')" title="Resend email"><i class="fas fa-paper-plane"></i></button>`);
-      actions.push(`<button type="button" onclick="copyNewVendorInviteLink('${id}')" title="Generate and copy a new secure link"><i class="fas fa-link"></i></button>`);
-      actions.push(`<button type="button" data-clear-invitation-id="${id}" onclick="revokeVendorInvitation('${id}')" title="Revoke"><i class="fas fa-ban"></i></button>`);
+      actions.push(`<button type="button" onclick="resendVendorInvitation('${id}')" title="Resend email" aria-label="Resend vendor invitation email"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>`);
+      actions.push(`<button type="button" onclick="copyNewVendorInviteLink('${id}')" title="Generate and copy a new secure link" aria-label="Generate and copy a new secure invitation link"><i class="fas fa-link" aria-hidden="true"></i></button>`);
+      actions.push(`<button type="button" data-clear-invitation-id="${id}" onclick="revokeVendorInvitation('${id}')" title="Revoke" aria-label="Revoke vendor invitation"><i class="fas fa-ban" aria-hidden="true"></i></button>`);
     }
     if (invitation.updateRecipientNotificationError && invitation.updateRecipientEmail) {
-      actions.push(`<button type="button" onclick="retryVendorUpdateRecipient('${id}')" title="Retry update-recipient notice"><i class="fas fa-bell"></i></button>`);
+      actions.push(`<button type="button" onclick="retryVendorUpdateRecipient('${id}')" title="Retry update-recipient notice" aria-label="Retry update-recipient notice"><i class="fas fa-bell" aria-hidden="true"></i></button>`);
     }
     return actions.length ? `<div class="invitation-actions">${actions.join('')}</div>` : '<span class="table-muted">No actions</span>';
   }
