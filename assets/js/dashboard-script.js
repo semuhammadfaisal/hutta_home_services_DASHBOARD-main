@@ -1541,6 +1541,7 @@ class DashboardManager {
         const normalized = String(value || 'unknown').toLowerCase();
         if (normalized === 'one-time') return 'One-time';
         if (normalized === 'recurring') return 'Recurring';
+        if (normalized === 'hoa') return 'HOA';
         return this.formatStatus(normalized);
     }
 
@@ -9062,7 +9063,9 @@ async function showCustomerProfile(customerId) {
         // Populate customer info
         const customerName = String(profileData.customer.name || 'Customer').trim();
         document.getElementById('customerProfileName').textContent = customerName;
-        const customerTypeLabel = formatOrderFilterLabel(profileData.customer.customerType || 'customer');
+        const customerTypeLabel = profileData.customer.customerType === 'hoa'
+            ? 'HOA'
+            : formatOrderFilterLabel(profileData.customer.customerType || 'customer');
         const customerStatusLabel = formatOrderFilterLabel(profileData.customer.status || 'status unavailable');
         document.getElementById('customerProfileSummary').textContent = `${customerTypeLabel} account / ${customerStatusLabel}`;
         
@@ -9096,7 +9099,9 @@ async function showCustomerProfile(customerId) {
             addressElement.textContent = profileData.customer.address || '-';
         }
         
-        document.getElementById('profileType').textContent = profileData.customer.customerType || '-';
+        document.getElementById('profileType').textContent = profileData.customer.customerType === 'hoa'
+            ? 'HOA'
+            : formatFilterLabel(profileData.customer.customerType || '-');
         document.getElementById('profileStatus').textContent = profileData.customer.status || '-';
         renderNotesManager('customers', profileData.customer._id, profileData.customer, 'profileCustomerNoteComposer');
         
@@ -9291,7 +9296,7 @@ function renderCustomersTable(customers) {
             <td><a href="mailto:${customer.email}" class="customer-email" onclick="event.stopPropagation()">${customer.email}</a></td>
             <td><span class="customer-phone">${customer.phone || 'N/A'}</span></td>
             <td>${customer.city || 'N/A'}</td>
-            <td><span class="customer-type-badge ${customer.customerType}">${customer.customerType}</span></td>
+            <td><span class="customer-type-badge ${customer.customerType}">${customer.customerType === 'hoa' ? 'HOA' : formatFilterLabel(customer.customerType)}</span></td>
             <td><span class="customer-status-badge ${customer.status}">${customer.status}</span></td>
             <td><span class="customer-orders-count">${customer.totalOrders || 0}</span></td>
         </tr>
@@ -9371,7 +9376,11 @@ function initializeCustomerFilters() {
 function updateCustomerFilterOptions(customers = []) {
     updateSelectOptions('customerTypeFilter', customers, customer => [customer.customerType], 'All Types', [
         ['recurring', 'Recurring'],
-        ['one-time', 'One-time']
+        ['one-time', 'One-time'],
+        ['residential', 'Residential'],
+        ['commercial', 'Commercial'],
+        ['government', 'Government'],
+        ['hoa', 'HOA']
     ]);
 
     updateSelectOptions('customerStatusFilter', customers, customer => [customer.status], 'All Status', [

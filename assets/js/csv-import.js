@@ -270,7 +270,13 @@ function mapCustomerType(type) {
         'onetime': 'one-time',
         'recurring': 'recurring',
         'regular': 'recurring',
-        'single': 'one-time'
+        'single': 'one-time',
+        'residential': 'residential',
+        'commercial': 'commercial',
+        'government': 'government',
+        'hoa': 'hoa',
+        'homeowners association': 'hoa',
+        'homeowners-association': 'hoa'
     };
     
     const normalized = type?.toLowerCase().trim();

@@ -45,7 +45,7 @@ const customerSchema = new mongoose.Schema({
   emails: { type: [emailSchema], default: [] },
   customerType: { 
     type: String, 
-    enum: ['recurring', 'one-time'], 
+    enum: ['recurring', 'one-time', 'residential', 'commercial', 'government', 'hoa'],
     default: 'one-time' 
   },
   status: { 

@@ -3681,6 +3681,28 @@ h3 {
     font-size: 12px;
     font-weight: 600;
     text-transform: capitalize;
+    color: #27272a;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+}
+
+.customer-type-badge.recurring::before,
+.customer-type-badge.residential::before,
+.customer-type-badge.commercial::before,
+.customer-type-badge.government::before,
+.customer-type-badge.hoa::before {
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+}
+
+.customer-type-badge.recurring::before { content: '\f2f1'; }
+.customer-type-badge.residential::before { content: '\f015'; }
+.customer-type-badge.commercial::before { content: '\f1ad'; }
+.customer-type-badge.government::before { content: '\f66f'; }
+.customer-type-badge.hoa::before { content: '\f0c0'; }
+
+.customer-type-badge.hoa {
+    text-transform: uppercase;
 }
 
 .customer-type-badge.permanent {

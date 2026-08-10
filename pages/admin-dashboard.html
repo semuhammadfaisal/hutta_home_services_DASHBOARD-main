@@ -10,7 +10,7 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="../assets/css/dashboard-styles.css?v=20260804-customer-actions">
+    <link rel="stylesheet" href="../assets/css/dashboard-styles.css?v=20260808-customer-types">
     <link rel="stylesheet" href="../assets/css/forms.css">
     <link rel="stylesheet" href="../assets/css/notifications.css">
     <link rel="stylesheet" href="../assets/css/reports.css">
@@ -1406,6 +1406,10 @@
                             <option value="all">All Types</option>
                             <option value="recurring">Recurring</option>
                             <option value="one-time">One-time</option>
+                            <option value="residential">Residential</option>
+                            <option value="commercial">Commercial</option>
+                            <option value="government">Government</option>
+                            <option value="hoa">HOA</option>
                         </select>
                         <select class="filter-select" id="customerStatusFilter" autocomplete="off" aria-label="Filter customers by status">
                             <option value="all">All Status</option>
@@ -3982,7 +3986,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="customerType">Customer type</label>
-                                <select id="customerType" autocomplete="off"><option value="one-time">One-time</option><option value="recurring">Recurring</option></select>
+                                <select id="customerType" autocomplete="off"><option value="one-time">One-time</option><option value="recurring">Recurring</option><option value="residential">Residential</option><option value="commercial">Commercial</option><option value="government">Government</option><option value="hoa">HOA</option></select>
                             </div>
                             <div class="form-group">
                                 <label for="customerStatus">Status</label>
@@ -4701,7 +4705,7 @@
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260807-form-rebrand"></script>
+    <script src="../assets/js/dashboard-script.js?v=20260808-customer-types"></script>
     <script src="../assets/js/incoming-quotes.js?v=20260725-quote-table-polish"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
