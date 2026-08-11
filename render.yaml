@@ -16,9 +16,9 @@ services:
       - key: EMAIL_PASSWORD
         sync: false
       - key: EMAIL_FROM
-        value: Hutta Home Services <sales@huttas.com>
+        value: smplfix <sales@smplfix.com>
       - key: EMAIL_REPLY_TO
-        value: sales@huttas.com
+        value: sales@smplfix.com
       - key: RESEND_API_KEY
         sync: false
       - key: HUTTAS_WEBHOOK_SECRET
@@ -28,7 +28,7 @@ services:
       - key: INTAKE_NOTIFICATION_EMAILS
         sync: false
       - key: CLOSEOUT_NOTIFICATION_EMAILS
-        value: sales@huttas.com
+        value: sales@smplfix.com
       - key: CLOSEOUT_TOKEN_SECRET
         sync: false
       - key: INTAKE_EMAIL_WORKER_ENABLED

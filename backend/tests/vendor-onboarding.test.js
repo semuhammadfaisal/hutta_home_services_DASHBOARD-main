@@ -99,7 +99,7 @@ test('public links always use HTTPS and reject localhost or private origins', ()
   }
 });
 
-test('email delivery retains the existing Resend sender and Gmail fallback', () => {
+test('email delivery uses the verified smplfix Resend sender and Gmail fallback', () => {
   const previous = {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
@@ -109,12 +109,12 @@ test('email delivery retains the existing Resend sender and Gmail fallback', () 
   };
   try {
     process.env.RESEND_API_KEY = 'test-key';
-    process.env.EMAIL_FROM = 'Hutta Home Services <sales@huttas.com>';
-    process.env.EMAIL_REPLY_TO = 'sales@huttas.com';
+    process.env.EMAIL_FROM = 'smplfix <sales@smplfix.com>';
+    process.env.EMAIL_REPLY_TO = 'sales@smplfix.com';
     process.env.EMAIL_USER = 'legacy-hutta@gmail.com';
     process.env.EMAIL_PASSWORD = 'app-password';
     assert.equal(getEmailDeliveryStatus().provider, 'resend');
-    assert.equal(getEmailDeliveryStatus().sender, 'sales@huttas.com');
+    assert.equal(getEmailDeliveryStatus().sender, 'sales@smplfix.com');
 
     delete process.env.RESEND_API_KEY;
     assert.equal(getEmailDeliveryStatus().provider, 'gmail');
@@ -143,12 +143,12 @@ test('generic email templates use SMPLFix presentation without changing delivery
   assert.match(emailSource, /YOUR PROPERTY, HANDLED\./);
   assert.match(emailSource, /DISPLAY_SUPPORT_ADDRESS = 'sales@smplfix\.com'/);
   assert.match(emailSource, /Professional Home Services Management Platform/);
-  assert.match(emailSource, /Hutta Home Services <\$\{REQUIRED_SENDER_ADDRESS\}>/);
-  assert.match(emailSource, /REQUIRED_SENDER_ADDRESS = 'sales@huttas\.com'/);
+  assert.match(emailSource, /smplfix <\$\{REQUIRED_SENDER_ADDRESS\}>/);
+  assert.match(emailSource, /REQUIRED_SENDER_ADDRESS = 'sales@smplfix\.com'/);
   assert.match(emailSource, /process\.env\.EMAIL_REPLY_TO/);
   assert.match(emailSource, /Resend|nodemailer|smtp\.gmail\.com|EMAIL_PASSWORD/i);
-  assert.equal((emailSource.match(/Hutta Home Services/g) || []).length, 2);
-  assert.equal((emailSource.match(/sales@huttas\.com/g) || []).length, 1);
+  assert.equal((emailSource.match(/Hutta Home Services/g) || []).length, 0);
+  assert.equal((emailSource.match(/sales@huttas\.com/g) || []).length, 0);
   assert.doesNotMatch(emailSource, /Your Hutta service quote|Thank you for contacting Hutta Home Services|Hutta Home Services team/);
   for (const sender of [
     'sendPasswordResetEmail',

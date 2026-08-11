@@ -2,13 +2,13 @@ const { buildPublicUrl, getPublicAppUrl } = require('./publicAppUrl');
 
 const nodemailer = require('nodemailer');
 const Resend = require('resend').Resend;
-const REQUIRED_SENDER_ADDRESS = 'sales@huttas.com';
+const REQUIRED_SENDER_ADDRESS = 'sales@smplfix.com';
 const DISPLAY_SUPPORT_ADDRESS = 'sales@smplfix.com';
 const EMAIL_USER = String(process.env.EMAIL_USER || '').trim();
 const EMAIL_PASSWORD = String(process.env.EMAIL_PASSWORD || '').trim();
-const EMAIL_FROM = String(process.env.EMAIL_FROM || `Hutta Home Services <${REQUIRED_SENDER_ADDRESS}>`).trim();
+const EMAIL_FROM = String(process.env.EMAIL_FROM || `smplfix <${REQUIRED_SENDER_ADDRESS}>`).trim();
 const EMAIL_REPLY_TO = String(process.env.EMAIL_REPLY_TO || REQUIRED_SENDER_ADDRESS).trim();
-const GMAIL_FROM = `Hutta Home Services <${EMAIL_USER}>`;
+const GMAIL_FROM = `smplfix <${EMAIL_USER}>`;
 
 function extractEmailAddress(value) {
   const match = String(value || '').match(/<([^>]+)>/);
