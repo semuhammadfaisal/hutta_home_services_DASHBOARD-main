@@ -1,0 +1,164 @@
+/* Workflow filter bar — final shared toolbar */
+body .workflow-stage-section .workflow-filterbar {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 1.7fr) repeat(4, minmax(132px, .62fr)) auto !important;
+  align-items: end !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 78px !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 1px solid var(--smpl-line) !important;
+  border-radius: 12px !important;
+  background: var(--smpl-paper) !important;
+  box-shadow: 0 6px 20px rgba(11, 11, 12, .055) !important;
+}
+
+body .workflow-stage-section .workflow-filter-field,
+body .workflow-stage-section .workflow-search {
+  position: relative;
+  display: grid !important;
+  min-width: 0;
+  align-content: end;
+  gap: 7px;
+  margin: 0 !important;
+  color: var(--smpl-ink);
+}
+
+body .workflow-stage-section .workflow-filter-label,
+body .workflow-stage-section .workflow-search::before {
+  display: block;
+  min-height: 10px;
+  color: var(--smpl-text-muted);
+  font: 800 8px/1 var(--smpl-font-ui);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+body .workflow-stage-section .workflow-search::before { content: "Search workflow"; }
+
+body .workflow-stage-section .workflow-filterbar :where(input, select) {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 13px !important;
+  border: 1px solid #c8c8c2 !important;
+  border-radius: 8px !important;
+  background-color: #fff !important;
+  color: var(--smpl-ink) !important;
+  font: 600 11px/1.2 var(--smpl-font-ui) !important;
+  box-shadow: inset 0 1px 0 rgba(11, 11, 12, .015) !important;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease !important;
+}
+
+body .workflow-stage-section .workflow-filterbar select {
+  padding-right: 34px !important;
+  cursor: pointer;
+}
+
+body .workflow-stage-section .workflow-search input {
+  padding-left: 39px !important;
+  padding-right: 34px !important;
+}
+
+body .workflow-stage-section .workflow-search > i {
+  position: absolute;
+  z-index: 1;
+  left: 14px !important;
+  top: auto !important;
+  bottom: 22px;
+  color: var(--smpl-text-muted) !important;
+  font-size: 12px;
+  transform: translateY(50%) !important;
+  pointer-events: none;
+}
+
+body .workflow-stage-section .workflow-search input::-webkit-search-cancel-button {
+  cursor: pointer;
+  opacity: .55;
+}
+
+body .workflow-stage-section .workflow-filterbar :where(input, select):hover {
+  border-color: #9f9f99 !important;
+  background-color: #fdfdfc !important;
+}
+
+body .workflow-stage-section .workflow-filterbar :where(input, select):focus {
+  border-color: var(--smpl-ink) !important;
+  outline: 0 !important;
+  box-shadow: 0 0 0 3px rgba(11, 11, 12, .1) !important;
+}
+
+body .workflow-stage-section .workflow-filter-clear {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  align-self: end;
+  width: auto !important;
+  min-width: 82px;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid #c8c8c2 !important;
+  border-radius: 8px !important;
+  background: var(--smpl-wash, #f5f5f2) !important;
+  color: var(--smpl-text-muted) !important;
+  font: 800 10px/1 var(--smpl-font-ui) !important;
+  white-space: nowrap;
+  box-shadow: none !important;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease, transform .15s ease !important;
+}
+
+body .workflow-stage-section .workflow-filter-clear:hover {
+  border-color: var(--smpl-ink) !important;
+  background: var(--smpl-ink) !important;
+  color: var(--smpl-paper) !important;
+  transform: translateY(-1px);
+}
+
+body .workflow-stage-section .workflow-filter-clear:focus-visible {
+  border-color: var(--smpl-ink) !important;
+  outline: 3px solid rgba(11, 11, 12, .16) !important;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1180px) {
+  body .workflow-stage-section .workflow-filterbar {
+    grid-template-columns: minmax(260px, 1.5fr) repeat(2, minmax(150px, .75fr)) !important;
+  }
+
+  body .workflow-stage-section .workflow-search { grid-column: span 1; }
+  body .workflow-stage-section .workflow-filter-clear { width: 100% !important; }
+}
+
+@media (max-width: 760px) {
+  body .workflow-stage-section .workflow-filterbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    padding: 11px !important;
+  }
+
+  body .workflow-stage-section .workflow-search { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  body .workflow-stage-section .workflow-filterbar {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 9px !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+  }
+
+  body .workflow-stage-section .workflow-search { grid-column: auto; }
+  body .workflow-stage-section .workflow-filter-clear { min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .workflow-stage-section .workflow-filterbar *,
+  body .workflow-stage-section .workflow-filterbar *::before,
+  body .workflow-stage-section .workflow-filterbar *::after { transition-duration: .01ms !important; }
+}

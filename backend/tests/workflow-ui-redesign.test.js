@@ -177,6 +177,17 @@ test('Workflow Center buttons provide pointer and keyboard interaction feedback'
   assert.match(html, /workflow-hub\.js\?v=20260806-activity-clean/);
 });
 
+test('Workflow Center filter bar uses the final labeled responsive toolbar', () => {
+  const html = read('pages/admin-dashboard.html');
+  const hub = read('assets/js/workflow-hub.js');
+  const css = read('assets/css/workflow-filterbar-polish.css');
+  assert.match(html, /workflow-filterbar-polish\.css\?v=20260812-filterbar-polish/);
+  assert.match(hub, /workflow-filter-label/);
+  assert.match(hub, /role="search" aria-label="Filter workflow records"/);
+  assert.match(css, /Workflow filter bar — final shared toolbar/);
+  assert.match(css, /@media \(max-width: 560px\)/);
+});
+
 test('Workflow Center overview follows the monochrome SMPLFix brand system', () => {
   const components = read('assets/css/smplfix-components.css');
   const hub = read('assets/js/workflow-hub.js');
