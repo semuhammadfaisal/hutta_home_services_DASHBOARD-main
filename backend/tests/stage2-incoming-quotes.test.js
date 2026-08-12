@@ -85,3 +85,14 @@ test('Stage 2 forms retain their form reference across asynchronous submissions'
   assert.ok((ui.match(/const form = event\.currentTarget;/g) || []).length >= 2);
   assert.ok((ui.match(/form\.reset\(\)/g) || []).length >= 2);
 });
+
+test('Stage 2 workspace uses the focused responsive quote-entry design', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'pages', 'admin-dashboard.html'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', 'assets', 'css', 'stage2-workspace-polish.css'), 'utf8');
+  assert.match(html, /stage2-workspace-polish\.css\?v=20260812-stage2-workspace/);
+  assert.match(html, /incoming-form-section-pricing/);
+  assert.match(html, /incoming-form-section-conditions/);
+  assert.match(css, /grid-template-columns:\s*minmax\(0, 1fr\) auto !important/);
+  assert.match(css, /is-workspace-open[^{}]*workflow-shared-chrome \.workflow-filterbar/);
+  assert.match(css, /@media \(max-width: 760px\)/);
+});

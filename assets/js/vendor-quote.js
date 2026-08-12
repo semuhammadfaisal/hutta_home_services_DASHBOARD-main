@@ -53,6 +53,11 @@
     const required = $('siteAccessRequired').value === 'true';
     $('accessNotes').required = required;
     $('accessNotes').placeholder = required ? 'Describe how access should be arranged' : 'Optional access information';
+    $('accessNotesLabel')?.classList.toggle('is-required', required);
+    if ($('accessNotesRequirement')) $('accessNotesRequirement').textContent = required ? 'Required' : 'Optional';
+    if ($('accessNotesHint')) $('accessNotesHint').textContent = required
+      ? 'Explain exactly how site access should be arranged before work begins.'
+      : 'Add gate, key, escort, parking, or scheduling instructions when relevant.';
   }
 
   function fieldsForStep(step) {
@@ -97,7 +102,9 @@
       button.disabled = step > highestStep;
     });
     if (currentStep === 3) reviewMarkup();
-    document.querySelector(`.secure-step[data-step="${currentStep}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const currentSection = document.querySelector(`.secure-step[data-step="${currentStep}"]`);
+    currentSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    currentSection?.querySelector('h2')?.focus({ preventScroll: true });
   }
 
   async function submit(event) {
@@ -121,7 +128,7 @@
     } catch (error) {
       showSubmitError(error.message);
       button.disabled = false;
-      button.textContent = 'Submit Quote Securely';
+      button.innerHTML = 'Submit Quote Securely <span aria-hidden="true">&#128274;</span>';
     }
   }
 

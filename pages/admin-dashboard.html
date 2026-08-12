@@ -52,10 +52,11 @@
     <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=20260806-pipeline-board-ux">
     <link rel="stylesheet" href="../assets/css/vendor-onboarding-admin.css?v=20260807-vendor-management-2">
     <link rel="stylesheet" href="../assets/css/vendor-modal-onboarding-polish.css?v=20260807-vendor-management-3">
-    <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css?v=20260807-vendor-reviews-monochrome">
+    <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css?v=20260812-review-toolbar-polish">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
+    <link rel="stylesheet" href="../assets/css/stage2-workspace-polish.css?v=20260812-stage2-workspace">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -1083,17 +1084,35 @@
                     <form id="incomingStaffQuoteForm" class="incoming-panel">
                         <div class="incoming-panel-heading"><span><i class="fas fa-keyboard"></i></span><div><h3>Enter Quote for Vendor</h3><p>Record a quote received by phone, email, or another offline channel.</p></div></div>
                         <div class="incoming-form-grid">
-                            <label class="full">Vendor<select id="incomingStaffVendor" required></select></label>
-                            <label class="full">Scope of Work<textarea id="incomingScope" rows="4" required maxlength="10000"></textarea></label>
-                            <label>Labor Amount<input id="incomingLabor" type="number" min="0" step="0.01" required></label>
-                            <label>Materials Amount<input id="incomingMaterials" type="number" min="0" step="0.01" required></label>
-                            <label>Duration<input id="incomingDurationValue" type="number" min="0.1" step="0.1" required></label>
-                            <label>Unit<select id="incomingDurationUnit" required><option value="days">Days</option><option value="hours">Hours</option><option value="weeks">Weeks</option></select></label>
-                            <label>Earliest Available<input id="incomingEarliestDate" type="date" required></label>
-                            <label>Site Access<select id="incomingAccessRequired" required><option value="false">No arrangement needed</option><option value="true">Must be arranged</option></select></label>
-                            <label class="full">Access Notes<textarea id="incomingAccessNotes" rows="2" maxlength="3000"></textarea></label>
-                            <label class="full">Exclusions / Conditions<textarea id="incomingExclusions" rows="3" maxlength="10000"></textarea></label>
-                            <label class="full">Supporting Documents<input id="incomingStaffDocuments" type="file" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><small>Optional, up to 10 approved files.</small></label>
+                            <fieldset class="incoming-form-section incoming-form-section-overview">
+                                <legend><span>1</span> Quote overview</legend>
+                                <div class="incoming-section-grid one-column">
+                                    <label>Vendor<select id="incomingStaffVendor" required></select></label>
+                                    <label>Scope of Work<textarea id="incomingScope" rows="4" required maxlength="10000" placeholder="Describe the work included in this vendor quote"></textarea></label>
+                                </div>
+                            </fieldset>
+                            <fieldset class="incoming-form-section incoming-form-section-pricing">
+                                <legend><span>2</span> Pricing and availability</legend>
+                                <div class="incoming-section-grid four-column">
+                                    <label>Labor Amount<input id="incomingLabor" type="number" min="0" step="0.01" required placeholder="0.00"></label>
+                                    <label>Materials Amount<input id="incomingMaterials" type="number" min="0" step="0.01" required placeholder="0.00"></label>
+                                    <label>Duration<input id="incomingDurationValue" type="number" min="0.1" step="0.1" required placeholder="0"></label>
+                                    <label>Unit<select id="incomingDurationUnit" required><option value="days">Days</option><option value="hours">Hours</option><option value="weeks">Weeks</option></select></label>
+                                </div>
+                            </fieldset>
+                            <fieldset class="incoming-form-section incoming-form-section-conditions">
+                                <legend><span>3</span> Schedule and conditions</legend>
+                                <div class="incoming-section-grid two-column">
+                                    <label>Earliest Available<input id="incomingEarliestDate" type="date" required></label>
+                                    <label>Site Access<select id="incomingAccessRequired" required><option value="false">No arrangement needed</option><option value="true">Must be arranged</option></select></label>
+                                    <label>Access Notes<textarea id="incomingAccessNotes" rows="3" maxlength="3000" placeholder="Gate codes, keys, escorts, or scheduling requirements"></textarea></label>
+                                    <label>Exclusions / Conditions<textarea id="incomingExclusions" rows="3" maxlength="10000" placeholder="Items excluded from the quote or special conditions"></textarea></label>
+                                </div>
+                            </fieldset>
+                            <fieldset class="incoming-form-section incoming-form-section-documents">
+                                <legend><span>4</span> Supporting documents</legend>
+                                <label class="incoming-file-field">Supporting Documents<input id="incomingStaffDocuments" type="file" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"><small>Optional · Upload up to 10 approved files in PDF, document, text, or image format.</small></label>
+                            </fieldset>
                         </div>
                         <div class="incoming-form-actions"><button class="btn-secondary" type="submit" value="draft" formnovalidate>Save Draft</button><button class="btn-primary" type="submit" value="submit">Submit Staff-Entered Quote</button></div>
                     </form>
@@ -1679,8 +1698,8 @@
             <section class="vendor-review-queue-panel" aria-labelledby="vendorReviewQueueTitle">
                 <div class="vendor-review-section-head"><div><h2 id="vendorReviewQueueTitle">Submitted applications</h2><p>Open an application to inspect details and documents before making a decision.</p></div><span class="vendor-review-secure-note"><i class="fas fa-lock"></i> Read-only review</span></div>
             <div class="vendor-review-toolbar">
-                <label class="vendor-review-search"><i class="fas fa-search"></i><input id="vendorReviewSearch" type="search" placeholder="Search company, email, or category" autocomplete="off"></label>
-                <label class="vendor-review-filter-label"><span>Status</span><select id="vendorReviewStatusFilter" class="filter-select" autocomplete="off"><option value="pending_review">Pending Review</option><option value="changes_requested">Changes Requested</option><option value="rejected">Rejected Archive</option><option value="all">All Reviews</option></select></label>
+                <label class="vendor-review-search"><i class="fas fa-search" aria-hidden="true"></i><input id="vendorReviewSearch" type="search" placeholder="Search company, email, or category" autocomplete="off" aria-label="Search submitted applications"></label>
+                <label class="vendor-review-filter-label"><span class="visually-hidden">Status</span><select id="vendorReviewStatusFilter" class="filter-select" autocomplete="off" aria-label="Filter submitted applications by status"><option value="pending_review">Pending Review</option><option value="changes_requested">Changes Requested</option><option value="rejected">Rejected Archive</option><option value="all">All Reviews</option></select></label>
             </div>
             <div class="vendor-review-table-wrap">
                 <table class="vendor-review-table">
@@ -1714,8 +1733,8 @@
                 </div>
                 <div id="vendorEmailDeliveryWarning" class="vendor-email-delivery-warning" role="status" aria-live="polite" hidden></div>
                 <div class="vendor-review-toolbar vendor-invitation-toolbar">
-                    <label class="vendor-review-search"><i class="fas fa-search"></i><input id="vendorInvitationSearch" type="search" placeholder="Search email, company, category, or update email" autocomplete="off"></label>
-                    <label class="vendor-review-filter-label"><span>Status</span><select id="vendorInvitationStatusFilter" class="filter-select" autocomplete="off"><option value="all">All Invitations</option><option value="sent">Sent</option><option value="delivery_failed">Delivery Failed</option><option value="submitted">Submitted</option><option value="expired">Expired</option><option value="revoked">Revoked</option><option value="processing">Processing</option></select></label>
+                    <label class="vendor-review-search"><i class="fas fa-search" aria-hidden="true"></i><input id="vendorInvitationSearch" type="search" placeholder="Search email, company, category, or update email" autocomplete="off" aria-label="Search vendor invitations"></label>
+                    <label class="vendor-review-filter-label"><span class="visually-hidden">Status</span><select id="vendorInvitationStatusFilter" class="filter-select" autocomplete="off" aria-label="Filter vendor invitations by status"><option value="all">All Invitations</option><option value="sent">Sent</option><option value="delivery_failed">Delivery Failed</option><option value="submitted">Submitted</option><option value="expired">Expired</option><option value="revoked">Revoked</option><option value="processing">Processing</option></select></label>
                 </div>
                 <div class="vendor-invitations-table-wrap">
                     <table class="vendor-invitations-table">

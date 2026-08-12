@@ -20,15 +20,16 @@
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
+    <link rel="stylesheet" href="../assets/css/vendor-quote-polish.css?v=20260812-vendor-quote-polish">
 </head>
-<body>
+<body class="vendor-quote-page">
   <main class="quote-shell">
     <header class="quote-header">
       <div class="quote-brand" aria-label="smplfix">
-        <img src="../assets/images/smplfix-logo-ink.png" alt="smplfix" width="624" height="368" decoding="async">
+        <img src="../assets/images/smplfix-logo-reversed.png" alt="smplfix" width="696" height="400" decoding="async">
       </div>
-      <div class="quote-header-copy"><p>Vendor portal</p><h1>Submit Your Quote</h1></div>
-      <span class="secure-session"><span aria-hidden="true">&#128274;</span> Secure one-time link</span>
+      <div class="quote-header-copy"><p>Secure vendor portal</p><h1>Submit Your Quote</h1></div>
+      <span class="secure-session"><span aria-hidden="true">&#128274;</span> Private one-time link</span>
     </header>
     <section id="quoteLoading" class="quote-state"><div class="spinner"></div><h2>Opening quote request</h2><p>Validating your secure invitation&hellip;</p></section>
     <section id="quoteError" class="quote-state hidden" role="alert"><div class="state-icon error">!</div><h2>Quote request unavailable</h2><p id="quoteErrorMessage"></p></section>
@@ -39,7 +40,7 @@
         <div>
           <span class="quote-kicker">Quote request</span>
           <h2 id="quoteService"></h2>
-          <p>Provide job-specific scope, pricing, timing, and conditions. Your company information is already on file.</p>
+          <p>Provide job-specific scope, pricing, timing, and conditions. Your company information is already on file and does not need to be entered again.</p>
         </div>
         <div class="quote-intro-meta">
           <span>Quote reference</span>
@@ -65,31 +66,31 @@
 
         <div class="quote-step-area">
           <section class="quote-card secure-step" data-step="1">
-            <div class="card-heading"><span>1</span><div><h2>Scope and Pricing</h2><p>Describe the work and separate labor from materials.</p></div></div>
+            <div class="card-heading"><span>1</span><div><h2 tabindex="-1">Scope and Pricing</h2><p>Describe the work and separate labor from materials.</p></div></div>
             <label class="wide"><span>Scope of Work <em>Required</em></span><textarea name="scopeOfWork" rows="7" maxlength="10000" required placeholder="Describe the work, deliverables, and job-specific responsibilities included in this quote."></textarea><small>Be specific so the smplfix team can compare quotes accurately.</small></label>
             <div class="quote-grid pricing-grid">
               <label><span>Labor Amount <em>Required</em></span><span class="money-input"><b>$</b><input name="laborAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></span></label>
               <label><span>Materials Amount <em>Required</em></span><span class="money-input"><b>$</b><input name="materialsAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></span></label>
             </div>
-            <div class="quote-total"><span><small>Calculated automatically</small>Quote total</span><strong id="quoteTotal">$0.00</strong></div>
+            <div class="quote-total"><span><small>Calculated automatically</small>Quote total</span><strong id="quoteTotal" aria-live="polite">$0.00</strong></div>
             <div class="secure-wizard-actions"><span>Step 1 of 3</span><button type="button" class="secure-next" data-next-step="2">Continue <span aria-hidden="true">&rarr;</span></button></div>
           </section>
 
           <section class="quote-card secure-step" data-step="2" hidden>
-            <div class="card-heading"><span>2</span><div><h2>Timing and Access</h2><p>Tell us when the work can begin and what access is required.</p></div></div>
+            <div class="card-heading"><span>2</span><div><h2 tabindex="-1">Timing and Access</h2><p>Tell us when the work can begin and what access is required.</p></div></div>
             <div class="quote-grid">
               <label><span>Estimated Duration <em>Required</em></span><input name="durationValue" type="number" min="0.1" step="0.1" inputmode="decimal" placeholder="e.g. 3" required></label>
               <label><span>Duration Unit <em>Required</em></span><select name="durationUnit" required><option value="hours">Hours</option><option value="days" selected>Days</option><option value="weeks">Weeks</option></select></label>
               <label><span>Earliest Available Date <em>Required</em></span><input name="earliestAvailableDate" type="date" required></label>
               <label><span>Site Access <em>Required</em></span><select name="siteAccessRequired" id="siteAccessRequired" required><option value="false">No arrangement needed</option><option value="true">Access must be arranged</option></select></label>
             </div>
-            <label class="wide"><span>Access Notes</span><textarea name="accessNotes" id="accessNotes" rows="3" maxlength="3000" placeholder="Optional access information"></textarea></label>
+            <label class="wide" id="accessNotesLabel"><span>Access Notes <em id="accessNotesRequirement">Optional</em></span><textarea name="accessNotes" id="accessNotes" rows="3" maxlength="3000" placeholder="Optional access information"></textarea><small id="accessNotesHint">Add gate, key, escort, parking, or scheduling instructions when relevant.</small></label>
             <label class="wide"><span>Exclusions or Conditions</span><textarea name="exclusionsConditions" rows="5" maxlength="10000" placeholder="List exclusions, assumptions, permit costs, payment conditions, or other limitations."></textarea></label>
             <div class="secure-wizard-actions"><button type="button" class="secure-back" data-next-step="1"><span aria-hidden="true">&larr;</span> Back</button><span>Step 2 of 3</span><button type="button" class="secure-next" data-next-step="3">Review Quote <span aria-hidden="true">&rarr;</span></button></div>
           </section>
 
           <section class="quote-card secure-step" data-step="3" hidden>
-            <div class="card-heading"><span>3</span><div><h2>Review and Submit</h2><p>Attach optional documents and confirm your final quote.</p></div></div>
+            <div class="card-heading"><span>3</span><div><h2 tabindex="-1">Review and Submit</h2><p>Attach optional documents and confirm your final quote.</p></div></div>
             <div class="upload-section">
               <div><h3>Supporting Documents <span>Optional</span></h3><p>Add quote documents, photos, or specifications.</p></div>
               <label class="file-field">
@@ -110,7 +111,7 @@
         </div>
       </div>
     </form>
-    <footer><span>&copy; smplfix</span><span>Secure Vendor Quote Collection</span></footer>
+    <footer><span>&copy; smplfix</span><span>Questions? Reply to your invitation email.</span><span>Secure Vendor Quote Collection</span></footer>
   </main>
   <script src="../assets/js/vendor-quote.js?v=20260725-vendor-quote-redesign"></script>
     <script src="../assets/js/icon-system.js?v=20260807-icon-reliability"></script>

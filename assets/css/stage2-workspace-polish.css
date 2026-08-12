@@ -1,0 +1,369 @@
+/* Stage 2 — focused quote-collection workspace */
+
+body #incoming-quotes.is-workspace-open > .workflow-shared-chrome .workflow-filterbar {
+  display: none !important;
+}
+
+body #incoming-quotes.is-workspace-open > .workflow-shared-chrome {
+  margin-bottom: 12px !important;
+}
+
+body #incoming-quotes .workflow-unified-workspace .workflow-workspace-back {
+  display: flex !important;
+  width: 100% !important;
+  min-height: 38px !important;
+  justify-content: space-between !important;
+  margin-bottom: 10px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+body #incoming-quotes .workflow-unified-workspace .workflow-back-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--smpl-line);
+  border-radius: 9px;
+  background: var(--smpl-paper);
+  color: var(--smpl-ink);
+  transition: border-color .16s ease, background .16s ease;
+}
+
+body #incoming-quotes .workflow-unified-workspace .workflow-back-button:hover {
+  border-color: var(--smpl-ink);
+  background: var(--smpl-surface);
+  text-decoration: none;
+}
+
+body #incoming-quotes .workflow-unified-workspace .workflow-back-context {
+  padding-right: 3px;
+}
+
+body #incoming-quotes .workflow-workspace-overview {
+  margin-bottom: 14px;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(11, 11, 12, .045);
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-order-context {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  min-height: 72px;
+  margin: 0 !important;
+  padding: 0 0 17px !important;
+  gap: 20px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--smpl-line) !important;
+  border-radius: 0 !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-order-context > div {
+  grid-column: 1;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-order-context > .workflow-chip {
+  grid-column: 2;
+  width: max-content !important;
+  max-width: 220px !important;
+  justify-self: end;
+  align-self: start;
+  margin-top: 2px !important;
+  padding: 7px 11px !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-order-context h2 {
+  margin: 4px 0 6px !important;
+  font-size: clamp(20px, 1.8vw, 26px) !important;
+  letter-spacing: -.035em !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-order-context p {
+  font-size: 11px !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-journey {
+  grid-template-columns: repeat(6, minmax(130px, 1fr)) !important;
+  margin: 14px 0 0 !important;
+  padding: 0 0 2px !important;
+  gap: 8px !important;
+  border: 0 !important;
+  overflow-x: auto !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-journey-step {
+  min-width: 130px !important;
+  min-height: 64px !important;
+  padding: 11px 10px 10px 42px !important;
+  border: 1px solid var(--smpl-line) !important;
+  border-radius: 9px !important;
+  background: #fafafa !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-journey-step.current {
+  border-color: var(--smpl-ink) !important;
+  background: var(--smpl-ink) !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-journey-step.completed {
+  border-color: var(--smpl-success-line) !important;
+  background: var(--smpl-success-bg) !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-journey-step strong {
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+}
+
+body #incoming-quotes .workflow-workspace-overview .workflow-journey-step span {
+  margin-top: 4px;
+  font-size: 9px !important;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  margin-bottom: 14px !important;
+  padding: 6px !important;
+  border-radius: 12px !important;
+  background: #f5f5f3 !important;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab {
+  grid-template-columns: 36px minmax(0, 1fr);
+  min-height: 58px;
+  padding: 9px 12px;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab:hover:not([aria-selected="true"]) {
+  border-color: var(--smpl-line);
+  background: var(--smpl-paper);
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab > i {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab strong {
+  font-size: 11px;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab small {
+  font-size: 9px;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab[aria-selected="true"] {
+  color: var(--smpl-paper) !important;
+  border-color: var(--smpl-ink) !important;
+  background: var(--smpl-ink) !important;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab[aria-selected="true"] small {
+  color: #d1d1d1 !important;
+}
+
+body #incoming-quotes .incoming-pane-entry > .incoming-panel {
+  padding: 22px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(11, 11, 12, .04) !important;
+}
+
+body #incoming-quotes .incoming-pane-entry .incoming-panel-heading {
+  margin-bottom: 20px !important;
+  padding-bottom: 17px !important;
+}
+
+body #incoming-quotes .incoming-pane-entry .incoming-panel-heading h3 {
+  font-size: 17px !important;
+}
+
+body #incoming-quotes .incoming-pane-entry .incoming-panel-heading p {
+  font-size: 10.5px !important;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+}
+
+body #incoming-quotes .incoming-form-section {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--smpl-line);
+  border-radius: 10px;
+  background: #fafaf8;
+}
+
+body #incoming-quotes .incoming-form-section-overview,
+body #incoming-quotes .incoming-form-section-pricing,
+body #incoming-quotes .incoming-form-section-documents {
+  grid-column: 1 / -1;
+}
+
+body #incoming-quotes .incoming-form-section-conditions {
+  grid-column: 1 / -1;
+}
+
+body #incoming-quotes .incoming-form-section legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 7px;
+  color: var(--smpl-ink);
+  font: 750 11px/1.2 var(--smpl-font-ui);
+}
+
+body #incoming-quotes .incoming-form-section legend > span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--smpl-ink);
+  color: var(--smpl-paper);
+  font: 700 9px/1 var(--smpl-font-mono);
+}
+
+body #incoming-quotes .incoming-section-grid {
+  display: grid;
+  min-width: 0;
+  gap: 13px;
+}
+
+body #incoming-quotes .incoming-section-grid.one-column {
+  grid-template-columns: 1fr;
+}
+
+body #incoming-quotes .incoming-section-grid.two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body #incoming-quotes .incoming-section-grid.four-column {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+body #incoming-quotes .incoming-form-section label {
+  margin: 0 !important;
+  gap: 7px !important;
+  font-size: 11px !important;
+}
+
+body #incoming-quotes .incoming-form-section :where(input:not([type="file"]), select) {
+  min-height: 44px !important;
+  border-color: #cfcfcb !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+}
+
+body #incoming-quotes .incoming-form-section textarea {
+  min-height: 102px !important;
+  border-color: #cfcfcb !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+body #incoming-quotes .incoming-form-section-overview textarea {
+  min-height: 118px !important;
+}
+
+body #incoming-quotes .incoming-file-field {
+  padding: 14px;
+  border: 1px dashed #bdbdb8;
+  border-radius: 9px;
+  background: var(--smpl-paper);
+}
+
+body #incoming-quotes .incoming-file-field input[type="file"] {
+  min-height: 42px !important;
+  padding: 6px !important;
+  border-color: var(--smpl-line) !important;
+  background: var(--smpl-paper) !important;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-live-total {
+  margin: 14px 0 0;
+  padding: 15px 17px;
+  border-color: var(--smpl-ink);
+  border-radius: 10px;
+  background: var(--smpl-ink);
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-live-total span,
+body #incoming-quotes .workflow-unified-workspace .incoming-live-total strong {
+  color: var(--smpl-paper);
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-live-total strong {
+  font-size: 22px;
+}
+
+body #incoming-quotes .workflow-unified-workspace .incoming-form-actions {
+  justify-content: space-between !important;
+  margin-top: 12px !important;
+  padding: 12px !important;
+}
+
+@media (max-width: 1050px) {
+  body #incoming-quotes .incoming-section-grid.four-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  body #incoming-quotes .workflow-unified-workspace .workflow-back-context {
+    display: none;
+  }
+
+  body #incoming-quotes .workflow-workspace-overview .workflow-order-context {
+    grid-template-columns: 1fr !important;
+  }
+
+  body #incoming-quotes .workflow-workspace-overview .workflow-order-context > .workflow-chip {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tabs {
+    display: flex !important;
+    overflow-x: auto !important;
+  }
+
+  body #incoming-quotes .workflow-unified-workspace .incoming-workspace-tab {
+    flex: 0 0 190px;
+  }
+
+  body #incoming-quotes .workflow-unified-workspace .incoming-form-grid,
+  body #incoming-quotes .incoming-section-grid.two-column,
+  body #incoming-quotes .incoming-section-grid.four-column {
+    grid-template-columns: 1fr !important;
+  }
+
+  body #incoming-quotes .incoming-form-section {
+    grid-column: 1 !important;
+    padding: 14px;
+  }
+
+  body #incoming-quotes .workflow-unified-workspace .incoming-form-actions {
+    align-items: stretch !important;
+    flex-direction: column-reverse !important;
+  }
+
+  body #incoming-quotes .workflow-unified-workspace .incoming-form-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  body #incoming-quotes .workflow-workspace-overview,
+  body #incoming-quotes .incoming-pane-entry > .incoming-panel {
+    padding: 14px !important;
+  }
+}

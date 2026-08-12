@@ -111,13 +111,18 @@ test('public workflow pages share secure styling and vendor quote is a three-ste
   const completion = read('pages/vendor-completion.html');
   const satisfaction = read('pages/customer-satisfaction.html');
   const vendorJs = read('assets/js/vendor-quote.js');
+  const vendorPolish = read('assets/css/vendor-quote-polish.css');
   const completionJs = read('assets/js/vendor-completion.js');
   const secureCss = read('assets/css/secure-workflow.css');
   for (const html of [customer, vendor, schedule, completion, satisfaction]) assert.match(html, /secure-workflow\.css/);
   assert.equal((vendor.match(/class="quote-card secure-step" data-step="[123]"/g) || []).length, 3);
   assert.match(vendor, /id="vendorQuoteReview"/);
+  assert.match(vendor, /vendor-quote-polish\.css\?v=20260812-vendor-quote-polish/);
+  assert.match(vendor, /class="vendor-quote-page"/);
   assert.match(vendorJs, /validateStep/);
   assert.match(vendorJs, /reviewMarkup/);
+  assert.match(vendorPolish, /Vendor quote portal — final smplfix visual layer/);
+  assert.match(vendorPolish, /@media\(max-width:520px\)/);
   assert.match(completionJs, /completion-preview-grid/);
   assert.match(completionJs, /completion-upload-progress/);
   assert.match(secureCss, /Shared secure workflow v2/);

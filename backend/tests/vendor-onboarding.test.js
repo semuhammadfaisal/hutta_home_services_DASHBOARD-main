@@ -353,7 +353,7 @@ test('vendor management forms use the monochrome SMPLFix system responsively', (
 
   assert.match(pageSource, /vendor-onboarding-admin\.css\?v=20260807-vendor-management-2/);
   assert.match(pageSource, /vendor-modal-onboarding-polish\.css\?v=20260807-vendor-management-3/);
-  assert.match(pageSource, /vendor-automation-branding\.css\?v=20260807-vendor-reviews-monochrome/);
+  assert.match(pageSource, /vendor-automation-branding\.css\?v=20260812-review-toolbar-polish/);
   assert.match(pageSource, /id="vendorModal"[^>]*role="dialog"[^>]*aria-modal="true"/);
   assert.match(modalCss, /#vendorModal \.vendor-entry-mode-switch > button\.active/);
   assert.match(modalCss, /#vendorModal :is\(\.btn-add-field, \.vendor-section-header-row \.btn-add-field\)[^{]*\{[^}]*color: var\(--smpl-paper, #fff\) !important;[^}]*background: var\(--vendor-modal-ink\) !important;/s);
