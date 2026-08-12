@@ -5592,6 +5592,10 @@ function renderPaymentsTable(payments) {
                     <button class="btn-action" onclick="showPaymentDetail('${payment._id}')" title="View" aria-label="View payment">
                         <i class="fas fa-eye" aria-hidden="true"></i>
                     </button>
+                    ${['received', 'completed'].includes(payment.status) ? `
+                    <a class="btn-action" href="/api/payments/${encodeURIComponent(payment._id)}/receipt.pdf" target="_blank" rel="noopener" title="Download receipt" aria-label="Download receipt">
+                        <i class="fas fa-receipt" aria-hidden="true"></i>
+                    </a>` : ''}
                     <button class="btn-action delete" onclick="deletePayment('${payment._id}')" title="Delete" aria-label="Delete payment">
                         <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
@@ -6909,6 +6913,10 @@ async function showPaymentDetail(paymentId) {
                     </div>
 
                     <div class="payment-detail-footer">
+                        ${['received', 'completed'].includes(payment.status) ? `
+                        <a class="btn btn-primary" href="/api/payments/${encodeURIComponent(payment._id)}/receipt.pdf" target="_blank" rel="noopener">
+                            <i class="fas fa-receipt"></i> Download Receipt
+                        </a>` : ''}
                         <button class="btn btn-secondary" type="button" onclick="closePaymentDetail()">
                             <i class="fas fa-times"></i> Close
                         </button>

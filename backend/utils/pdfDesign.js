@@ -2,24 +2,23 @@ const PDFDocument = require('pdfkit');
 const path = require('path');
 
 const COLORS = Object.freeze({
-  blue: '#0B0B0C',
-  blueDark: '#0B0B0C',
-  ink: '#0B0B0C',
-  text: '#343436',
-  muted: '#737377',
-  border: '#ECECED',
-  surface: '#F6F6F4',
-  paleBlue: '#F6F6F4'
+  ink: '#0A0A0B',
+  text: '#27272A',
+  muted: '#77777C',
+  label: '#A2A2A7',
+  border: '#E7E7E8',
+  surface: '#F5F5F3',
+  white: '#FFFFFF'
 });
 
-const PAGE = Object.freeze({ left: 50, right: 562, width: 512, footerY: 758 });
-const BRAND_LOGO = path.resolve(__dirname, '../../assets/images/smplfix-logo-ink.png');
+const PAGE = Object.freeze({ left: 46, right: 566, width: 520, footerY: 758 });
+const REVERSED_LOGO = path.resolve(__dirname, '../../assets/images/smplfix-logo-reversed.png');
 const clean = (value, fallback = '') => String(value ?? '').trim() || fallback;
 
 function createDocument({ title, subject }) {
   const doc = new PDFDocument({
     size: 'LETTER',
-    margins: { top: 46, right: 50, bottom: 58, left: 50 },
+    margins: { top: 38, right: PAGE.left, bottom: 60, left: PAGE.left },
     bufferPages: true,
     info: {
       Title: clean(title, 'smplfix Document'),
@@ -27,75 +26,157 @@ function createDocument({ title, subject }) {
       Subject: clean(subject, title)
     }
   });
+
   doc.on('pageAdded', () => {
+    doc.rect(0, 0, doc.page.width, 70).fill(COLORS.ink);
     try {
-      doc.image(BRAND_LOGO, PAGE.left, 34, { fit: [78, 38], align: 'left', valign: 'center' });
+      doc.image(REVERSED_LOGO, PAGE.left, 19, { fit: [76, 34] });
     } catch (_error) {
-      doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(8)
-        .text('smplfix', PAGE.left, 42, { width: 250, characterSpacing: .9 });
+      doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(16).text('smplfix', PAGE.left, 27);
     }
-    doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8)
-      .text('DOCUMENT CONTINUED', 312, 42, { width: 250, align: 'right' });
-    doc.moveTo(PAGE.left, 59).lineTo(PAGE.right, 59).lineWidth(.7).strokeColor(COLORS.border).stroke();
-    doc.y = 76;
+    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(8)
+      .text('DOCUMENT CONTINUED', 320, 27, { width: PAGE.right - 320, align: 'right', characterSpacing: 1.1 });
+    doc.y = 92;
   });
   return doc;
 }
 
 function drawBrandHeader(doc, { documentType, reference, meta = [], status }) {
+  doc.rect(0, 0, doc.page.width, 100).fill(COLORS.ink);
   try {
-    doc.image(BRAND_LOGO, PAGE.left, 43, { width: 94, height: 46, fit: [94, 46] });
+    doc.image(REVERSED_LOGO, PAGE.left, 27, { fit: [92, 42] });
   } catch (_error) {
-    doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(18).text('smplfix', PAGE.left, 54);
+    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(19).text('smplfix', PAGE.left, 40);
   }
-  doc.fillColor(COLORS.muted).font('Helvetica-Bold').fontSize(8)
-    .text('smplfix', 300, 48, { width: 262, align: 'right' });
-  doc.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(11)
-    .text('sales@smplfix.com', 300, 63, { width: 262, align: 'right' });
-  doc.moveTo(PAGE.left, 101).lineTo(PAGE.right, 101).lineWidth(1).strokeColor(COLORS.border).stroke();
 
-  doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(9)
-    .text(clean(documentType).toUpperCase(), PAGE.left, 124, { characterSpacing: 1.25 });
-  doc.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(25)
-    .text(clean(reference, documentType), PAGE.left, 141, { width: 360 });
-  if (status) {
-    const statusText = clean(status).toUpperCase();
-    const statusWidth = Math.min(150, Math.max(76, doc.widthOfString(statusText) + 24));
-    doc.roundedRect(PAGE.right - statusWidth, 137, statusWidth, 28, 14).fill(COLORS.paleBlue);
-    doc.fillColor(COLORS.blueDark).font('Helvetica-Bold').fontSize(8)
-      .text(statusText, PAGE.right - statusWidth, 147, {
-        width: statusWidth,
-        align: 'center',
-        characterSpacing: .5
-      });
-  }
-  doc.y = 182;
-  const cleanMeta = meta.filter(Boolean);
-  if (cleanMeta.length) {
-    doc.fillColor(COLORS.muted).font('Helvetica').fontSize(9)
-      .text(cleanMeta.join('  |  '), PAGE.left, doc.y, { width: PAGE.width });
-    doc.moveDown(1.3);
+  doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(19)
+    .text(clean(documentType, 'Document'), 330, 31, { width: PAGE.right - 330, align: 'right' });
+  doc.fillColor('#9C9CA1').font('Helvetica-Bold').fontSize(7.5)
+    .text(clean(reference).toUpperCase(), 330, 61, {
+      width: PAGE.right - 330,
+      align: 'right',
+      characterSpacing: 1.25
+    });
+
+  const context = [...meta, status].filter(Boolean).map(clean).filter(Boolean);
+  doc.y = 124;
+  if (context.length) {
+    doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8)
+      .text(context.join('  |  '), PAGE.left, doc.y, { width: PAGE.width, align: 'right' });
+    doc.y += 18;
   }
 }
 
 function ensureSpace(doc, height = 80) {
-  if (doc.y + height > doc.page.height - 70) doc.addPage();
+  if (doc.y + height > doc.page.height - 72) doc.addPage();
+}
+
+function drawMetadataColumns(doc, columns) {
+  const items = columns.filter(Boolean).slice(0, 3);
+  if (!items.length) return;
+  ensureSpace(doc, 94);
+  const top = doc.y;
+  const gap = 22;
+  const width = (PAGE.width - gap * 2) / 3;
+  const heights = items.map(item => {
+    const lines = (item.lines || []).filter(Boolean).map(clean);
+    const primary = clean(item.value || lines.shift(), '-');
+    return 27
+      + doc.font('Helvetica-Bold').fontSize(9.2).heightOfString(primary, { width, lineGap: 1.5 })
+      + (lines.length ? doc.font('Helvetica').fontSize(8).heightOfString(lines.join('\n'), { width, lineGap: 2 }) + 5 : 0);
+  });
+  const height = Math.max(64, ...heights);
+
+  items.forEach((item, index) => {
+    const x = PAGE.left + index * (width + gap);
+    const lines = (item.lines || []).filter(Boolean).map(clean);
+    const primary = clean(item.value || lines.shift(), '-');
+    doc.fillColor(COLORS.label).font('Helvetica-Bold').fontSize(7)
+      .text(clean(item.label).toUpperCase(), x, top, { width, characterSpacing: 1.25 });
+    doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(9.2)
+      .text(primary, x, top + 18, { width, lineGap: 1.5 });
+    if (lines.length) {
+      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8)
+        .text(lines.join('\n'), x, doc.y + 3, { width, lineGap: 2 });
+    }
+  });
+  doc.y = top + height + 14;
 }
 
 function drawSectionTitle(doc, title) {
-  ensureSpace(doc, 105);
-  doc.moveDown(.45);
-  doc.fillColor(COLORS.blueDark).font('Helvetica-Bold').fontSize(9)
-    .text(clean(title).toUpperCase(), PAGE.left, doc.y, { characterSpacing: .9 });
+  ensureSpace(doc, 55);
   doc.moveDown(.35);
-  doc.moveTo(PAGE.left, doc.y).lineTo(PAGE.right, doc.y).lineWidth(.7).strokeColor(COLORS.border).stroke();
-  doc.moveDown(.75);
+  doc.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(8)
+    .text(clean(title).toUpperCase(), PAGE.left, doc.y, { characterSpacing: 1.05 });
+  doc.y += 7;
+  doc.moveTo(PAGE.left, doc.y).lineTo(PAGE.right, doc.y).lineWidth(.8).strokeColor(COLORS.border).stroke();
+  doc.y += 13;
+}
+
+function drawLineItems(doc, items) {
+  const rows = (items || []).filter(Boolean);
+  if (!rows.length) return;
+  ensureSpace(doc, 56);
+  const descriptionWidth = 350;
+  const qtyX = 414;
+  const amountX = 468;
+
+  doc.fillColor(COLORS.label).font('Helvetica-Bold').fontSize(6.8)
+    .text('DESCRIPTION', PAGE.left, doc.y, { width: descriptionWidth, characterSpacing: 1.2 });
+  doc.text('QTY', qtyX, doc.y, { width: 35, align: 'center', characterSpacing: 1.2 });
+  doc.text('AMOUNT', amountX, doc.y, { width: PAGE.right - amountX, align: 'right', characterSpacing: 1.2 });
+  doc.y += 15;
+  doc.moveTo(PAGE.left, doc.y).lineTo(PAGE.right, doc.y).lineWidth(1).strokeColor(COLORS.ink).stroke();
+  doc.y += 12;
+
+  rows.forEach(item => {
+    const title = clean(item.title || item.description, 'Service');
+    const detail = clean(item.detail || item.note);
+    const rowHeight = Math.max(50,
+      doc.font('Helvetica-Bold').fontSize(9.5).heightOfString(title, { width: descriptionWidth, lineGap: 2 })
+      + (detail ? doc.font('Helvetica').fontSize(7.8).heightOfString(detail, { width: descriptionWidth, lineGap: 2 }) + 6 : 0)
+      + 18);
+    ensureSpace(doc, rowHeight + 15);
+    const top = doc.y;
+    doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(9.5)
+      .text(title, PAGE.left, top, { width: descriptionWidth, lineGap: 2 });
+    if (detail) {
+      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7.8)
+        .text(detail, PAGE.left, doc.y + 3, { width: descriptionWidth, lineGap: 2 });
+    }
+    doc.fillColor(COLORS.text).font(item.qty === 'Included' ? 'Helvetica' : 'Helvetica-Bold').fontSize(8.8)
+      .text(clean(item.qty, '1'), qtyX, top + 1, { width: 35, align: 'center' });
+    doc.font(item.included ? 'Helvetica' : 'Helvetica-Bold')
+      .text(clean(item.amount, '-'), amountX, top + 1, { width: PAGE.right - amountX, align: 'right' });
+    doc.y = top + rowHeight;
+    doc.moveTo(PAGE.left, doc.y).lineTo(PAGE.right, doc.y).lineWidth(.65).strokeColor(COLORS.border).stroke();
+    doc.y += 11;
+  });
+}
+
+function drawTotals(doc, { subtotal, tax, total, totalLabel = 'Total due' }) {
+  ensureSpace(doc, 112);
+  const x = 336;
+  const width = PAGE.right - x;
+  const line = (label, value) => {
+    doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8.5).text(label, x, doc.y, { width: 84 });
+    doc.fillColor(COLORS.text).text(clean(value), x + 84, doc.y, { width: width - 84, align: 'right' });
+    doc.y += 21;
+  };
+  line('Subtotal', subtotal);
+  if (tax !== undefined && tax !== null) line('Tax', tax);
+  const top = doc.y + 2;
+  doc.roundedRect(x, top, width, 43, 7).fill(COLORS.ink);
+  doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(9)
+    .text(clean(totalLabel), x + 13, top + 17, { width: 92 });
+  doc.fontSize(16).text(clean(total), x + 105, top + 13, { width: width - 118, align: 'right' });
+  doc.y = top + 58;
 }
 
 function drawText(doc, value, options = {}) {
   doc.fillColor(options.color || COLORS.text)
     .font(options.bold ? 'Helvetica-Bold' : 'Helvetica')
-    .fontSize(options.size || 10)
+    .fontSize(options.size || 9)
     .text(clean(value, options.fallback || '-'), {
       width: options.width || PAGE.width,
       lineGap: options.lineGap ?? 2.5,
@@ -103,61 +184,40 @@ function drawText(doc, value, options = {}) {
     });
 }
 
+function drawNotePanel(doc, { label = 'Note', value }) {
+  const content = clean(value);
+  if (!content) return;
+  const innerWidth = PAGE.width - 30;
+  const height = Math.max(62, doc.font('Helvetica').fontSize(8.3)
+    .heightOfString(content, { width: innerWidth, lineGap: 2.5 }) + 39);
+  ensureSpace(doc, height + 8);
+  const top = doc.y;
+  doc.roundedRect(PAGE.left, top, PAGE.width, height, 9).fill(COLORS.surface);
+  doc.fillColor(COLORS.label).font('Helvetica-Bold').fontSize(6.8)
+    .text(clean(label).toUpperCase(), PAGE.left + 15, top + 13, { width: innerWidth, characterSpacing: 1.2 });
+  doc.fillColor(COLORS.text).font('Helvetica').fontSize(8.3)
+    .text(content, PAGE.left + 15, top + 31, { width: innerWidth, lineGap: 2.5 });
+  doc.y = top + height + 8;
+}
+
+// Backward-compatible helpers for work orders and any internal documents.
 function drawDetailsGrid(doc, items) {
   const filtered = items.filter(item => item && (item.value || item.showEmpty));
-  const gap = 12;
-  const columnWidth = (PAGE.width - gap) / 2;
-  for (let index = 0; index < filtered.length; index += 2) {
-    ensureSpace(doc, 58);
-    const row = filtered.slice(index, index + 2);
-    const top = doc.y;
-    const heights = row.map(item => {
-      const valueHeight = doc.font('Helvetica-Bold').fontSize(10)
-        .heightOfString(clean(item.value, '-'), { width: columnWidth - 24, lineGap: 2 });
-      return Math.max(52, 29 + valueHeight);
-    });
-    const height = Math.max(...heights);
-    row.forEach((item, column) => {
-      const x = PAGE.left + column * (columnWidth + gap);
-      doc.roundedRect(x, top, columnWidth, height, 7).fill(COLORS.surface);
-      doc.fillColor(COLORS.muted).font('Helvetica-Bold').fontSize(7.5)
-        .text(clean(item.label).toUpperCase(), x + 12, top + 11, {
-          width: columnWidth - 24,
-          characterSpacing: .65
-        });
-      doc.fillColor(COLORS.ink).font('Helvetica-Bold').fontSize(10)
-        .text(clean(item.value, '-'), x + 12, top + 27, { width: columnWidth - 24, lineGap: 2 });
-    });
-    doc.y = top + height + 10;
+  for (let index = 0; index < filtered.length; index += 3) {
+    drawMetadataColumns(doc, filtered.slice(index, index + 3).map(item => ({
+      label: item.label,
+      value: clean(item.value, '-')
+    })));
   }
 }
 
 function drawCallout(doc, { label, value, note }) {
-  ensureSpace(doc, note ? 84 : 66);
-  const top = doc.y;
-  const height = note ? 78 : 62;
-  doc.roundedRect(PAGE.left, top, PAGE.width, height, 8).fill(COLORS.paleBlue);
-  doc.fillColor(COLORS.blueDark).font('Helvetica-Bold').fontSize(8)
-    .text(clean(label).toUpperCase(), PAGE.left + 16, top + 13, { characterSpacing: .75 });
-  doc.fillColor(COLORS.blue).font('Helvetica-Bold').fontSize(22)
-    .text(clean(value), PAGE.left + 16, top + 29, { width: PAGE.width - 32, align: 'right' });
-  if (note) {
-    doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8)
-      .text(clean(note), PAGE.left + 16, top + 58, { width: PAGE.width - 32 });
-  }
-  doc.y = top + height + 8;
+  drawTotals(doc, { subtotal: value, total: value, totalLabel: label });
+  if (note) drawNotePanel(doc, { label: 'Terms', value: note });
 }
 
 function drawNotice(doc, value) {
-  ensureSpace(doc, 48);
-  const content = clean(value);
-  const height = Math.max(42, doc.font('Helvetica').fontSize(8.5)
-    .heightOfString(content, { width: PAGE.width - 28, lineGap: 2 }) + 22);
-  const top = doc.y;
-  doc.roundedRect(PAGE.left, top, PAGE.width, height, 7).fill(COLORS.surface);
-  doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8.5)
-    .text(content, PAGE.left + 14, top + 11, { width: PAGE.width - 28, lineGap: 2 });
-  doc.y = top + height + 8;
+  drawNotePanel(doc, { value });
 }
 
 function addPageFooters(doc, { reference }) {
@@ -167,19 +227,12 @@ function addPageFooters(doc, { reference }) {
     doc.save();
     const previousBottomMargin = doc.page.margins.bottom;
     doc.page.margins.bottom = 0;
-    doc.moveTo(PAGE.left, 744).lineTo(PAGE.right, 744).lineWidth(.7).strokeColor(COLORS.border).stroke();
-    doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7.5)
-      .text('smplfix  |  sales@smplfix.com', PAGE.left, PAGE.footerY, {
-        width: 300,
-        lineBreak: false
-      });
-    doc.text(clean(reference), 330, PAGE.footerY, {
-      width: 135,
-      align: 'right',
-      lineBreak: false
-    });
-    doc.text(`Page ${pageIndex + 1} of ${range.count}`, 475, PAGE.footerY, {
-      width: PAGE.right - 475,
+    doc.moveTo(PAGE.left, 742).lineTo(PAGE.right, 742).lineWidth(.65).strokeColor(COLORS.border).stroke();
+    doc.fillColor(COLORS.muted).font('Helvetica').fontSize(7)
+      .text('smplfix  |  sales@smplfix.com', PAGE.left, PAGE.footerY, { width: 280, lineBreak: false });
+    doc.text(clean(reference), 330, PAGE.footerY, { width: 130, align: 'right', lineBreak: false });
+    doc.text(`Page ${pageIndex + 1} of ${range.count}`, 474, PAGE.footerY, {
+      width: PAGE.right - 474,
       align: 'right',
       lineBreak: false
     });
@@ -194,7 +247,11 @@ module.exports = {
   drawBrandHeader,
   drawCallout,
   drawDetailsGrid,
+  drawLineItems,
+  drawMetadataColumns,
+  drawNotePanel,
   drawNotice,
   drawSectionTitle,
-  drawText
+  drawText,
+  drawTotals
 };

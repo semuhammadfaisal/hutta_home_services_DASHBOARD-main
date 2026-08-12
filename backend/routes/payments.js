@@ -7,6 +7,7 @@ const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache'
 const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
 const router = express.Router();
 const { synchronizePaymentStage } = require('../utils/workflowSync');
+const { createPaymentReceiptPdf } = require('../utils/receiptPdf');
 
 function normalizeMilestones(milestones = [], paymentAmount = 0) {
   if (!Array.isArray(milestones)) return [];
@@ -134,6 +135,30 @@ router.get('/', authenticateToken, async (req, res) => {
         pages: Math.max(1, Math.ceil(total / limit))
       }
     });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message || 'Server error' });
+  }
+});
+
+// Download a customer receipt for a received or completed payment.
+router.get('/:id/receipt.pdf', authenticateToken, async (req, res) => {
+  try {
+    const payment = await Payment.findById(req.params.id)
+      .populate('customer', 'name email address')
+      .populate('order', 'orderId service')
+      .lean();
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    if (!['received', 'completed'].includes(payment.status)) {
+      return res.status(409).json({ message: 'A receipt is available after payment is received.' });
+    }
+    const pdf = await createPaymentReceiptPdf(payment);
+    const reference = payment.receiptNumber || `RCPT-${payment.paymentId || payment._id}`;
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${reference}.pdf"`,
+      'Cache-Control': 'private, no-store'
+    });
+    res.send(pdf);
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message || 'Server error' });
   }

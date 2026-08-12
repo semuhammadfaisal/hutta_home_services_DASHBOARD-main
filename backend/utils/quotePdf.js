@@ -2,19 +2,20 @@ const {
   addPageFooters,
   createDocument,
   drawBrandHeader,
-  drawCallout,
-  drawDetailsGrid,
-  drawNotice,
+  drawLineItems,
+  drawMetadataColumns,
+  drawNotePanel,
   drawSectionTitle,
-  drawText
+  drawText,
+  drawTotals
 } = require('./pdfDesign');
 
-const money = value => `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = value => Number(value || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 const formatDate = value => value
-  ? new Date(value).toLocaleDateString('en-US', { timeZone: 'America/Phoenix', year: 'numeric', month: 'long', day: 'numeric' })
+  ? new Date(value).toLocaleDateString('en-US', { timeZone: 'America/Phoenix', year: 'numeric', month: 'short', day: 'numeric' })
   : 'Not specified';
 
-function createOutgoingQuotePdf(quote, settings = {}) {
+function createOutgoingQuotePdf(quote) {
   return new Promise((resolve, reject) => {
     const document = createDocument({ title: `Quote ${quote.quoteReference}`, subject: 'Customer service quote' });
     const chunks = [];
@@ -23,52 +24,73 @@ function createOutgoingQuotePdf(quote, settings = {}) {
     document.on('error', reject);
 
     drawBrandHeader(document, {
-      documentType: 'Service quote',
+      documentType: 'Quote',
       reference: quote.quoteReference,
       status: 'Ready for review',
-      meta: [
-        `Revision ${quote.revisionNumber || 1}`,
-        `Issued ${formatDate(quote.sentAt || new Date())}`,
-        `Valid through ${formatDate(quote.validUntil)}`
-      ]
+      meta: [`Revision ${quote.revisionNumber || 1}`]
     });
-    drawDetailsGrid(document, [
-      { label: 'Prepared for', value: quote.customerSnapshot?.name || 'Customer' },
-      { label: 'Service', value: quote.jobSnapshot?.service || 'Service' },
-      { label: 'Service address', value: quote.customerSnapshot?.address },
-      { label: 'Request reference', value: quote.jobSnapshot?.requestReference || quote.jobSnapshot?.orderReference }
-    ]);
-
-    drawSectionTitle(document, 'Scope of work');
-    drawText(document, quote.scopeOfWork, { fallback: 'No scope supplied.' });
-    document.moveDown(.65);
-    const duration = quote.estimatedDuration?.value
-      ? `${quote.estimatedDuration.value} ${quote.estimatedDuration.unit || ''}`
-      : 'Not specified';
-    drawDetailsGrid(document, [
-      { label: 'Estimated duration', value: duration },
-      { label: 'Earliest availability', value: formatDate(quote.earliestAvailableDate) },
+    drawMetadataColumns(document, [
       {
-        label: 'Site access',
-        value: quote.siteAccessRequired
-          ? `Arrangement required${quote.accessNotes ? ` - ${quote.accessNotes}` : ''}`
-          : 'No special arrangement required'
+        label: 'Prepared for',
+        value: quote.customerSnapshot?.name || 'Customer',
+        lines: [quote.customerSnapshot?.address]
       },
-      { label: 'Exclusions / conditions', value: quote.exclusionsConditions || 'None stated', showEmpty: true }
+      {
+        label: 'Issued',
+        value: formatDate(quote.sentAt || new Date()),
+        lines: [`Valid through ${formatDate(quote.validUntil)}`]
+      },
+      {
+        label: 'Service',
+        value: quote.jobSnapshot?.service || 'Home service',
+        lines: [quote.jobSnapshot?.requestReference || quote.jobSnapshot?.orderReference]
+      }
     ]);
 
-    drawCallout(document, { label: 'Total customer price', value: money(quote.customerTotal) });
-    drawSectionTitle(document, 'Terms and conditions');
-    drawText(document, quote.termsAndConditions, { fallback: 'No terms supplied.', size: 8.7, lineGap: 2 });
-    drawSectionTitle(document, 'Contractor disclosure');
-    drawDetailsGrid(document, [
-      { label: 'Licensed contractor', value: quote.vendorSnapshot?.licensedContractorName },
-      { label: 'License type', value: quote.vendorSnapshot?.licenseType },
-      { label: 'ROC number', value: quote.vendorSnapshot?.rocNumber }
-    ]);
-    drawText(document, quote.legalDisclosure, { fallback: 'No disclosure supplied.', size: 8.5, color: '#526178' });
-    document.moveDown(.8);
-    drawNotice(document, 'This quote is not an invoice and does not confirm scheduling. Customer approval is handled separately.');
+    drawLineItems(document, [{
+      title: quote.jobSnapshot?.service || 'Home service',
+      detail: quote.scopeOfWork || 'Service scope as discussed.',
+      qty: '1',
+      amount: money(quote.customerTotal)
+    }]);
+    drawTotals(document, {
+      subtotal: money(quote.customerTotal),
+      tax: money(0),
+      total: money(quote.customerTotal),
+      totalLabel: 'Quoted total'
+    });
+
+    const duration = quote.estimatedDuration?.value
+      ? `${quote.estimatedDuration.value} ${quote.estimatedDuration.unit || ''}`.trim()
+      : 'Not specified';
+    drawNotePanel(document, {
+      label: 'Service details',
+      value: [
+        `Estimated duration: ${duration}`,
+        `Earliest availability: ${formatDate(quote.earliestAvailableDate)}`,
+        quote.siteAccessRequired
+          ? `Site access: Arrangement required${quote.accessNotes ? ` - ${quote.accessNotes}` : ''}`
+          : 'Site access: No special arrangement required',
+        `Exclusions / conditions: ${quote.exclusionsConditions || 'None stated'}`
+      ].join('\n')
+    });
+
+    if (quote.termsAndConditions) {
+      drawSectionTitle(document, 'Terms and conditions');
+      drawText(document, quote.termsAndConditions, { size: 8.2, lineGap: 2 });
+    }
+    const contractorDisclosure = quote.legalDisclosure || [
+      quote.vendorSnapshot?.licensedContractorName,
+      quote.vendorSnapshot?.licenseType,
+      quote.vendorSnapshot?.rocNumber
+    ].filter(Boolean).join(' | ');
+    drawNotePanel(document, {
+      label: contractorDisclosure ? 'Contractor disclosure' : 'Note',
+      value: [
+        contractorDisclosure,
+        'This quote is not an invoice and does not confirm scheduling. Customer approval is handled separately.'
+      ].filter(Boolean).join('\n\n')
+    });
     addPageFooters(document, { reference: quote.quoteReference });
     document.end();
   });

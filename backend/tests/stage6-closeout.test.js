@@ -20,6 +20,7 @@ const {
   FOLLOWUP_DELAY_MS
 } = require('../utils/closeout');
 const { createCustomerInvoicePdf } = require('../utils/invoicePdf');
+const { createPaymentReceiptPdf } = require('../utils/receiptPdf');
 const { buildPublicUrl } = require('../utils/publicAppUrl');
 
 const root = path.resolve(__dirname, '../..');
@@ -249,6 +250,34 @@ test('invoice PDF is generated from the immutable invoice snapshot', async () =>
   });
   assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
   assert.ok(pdf.length > 1000);
+});
+
+test('payment receipt PDF uses received payment data', async () => {
+  const pdf = await createPaymentReceiptPdf({
+    paymentId: 'PAY-0042',
+    receiptNumber: 'RCPT-2026-0042',
+    invoiceNumber: 'INV-2026-000001',
+    amount: 251.99,
+    status: 'received',
+    paymentMethod: 'bank-transfer',
+    paymentDate: new Date('2026-07-23T12:00:00.000Z'),
+    transactionId: 'BANK-123',
+    description: 'Landscaping service',
+    customer: { name: 'Customer', email: 'customer@example.com' },
+    order: { orderId: 'ORD-0042', service: 'Landscaping' }
+  });
+  assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
+  assert.ok(pdf.length > 1000);
+});
+
+test('received payments expose the receipt PDF endpoint', () => {
+  const route = read('backend/routes/payments.js');
+  const ui = read('assets/js/dashboard-script.js');
+  assert.match(route, /router\.get\('\/:id\/receipt\.pdf'/);
+  assert.match(route, /createPaymentReceiptPdf/);
+  assert.match(route, /\['received', 'completed'\]\.includes\(payment\.status\)/);
+  assert.match(ui, /Download Receipt/);
+  assert.match(ui, /receipt\.pdf/);
 });
 
 test('Stage 6 email links always use deployed HTTPS fragments and reject localhost', () => {
