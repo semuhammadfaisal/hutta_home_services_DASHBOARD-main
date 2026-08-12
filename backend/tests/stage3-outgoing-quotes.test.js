@@ -75,12 +75,24 @@ test('public quote endpoints are no-store and retain the downloadable customer d
   assert.match(page, /quotePdfLink/);
 });
 
+test('staff quote PDF preview is no-store so template updates are never cached', () => {
+  const route = read('backend/routes/outgoingQuotes.js');
+  assert.match(route, /router\.get\('\/:quoteId\/pdf'[\s\S]*?noStore\(res\)/);
+});
+
 test('Workflow Center includes Stage 3 editor, settings, delivery, and responsive assets', () => {
   const html = read('pages/admin-dashboard.html');
   const js = read('assets/js/outgoing-quotes.js');
+  const polish = read('assets/css/stage3-workspace-polish.css');
   assert.match(html, /id="outgoing-quotes"/);
   assert.match(html, /Approved terms and conditions/);
+  assert.match(html, /stage3-workspace-polish\.css/);
   assert.match(js, /Create Revision/);
   assert.match(js, /Rotate Link & Resend/);
   assert.match(js, /Preview PDF/);
+  assert.match(polish, /\.outgoing-editor-layout/);
+  assert.match(polish, /\.outgoing-price-stack \.customer-total/);
+  assert.match(polish, /@media \(max-width: 720px\)/);
+  assert.match(read('assets/js/outgoing-quotes.js'), /outgoing-heading-icon/);
+  assert.match(read('assets/css/smplfix-icons.css'), /#outgoing-quotes \.outgoing-section-heading[\s\S]*?stroke: currentColor/);
 });

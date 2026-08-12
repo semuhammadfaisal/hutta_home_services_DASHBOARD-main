@@ -54,9 +54,10 @@
     <link rel="stylesheet" href="../assets/css/vendor-modal-onboarding-polish.css?v=20260807-vendor-management-3">
     <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css?v=20260812-review-toolbar-polish">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
+    <link rel="stylesheet" href="../assets/css/stage2-workspace-polish.css?v=20260812-stage2-workspace">
+    <link rel="stylesheet" href="../assets/css/stage3-workspace-polish.css?v=20260812-stage3-workspace">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
-    <link rel="stylesheet" href="../assets/css/stage2-workspace-polish.css?v=20260812-stage2-workspace">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -907,7 +908,7 @@
 
         <section id="outgoing-quotes" class="content-section outgoing-quotes-section workflow-stage-section" data-workflow-stage="3">
             <div class="page-header workflow-header"><div><h1>Outgoing Quotes</h1><p>Apply markup, prepare customer-facing terms, preview, and securely send quotes.</p></div><button type="button" class="btn-secondary" onclick="loadOutgoingQuotes()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
-            <div class="workflow-summary"><div><strong id="outgoingReadyCount">0</strong><span>Ready to convert</span></div><div><strong id="outgoingDraftCount">0</strong><span>Draft quotes</span></div><div><strong id="outgoingSentCount">0</strong><span>Sent quotes</span></div></div>
+            <div class="workflow-summary" aria-label="Outgoing quote summary"><div><strong id="outgoingReadyCount">0</strong><span>Ready to convert</span></div><div><strong id="outgoingDraftCount">0</strong><span>Draft quotes</span></div><div><strong id="outgoingSentCount">0</strong><span>Sent quotes</span></div></div>
             <section id="outgoingSettingsPanel" class="outgoing-panel outgoing-settings" role="dialog" aria-modal="true" aria-labelledby="outgoingSettingsTitle" hidden>
                 <div class="outgoing-panel-head"><div><h2 id="outgoingSettingsTitle">Outgoing Quote Settings</h2><p>Admin-managed defaults and approved terms.</p></div><button type="button" class="btn-secondary" onclick="toggleOutgoingSettings(false)">Close</button></div>
                 <form id="outgoingSettingsForm" class="outgoing-form-grid"><label>Default markup type<select id="outgoingDefaultMarkupType"><option value="percentage">Percentage</option><option value="fixed">Fixed amount</option></select></label><label>Default markup value<input id="outgoingDefaultMarkupValue" type="number" min="0" step="0.01"></label><label>Validity days<input id="outgoingDefaultValidityDays" type="number" min="1" max="365"></label><label>Company name<input id="outgoingCompanyName" maxlength="300"></label><label class="full">Company address<input id="outgoingCompanyAddress" maxlength="500"></label><label>Company phone<input id="outgoingCompanyPhone" maxlength="100"></label><label>Company email<input id="outgoingCompanyEmail" type="email" maxlength="300"></label><label>Website<input id="outgoingCompanyWebsite" maxlength="300"></label><label class="full">Approved terms and conditions<textarea id="outgoingDefaultTerms" rows="9" maxlength="30000" required></textarea></label><div class="full outgoing-actions"><button class="btn-primary" type="submit">Save Quote Settings</button></div></form>

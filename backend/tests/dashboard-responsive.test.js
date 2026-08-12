@@ -72,7 +72,7 @@ test('Settings uses the responsive SMPLFix workspace and safe interaction states
   const dashboard = read('assets/js/dashboard-script.js');
   const markup = html.slice(html.indexOf('<section id="settings"'), html.indexOf('<!-- Calendar Section -->'));
   assert.match(html, /settings\.css\?v=20260806-settings-ui/);
-  assert.match(html, /dashboard-script\.js\?v=20260807-form-rebrand/);
+  assert.match(html, /dashboard-script\.js\?v=20260812-payment-receipts/);
   assert.match(markup, /id="settingsForm" class="settings-workspace" onsubmit="saveSettings\(event\)"/);
   assert.match(markup, /id="settingsSaveState" role="status" aria-live="polite"/);
   assert.match(markup, /class="settings-toggle-control" aria-hidden="true"/);

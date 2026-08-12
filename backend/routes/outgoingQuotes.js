@@ -457,6 +457,7 @@ router.post('/:quoteId/send', async (req, res, next) => {
 
 router.get('/:quoteId/pdf', async (req, res, next) => {
   try {
+    noStore(res);
     const quote = await OutgoingQuote.findById(req.params.quoteId).lean();
     if (!quote) return res.status(404).json({ message: 'Quote not found' });
     const config = await settings();

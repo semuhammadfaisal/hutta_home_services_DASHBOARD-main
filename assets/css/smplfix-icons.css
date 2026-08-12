@@ -56,6 +56,20 @@
   color: currentColor !important;
 }
 
+/* Stage 3 section markers use inline SVG so they remain visible even if an
+   icon-font stylesheet is delayed, blocked, or overridden. */
+body #outgoing-quotes .outgoing-section-heading > span > .outgoing-heading-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: var(--smpl-icon-paper) !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 :where(button, [role="button"], .btn, [class^="btn-"], [class*=" btn-"]):disabled :where(i, svg),
 :where(button, [role="button"], .btn, [class^="btn-"], [class*=" btn-"])[aria-disabled="true"] :where(i, svg) {
   color: currentColor !important;

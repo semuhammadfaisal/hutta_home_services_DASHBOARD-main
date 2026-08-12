@@ -101,7 +101,7 @@ test('profile modal loads fresh data and separates profile and password transact
   assert.match(styles, /body #profileModal \.profile-form,[\s\S]*?display: block !important/);
   assert.match(styles, /width: min\(920px, calc\(100vw - 48px\)\) !important/);
   assert.match(dashboard, /document\.body\.classList\.add\('profile-modal-open'\)/);
-  assert.match(html, /dashboard-script\.js\?v=20260807-form-rebrand/);
+  assert.match(html, /dashboard-script\.js\?v=20260812-payment-receipts/);
 });
 
 test('sensitive modules and notification mutations have server-side ownership checks', () => {
