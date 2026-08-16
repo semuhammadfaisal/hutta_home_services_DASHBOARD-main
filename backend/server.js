@@ -233,6 +233,10 @@ app.use('/pages', (req, res, next) => {
   if (['complete-request.html','vendor-completion.html','customer-satisfaction.html'].includes(fileName)) res.set({ 'Cache-Control': 'no-store, max-age=0', Pragma: 'no-cache' });
   return next();
 }, express.static(path.join(__dirname, '../pages'), { ...staticOptions, index: false }));
+app.get('/manifest.webmanifest', (_req, res) => {
+  res.type('application/manifest+json');
+  res.sendFile(path.join(__dirname, '../manifest.webmanifest'));
+});
 app.get('/sw.js', (_req, res) => res.sendFile(path.join(__dirname, '../sw.js')));
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../favicon.ico')));
 
