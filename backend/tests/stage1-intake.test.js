@@ -57,6 +57,29 @@ test('Forminator native underscore field IDs map to the Stage 1 contract', () =>
   assert.equal(mapped.submittedAt, '2026-07-17 06:25:00');
 });
 
+test('Contact Form 7 field names map customer and project details to the Stage 1 contract', () => {
+  const body = {
+    _wpcf7: 'c3890d3',
+    'your-name': 'CF7 Customer',
+    'your-email': 'cf7@example.com',
+    'your-phone': '(480) 555-0175',
+    'service-type': 'Plumbing',
+    'common-request': 'Leaking fixture',
+    'request-type': 'Repair',
+    'project-details': 'Kitchen faucet is leaking.'
+  };
+  const mapped = mapForminatorPayload(body, Buffer.from(JSON.stringify(body)));
+  assert.equal(mapped.name, 'CF7 Customer');
+  assert.equal(mapped.email, 'cf7@example.com');
+  assert.equal(mapped.phone, '(480) 555-0175');
+  assert.match(mapped.externalSubmissionId, /^forminator-c3890d3-/);
+  assert.match(mapped.serviceDetails, /Service type: Plumbing/);
+  assert.match(mapped.serviceDetails, /Common request: Leaking fixture/);
+  assert.match(mapped.serviceDetails, /Request type: Repair/);
+  assert.match(mapped.serviceDetails, /Project details: Kitchen faucet is leaking\./);
+  assert.deepEqual(validatePayload(mapped).errors, []);
+});
+
 test('Forminator webhook key uses constant-time equality semantics', () => {
   assert.equal(safeSecretEqual('separate-long-secret', 'separate-long-secret'), true);
   assert.equal(safeSecretEqual('wrong', 'separate-long-secret'), false);

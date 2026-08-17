@@ -81,7 +81,7 @@ function formInputChecked(value) {
 }
 
 function mapForminatorPayload(body, rawBody = Buffer.alloc(0), now = new Date()) {
-  const formId = firstForminatorValue(body, ['form_id', 'formId', 'form-id']) ||
+  const formId = firstForminatorValue(body, ['form_id', 'formId', 'form-id', '_wpcf7']) ||
     String(process.env.FORMINATOR_FORM_ID || '1029');
   const entryId = firstForminatorValue(body, ['entry_id', 'entryId', 'submission_id', 'submissionId']);
   const fingerprintSource = rawBody.length ? rawBody : Buffer.from(JSON.stringify(body || {}));
@@ -91,13 +91,23 @@ function mapForminatorPayload(body, rawBody = Buffer.alloc(0), now = new Date())
     ? submittedAtValue
     : now.toISOString();
 
+  const projectDetails = firstForminatorValue(body, ['project-details', 'project_details', 'textarea-1', 'textarea_1']);
+  const categorizedDetails = [
+    ['Service type', firstForminatorValue(body, ['service-type', 'service_type'])],
+    ['Common request', firstForminatorValue(body, ['common-request', 'common_request'])],
+    ['Request type', firstForminatorValue(body, ['request-type', 'request_type'])]
+  ].filter(([, value]) => value);
+  const serviceDetails = categorizedDetails.length
+    ? [...categorizedDetails, ['Project details', projectDetails]].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n')
+    : projectDetails;
+
   return {
     externalSubmissionId: sanitizeText(`forminator-${formId}-${entryId || fingerprint}`, 128),
     submittedAt,
-    name: firstForminatorValue(body, ['name-1', 'name_1']),
-    phone: firstForminatorValue(body, ['phone-1', 'phone_1']),
-    email: firstForminatorValue(body, ['email-1', 'email_1']),
-    serviceDetails: firstForminatorValue(body, ['textarea-1', 'textarea_1']),
+    name: firstForminatorValue(body, ['name-1', 'name_1', 'your-name', 'your_name']),
+    phone: firstForminatorValue(body, ['phone-1', 'phone_1', 'your-phone', 'your_phone']),
+    email: firstForminatorValue(body, ['email-1', 'email_1', 'your-email', 'your_email']),
+    serviceDetails,
     marketingSmsConsent: formInputChecked(
       findForminatorField(body, 'consent-1') ?? findForminatorField(body, 'consent_1')
     )

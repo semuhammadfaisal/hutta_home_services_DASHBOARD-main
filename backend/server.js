@@ -77,7 +77,7 @@ app.use(express.json({
   limit: '10mb',
   verify: (req, _res, buffer) => {
     const requestPath = req.originalUrl?.split('?')[0];
-    if (!['/api/integrations/website-requests', '/api/integrations/website-requests/forminator'].includes(requestPath)) return;
+    if (!['/api/integrations/website-requests', '/api/integrations/website-requests/forminator', '/api/integrations/website-requests/contact-form-7'].includes(requestPath)) return;
     if (buffer.length > MAX_BODY_BYTES) {
       const error = new Error('Website request body is too large');
       error.status = 413;
@@ -90,7 +90,7 @@ app.use(express.urlencoded({
   limit: '10mb',
   extended: true,
   verify: (req, _res, buffer) => {
-    if (req.originalUrl?.split('?')[0] !== '/api/integrations/website-requests/forminator') return;
+    if (!['/api/integrations/website-requests/forminator', '/api/integrations/website-requests/contact-form-7'].includes(req.originalUrl?.split('?')[0])) return;
     if (buffer.length > MAX_BODY_BYTES) {
       const error = new Error('Forminator request body is too large');
       error.status = 413;
