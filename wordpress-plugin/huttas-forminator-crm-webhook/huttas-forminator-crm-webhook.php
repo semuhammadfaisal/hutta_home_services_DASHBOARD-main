@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: smplfix Forminator CRM Webhook
- * Description: Securely sends the smplfix Forminator request form to the smplfix CRM Stage 1 intake webhook.
- * Version: 2.1.0
+ * Description: Securely sends smplfix Forminator and Contact Form 7 requests to the smplfix CRM Stage 1 intake webhook.
+ * Version: 2.2.0
  * Author: smplfix
  * License: GPL-2.0-or-later
  */
@@ -36,14 +36,16 @@ final class Huttas_Forminator_CRM_Webhook {
 		add_filter( 'forminator_form_submit_response', array( __CLASS__, 'send_from_response' ), 5, 2 );
 		add_filter( 'forminator_form_ajax_submit_response', array( __CLASS__, 'append_request_reference' ), 20, 2 );
 		add_filter( 'forminator_form_submit_response', array( __CLASS__, 'append_request_reference' ), 20, 2 );
+		add_action( 'wpcf7_before_send_mail', array( __CLASS__, 'contact_form_7_before_send_mail' ), 20, 3 );
 		add_action( self::RETRY_HOOK, array( __CLASS__, 'retry_submission' ), 10, 2 );
 	}
 
 	private static function defaults() {
 		return array(
-			'form_id'     => 0,
-			'webhook_url' => '',
-			'secret'      => '',
+			'form_id'               => 0,
+			'contact_form_7_form_id' => 518,
+			'webhook_url'            => '',
+			'secret'                 => '',
 		);
 	}
 
@@ -67,10 +69,11 @@ final class Huttas_Forminator_CRM_Webhook {
 		$current = self::settings();
 		$secret  = isset( $input['secret'] ) ? trim( (string) $input['secret'] ) : '';
 		return array(
-			'form_id'     => isset( $input['form_id'] ) ? absint( $input['form_id'] ) : 0,
-			'webhook_url' => isset( $input['webhook_url'] ) ? esc_url_raw( trim( (string) $input['webhook_url'] ) ) : '',
+			'form_id'               => isset( $input['form_id'] ) ? absint( $input['form_id'] ) : 0,
+			'contact_form_7_form_id' => isset( $input['contact_form_7_form_id'] ) ? absint( $input['contact_form_7_form_id'] ) : 518,
+			'webhook_url'            => isset( $input['webhook_url'] ) ? esc_url_raw( trim( (string) $input['webhook_url'] ) ) : '',
 			// Leaving the secret blank preserves the already-saved value.
-			'secret'      => '' !== $secret ? sanitize_text_field( $secret ) : $current['secret'],
+			'secret'                 => '' !== $secret ? sanitize_text_field( $secret ) : $current['secret'],
 		);
 	}
 
@@ -98,11 +101,15 @@ final class Huttas_Forminator_CRM_Webhook {
 				<table class="form-table" role="presentation">
 					<tr>
 						<th scope="row"><label for="huttas-form-id">Forminator Form ID</label></th>
-						<td><input id="huttas-form-id" class="regular-text" type="number" min="1" required name="<?php echo esc_attr( self::OPTION_KEY ); ?>[form_id]" value="<?php echo esc_attr( $settings['form_id'] ); ?>"><p class="description">The numeric ID shown by Forminator for the request form.</p></td>
+						<td><input id="huttas-form-id" class="regular-text" type="number" min="0" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[form_id]" value="<?php echo esc_attr( $settings['form_id'] ); ?>"><p class="description">Optional. Use 0 when the site does not use Forminator.</p></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="huttas-cf7-form-id">Contact Form 7 Form ID</label></th>
+						<td><input id="huttas-cf7-form-id" class="regular-text" type="number" min="0" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[contact_form_7_form_id]" value="<?php echo esc_attr( $settings['contact_form_7_form_id'] ); ?>"><p class="description">The live smplfix service-request form ID is 518. Use 0 to disable Contact Form 7 relaying.</p></td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="huttas-webhook-url">CRM Webhook URL</label></th>
-						<td><input id="huttas-webhook-url" class="large-text code" type="url" required name="<?php echo esc_attr( self::OPTION_KEY ); ?>[webhook_url]" value="<?php echo esc_attr( $settings['webhook_url'] ); ?>" placeholder="https://YOUR-RENDER-DOMAIN/api/integrations/website-requests"></td>
+						<td><input id="huttas-webhook-url" class="large-text code" type="url" required name="<?php echo esc_attr( self::OPTION_KEY ); ?>[webhook_url]" value="<?php echo esc_attr( $settings['webhook_url'] ); ?>" placeholder="https://app.smplfix.com/api/integrations/website-requests"></td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="huttas-webhook-secret">Webhook Secret</label></th>
@@ -122,6 +129,58 @@ final class Huttas_Forminator_CRM_Webhook {
 		return (int) $form_id === (int) $settings['form_id']
 			&& ! empty( $settings['webhook_url'] )
 			&& strlen( (string) $settings['secret'] ) >= 32;
+	}
+
+	private static function configured_for_contact_form_7( $form_id ) {
+		$settings = self::settings();
+		return (int) $form_id === (int) $settings['contact_form_7_form_id']
+			&& (int) $settings['contact_form_7_form_id'] > 0
+			&& ! empty( $settings['webhook_url'] )
+			&& strlen( (string) $settings['secret'] ) >= 32;
+	}
+
+	public static function contact_form_7_before_send_mail( $contact_form, $abort = null, $submission = null ) {
+		if ( ! is_object( $contact_form ) || ! method_exists( $contact_form, 'id' ) ) {
+			return;
+		}
+
+		$form_id = absint( $contact_form->id() );
+		if ( ! self::configured_for_contact_form_7( $form_id ) || ! class_exists( 'WPCF7_Submission' ) ) {
+			return;
+		}
+
+		if ( ! $submission ) {
+			$submission = WPCF7_Submission::get_instance();
+		}
+		if ( ! $submission || ! method_exists( $submission, 'get_posted_data' ) ) {
+			return;
+		}
+
+		$field = function ( $name ) use ( $submission ) {
+			return self::scalar_value( $submission->get_posted_data( $name ) );
+		};
+		$details = array();
+		foreach ( array(
+			'Service type'   => 'service-type',
+			'Common request' => 'common-request',
+			'Request type'   => 'request-type',
+			'Project details' => 'project-details',
+		) as $label => $field_name ) {
+			$value = $field( $field_name );
+			if ( '' !== $value ) {
+				$details[] = $label . ': ' . $value;
+			}
+		}
+
+		self::dispatch_payload( array(
+			'externalSubmissionId' => 'contact-form-7-' . $form_id . '-' . wp_generate_uuid4(),
+			'submittedAt'          => gmdate( 'c' ),
+			'name'                 => $field( 'your-name' ),
+			'phone'                => $field( 'your-phone' ),
+			'email'                => sanitize_email( $field( 'your-email' ) ),
+			'serviceDetails'       => implode( "\n", $details ),
+			'marketingSmsConsent'  => false,
+		) );
 	}
 
 	public static function capture_submission( $entry, $form_id, $field_data_array ) {

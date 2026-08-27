@@ -23,6 +23,8 @@ services:
         sync: false
       - key: HUTTAS_WEBHOOK_SECRET
         sync: false
+      - key: CONTACT_FORM_7_WEBHOOK_KEY
+        sync: false
       - key: INTAKE_COMPLETION_TOKEN_SECRET
         sync: false
       - key: INTAKE_NOTIFICATION_EMAILS
@@ -36,9 +38,9 @@ services:
       - key: TAX_ID_ENCRYPTION_KEY
         sync: false
       - key: FRONTEND_URL
-        value: https://hutta-home-services-dashboard-main.onrender.com
+        value: https://app.smplfix.com
       - key: PUBLIC_APP_URL
-        value: https://hutta-home-services-dashboard-main.onrender.com
+        value: https://app.smplfix.com
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

@@ -29,6 +29,8 @@ test('server applies an authenticated-by-default API boundary and protects dashb
   assert.ok(boundary > server.indexOf("app.use('/api/vendor-onboarding'"));
   assert.ok(boundary < server.indexOf("app.use('/api/orders'"));
   assert.ok(boundary < server.indexOf("app.use('/api/stages'"));
+  assert.match(server, /origin:\s*\[[\s\S]*CANONICAL_PUBLIC_APP_URL,[\s\S]*PUBLIC_APP_URL/);
+  assert.match(server, /app\.get\('\/manifest\.webmanifest',[\s\S]*application\/manifest\+json[\s\S]*manifest\.webmanifest/);
   assert.match(server, /app\.get\(\['\/pages\/admin-dashboard\.html', '\/admin-dashboard\.html'\], serveDashboard\)/);
   assert.doesNotMatch(server, /express\.static\(path\.join\(__dirname, '\.\.'/);
 });
@@ -131,9 +133,10 @@ test('idle and absolute session deadlines fail closed', () => {
   assert.equal(ABSOLUTE_TIMEOUT_MS, 8 * 60 * 60 * 1000);
 });
 
-test('CSRF comparisons trust the deployed Render origin and reject unconfigured origins', () => {
+test('CSRF comparisons trust the canonical app origin and reject unconfigured origins', () => {
   const auth = require('../middleware/auth');
   const { CANONICAL_PUBLIC_APP_URL } = require('../utils/publicAppUrl');
+  assert.equal(CANONICAL_PUBLIC_APP_URL, 'https://app.smplfix.com');
   assert.equal(auth.sameValue('same-token', 'same-token'), true);
   assert.equal(auth.sameValue('same-token', 'different-token'), false);
 

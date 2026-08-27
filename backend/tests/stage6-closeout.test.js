@@ -283,11 +283,11 @@ test('received payments expose the receipt PDF endpoint', () => {
 test('Stage 6 email links always use deployed HTTPS fragments and reject localhost', () => {
   const previous = { PUBLIC_APP_URL: process.env.PUBLIC_APP_URL, FRONTEND_URL: process.env.FRONTEND_URL };
   try {
-    process.env.PUBLIC_APP_URL = 'https://hutta-home-services-dashboard-main.onrender.com';
+    process.env.PUBLIC_APP_URL = 'https://app.smplfix.com';
     delete process.env.FRONTEND_URL;
     assert.equal(
       buildPublicUrl('/pages/vendor-completion.html', 'token=secret'),
-      'https://hutta-home-services-dashboard-main.onrender.com/pages/vendor-completion.html#token=secret'
+      'https://app.smplfix.com/pages/vendor-completion.html#token=secret'
     );
     process.env.PUBLIC_APP_URL = 'http://localhost:10000';
     assert.throws(() => buildPublicUrl('/pages/customer-satisfaction.html', 'token=secret'), /public HTTPS/);

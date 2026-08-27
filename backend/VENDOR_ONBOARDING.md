@@ -7,7 +7,7 @@ The onboarding workflow requires these production secrets:
 - `EMAIL_FROM`: exactly `smplfix <sales@smplfix.com>`.
 - `EMAIL_REPLY_TO`: exactly `sales@smplfix.com`.
 - `EMAIL_USER` and `EMAIL_PASSWORD`: optional legacy Gmail fallback credentials.
-- `PUBLIC_APP_URL` and `FRONTEND_URL`: `https://hutta-home-services-dashboard-main.onrender.com` without a trailing path.
+- `PUBLIC_APP_URL` and `FRONTEND_URL`: `https://app.smplfix.com` without a trailing path.
 
 Production refuses localhost, private-network, non-HTTPS, and path-bearing public application URLs. It uses the verified smplfix Resend sender first and falls back to Gmail only when Resend is unavailable. Keep credentials only in Render environment variables; never place them in this repository or documentation.
 

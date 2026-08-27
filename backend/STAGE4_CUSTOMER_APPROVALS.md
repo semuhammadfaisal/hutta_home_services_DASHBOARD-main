@@ -10,7 +10,7 @@ QUOTE_APPROVAL_NOTIFICATION_EMAILS=sales@smplfix.com
 
 Use a comma-separated list when multiple staff recipients are required. If this setting is blank, Stage 4 falls back to `INTAKE_NOTIFICATION_EMAILS`.
 
-The existing `APP_BASE_URL`, Resend settings, MongoDB connection, and email-worker settings are reused. `APP_BASE_URL` must be the deployed HTTPS CRM origin so secure quote and CRM links are generated correctly.
+The existing `PUBLIC_APP_URL`, Resend settings, MongoDB connection, and email-worker settings are reused. `PUBLIC_APP_URL` must be the deployed HTTPS CRM origin (`https://app.smplfix.com`) so secure quote and CRM links are generated correctly.
 
 ## Migration
 

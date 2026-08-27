@@ -1,4 +1,4 @@
-const CANONICAL_PUBLIC_APP_URL = 'https://hutta-home-services-dashboard-main.onrender.com';
+const CANONICAL_PUBLIC_APP_URL = 'https://app.smplfix.com';
 
 function isPrivateHostname(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '');

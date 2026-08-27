@@ -14,10 +14,26 @@ FORMINATOR_FORM_ID=1029
 Configure Forminator to POST to:
 
 ```text
-https://hutta-home-services-dashboard-main.onrender.com/api/integrations/website-requests/forminator?key=<FORMINATOR_WEBHOOK_KEY>
+https://app.smplfix.com/api/integrations/website-requests/forminator?key=<FORMINATOR_WEBHOOK_KEY>
 ```
 
 This compatibility endpoint maps both the configured dashed IDs and Forminator's native underscore output (`name_1`, `phone_1`, `email_1`, `textarea_1`, and `consent_1`) to the Stage 1 intake contract. It accepts Forminator's flat or nested JSON/form payload, uses its entry ID for idempotency when supplied, and otherwise uses a request-body fingerprint. Setup probes are identified by Forminator's `X-Hook-Test: true` header. Use a dedicated key here; do not put `HUTTAS_WEBHOOK_SECRET` in the URL.
+
+## Contact Form 7 webhook compatibility
+
+Contact Form 7 requires an external webhook integration/add-on to POST submissions; the form shortcode alone does not send data to the CRM. Configure that integration to POST form or JSON data to:
+
+```text
+https://app.smplfix.com/api/integrations/website-requests/contact-form-7?key=<CONTACT_FORM_7_WEBHOOK_KEY>
+```
+
+Configure these Render values and redeploy:
+
+```text
+CONTACT_FORM_7_WEBHOOK_KEY=<a separate random secret of at least 32 characters>
+```
+
+The mapper accepts `your-name`, `your-email`, `your-phone`, `service-type`, `common-request`, `request-type`, and `project-details`. `CONTACT_FORM_7_FORM_ID` is optional; set it only when the webhook payload includes `_wpcf7` and its value has been confirmed. For a transition period, the Contact Form 7 route falls back to `FORMINATOR_WEBHOOK_KEY` if its dedicated key is not configured.
 
 ## Configuration
 

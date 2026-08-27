@@ -86,12 +86,26 @@ test('public links always use HTTPS and reject localhost or private origins', ()
     assert.throws(() => getPublicAppUrl(), /public HTTPS/);
     process.env.PUBLIC_APP_URL = 'http://192.168.1.20:5500';
     assert.throws(() => getPublicAppUrl(), /public HTTPS/);
-    process.env.PUBLIC_APP_URL = 'https://hutta-home-services-dashboard-main.onrender.com';
-    assert.equal(getPublicAppUrl(), 'https://hutta-home-services-dashboard-main.onrender.com');
+    process.env.PUBLIC_APP_URL = 'https://app.smplfix.com/dashboard';
+    assert.throws(() => getPublicAppUrl(), /must not include a path/);
+    process.env.PUBLIC_APP_URL = 'https://app.smplfix.com';
+    assert.equal(getPublicAppUrl(), 'https://app.smplfix.com');
     assert.equal(
       buildPublicUrl('/pages/vendor-onboarding.html', 'token=secret-token'),
-      'https://hutta-home-services-dashboard-main.onrender.com/pages/vendor-onboarding.html#token=secret-token'
+      'https://app.smplfix.com/pages/vendor-onboarding.html#token=secret-token'
     );
+    for (const publicPath of [
+      '/pages/reset-password.html?token=reset',
+      '/pages/vendor-quote.html#token=quote',
+      '/pages/customer-quote.html?token=customer',
+      '/pages/vendor-schedule.html?token=schedule',
+      '/pages/vendor-completion.html#token=completion',
+      '/pages/customer-satisfaction.html#token=satisfaction',
+      '/assets/images/smplfix-logo-ink.png',
+      '/pages/admin-dashboard.html#workflow-center'
+    ]) {
+      assert.equal(new URL(publicPath, `${getPublicAppUrl()}/`).origin, 'https://app.smplfix.com');
+    }
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key]; else process.env[key] = value;

@@ -80,6 +80,16 @@ test('Contact Form 7 field names map customer and project details to the Stage 1
   assert.deepEqual(validatePayload(mapped).errors, []);
 });
 
+test('WordPress relay plugin hooks the live Contact Form 7 form into the signed intake endpoint', () => {
+  const plugin = fs.readFileSync(path.join(__dirname, '../../wordpress-plugin/huttas-forminator-crm-webhook/huttas-forminator-crm-webhook.php'), 'utf8');
+  assert.match(plugin, /add_action\(\s*'wpcf7_before_send_mail'/);
+  assert.match(plugin, /'contact_form_7_form_id'\s*=>\s*518/);
+  for (const field of ['your-name', 'your-email', 'your-phone', 'service-type', 'common-request', 'request-type', 'project-details']) {
+    assert.match(plugin, new RegExp(`'${field}'`));
+  }
+  assert.match(plugin, /self::dispatch_payload/);
+});
+
 test('Forminator webhook key uses constant-time equality semantics', () => {
   assert.equal(safeSecretEqual('separate-long-secret', 'separate-long-secret'), true);
   assert.equal(safeSecretEqual('wrong', 'separate-long-secret'), false);
