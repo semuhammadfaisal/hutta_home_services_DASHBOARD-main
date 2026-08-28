@@ -4142,10 +4142,180 @@ function renderOrderStageBadge(order) {
     return `<span class="order-status-badge ${stageDisplay.className}">${stageDisplay.label}</span>`;
 }
 
+let orderVendorAssignmentReturnToModal = false;
+
+function canManageOrderVendors() {
+    return Boolean(window.RBAC?.hasPermission?.(window.PERMISSIONS?.VIEW_VENDORS));
+}
+
+function getVendorRecordId(vendor) {
+    return String(vendor?._id || vendor || '');
+}
+
+function getOrderVendorAssignmentRows(order) {
+    const assignments = Array.isArray(order.vendorAssignments) ? [...order.vendorAssignments] : [];
+    const legacyVendorId = getVendorRecordId(order.vendor);
+    const legacyAlreadyShown = assignments.some(item => getVendorRecordId(item.vendor) === legacyVendorId);
+    if (legacyVendorId && !legacyAlreadyShown) {
+        assignments.unshift({
+            _id: null,
+            vendor: order.vendor,
+            service: order.service || 'Order service',
+            scheduledStart: order.scheduledStart || order.scheduleDate || order.startDate,
+            timezone: 'America/Phoenix',
+            isLegacyPrimary: true
+        });
+    }
+    return assignments.sort((a, b) => {
+        const left = a.scheduledStart ? new Date(a.scheduledStart).getTime() : Number.MAX_SAFE_INTEGER;
+        const right = b.scheduledStart ? new Date(b.scheduledStart).getTime() : Number.MAX_SAFE_INTEGER;
+        return left - right;
+    });
+}
+
+function renderOrderVendorAssignments(order, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    document.querySelectorAll('.order-vendor-add-button').forEach(button => {
+        button.hidden = !canManageOrderVendors();
+    });
+    const assignments = getOrderVendorAssignmentRows(order);
+    if (!assignments.length) {
+        container.innerHTML = '<p class="order-vendors-empty">No vendors attached yet. Add a vendor to schedule their service visit.</p>';
+        return;
+    }
+
+    container.innerHTML = assignments.map(assignment => {
+        const vendor = assignment.vendor || {};
+        const vendorId = getVendorRecordId(vendor);
+        const vendorName = vendor.name || 'Vendor unavailable';
+        const scheduled = assignment.scheduledStart
+            ? `${formatPaymentDateTime(assignment.scheduledStart)} MST`
+            : 'Not scheduled';
+        const removeButton = assignment._id && canManageOrderVendors()
+            ? `<button type="button" class="order-vendor-assignment-remove" onclick="removeOrderVendorAssignment('${escapePaymentHtml(String(assignment._id))}')" title="Remove vendor assignment" aria-label="Remove ${escapePaymentHtml(vendorName)} assignment"><i class="fas fa-trash"></i></button>`
+            : (assignment.isLegacyPrimary ? '<span aria-label="Primary order vendor" title="Primary order vendor"><i class="fas fa-thumbtack"></i></span>' : '');
+        const vendorMarkup = vendorId && canManageOrderVendors()
+            ? `<a class="order-vendor-profile-link" href="#vendor-detail" onclick="event.preventDefault(); openAssignedVendorProfile('${escapePaymentHtml(vendorId)}')">${escapePaymentHtml(vendorName)} <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>`
+            : `<span class="order-vendor-assignment-value">${escapePaymentHtml(vendorName)}</span>`;
+        return `
+            <div class="order-vendor-assignment-row">
+                <div class="order-vendor-assignment-field">
+                    <span class="order-vendor-assignment-label">Service</span>
+                    <span class="order-vendor-assignment-value">${escapePaymentHtml(assignment.service || order.service || '-')}</span>
+                </div>
+                <div class="order-vendor-assignment-field">
+                    <span class="order-vendor-assignment-label">Vendor</span>
+                    ${vendorMarkup}
+                </div>
+                <div class="order-vendor-assignment-field">
+                    <span class="order-vendor-assignment-label">Scheduled arrival</span>
+                    <time class="order-vendor-assignment-value"${assignment.scheduledStart ? ` datetime="${escapePaymentHtml(assignment.scheduledStart)}"` : ''}>${escapePaymentHtml(scheduled)}</time>
+                </div>
+                <div class="order-vendor-assignment-actions">${removeButton}</div>
+            </div>`;
+    }).join('');
+}
+
+function formatArizonaDateTimeInput(value) {
+    if (!value) return '';
+    const parts = window.TimezoneConfig?.getMDTParts?.(new Date(value).getTime());
+    if (!parts) return '';
+    const pad = number => String(number).padStart(2, '0');
+    return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}`;
+}
+
+async function openOrderVendorAssignmentModal(fromPipelineModal = false) {
+    if (!currentDetailOrderId) return;
+    if (!canManageOrderVendors()) {
+        showToast('You do not have permission to manage vendors.', 'error');
+        return;
+    }
+    orderVendorAssignmentReturnToModal = Boolean(fromPipelineModal || document.getElementById('orderDetailModal')?.classList.contains('show'));
+    try {
+        const vendors = await window.APIService.getVendors();
+        const options = (Array.isArray(vendors) ? vendors : [])
+            .filter(vendor => vendor.isActive !== false)
+            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+        const select = document.getElementById('orderAssignmentVendor');
+        select.innerHTML = '<option value="">Select a vendor</option>' + options.map(vendor =>
+            `<option value="${escapePaymentHtml(vendor._id)}">${escapePaymentHtml(vendor.name || 'Unnamed vendor')}${vendor.category ? ` — ${escapePaymentHtml(vendor.category)}` : ''}</option>`
+        ).join('');
+        document.getElementById('orderAssignmentService').value = window.currentDetailOrderData?.service || '';
+        document.getElementById('orderAssignmentScheduledStart').value = formatArizonaDateTimeInput(
+            window.currentDetailOrderData?.scheduledStart || window.currentDetailOrderData?.scheduleDate
+        );
+        const modal = document.getElementById('orderVendorAssignmentModal');
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+        select.focus();
+    } catch (error) {
+        showToast('Unable to load vendors: ' + error.message, 'error');
+    }
+}
+
+function closeOrderVendorAssignmentModal() {
+    const modal = document.getElementById('orderVendorAssignmentModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    document.getElementById('orderVendorAssignmentForm')?.reset();
+}
+
+async function refreshCurrentOrderDetail() {
+    if (orderVendorAssignmentReturnToModal) return showOrderDetail(currentDetailOrderId, true);
+    return showOrderDetail(
+        currentDetailOrderId,
+        false,
+        window.orderDetailSource === 'dashboard',
+        window.orderDetailSource === 'workflow-center'
+    );
+}
+
+async function saveOrderVendorAssignment(event) {
+    event.preventDefault();
+    const button = document.getElementById('saveOrderVendorAssignmentButton');
+    const localStart = document.getElementById('orderAssignmentScheduledStart').value;
+    if (!localStart) return;
+    try {
+        setButtonLoading(button, true);
+        await window.APIService.addOrderVendorAssignment(currentDetailOrderId, {
+            vendor: document.getElementById('orderAssignmentVendor').value,
+            service: document.getElementById('orderAssignmentService').value.trim(),
+            scheduledStart: `${localStart}:00-07:00`
+        });
+        closeOrderVendorAssignmentModal();
+        showToast('Vendor attached to order.', 'success');
+        await refreshCurrentOrderDetail();
+    } catch (error) {
+        showToast(error.message || 'Unable to attach vendor', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
+}
+
+async function removeOrderVendorAssignment(assignmentId) {
+    if (!confirm('Remove this vendor assignment from the order?')) return;
+    try {
+        orderVendorAssignmentReturnToModal = document.getElementById('orderDetailModal')?.classList.contains('show');
+        await window.APIService.removeOrderVendorAssignment(currentDetailOrderId, assignmentId);
+        showToast('Vendor assignment removed.', 'success');
+        await refreshCurrentOrderDetail();
+    } catch (error) {
+        showToast(error.message || 'Unable to remove vendor assignment', 'error');
+    }
+}
+
+function openAssignedVendorProfile(vendorId) {
+    closeOrderVendorAssignmentModal();
+    closeOrderDetailModal();
+    showVendorDetail(vendorId);
+}
+
 async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity = false, fromWorkflow = false) {
     try {
         const order = await window.APIService.getOrder(orderId);
         currentDetailOrderId = order._id || order.id || orderId;
+        window.currentDetailOrderData = order;
         
         // If opened from pipeline, show modal instead of full page
         if (fromPipeline) {
@@ -4168,6 +4338,7 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
             document.getElementById('modalDetailOrderCustomerAddress').textContent = order.customer?.address || '-';
             document.getElementById('modalDetailOrderDescription').textContent = order.description || 'No description provided';
             renderNotesManager('orders', order._id, order, 'modalDetailOrderNoteComposer');
+            renderOrderVendorAssignments(order, 'modalDetailOrderVendorAssignments');
             
             // Display documents in modal
             const modalDocsList = document.getElementById('modalOrderDocumentsList');
@@ -4289,6 +4460,13 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         
         if (detailOrderDescription) detailOrderDescription.textContent = order.description || 'No description provided';
         if (detailOrderNoteComposer) renderNotesManager('orders', order._id, order, 'detailOrderNoteComposer');
+        const vendorContext = document.getElementById('detailOrderVendorsContext');
+        if (vendorContext) {
+            vendorContext.textContent = order.orderType === 'recurring'
+                ? 'Recurring order — add every vendor visit needed for the service cycle.'
+                : 'One-time order — add every vendor needed for this job.';
+        }
+        renderOrderVendorAssignments(order, 'detailOrderVendorAssignments');
         
         // Display documents
         const docsList = document.getElementById('orderDocumentsList');
@@ -4360,6 +4538,11 @@ window.deleteCurrentDetailOrder = function() {
     }
 };
 window.closeOrderDetailModal = closeOrderDetailModal;
+window.openOrderVendorAssignmentModal = openOrderVendorAssignmentModal;
+window.closeOrderVendorAssignmentModal = closeOrderVendorAssignmentModal;
+window.saveOrderVendorAssignment = saveOrderVendorAssignment;
+window.removeOrderVendorAssignment = removeOrderVendorAssignment;
+window.openAssignedVendorProfile = openAssignedVendorProfile;
 
 function closeOrderModal() {
     document.getElementById('orderModal').classList.remove('show');
@@ -10604,7 +10787,13 @@ async function showVendorDetail(vendorId) {
         });
         
         const orders = await window.APIService.getOrders();
-        const vendorOrders = orders.filter(order => order.vendor && (order.vendor._id === vendorId || order.vendor === vendorId));
+        const vendorOrders = orders.filter(order => {
+            const isPrimaryVendor = getVendorRecordId(order.vendor) === String(vendorId);
+            const isAssignedVendor = (order.vendorAssignments || []).some(assignment =>
+                getVendorRecordId(assignment.vendor) === String(vendorId)
+            );
+            return isPrimaryVendor || isAssignedVendor;
+        });
         
         // Calculate financial summary
         const totalValue = vendorOrders.reduce((sum, order) => sum + (order.amount || 0), 0);

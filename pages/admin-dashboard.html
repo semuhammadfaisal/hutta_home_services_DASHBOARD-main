@@ -59,6 +59,7 @@
     <link rel="stylesheet" href="../assets/css/workflow-filterbar-polish.css?v=20260812-filterbar-polish">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
+    <link rel="stylesheet" href="../assets/css/order-vendor-assignments.css?v=20260828-multi-vendor">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -1373,6 +1374,20 @@
                             <span class="display-label">Address:</span>
                             <span id="detailOrderCustomerAddress">-</span>
                         </div>
+                    </div>
+                </div>
+
+                <div class="detail-info-card order-vendors-card">
+                    <h3 class="order-vendors-heading">
+                        <i class="fas fa-helmet-safety"></i>
+                        <span>Assigned Vendors</span>
+                        <button type="button" class="btn-secondary order-vendor-add-button" onclick="openOrderVendorAssignmentModal()">
+                            <i class="fas fa-plus"></i> Add vendor
+                        </button>
+                    </h3>
+                    <p class="order-vendors-context" id="detailOrderVendorsContext">Add each vendor visit with its service and scheduled arrival.</p>
+                    <div id="detailOrderVendorAssignments" class="order-vendor-assignments-list">
+                        <p class="order-vendors-empty">No vendors attached yet.</p>
                     </div>
                 </div>
                 
@@ -4684,6 +4699,18 @@
                             </div>
                         </div>
                     </div>
+                    <div class="detail-info-card modal-order-vendors-card">
+                        <h3 class="order-vendors-heading">
+                            <i class="fas fa-helmet-safety"></i>
+                            <span>Assigned Vendors</span>
+                            <button type="button" class="btn-secondary order-vendor-add-button" onclick="openOrderVendorAssignmentModal(true)">
+                                <i class="fas fa-plus"></i> Add vendor
+                            </button>
+                        </h3>
+                        <div id="modalDetailOrderVendorAssignments" class="order-vendor-assignments-list">
+                            <p class="order-vendors-empty">No vendors attached yet.</p>
+                        </div>
+                    </div>
                     <div class="detail-info-card modal-order-notes-card">
                         <h3><i class="fas fa-align-left"></i> Description & Notes</h3>
                         <div class="info-item full-width description-notes-section description-section">
@@ -4710,8 +4737,48 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="orderVendorAssignmentModal" role="dialog" aria-modal="true" aria-labelledby="orderVendorAssignmentTitle" aria-hidden="true">
+        <div class="modal-content order-vendor-assignment-modal">
+            <div class="modal-header">
+                <div>
+                    <span class="order-vendor-modal-eyebrow">Order staffing</span>
+                    <h2 id="orderVendorAssignmentTitle">Attach a vendor</h2>
+                    <p>Add the service and the vendor's Arizona arrival time.</p>
+                </div>
+                <button type="button" class="modal-close" onclick="closeOrderVendorAssignmentModal()" aria-label="Close vendor assignment form">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="orderVendorAssignmentForm" onsubmit="saveOrderVendorAssignment(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="orderAssignmentVendor">Vendor *</label>
+                        <select id="orderAssignmentVendor" required>
+                            <option value="">Select a vendor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="orderAssignmentService">Service performed *</label>
+                        <input type="text" id="orderAssignmentService" maxlength="500" required autocomplete="off" placeholder="e.g. Plumbing repair">
+                    </div>
+                    <div class="form-group">
+                        <label for="orderAssignmentScheduledStart">Scheduled day and time *</label>
+                        <input type="datetime-local" id="orderAssignmentScheduledStart" required>
+                        <small>Arizona time (MST)</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeOrderVendorAssignmentModal()">Cancel</button>
+                    <button type="submit" class="btn-primary" id="saveOrderVendorAssignmentButton">
+                        <i class="fas fa-link"></i> Attach vendor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20260806-profile-sync"></script>
+    <script src="../assets/js/api-service.js?v=20260828-multi-vendor"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
     <script src="../assets/js/custom-fields.js?v=20260807-form-rebrand"></script>
@@ -4726,7 +4793,7 @@
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260812-payment-receipts"></script>
+    <script src="../assets/js/dashboard-script.js?v=20260828-multi-vendor"></script>
     <script src="../assets/js/incoming-quotes.js?v=20260725-quote-table-polish"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>

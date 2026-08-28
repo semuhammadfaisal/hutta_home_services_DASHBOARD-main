@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 const noteSchema = require('./noteSchema');
 const attachmentSchema = require('./attachmentSchema');
 
+const vendorAssignmentSchema = new mongoose.Schema({
+  vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true },
+  service: { type: String, required: true, trim: true, maxlength: 500 },
+  scheduledStart: { type: Date, required: true },
+  timezone: { type: String, enum: ['America/Phoenix'], default: 'America/Phoenix' },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
+
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
   workOrderNumber: { type: String },
@@ -67,6 +75,7 @@ const orderSchema = new mongoose.Schema({
   processingFee: { type: Number, default: 0 },
   profit: { type: Number, default: 0 },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
+  vendorAssignments: { type: [vendorAssignmentSchema], default: [] },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
   startDate: { type: Date },
   scheduleDate: { type: Date },
@@ -90,6 +99,8 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ customerId: 1 });
 orderSchema.index({ employee: 1 });
 orderSchema.index({ vendor: 1 });
+orderSchema.index({ 'vendorAssignments.vendor': 1 });
+orderSchema.index({ 'vendorAssignments.scheduledStart': 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ pipelineRecordId: 1 });
 orderSchema.index({ createdAt: -1 });

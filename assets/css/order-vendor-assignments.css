@@ -1,0 +1,192 @@
+/* Multi-vendor assignments on order detail views. */
+body #order-detail .order-vendors-card {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+}
+
+body #order-detail .order-notes-card {
+    grid-row: 4 !important;
+}
+
+.order-vendors-heading {
+    justify-content: flex-start !important;
+}
+
+.order-vendor-add-button {
+    margin-left: auto !important;
+    min-height: 34px !important;
+    padding: 7px 11px !important;
+    white-space: nowrap;
+}
+
+/* The action's plus icon should remain plain, not inherit the card-title icon box. */
+body #order-detail .order-vendors-heading .order-vendor-add-button i,
+body #orderDetailModal .order-vendors-heading .order-vendor-add-button i {
+    display: inline-block !important;
+    width: auto !important;
+    height: auto !important;
+    color: currentColor !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: inherit !important;
+}
+
+.order-vendors-context {
+    margin: 0;
+    padding: 12px 16px 0;
+    color: var(--smpl-text-muted, #626266);
+    font-size: 13px;
+}
+
+.order-vendor-assignments-list {
+    padding: 12px 16px 16px;
+}
+
+.order-vendor-assignment-row {
+    display: grid;
+    grid-template-columns: minmax(160px, 1.25fr) minmax(160px, 1fr) minmax(210px, 1.15fr) auto;
+    align-items: center;
+    gap: 18px;
+    min-height: 68px;
+    padding: 12px 14px;
+    border: 1px solid var(--smpl-line, #e5e7eb);
+    border-radius: 10px;
+    background: var(--smpl-paper, #fff);
+}
+
+.order-vendor-assignment-row + .order-vendor-assignment-row {
+    margin-top: 9px;
+}
+
+.order-vendor-assignment-field {
+    min-width: 0;
+}
+
+.order-vendor-assignment-label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--smpl-text-muted, #626266);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.order-vendor-assignment-value,
+.order-vendor-profile-link {
+    color: var(--smpl-ink, #0b0b0c);
+    font-size: 14px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.order-vendor-profile-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--smpl-ink, #0b0b0c);
+    text-decoration: none;
+}
+
+.order-vendor-profile-link:hover {
+    color: var(--smpl-ink-hover, #242426);
+    text-decoration: underline;
+}
+
+.order-vendor-assignment-remove {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--smpl-line, #ececed);
+    border-radius: 8px;
+    background: var(--smpl-paper, #fff);
+    color: var(--smpl-text-muted, #626266);
+    cursor: pointer;
+}
+
+.order-vendor-assignment-remove:hover {
+    border-color: var(--smpl-ink, #0b0b0c);
+    color: var(--smpl-ink, #0b0b0c);
+    background: var(--smpl-surface, #f6f6f4);
+}
+
+.order-vendors-empty {
+    margin: 0;
+    padding: 18px;
+    border: 1px dashed var(--smpl-soft, #b6b6ba);
+    border-radius: 10px;
+    color: var(--smpl-text-muted, #626266);
+    text-align: center;
+}
+
+#orderDetailModal .modal-order-vendors-card {
+    grid-column: 1 / -1;
+}
+
+#orderDetailModal .order-vendor-assignments-list {
+    padding: 12px;
+}
+
+#orderVendorAssignmentModal {
+    z-index: 2200;
+}
+
+#orderVendorAssignmentModal .order-vendor-assignment-modal {
+    max-width: 520px;
+}
+
+#orderVendorAssignmentModal .modal-header {
+    align-items: flex-start;
+}
+
+#orderVendorAssignmentModal .modal-header h2 {
+    margin: 3px 0 5px;
+}
+
+#orderVendorAssignmentModal .modal-header p {
+    margin: 0;
+    color: var(--smpl-text-muted, #626266);
+    font-size: 13px;
+}
+
+.order-vendor-modal-eyebrow {
+    color: var(--smpl-text-muted, #626266);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+#orderVendorAssignmentModal .modal-body {
+    display: grid;
+    gap: 18px;
+}
+
+#orderVendorAssignmentModal .form-group small {
+    color: var(--smpl-text-muted, #626266);
+}
+
+#orderVendorAssignmentModal .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px 22px;
+    border-top: 1px solid var(--smpl-line, #ececed);
+}
+
+@media (max-width: 760px) {
+    .order-vendor-assignment-row {
+        grid-template-columns: 1fr;
+        gap: 11px;
+    }
+
+    .order-vendor-assignment-remove {
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .order-vendors-heading {
+        flex-wrap: wrap;
+    }
+}

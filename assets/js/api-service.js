@@ -461,6 +461,26 @@ class APIService {
         });
     }
 
+    async addOrderVendorAssignment(orderId, assignment) {
+        return this.request(`/orders/${orderId}/vendor-assignments`, {
+            method: 'POST',
+            body: JSON.stringify(assignment)
+        });
+    }
+
+    async updateOrderVendorAssignment(orderId, assignmentId, assignment) {
+        return this.request(`/orders/${orderId}/vendor-assignments/${assignmentId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(assignment)
+        });
+    }
+
+    async removeOrderVendorAssignment(orderId, assignmentId) {
+        return this.request(`/orders/${orderId}/vendor-assignments/${assignmentId}`, {
+            method: 'DELETE'
+        });
+    }
+
     async getOrderStats() {
         return this.request('/orders/stats');
     }

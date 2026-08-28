@@ -27,6 +27,44 @@ function parseMdtDateInput(value) {
   return dateInputToMDT(value);
 }
 
+function parseVendorAssignmentInput(body = {}, { partial = false } = {}) {
+  const payload = {};
+  if (!partial || body.vendor !== undefined) {
+    if (!mongoose.Types.ObjectId.isValid(body.vendor)) {
+      throw Object.assign(new Error('A valid vendor is required'), { status: 400 });
+    }
+    payload.vendor = body.vendor;
+  }
+  if (!partial || body.service !== undefined) {
+    const service = String(body.service || '').trim();
+    if (!service || service.length > 500) {
+      throw Object.assign(new Error('Service is required and must be 500 characters or fewer'), { status: 400 });
+    }
+    payload.service = service;
+  }
+  if (!partial || body.scheduledStart !== undefined) {
+    const rawStart = String(body.scheduledStart || '');
+    if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(rawStart)) {
+      throw Object.assign(new Error('Scheduled date and time must include a timezone'), { status: 400 });
+    }
+    const scheduledStart = new Date(rawStart);
+    if (Number.isNaN(scheduledStart.getTime())) {
+      throw Object.assign(new Error('A valid scheduled date and time is required'), { status: 400 });
+    }
+    payload.scheduledStart = scheduledStart;
+  }
+  payload.timezone = 'America/Phoenix';
+  return payload;
+}
+
+async function populatedVendorAssignments(orderId) {
+  const order = await Order.findById(orderId)
+    .select('vendorAssignments')
+    .populate('vendorAssignments.vendor', 'name category isActive')
+    .lean();
+  return order?.vendorAssignments || [];
+}
+
 // Clear stats cache endpoint
 router.post('/clear-cache', authenticateToken, (req, res) => {
   invalidateOrderStatsCache();
@@ -130,6 +168,7 @@ router.get('/', authenticateToken, async (req, res) => {
         .lean(),
       Order.find()
         .populate('vendor', 'name category')
+        .populate('vendorAssignments.vendor', 'name category isActive')
         .populate('employee', 'name')
         .sort({ createdAt: -1 })
         .lean()
@@ -235,6 +274,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     const order = await Order.findById(req.params.id)
       .populate('vendor')
+      .populate('vendorAssignments.vendor', 'name category isActive')
       .populate('employee', 'name')
       .lean();
 
@@ -270,6 +310,63 @@ router.get('/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get order error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Add a vendor service visit without replacing the order's legacy primary vendor.
+router.post('/:id/vendor-assignments', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const payload = parseVendorAssignmentInput(req.body);
+    const [order, vendor] = await Promise.all([
+      Order.findById(req.params.id),
+      Vendor.findById(payload.vendor).select('_id')
+    ]);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+
+    payload.createdBy = req.user?.userId || req.user?.id;
+    order.vendorAssignments.push(payload);
+    await order.save();
+    invalidateOrderStatsCache();
+    res.status(201).json({ vendorAssignments: await populatedVendorAssignments(order._id) });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message || 'Unable to attach vendor' });
+  }
+});
+
+router.patch('/:id/vendor-assignments/:assignmentId', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    const assignment = order.vendorAssignments.id(req.params.assignmentId);
+    if (!assignment) return res.status(404).json({ message: 'Vendor assignment not found' });
+
+    const payload = parseVendorAssignmentInput(req.body, { partial: true });
+    if (payload.vendor) {
+      const vendor = await Vendor.findById(payload.vendor).select('_id');
+      if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    }
+    Object.assign(assignment, payload);
+    await order.save();
+    invalidateOrderStatsCache();
+    res.json({ vendorAssignments: await populatedVendorAssignments(order._id) });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message || 'Unable to update vendor assignment' });
+  }
+});
+
+router.delete('/:id/vendor-assignments/:assignmentId', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    const assignment = order.vendorAssignments.id(req.params.assignmentId);
+    if (!assignment) return res.status(404).json({ message: 'Vendor assignment not found' });
+    assignment.deleteOne();
+    await order.save();
+    invalidateOrderStatsCache();
+    res.json({ vendorAssignments: await populatedVendorAssignments(order._id) });
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Unable to remove vendor assignment' });
   }
 });
 
