@@ -350,6 +350,7 @@ class APIService {
     }
 
     async getIncomingQuoteVendors() {
+        this.requestCache.delete('GET:/incoming-quotes/vendor-options');
         return this.request('/incoming-quotes/vendor-options');
     }
 

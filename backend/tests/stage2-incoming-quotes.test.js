@@ -86,6 +86,16 @@ test('Stage 2 forms retain their form reference across asynchronous submissions'
   assert.ok((ui.match(/form\.reset\(\)/g) || []).length >= 2);
 });
 
+test('Stage 2 compliance panel renders the canonical vendor ROC and COI fields', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', '..', 'assets', 'js', 'incoming-quotes.js'), 'utf8');
+  const api = fs.readFileSync(path.join(__dirname, '..', '..', 'assets', 'js', 'api-service.js'), 'utf8');
+  assert.match(ui, /vendor\.rocLicenseNumber/);
+  assert.match(ui, /vendor\.certificateOfInsuranceOnFile/);
+  assert.doesNotMatch(ui, /vendor\.rocNumber/);
+  assert.doesNotMatch(ui, /vendor\.coiOnFile/);
+  assert.match(api, /requestCache\.delete\('GET:\/incoming-quotes\/vendor-options'\)/);
+});
+
 test('Stage 2 workspace uses the focused responsive quote-entry design', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', '..', 'pages', 'admin-dashboard.html'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', '..', 'assets', 'css', 'stage2-workspace-polish.css'), 'utf8');

@@ -43,7 +43,7 @@
     const warnings = compliance.warnings || [];
     panel.hidden = false;
     panel.innerHTML = `<div><span>Vendor compliance</span><strong class="incoming-compliance ${escapeHtml(compliance.status || 'missing')}">${escapeHtml(compliance.status || 'missing')}</strong></div>
-      <dl><div><dt>License</dt><dd>${escapeHtml(vendor.contractorLicenseNumber || 'Missing')}</dd></div><div><dt>ROC</dt><dd>${escapeHtml(vendor.rocNumber || 'Missing')}</dd></div><div><dt>COI</dt><dd>${vendor.coiOnFile ? 'On file' : 'Missing'}</dd></div><div><dt>Insurance</dt><dd>${date(vendor.insuranceExpirationDate)}</dd></div></dl>
+      <dl><div><dt>License</dt><dd>${escapeHtml(vendor.contractorLicenseNumber || 'Missing')}</dd></div><div><dt>ROC</dt><dd>${escapeHtml(vendor.rocLicenseNumber || 'Missing')}</dd></div><div><dt>COI</dt><dd>${vendor.certificateOfInsuranceOnFile ? 'On file' : 'Missing'}</dd></div><div><dt>Insurance</dt><dd>${date(vendor.insuranceExpirationDate)}</dd></div></dl>
       ${warnings.length ? `<p><i class="fas fa-exclamation-triangle"></i>${escapeHtml(warnings.join(' · '))}</p>` : '<p class="is-clear"><i class="fas fa-check-circle"></i>Compliance information is current.</p>'}`;
   }
 
