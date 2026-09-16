@@ -20,6 +20,7 @@ const memCache = require('../utils/memoryCache');
 const { TIMEZONE, TOKEN_TTL_MS, MAX_DECISION_BODY_BYTES, cleanText, generateToken, hashToken, encryptToken, nextScheduleReference, nextWorkOrderReference, parseProposal, parseDecision, scheduleSnapshotHash, workOrderSnapshotHash, publicSchedule } = require('../utils/scheduling');
 const { COMPLETION_TOKEN_TTL_MS, generateToken: generateCompletionToken, hashToken: hashCompletionToken, encryptToken: encryptCompletionToken, nextCompletionReference } = require('../utils/closeout');
 const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
+const { activeCompliance } = require('../utils/vendorLeadDistribution');
 
 const router = express.Router();
 const staffRoles = checkRole(['admin', 'manager', 'account_rep']);
@@ -30,8 +31,9 @@ const actorId = req => req.user?.userId || req.user?.id;
 const noStore = res => { res.set('Cache-Control', 'no-store, max-age=0'); res.set('Pragma', 'no-cache'); };
 const invalidate = () => { memCache.del('orders:stats:v2'); invalidateDashboardStatsCache(); };
 
-async function conflicts(vendorId, start, end, excludeOrderId, session) {
-  return JobSchedule.find({ vendorId, orderId: { $ne: excludeOrderId }, status: { $in: ['pending_vendor', 'accepted'] }, proposedStart: { $lt: end }, proposedEnd: { $gt: start } })
+async function conflicts(vendorId, start, end, excludeOrderId, session, assignmentId) {
+  const exclusion = assignmentId ? { $nor: [{ orderId: excludeOrderId, assignmentId }] } : { orderId: { $ne: excludeOrderId } };
+  return JobSchedule.find({ vendorId, ...exclusion, status: { $in: ['pending_vendor', 'accepted'] }, proposedStart: { $lt: end }, proposedEnd: { $gt: start } })
     .select('scheduleReference orderId proposedStart proposedEnd status').session(session || null).lean();
 }
 function proposalOutbox(schedule, token) {
@@ -46,7 +48,7 @@ function decisionOutbox(schedule, decision, workOrder, completionToken) {
   ];
   return [
     { type: 'customer_schedule_confirmation', dedupeKey: `${schedule._id}:customer_schedule_confirmation`, recipients: [schedule.customerSnapshot.email], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
-    { type: 'vendor_schedule_accepted_confirmation', dedupeKey: `${schedule._id}:vendor_schedule_accepted_confirmation`, recipients: [schedule.vendorSnapshot.email], payload: { ...base, vendorWorkOrderId: String(workOrder._id), encryptedCompletionToken: encryptCompletionToken(completionToken) }, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
+    { type: 'vendor_schedule_accepted_confirmation', dedupeKey: `${schedule._id}:vendor_schedule_accepted_confirmation`, recipients: [schedule.vendorSnapshot.email], payload: { ...base, vendorWorkOrderId: String(workOrder._id), ...(completionToken ? { encryptedCompletionToken: encryptCompletionToken(completionToken) } : {}) }, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id },
     { type: 'staff_schedule_accepted_alert', dedupeKey: `${schedule._id}:staff_schedule_accepted_alert`, recipients: ['sales@smplfix.com'], payload: base, orderId: schedule.orderId, outgoingQuoteId: schedule.outgoingQuoteId, jobScheduleId: schedule._id, vendorWorkOrderId: workOrder._id }
   ];
 }
@@ -71,8 +73,16 @@ router.post('/public/decision', publicLimiter, async (req, res, next) => {
       const existing = await VendorScheduleDecision.findOne({ jobScheduleId: schedule._id }).session(session);
       if (existing) { if (existing.decision !== wanted) throw Object.assign(new Error('A different decision has already been recorded'), { status: 409 }); result = { success: true, status: existing.decision, decisionAt: existing.decisionAt, duplicate: true }; return; }
       if (schedule.status !== 'pending_vendor') throw Object.assign(new Error('This schedule is no longer awaiting a decision'), { status: 409 });
-      const order = await Order.findOne({ _id: schedule.orderId, currentJobScheduleId: schedule._id, workflowStatus: 'schedule_pending_vendor' }).session(session);
+      const orderQuery = schedule.assignmentId ? { _id: schedule.orderId, vendorAssignments: { $elemMatch: { _id: schedule.assignmentId, vendor: schedule.vendorId, jobScheduleId: schedule._id } } } : { _id: schedule.orderId, currentJobScheduleId: schedule._id, workflowStatus: 'schedule_pending_vendor' };
+      const order = await Order.findOne(orderQuery).session(session);
       if (!order) throw Object.assign(new Error('This proposal is no longer the current schedule'), { status: 409 });
+      const assignment = schedule.assignmentId ? order.vendorAssignments.id(schedule.assignmentId) : null;
+      if (wanted === 'accepted') {
+        const vendor = await Vendor.findById(schedule.vendorId).session(session);
+        if (!activeCompliance(vendor, schedule.proposedEnd)) throw Object.assign(new Error('Vendor compliance must remain active through the scheduled visit'), { status: 409 });
+        const overlap = await JobSchedule.findOne({ _id: { $ne: schedule._id }, vendorId: schedule.vendorId, status: 'accepted', proposedStart: { $lt: schedule.proposedEnd }, proposedEnd: { $gt: schedule.proposedStart } }).session(session);
+        if (overlap) throw Object.assign(new Error('This visit conflicts with another confirmed assignment'), { status: 409 });
+      }
       const decisionAt = new Date();
       const [decision] = await VendorScheduleDecision.create([{ jobScheduleId: schedule._id, orderId: order._id, vendorId: schedule.vendorId, decision: wanted, typedName: payload.typedName, changeRequestMessage: wanted === 'changes_requested' ? payload.changeRequestMessage : undefined, decisionAt, scheduleReference: schedule.scheduleReference, revisionNumber: schedule.revisionNumber, scheduleSnapshotHash: scheduleSnapshotHash(schedule), ipAddress: cleanText(req.ip, 128), userAgent: cleanText(req.get('user-agent'), 1000) }], { session });
       schedule.status = wanted;
@@ -81,19 +91,20 @@ router.post('/public/decision', publicLimiter, async (req, res, next) => {
       await schedule.save({ session });
       let workOrder = null, completionToken = null;
       if (wanted === 'accepted') {
-        if (order.confirmedJobScheduleId && String(order.confirmedJobScheduleId) !== String(schedule._id)) await JobSchedule.updateOne({ _id: order.confirmedJobScheduleId, status: 'accepted' }, { $set: { status: 'superseded', supersededAt: decisionAt } }, { session });
+        if (!assignment && order.confirmedJobScheduleId && String(order.confirmedJobScheduleId) !== String(schedule._id)) await JobSchedule.updateOne({ _id: order.confirmedJobScheduleId, status: 'accepted' }, { $set: { status: 'superseded', supersededAt: decisionAt } }, { session });
         const workOrderReference = await nextWorkOrderReference(session);
-        const workData = { workOrderReference, orderId: order._id, jobScheduleId: schedule._id, outgoingQuoteId: schedule.outgoingQuoteId, vendorId: schedule.vendorId, revisionNumber: schedule.revisionNumber, customerSnapshot: schedule.customerSnapshot.toObject?.() || schedule.customerSnapshot, vendorSnapshot: schedule.vendorSnapshot.toObject?.() || schedule.vendorSnapshot, jobSnapshot: schedule.jobSnapshot.toObject?.() || schedule.jobSnapshot, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, timezone: TIMEZONE, accessInstructions: schedule.accessInstructions, generatedAt: decisionAt };
+        const workData = { workOrderReference, orderId: order._id, assignmentId: assignment?._id, jobScheduleId: schedule._id, outgoingQuoteId: schedule.outgoingQuoteId, vendorId: schedule.vendorId, revisionNumber: schedule.revisionNumber, customerSnapshot: schedule.customerSnapshot.toObject?.() || schedule.customerSnapshot, vendorSnapshot: schedule.vendorSnapshot.toObject?.() || schedule.vendorSnapshot, jobSnapshot: schedule.jobSnapshot.toObject?.() || schedule.jobSnapshot, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, timezone: TIMEZONE, accessInstructions: schedule.accessInstructions, generatedAt: decisionAt };
         workData.snapshotHash = workOrderSnapshotHash(workData); [workOrder] = await VendorWorkOrder.create([workData], { session });
-        completionToken = generateCompletionToken();
-        let completion = await JobCompletion.findOne({ orderId: order._id }).session(session).select('+publicTokenHash');
+        completionToken = assignment ? null : generateCompletionToken();
+        let completion = await JobCompletion.findOne(assignment ? { orderId: order._id, assignmentId: assignment._id } : { orderId: order._id, assignmentId: { $exists: false } }).session(session).select('+publicTokenHash');
         const completionData = {
+          assignmentId: assignment?._id,
           jobScheduleId: schedule._id, outgoingQuoteId: schedule.outgoingQuoteId, vendorWorkOrderId: workOrder._id,
           customerId: order.customerId, vendorId: schedule.vendorId, status: 'pending',
           customerSnapshot: workData.customerSnapshot, vendorSnapshot: workData.vendorSnapshot,
           scheduleSnapshot: { scheduleReference: schedule.scheduleReference, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, timezone: schedule.timezone, accessInstructions: schedule.accessInstructions },
           jobSnapshot: workData.jobSnapshot, approvedTotal: order.amount,
-          publicTokenHash: hashCompletionToken(completionToken), tokenExpiresAt: new Date(new Date(schedule.proposedEnd).getTime() + COMPLETION_TOKEN_TTL_MS), tokenSentAt: decisionAt
+          publicTokenHash: completionToken ? hashCompletionToken(completionToken) : undefined, tokenExpiresAt: completionToken ? new Date(new Date(schedule.proposedEnd).getTime() + COMPLETION_TOKEN_TTL_MS) : undefined, tokenSentAt: completionToken ? decisionAt : undefined
         };
         if (!completion) {
           const completionReference = await nextCompletionReference(session);
@@ -102,8 +113,10 @@ router.post('/public/decision', publicLimiter, async (req, res, next) => {
           if (completion.status !== 'pending') throw Object.assign(new Error('A completed job cannot be rescheduled'), { status: 409 });
           Object.assign(completion, completionData); completion.history.push({ action: 'completion_link_rotated_for_reschedule', actorType: 'system' }); await completion.save({ session });
         }
-        Object.assign(order, { confirmedJobScheduleId: schedule._id, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, scheduledTimezone: TIMEZONE, scheduleConfirmedAt: decisionAt, scheduleDate: schedule.proposedStart });
+        if (assignment) { Object.assign(assignment, { status: 'scheduled', vendorWorkOrderId: workOrder._id, jobCompletionId: completion._id, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, accessInstructions: schedule.accessInstructions }); assignment.statusHistory.push({ status: 'scheduled', actorType: 'vendor', message: `Accepted ${schedule.scheduleReference}` }); }
+        else Object.assign(order, { confirmedJobScheduleId: schedule._id, scheduledStart: schedule.proposedStart, scheduledEnd: schedule.proposedEnd, scheduledTimezone: TIMEZONE, scheduleConfirmedAt: decisionAt, scheduleDate: schedule.proposedStart });
       }
+      if (assignment && wanted === 'changes_requested') { assignment.status = 'schedule_changes_requested'; assignment.statusHistory.push({ status: 'schedule_changes_requested', actorType: 'vendor', message: payload.changeRequestMessage }); }
       const sync = await synchronizeWorkflowOrder(order, wanted === 'accepted' ? 'scheduled' : 'schedule_changes_requested', { session });
       const users = await User.find({ isActive: true, role: { $in: ['admin', 'manager', 'account_rep'] } }).select('_id').session(session).lean();
       if (users.length) await Notification.insertMany(users.map(user => ({ userId: user._id, title: wanted === 'accepted' ? 'Vendor accepted schedule' : 'Vendor requested schedule changes', message: `${schedule.vendorSnapshot.name} ${wanted === 'accepted' ? 'accepted' : 'requested changes to'} ${schedule.scheduleReference}.`, type: wanted === 'accepted' ? 'success' : 'warning', priority: 'high', actionUrl: '#scheduling', metadata: { orderId: order._id, jobScheduleId: schedule._id, decision: wanted } })), { session });
@@ -120,22 +133,28 @@ router.post('/public/decision', publicLimiter, async (req, res, next) => {
 router.use(authenticateToken, staffRoles);
 
 router.get('/orders', async (_req, res, next) => {
-  try { const orders = await Order.find({ workflowStatus: { $in: ['customer_approved', 'schedule_pending_vendor', 'schedule_changes_requested', 'scheduled'] } }).populate('vendor', 'name email phone emails phones').sort({ updatedAt: -1 }).lean(); const scheduleIds = orders.map(o => o.currentJobScheduleId).filter(Boolean); const schedules = await JobSchedule.find({ _id: { $in: scheduleIds } }).lean(); const byId = new Map(schedules.map(s => [String(s._id), s])); res.json(orders.map(o => ({ ...o, currentSchedule: byId.get(String(o.currentJobScheduleId)) || null }))); } catch (error) { next(error); }
+  try { const orders = await Order.find({...require('../utils/serviceRequestWorkspace').workspaceFilter(_req), workflowStatus: { $in: ['customer_approved', 'schedule_pending_vendor', 'schedule_changes_requested', 'scheduled'] } }).populate('vendor', 'name email phone emails phones').sort({ updatedAt: -1 }).lean(); const scheduleIds = orders.map(o => o.currentJobScheduleId).filter(Boolean); const schedules = await JobSchedule.find({ _id: { $in: scheduleIds } }).lean(); const byId = new Map(schedules.map(s => [String(s._id), s])); res.json(orders.map(o => ({ ...o, currentSchedule: byId.get(String(o.currentJobScheduleId)) || null }))); } catch (error) { next(error); }
 });
 router.get('/orders/:orderId', async (req, res, next) => {
-  try { const order = await Order.findById(req.params.orderId).populate('vendor').lean(); if (!order) return res.status(404).json({ message: 'Order not found' }); const [schedules, decisions, workOrders, emailMessages] = await Promise.all([JobSchedule.find({ orderId: order._id }).select('+internalNotes').sort({ revisionNumber: -1 }).lean(), VendorScheduleDecision.find({ orderId: order._id }).lean(), VendorWorkOrder.find({ orderId: order._id }).sort({ revisionNumber: -1 }).lean(), EmailOutbox.find({ orderId: order._id, type: { $in: STAGE5_TYPES } }).select('-payload').sort({ createdAt: -1 }).lean()]); if (!['admin', 'manager'].includes(req.user.role)) decisions.forEach(d => { delete d.ipAddress; delete d.userAgent; }); res.json({ order, schedules, decisions, workOrders, emailMessages }); } catch (error) { next(error); }
+  try { const order = await Order.findById(req.params.orderId).populate('vendor').populate('vendorAssignments.vendor', 'name category').lean(); if (!order) return res.status(404).json({ message: 'Order not found' }); const [schedules, decisions, workOrders, emailMessages] = await Promise.all([JobSchedule.find({ orderId: order._id }).select('+internalNotes').sort({ revisionNumber: -1 }).lean(), VendorScheduleDecision.find({ orderId: order._id }).lean(), VendorWorkOrder.find({ orderId: order._id }).sort({ revisionNumber: -1 }).lean(), EmailOutbox.find({ orderId: order._id, type: { $in: STAGE5_TYPES } }).select('-payload').sort({ createdAt: -1 }).lean()]); if (!['admin', 'manager'].includes(req.user.role)) decisions.forEach(d => { delete d.ipAddress; delete d.userAgent; }); res.json({ order, schedules, decisions, workOrders, emailMessages }); } catch (error) { next(error); }
 });
 router.post('/orders/:orderId/proposals', async (req, res, next) => {
   const { payload, errors } = parseProposal(req.body); if (errors.length) return res.status(400).json({ message: errors.join('. ') });
   const session = await mongoose.startSession();
   try { let created; await session.withTransaction(async () => {
     const order = await Order.findById(req.params.orderId).session(session); if (!order || !['customer_approved', 'scheduled', 'schedule_changes_requested'].includes(order.workflowStatus)) throw Object.assign(new Error('Order is not ready for a scheduling proposal'), { status: 409 });
-    const [quote, vendor] = await Promise.all([OutgoingQuote.findOne({ _id: order.approvedOutgoingQuoteId, status: 'sent', customerDecisionStatus: 'approved' }).session(session), Vendor.findOne({ _id: order.vendor, isActive: true, onboardingStatus: 'approved' }).session(session)]);
+    const requestedAssignment = req.body.assignmentId && mongoose.Types.ObjectId.isValid(req.body.assignmentId) ? order.vendorAssignments.id(req.body.assignmentId) : null;
+    if (req.body.assignmentId && !requestedAssignment) throw Object.assign(new Error('The selected vendor assignment does not belong to this Order'), { status: 400 });
+    const selectedVendorId = requestedAssignment?.vendor || order.vendor;
+    const [quote, vendor] = await Promise.all([OutgoingQuote.findOne({ _id: order.approvedOutgoingQuoteId, status: 'sent', customerDecisionStatus: 'approved' }).session(session), Vendor.findOne({ _id: selectedVendorId, isActive: true, onboardingStatus: 'approved' }).session(session)]);
     if (!quote || !vendor) throw Object.assign(new Error('Approved quote and active selected vendor are required'), { status: 409 });
+    if (!activeCompliance(vendor, payload.proposedEnd)) throw Object.assign(new Error('Vendor compliance must remain active through the scheduled visit'), { status: 409 });
     const vendorEmail = vendorPrimaryEmail(vendor); if (!emailPattern.test(vendorEmail) || !emailPattern.test(quote.customerSnapshot?.email || '') || !quote.customerSnapshot?.address || !quote.scopeOfWork) throw Object.assign(new Error('Valid vendor/customer emails, service address, and approved scope are required'), { status: 409 });
-    const overlap = await conflicts(vendor._id, payload.proposedStart, payload.proposedEnd, order._id, session); if (overlap.length && !payload.conflictAcknowledged) throw Object.assign(new Error('Vendor schedule conflict acknowledgement is required'), { status: 409, conflicts: overlap });
-    const latest = await JobSchedule.findOne({ orderId: order._id }).sort({ revisionNumber: -1 }).session(session); const reference = await nextScheduleReference(session); const token = generateToken(); const expires = new Date(Math.min(Date.now() + TOKEN_TTL_MS, payload.proposedStart.getTime()));
-    [created] = await JobSchedule.create([{ scheduleReference: reference, orderId: order._id, outgoingQuoteId: quote._id, customerId: order.customerId, vendorId: vendor._id, revisionNumber: (latest?.revisionNumber || 0) + 1, previousVersionId: latest?._id, proposedStart: payload.proposedStart, proposedEnd: payload.proposedEnd, timezone: TIMEZONE, accessInstructions: payload.accessInstructions, internalNotes: payload.internalNotes, conflictAcknowledged: payload.conflictAcknowledged, conflictSnapshot: overlap, customerSnapshot: { name: quote.customerSnapshot.name, email: quote.customerSnapshot.email, phone: quote.customerSnapshot.phone, address: quote.customerSnapshot.address }, vendorSnapshot: { name: vendor.name, email: vendorEmail, phone: vendorPrimaryPhone(vendor) }, jobSnapshot: { requestReference: order.requestReference, orderReference: order.orderId, service: quote.jobSnapshot.service || order.service, description: quote.jobSnapshot.description || order.description, scopeOfWork: quote.scopeOfWork }, publicTokenHash: hashToken(token), tokenExpiresAt: expires, sentAt: new Date(), sentBy: actorId(req), history: [{ action: 'proposal_sent', actorId: actorId(req), actorEmail: req.user.email }] }], { session });
+    const overlap = await conflicts(vendor._id, payload.proposedStart, payload.proposedEnd, order._id, session, requestedAssignment?._id); if (overlap.length && !payload.conflictAcknowledged) throw Object.assign(new Error('Vendor schedule conflict acknowledgement is required'), { status: 409, conflicts: overlap });
+    const assignmentId = requestedAssignment?._id;
+    const latest = await JobSchedule.findOne({ orderId: order._id, assignmentId: assignmentId || { $exists: false } }).sort({ revisionNumber: -1 }).session(session); const reference = await nextScheduleReference(session); const token = generateToken(); const expires = new Date(Math.min(Date.now() + TOKEN_TTL_MS, payload.proposedStart.getTime()));
+    [created] = await JobSchedule.create([{ scheduleReference: reference, orderId: order._id, assignmentId, outgoingQuoteId: quote._id, customerId: order.customerId, vendorId: vendor._id, revisionNumber: (latest?.revisionNumber || 0) + 1, previousVersionId: latest?._id, proposedStart: payload.proposedStart, proposedEnd: payload.proposedEnd, timezone: TIMEZONE, accessInstructions: payload.accessInstructions, internalNotes: payload.internalNotes, conflictAcknowledged: payload.conflictAcknowledged, conflictSnapshot: overlap, customerSnapshot: { name: quote.customerSnapshot.name, email: quote.customerSnapshot.email, phone: quote.customerSnapshot.phone, address: quote.customerSnapshot.address }, vendorSnapshot: { name: vendor.name, email: vendorEmail, phone: vendorPrimaryPhone(vendor) }, jobSnapshot: { requestReference: order.requestReference, orderReference: order.orderId, service: requestedAssignment?.service || quote.jobSnapshot.service || order.service, description: quote.jobSnapshot.description || order.description, scopeOfWork: requestedAssignment?.scope || quote.scopeOfWork }, publicTokenHash: hashToken(token), tokenExpiresAt: expires, sentAt: new Date(), sentBy: actorId(req), history: [{ action: 'proposal_sent', actorId: actorId(req), actorEmail: req.user.email }] }], { session });
+    if (requestedAssignment) { requestedAssignment.jobScheduleId = created._id; requestedAssignment.status = 'schedule_pending'; requestedAssignment.scheduledStart = payload.proposedStart; requestedAssignment.scheduledEnd = payload.proposedEnd; requestedAssignment.accessInstructions = payload.accessInstructions; requestedAssignment.statusHistory.push({ status: 'schedule_pending', actorType: 'staff', actorId: actorId(req), message: `Proposal ${created.scheduleReference} sent` }); }
     order.currentJobScheduleId = created._id; const sync = await synchronizeWorkflowOrder(order, 'schedule_pending_vendor', { session }); await EmailOutbox.create([proposalOutbox(created, token)], { session });
     created = { ...created.toObject(), sync };
   }); invalidate(); res.status(201).json(created); } catch (error) { if (error.conflicts) return res.status(error.status).json({ message: error.message, conflicts: error.conflicts }); next(error); } finally { await session.endSession(); }

@@ -1,18 +1,83 @@
 // Login System Manager
 class LoginManager {
     constructor() {
+        this.portals = {
+            crm: {
+                destination: '/pages/admin-dashboard.html',
+                subtitle: 'Sign in to continue to the SMPLfix CRM.',
+                description: 'Manage company operations, orders, vendors, and accounting.',
+                button: 'Sign in to CRM'
+            },
+            residential: {
+                destination: '/pages/residential-portal.html',
+                subtitle: 'Sign in to manage your properties and service requests.',
+                description: 'View jobs, approve estimates, manage invoices, and access property records.',
+                button: 'Sign in to Residential Portal'
+            },
+            real_estate_agent: {
+                destination: '/pages/agent-portal.html',
+                subtitle: 'Sign in to manage clients, properties, and closing transactions.',
+                description: 'Coordinate client properties, service requests, documents, and referrals.',
+                button: 'Sign in to Agent Portal'
+            },
+            commercial: {
+                destination: '/pages/commercial-portal.html',
+                subtitle: 'Sign in to oversee your locations, work, and billing.',
+                description: 'Manage portfolios, properties, open orders, reports, and authorized account users.',
+                button: 'Sign in to Commercial Portal'
+            },
+            vendor: {
+                destination: '/pages/vendor-portal.html',
+                subtitle: 'Sign in to manage your vendor profile and compliance.',
+                description: 'Complete onboarding, maintain compliance, and access your authorized vendor workspace.',
+                button: 'Sign in to Vendor Portal'
+            }
+        };
+        this.preferenceKey = 'smplfixPortalPreference';
+        this.initializePortalSelection();
         this.initializeEventListeners();
         this.checkExistingSession();
+    }
+
+    initializePortalSelection() {
+        const select = document.getElementById('portalType');
+        if (!select) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const requestedPath = params.get('returnTo') || '';
+        const requestedPortal = Object.entries(this.portals).find(([, portal]) => requestedPath.startsWith(portal.destination))?.[0];
+        let rememberedPortal = '';
+        try {
+            rememberedPortal = window.localStorage.getItem(this.preferenceKey) || '';
+        } catch (_error) {
+            // Portal preference is optional; sign-in still works when storage is unavailable.
+        }
+
+        const initialPortal = requestedPortal || (this.portals[rememberedPortal] ? rememberedPortal : 'crm');
+        select.value = initialPortal;
+        this.updatePortalPresentation();
     }
 
     initializeEventListeners() {
         const loginForm = document.getElementById('loginForm');
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');
+        const portalSelect = document.getElementById('portalType');
 
         // Form submission - with null check
         if (loginForm) {
             loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+        }
+
+        if (portalSelect) {
+            portalSelect.addEventListener('change', () => {
+                try {
+                    window.localStorage.setItem(this.preferenceKey, this.getSelectedPortal());
+                } catch (_error) {
+                    // Remembering the workspace is a convenience, not an authentication requirement.
+                }
+                this.updatePortalPresentation();
+            });
         }
 
         // Password toggle - with null checks
@@ -29,6 +94,23 @@ class LoginManager {
                 }
             });
         }
+    }
+
+    getSelectedPortal() {
+        const value = document.getElementById('portalType')?.value;
+        return this.portals[value] ? value : 'crm';
+    }
+
+    updatePortalPresentation() {
+        const portal = this.portals[this.getSelectedPortal()];
+        const subtitle = document.getElementById('loginSubtitle');
+        const description = document.getElementById('portalDescription');
+        const buttonText = document.querySelector('#loginBtn .submit-btn__text');
+        const createAccountLink = document.getElementById('createAccountLink');
+        if (subtitle) subtitle.textContent = portal.subtitle;
+        if (description) description.textContent = portal.description;
+        if (buttonText) buttonText.textContent = portal.button;
+        if (createAccountLink) createAccountLink.href = `/pages/signup.html?portal=${encodeURIComponent(this.getSelectedPortal())}`;
     }
 
 
@@ -56,7 +138,9 @@ class LoginManager {
         this.hideError();
         
         try {
-            const response = await window.APIService.login(email, password);
+            const params = new URLSearchParams(window.location.search);
+            const selectedPortal = this.portals[this.getSelectedPortal()];
+            const response = await window.APIService.login(email, password, params.get('returnTo') || selectedPortal.destination);
             
             // Check if user has pending role
             if (response.user && response.user.role === 'pending') {
@@ -64,15 +148,30 @@ class LoginManager {
                 this.showLoading(false);
                 return;
             }
+
+            const verifiedPortal = ['admin', 'manager', 'account_rep'].includes(response.user?.role)
+                ? 'crm'
+                : response.user?.role;
+            if (this.portals[verifiedPortal]) {
+                try {
+                    window.localStorage.setItem(this.preferenceKey, verifiedPortal);
+                } catch (_error) {
+                    // Do not interrupt a successful login when preferences cannot be stored.
+                }
+            }
             
             this.showSuccess();
             setTimeout(() => {
-                const params = new URLSearchParams(window.location.search);
-                const returnTo = params.get('returnTo');
-                const safeReturnTo = returnTo?.startsWith('/') && !returnTo.startsWith('//')
-                    ? returnTo
-                    : (window.DASHBOARD_URL || '/pages/admin-dashboard.html');
-                window.location.href = safeReturnTo;
+                const destination = typeof response.destination === 'string'
+                    && response.destination.startsWith('/')
+                    && !response.destination.startsWith('//')
+                    ? response.destination
+                    : '/pages/login.html';
+                const invitationFragment = ['real_estate_agent', 'residential'].includes(response.user?.role)
+                    && /^#invitation=[A-Za-z0-9_-]{32,100}$/.test(window.location.hash)
+                    ? window.location.hash
+                    : '';
+                window.location.href = `${destination}${invitationFragment}`;
             }, 1000);
         } catch (error) {
             this.showError(error.message || 'Login failed. Please try again.');
@@ -108,6 +207,7 @@ class LoginManager {
             loginBtn.classList.remove('is-loading');
             if (btnText) btnText.style.display = 'inline-block';
             if (spinner) spinner.style.display = 'none';
+            this.updatePortalPresentation();
         }
     }
 

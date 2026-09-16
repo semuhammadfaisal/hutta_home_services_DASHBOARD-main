@@ -1,0 +1,9 @@
+.commercial-workflow-dialog .form-stack { display: grid; gap: 18px; }
+.commercial-workflow-dialog label { display: grid; gap: 8px; }
+.commercial-workflow-dialog .workflow-check { display: flex; align-items: flex-start; gap: 10px; }
+.commercial-workflow-dialog .workflow-check input { width: 18px; min-height: 18px; flex: 0 0 18px; }
+.commercial-workflow-dialog input, .commercial-workflow-dialog select, .commercial-workflow-dialog textarea { padding: 12px; min-height: 44px; border: 1px solid var(--line-dark); border-radius: 10px; max-width: 100%; }
+.commercial-workflow-dialog [role="alert"] { color: var(--red); }
+.preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
+.completion-photo-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; }
+.completion-photo-grid img { display: block; width: 100%; max-height: 240px; object-fit: contain; border-radius: 12px; background: var(--paper); }

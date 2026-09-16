@@ -132,3 +132,4 @@
   .incoming-comparison-panel .incoming-empty-cell:before{display:none}
   .incoming-no-action{display:block;padding:5px}
 }
+.incoming-lead-distribution{grid-column:1/-1}.incoming-lead-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:16px 0}.incoming-lead-candidate{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--border-color,#d8d8d8);border-radius:10px}.incoming-lead-candidate input{margin-top:3px}.incoming-lead-candidate span{display:grid;gap:3px}.incoming-lead-candidate small{color:var(--text-secondary,#666)}.incoming-lead-candidate.is-blocked{opacity:.62;background:#f5f5f5}@media(max-width:640px){.incoming-lead-candidates{grid-template-columns:1fr}}

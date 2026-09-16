@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@700&amp;display=swap">
     <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
     <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260804-final">
-    <link rel="stylesheet" href="../assets/css/login-styles.css?v=20260810-signup-logo">
+    <link rel="stylesheet" href="../assets/css/login-styles.css?v=20260916-svg-icons">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
@@ -65,6 +65,20 @@
                 </header>
 
                 <form id="signupForm" class="auth-form" novalidate>
+                    <div class="field-group portal-selector">
+                        <label for="signupPortal">Create account for</label>
+                        <div class="field-control field-control--select">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                            <select id="signupPortal" name="signupPortal" aria-describedby="signupPortalHelp">
+                                <option value="crm">Internal / CRM</option>
+                                <option value="residential">Residential Client Portal</option>
+                                <option value="real_estate_agent">Real Estate Agent Portal</option>
+                                <option value="commercial">Commercial Client / Property Manager Portal</option>
+                                <option value="vendor">Vendor Portal</option>
+                            </select>
+                        </div>
+                        <small id="signupPortalHelp" aria-live="polite">CRM access requires administrator approval.</small>
+                    </div>
                     <div class="form-grid">
                         <div class="field-group">
                             <label for="fullName">Full name</label>
@@ -75,7 +89,7 @@
                         </div>
 
                         <div class="field-group">
-                            <label for="email">Work email</label>
+                            <label for="email">Email address</label>
                             <div class="field-control">
                                 <i class="fa-regular fa-envelope" aria-hidden="true"></i>
                                 <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" aria-describedby="errorMessage" required>
@@ -102,7 +116,23 @@
                         </div>
                     </div>
 
-                    <div class="field-group">
+                    <fieldset id="vendorSignupFields" class="form-grid" hidden disabled>
+                        <legend>Vendor company details</legend>
+                        <div class="field-group"><label for="vendorCompanyName">Company name *</label><div class="field-control"><input id="vendorCompanyName" name="companyName" maxlength="160" required></div></div>
+                        <div class="field-group"><label for="vendorLegalName">Legal business name</label><div class="field-control"><input id="vendorLegalName" name="legalBusinessName" maxlength="200"></div></div>
+                        <div class="field-group"><label for="vendorPhone">Contact phone *</label><div class="field-control"><input id="vendorPhone" name="phone" type="tel" autocomplete="tel" maxlength="40" required></div></div>
+                        <div class="field-group"><label for="vendorEntityType">Entity type *</label><div class="field-control field-control--select"><select id="vendorEntityType" name="entityType" required><option value="">Choose entity type</option><option>LLC</option><option>Sole Proprietor</option><option>Corporation</option><option>Partnership</option><option>Other</option></select></div></div>
+                        <div class="field-group"><label for="vendorTrades">Trade classifications *</label><div class="field-control"><input id="vendorTrades" name="trades" maxlength="1000" placeholder="HVAC, Plumbing" required></div><small>Separate multiple trades with commas.</small></div>
+                        <div class="field-group"><label for="vendorAddress">Business address</label><div class="field-control"><input id="vendorAddress" name="businessAddress" maxlength="500" autocomplete="street-address"></div></div>
+                        <div class="field-group"><label for="vendorZip">Base ZIP code</label><div class="field-control"><input id="vendorZip" name="basePostalCode" maxlength="20" autocomplete="postal-code"></div></div>
+                        <div class="field-group"><label for="vendorRadius">Service radius (miles)</label><div class="field-control"><input id="vendorRadius" name="radiusMiles" type="number" min="0" max="500" value="25" required></div></div>
+                        <label class="check-control"><input id="vendorLicensedTrade" name="licensedTrade" type="checkbox"><span class="check-control__box" aria-hidden="true"><i class="fa-solid fa-check"></i></span><span>Performs licensed trade work</span></label>
+                        <div class="field-group"><label for="vendorRocNumber">Arizona ROC number <span id="vendorRocRequired" hidden>*</span></label><div class="field-control"><input id="vendorRocNumber" name="rocLicenseNumber" maxlength="100"></div></div>
+                        <div class="field-group"><label for="vendorRocClassification">ROC classification</label><div class="field-control"><input id="vendorRocClassification" name="rocClassification" maxlength="160"></div></div>
+                        <p>After creating your account, complete the agreement, W-9, insurance, and hosted Stripe payout setup securely inside your Vendor Portal. Do not enter tax IDs or bank details here.</p>
+                    </fieldset>
+
+                    <div class="field-group" id="crmRoleGroup">
                         <label for="requestedRole">Requested role</label>
                         <div class="field-control field-control--select">
                             <i class="fa-solid fa-user-tag" aria-hidden="true"></i>
@@ -145,7 +175,8 @@
     </div>
 
     <script src="../assets/js/api-service.js"></script>
-    <script src="../assets/js/signup-script.js?v=20260804-auth-compact"></script>
+    <script src="../assets/js/signup-icons.js?v=20260916-svg-icons"></script>
+    <script src="../assets/js/signup-script.js?v=20260916-svg-icons"></script>
     <script src="../assets/js/icon-system.js?v=20260807-icon-reliability"></script>
 </body>
 </html>

@@ -77,10 +77,11 @@
 
   function setSidebarActive() {
     document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-    document.getElementById('workflowCenterNav')?.closest('.menu-item')?.classList.add('active');
+    document.getElementById(window.ServiceRequestsActive ? 'serviceRequestsNav' : 'workflowCenterNav')?.closest('.menu-item')?.classList.add('active');
   }
 
   function routeHash(stage, orderId = '') {
+    if (window.ServiceRequestsActive) return `#service-requests/${stage ? `stage-${stage}${orderId ? `/order/${encodeURIComponent(orderId)}` : ''}` : 'overview'}`;
     if (!stage) return '#workflow-center/overview';
     return `#workflow-center/stage-${stage}${orderId ? `/order/${encodeURIComponent(orderId)}` : ''}`;
   }
@@ -111,6 +112,12 @@
       const config = STAGES.find(item => item.stage === Number(stage));
       if (!config) return;
       window.dashboard.showSection(config.section);
+      document.querySelectorAll('.workflow-stage-section > .section-header h1, .workflow-stage-section > .section-heading h1').forEach(heading => {
+        if (!heading.dataset.originalTitle) heading.dataset.originalTitle = heading.textContent;
+        heading.textContent = window.ServiceRequestsActive ? `Service Requests — ${heading.dataset.originalTitle}` : heading.dataset.originalTitle;
+      });
+      const intakeDescription = document.querySelector('#workflow-center .section-header p');
+      if (intakeDescription) intakeDescription.textContent = window.ServiceRequestsActive ? 'Portal service requests awaiting staff review and vendor distribution.' : 'Website requests awaiting intake review and missing job information.';
       injectStageChrome();
       if (typeof window[config.load] === 'function') await window[config.load]();
       if (orderId && config.open && typeof window[config.open] === 'function') await window[config.open](orderId, false);
@@ -119,7 +126,7 @@
   }
 
   function overviewHeader() {
-    return `<header class="workflow-hub-header workflow-reference-header smpl-section-header"><div class="smpl-section-header-copy"><p class="page-eyebrow">Command</p><h1>Workflow center</h1><p class="smpl-section-description">Requests, quotes, approvals, scheduling, and closeout.</p></div><div class="workflow-hub-actions smpl-section-header-actions"><span class="workflow-updated">Updated <time data-relative-time="${esc(state.overview?.refreshedAt || '')}">${relativeTime(state.overview?.refreshedAt)}</time></span><button class="btn-refresh" type="button" data-workflow-refresh><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div></header>`;
+    return `<header class="workflow-hub-header workflow-reference-header smpl-section-header"><div class="smpl-section-header-copy"><p class="page-eyebrow">${window.ServiceRequestsActive ? 'Portal requests' : 'Command'}</p><h1>${window.ServiceRequestsActive ? 'Service Requests' : 'Workflow center'}</h1><p class="smpl-section-description">Requests, quotes, approvals, scheduling, and closeout.</p></div><div class="workflow-hub-actions smpl-section-header-actions"><span class="workflow-updated">Updated <time data-relative-time="${esc(state.overview?.refreshedAt || '')}">${relativeTime(state.overview?.refreshedAt)}</time></span><button class="btn-refresh" type="button" data-workflow-refresh><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div></header>`;
   }
 
   const metricIcons = {
@@ -166,20 +173,25 @@
   }
 
   async function loadOverview() {
-    if (state.loadingOverview) return;
+    const workspace = window.ServiceRequestsActive ? 'service-requests' : 'workflow-center';
+    if (state.loadingOverview === workspace) return;
+    const requestId = state.overviewRequestId = (state.overviewRequestId || 0) + 1;
     const mount = document.getElementById('workflowOverviewMount');
     if (mount && !state.overview) mount.innerHTML = `<div class="workflow-reference-loading" aria-label="Loading Workflow Center"><div class="workflow-skeleton workflow-skeleton-header"></div><div class="workflow-kpi-grid">${Array.from({ length: 5 }, () => '<div class="workflow-skeleton workflow-skeleton-kpi"></div>').join('')}</div><div class="workflow-skeleton workflow-skeleton-tabs"></div><div class="workflow-overview-grid"><div class="workflow-skeleton workflow-skeleton-panel"></div><div class="workflow-skeleton workflow-skeleton-panel"></div></div></div>`;
-    state.loadingOverview = true;
+    state.loadingOverview = workspace;
     try {
-      state.overview = await window.APIService.getWorkflowOverview({ attention: state.overviewAttention, attentionLimit: 5, activityLimit: 8 });
+      const overview = await window.APIService.getWorkflowOverview({ workspace, attention: state.overviewAttention, attentionLimit: 5, activityLimit: 8 });
+      if (requestId !== state.overviewRequestId || workspace !== (window.ServiceRequestsActive ? 'service-requests' : 'workflow-center')) return;
+      state.overview = overview;
       const badge = document.getElementById('workflowHubNavBadge');
-      if (badge) { badge.textContent = state.overview.actionRequiredTotal || 0; badge.hidden = !state.overview.actionRequiredTotal; }
+      if (badge && workspace === 'workflow-center') { badge.textContent = state.overview.actionRequiredTotal || 0; badge.hidden = !state.overview.actionRequiredTotal; }
       renderOverview();
       injectStageChrome();
     } catch (error) {
+      if (requestId !== state.overviewRequestId || workspace !== (window.ServiceRequestsActive ? 'service-requests' : 'workflow-center')) return;
       if (mount) mount.innerHTML = `<div class="workflow-empty"><i class="fas fa-exclamation-circle"></i><p>${esc(error.message || 'Unable to load Workflow Center')}</p><button class="btn-primary" data-workflow-refresh>Retry</button></div>`;
       bindNavigation(mount);
-    } finally { state.loadingOverview = false; }
+    } finally { if (requestId === state.overviewRequestId) state.loadingOverview = false; }
   }
 
   function updateRelativeTimes(root = document) {
@@ -524,6 +536,10 @@
 
   function parseHash() {
     const hash = location.hash;
+    const service = hash.match(/^#service-requests\/(?:stage-(\d)(?:\/order\/([^/]+))?|overview)$/);
+    const active = Boolean(service);
+    if (window.ServiceRequestsActive !== active) { window.ServiceRequestsActive = active; state.overview = null; state.filters = {}; window.APIService.clearCache(); }
+    if (service) return { stage: Number(service[1] || 0), orderId: service[2] ? decodeURIComponent(service[2]) : '' };
     const modern = hash.match(/^#workflow-center\/(?:stage-(\d)(?:\/order\/([^/]+))?|overview)$/);
     if (modern) return { stage: Number(modern[1] || 0), orderId: modern[2] ? decodeURIComponent(modern[2]) : '' };
     const legacy = { '#workflow-center':1,'#incoming-quotes':2,'#outgoing-quotes':3,'#customer-approvals':4,'#scheduling':5,'#closeout':6 };
@@ -591,6 +607,7 @@
     await window.AuthReady?.catch(() => null);
     for (let index=0; index<80 && !window.dashboard; index++) await new Promise(resolve => setTimeout(resolve,50));
     if (!window.dashboard || !document.getElementById('workflowOverviewMount')) return;
+    parseHash();
     await loadOverview(); injectStageChrome(); wrapWorkspaceOpeners();
     const nav = document.getElementById('workflowCenterNav'); nav?.addEventListener('click', event => { event.preventDefault(); showView(0); });
     const observer = new MutationObserver(records => { const list = records[0]?.target?.closest?.('[id]'); const stage = Number(Object.entries(listIds).find(([,id])=>id===list?.id)?.[0]); if(stage) applyFilters(stage); if(state.currentOrderId&&state.activeStage){const workspace=document.getElementById(STAGES.find(item=>item.stage===state.activeStage)?.workspace);if(workspace&&!workspace.hidden)setupStageEnhancements(state.activeStage,workspace)} });
@@ -629,5 +646,9 @@
       await showView(2, orderId);
     } catch (error) { window.showToast?.(error.message || 'Unable to start quote collection', 'error'); }
   };
+  window.reviewResidentialVendorRequest = async orderId => { window.ServiceRequestsActive = true; state.overview = null; await showView(2, orderId); };
+  for (const [id, active] of [['serviceRequestsNav', true], ['workflowCenterNav', false]]) {
+    document.getElementById(id)?.addEventListener('click', event => { event.preventDefault(); event.stopImmediatePropagation(); window.ServiceRequestsActive = active; state.overview = null; state.filters = {}; window.APIService.clearCache(); showView(0); }, { capture: true });
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

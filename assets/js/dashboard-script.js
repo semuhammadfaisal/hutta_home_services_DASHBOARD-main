@@ -4212,6 +4212,10 @@ function renderOrderVendorAssignments(order, containerId) {
                     <span class="order-vendor-assignment-label">Scheduled arrival</span>
                     <time class="order-vendor-assignment-value"${assignment.scheduledStart ? ` datetime="${escapePaymentHtml(assignment.scheduledStart)}"` : ''}>${escapePaymentHtml(scheduled)}</time>
                 </div>
+                <div class="order-vendor-assignment-field">
+                    <span class="order-vendor-assignment-label">Billing lane</span>
+                    <span class="order-vendor-assignment-value">${assignment.billingLane === 'owner_billed' ? 'Billed to owner' : 'SMPLfix-paid direct lane'}</span>
+                </div>
                 <div class="order-vendor-assignment-actions">${removeButton}</div>
             </div>`;
     }).join('');
@@ -4239,8 +4243,17 @@ async function openOrderVendorAssignmentModal(fromPipelineModal = false) {
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
         const select = document.getElementById('orderAssignmentVendor');
         select.innerHTML = '<option value="">Select a vendor</option>' + options.map(vendor =>
-            `<option value="${escapePaymentHtml(vendor._id)}">${escapePaymentHtml(vendor.name || 'Unnamed vendor')}${vendor.category ? ` — ${escapePaymentHtml(vendor.category)}` : ''}</option>`
+            `<option value="${escapePaymentHtml(vendor._id)}" data-licensed="${vendor.licensedTrade === true}">${escapePaymentHtml(vendor.name || 'Unnamed vendor')}${vendor.category ? ` — ${escapePaymentHtml(vendor.category)}` : ''}</option>`
         ).join('');
+        const billingLane = document.getElementById('orderAssignmentBillingLane');
+        const syncBillingLane = () => {
+            const licensed = select.selectedOptions[0]?.dataset.licensed === 'true';
+            if (licensed) billingLane.value = 'owner_billed';
+            billingLane.disabled = licensed;
+        };
+        select.onchange = syncBillingLane;
+        billingLane.value = 'smplfix_direct';
+        syncBillingLane();
         document.getElementById('orderAssignmentService').value = window.currentDetailOrderData?.service || '';
         document.getElementById('orderAssignmentScheduledStart').value = formatArizonaDateTimeInput(
             window.currentDetailOrderData?.scheduledStart || window.currentDetailOrderData?.scheduleDate
@@ -4281,6 +4294,7 @@ async function saveOrderVendorAssignment(event) {
         await window.APIService.addOrderVendorAssignment(currentDetailOrderId, {
             vendor: document.getElementById('orderAssignmentVendor').value,
             service: document.getElementById('orderAssignmentService').value.trim(),
+            billingLane: document.getElementById('orderAssignmentBillingLane').value,
             scheduledStart: `${localStart}:00-07:00`
         });
         closeOrderVendorAssignmentModal();
@@ -4316,6 +4330,8 @@ async function showOrderDetail(orderId, fromPipeline = false, fromRecentActivity
         const order = await window.APIService.getOrder(orderId);
         currentDetailOrderId = order._id || order.id || orderId;
         window.currentDetailOrderData = order;
+        const residentialHandoff = document.getElementById('residentialReviewVendorsButton');
+        if (residentialHandoff) residentialHandoff.hidden = !(order.source === 'residential_portal' && order.workflowStatus === 'request_received');
         
         // If opened from pipeline, show modal instead of full page
         if (fromPipeline) {
@@ -9919,6 +9935,18 @@ function renderWorkflowCenter(intakes) {
 }
 
 async function loadWorkflowCenter() {
+    if (window.ServiceRequestsActive) {
+        const list = document.getElementById('workflowRequestList');
+        if (list) list.innerHTML = '<p role="status">Loading service requests…</p>';
+        try {
+            const requests = await window.APIService.getServiceRequestQueue();
+            document.getElementById('workflowTotalCount').textContent = requests.length;
+            document.getElementById('workflowReviewCount').textContent = requests.filter(order => !order.residentialStaffReview?.reviewedAt).length;
+            document.getElementById('workflowEmailIssueCount').textContent = '0';
+            if (list) list.innerHTML = requests.length ? requests.map(order => `<article class="workflow-queue-row"><div><strong>${escapePaymentHtml(order.requestReference || order.orderId)}</strong><p>${escapePaymentHtml(order.customer?.name || '')} · ${escapePaymentHtml(order.service)}</p><p>${escapePaymentHtml(order.customer?.address || '')}</p><small>${escapePaymentHtml(order.employee?.name || 'Coordinator unassigned')}</small></div><button class="btn-secondary" type="button" onclick="openWorkflowOrder('${escapePaymentHtml(order._id)}')">Review request →</button><button class="btn-primary" type="button" onclick="window.reviewResidentialVendorRequest('${escapePaymentHtml(order._id)}')">Send to vendors →</button></article>`).join('') : '<p>No new service requests. Later stages remain available above.</p>';
+        } catch (error) { if (list) list.textContent = error.message || 'Unable to load service requests'; }
+        return;
+    }
     const list = document.getElementById('workflowRequestList');
     if (list) list.innerHTML = '<div class="workflow-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading website requests…</p></div>';
     try {
@@ -11049,8 +11077,8 @@ async function assignUserRole(userId) {
     }
     
     try {
-        await window.APIService.assignUserRole(userId, role);
-        showToast('Role assigned. The user must sign out and sign in to see changes.', 'success');
+        const assignedUser = await window.APIService.assignUserRole(userId, role);
+        showToast((assignedUser.agentApprovalEmail || assignedUser.commercialApprovalEmail)?.status === 'failed' ? 'Account access approved, but email delivery failed. Check email configuration and assign again to retry.' : 'Role assigned. The user must sign out and sign in to see changes.', (assignedUser.agentApprovalEmail || assignedUser.commercialApprovalEmail)?.status === 'failed' ? 'error' : 'success');
         await loadUsersSection();
     } catch (error) {
         showToast('Failed to assign role: ' + error.message, 'error');
@@ -11067,8 +11095,8 @@ async function changeUserRole(userId) {
     }
     
     try {
-        await window.APIService.assignUserRole(userId, role);
-        showToast('Role updated. The user must sign out and sign in to see changes.', 'success');
+        const assignedUser = await window.APIService.assignUserRole(userId, role);
+        showToast((assignedUser.agentApprovalEmail || assignedUser.commercialApprovalEmail)?.status === 'failed' ? 'Account access approved, but email delivery failed. Check email configuration and assign again to retry.' : 'Role updated. The user must sign out and sign in to see changes.', (assignedUser.agentApprovalEmail || assignedUser.commercialApprovalEmail)?.status === 'failed' ? 'error' : 'success');
         await loadUsersSection();
     } catch (error) {
         showToast('Failed to update role: ' + error.message, 'error');
@@ -11082,8 +11110,8 @@ async function approveUserRole(userId, requestedRole) {
     }
     
     try {
-        await window.APIService.assignUserRole(userId, requestedRole);
-        showToast('User approved. They can now sign in with their requested role.', 'success');
+        const assignedUser = await window.APIService.assignUserRole(userId, requestedRole);
+        showToast((assignedUser.agentApprovalEmail || assignedUser.commercialApprovalEmail)?.status === 'failed' ? 'Account access approved, but email delivery failed. Check email configuration and assign again to retry.' : 'User approved. They can now sign in with their requested role.', (assignedUser.agentApprovalEmail || assignedUser.commercialApprovalEmail)?.status === 'failed' ? 'error' : 'success');
         await loadUsersSection();
     } catch (error) {
         showToast('Failed to approve user: ' + error.message, 'error');

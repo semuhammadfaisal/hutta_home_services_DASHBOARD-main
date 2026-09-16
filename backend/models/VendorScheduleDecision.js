@@ -13,7 +13,7 @@ const schema = new mongoose.Schema({
   scheduleSnapshotHash: { type: String, required: true, match: /^[a-f0-9]{64}$/, immutable: true },
   ipAddress: { type: String, maxlength: 128, immutable: true },
   userAgent: { type: String, maxlength: 1000, immutable: true },
-  source: { type: String, enum: ['secure_schedule_link'], default: 'secure_schedule_link', immutable: true }
+  source: { type: String, enum: ['secure_schedule_link', 'vendor_portal'], default: 'secure_schedule_link', immutable: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('VendorScheduleDecision', schema);

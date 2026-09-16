@@ -1,0 +1,6 @@
+.commercial-approval-dialog { width: min(580px,calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 26px; overflow: auto; border: 1px solid #ececed; border-radius: 16px; color: #0b0b0c; background: #fff; }
+.commercial-approval-dialog::backdrop { background: rgba(11,11,12,.58); }
+.commercial-approval-dialog .form-stack { display: grid; gap: 18px; }
+.commercial-approval-dialog label { display: grid; gap: 8px; }
+.commercial-approval-dialog input,.commercial-approval-dialog select { width: 100%; padding: 12px; border: 1px solid #b6b6ba; border-radius: 10px; min-height: 44px; font: inherit; }
+.commercial-approval-dialog [role="alert"] { color: #b42318; }

@@ -18,6 +18,8 @@ process.env.TZ = 'America/Phoenix';
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+const STAFF_ROLES = ['admin', 'manager', 'account_rep'];
+const staffOnly = checkRole(STAFF_ROLES);
 
 if (process.env.NODE_ENV === 'production' && String(process.env.HUTTAS_WEBHOOK_SECRET || '').length < 32) {
   throw new Error('HUTTAS_WEBHOOK_SECRET must contain at least 32 characters in production');
@@ -69,6 +71,8 @@ const apiLimiter = rateLimit({
 
 app.use('/api/auth/login', authRouteLimiter);
 app.use('/api/auth/signup', authRouteLimiter);
+app.use('/api/auth/vendor-signup', authRouteLimiter);
+app.use('/api/auth/residential-invite-signup', authRouteLimiter);
 app.use('/api/auth/forgot-password', authRouteLimiter);
 app.use('/api/', apiLimiter);
 
@@ -147,26 +151,34 @@ try {
 
   // Every API mounted after this line requires an active, approved session.
   app.use('/api', authenticateToken);
+    app.use('/api/residential', checkRole(['residential']), require('./routes/residential'));
+    app.use('/api/residential/features', checkRole(['residential']), require('./routes/residentialFeatures'));
+    app.use('/api/residential/agent-invitations', checkRole(['residential']), require('./routes/agentClientInvitations'));
+    app.use('/api/agent', checkRole(['real_estate_agent']), require('./routes/agent'));
+    app.use('/api/agent-admin', staffOnly, require('./routes/agentAdmin'));
+    app.use('/api/commercial', checkRole(['commercial']), require('./routes/commercial'));
+    app.use('/api/vendor-portal', checkRole(['vendor']), require('./routes/vendorPortal'));
+    app.use('/api/vendor-portal-admin', staffOnly, require('./routes/vendorPortalAdmin'));
   app.use('/api/users', checkRole(['admin']), require('./routes/users'));
-  app.use('/api/dashboard', require('./routes/dashboard'));
-  app.use('/api/orders', require('./routes/orders'));
-  app.use('/api/customers', require('./routes/customers'));
-  app.use('/api/vendors', require('./routes/vendors'));
-  app.use('/api/employees', require('./routes/employees'));
-  app.use('/api/projects', require('./routes/projects'));
+  app.use('/api/dashboard', staffOnly, require('./routes/dashboard'));
+  app.use('/api/orders', staffOnly, require('./routes/orders'));
+  app.use('/api/customers', staffOnly, require('./routes/customers'));
+  app.use('/api/vendors', staffOnly, require('./routes/vendors'));
+  app.use('/api/employees', staffOnly, require('./routes/employees'));
+  app.use('/api/projects', staffOnly, require('./routes/projects'));
   app.use('/api/payments', checkRole(['admin']), require('./routes/payments'));
-  app.use('/api/notes', require('./routes/notes'));
+  app.use('/api/notes', staffOnly, require('./routes/notes'));
   app.use('/api/reports', checkRole(['admin']), require('./routes/reports'));
   app.use('/api/settings', checkRole(['admin']), require('./routes/settings'));
   app.use('/api/notifications', require('./routes/notifications'));
-  app.use('/api/workflow-center', require('./routes/workflowCenter'));
-  app.use('/api/intakes', require('./routes/intakes'));
-  app.use('/api/stages', require('./routes/stages'));
-  app.use('/api/pipeline-records', require('./routes/pipelineRecords'));
-  app.use('/api/pipeline-movements', require('./routes/pipelineMovements'));
-  app.use('/api/attachments', require('./routes/attachments'));
-  app.use('/api/upload', require('./routes/gridfs-upload'));
-  app.use('/uploads', authenticateToken, require('./routes/gridfs-upload'));
+  app.use('/api/workflow-center', staffOnly, require('./routes/workflowCenter'));
+  app.use('/api/intakes', staffOnly, require('./routes/intakes'));
+  app.use('/api/stages', staffOnly, require('./routes/stages'));
+  app.use('/api/pipeline-records', staffOnly, require('./routes/pipelineRecords'));
+  app.use('/api/pipeline-movements', staffOnly, require('./routes/pipelineMovements'));
+  app.use('/api/attachments', staffOnly, require('./routes/attachments'));
+  app.use('/api/upload', staffOnly, require('./routes/gridfs-upload'));
+  app.use('/uploads', authenticateToken, staffOnly, require('./routes/gridfs-upload'));
   console.log(' All routes loaded');
 } catch (error) {
   console.error(' Error loading routes:', error);
@@ -192,6 +204,9 @@ async function serveDashboard(req, res, next) {
       const returnTo = encodeURIComponent('/pages/admin-dashboard.html' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''));
       return res.redirect(302, `/pages/login.html?returnTo=${returnTo}`);
     }
+    if (!STAFF_ROLES.includes(resolved.user.role)) {
+      return res.status(403).type('text/plain').send('This page is available to SMPLfix staff only.');
+    }
     res.set({
       'Cache-Control': 'private, no-store, max-age=0',
       Pragma: 'no-cache',
@@ -203,12 +218,84 @@ async function serveDashboard(req, res, next) {
   }
 }
 
+async function serveResidentialPortal(req, res, next) {
+  try {
+    const resolved = await resolveSession(req, res);
+    if (!resolved) {
+      const returnTo = encodeURIComponent('/pages/residential-portal.html');
+      return res.redirect(302, `/pages/login.html?returnTo=${returnTo}`);
+    }
+    if (resolved.user.role !== 'residential') {
+      return res.status(403).type('text/plain').send('This page is available to residential clients only.');
+    }
+    res.set({
+      'Cache-Control': 'private, no-store, max-age=0',
+      Pragma: 'no-cache',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    return res.sendFile(path.join(__dirname, '../pages/residential-portal.html'));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function serveAgentPortal(req, res, next) {
+  try {
+    const resolved = await resolveSession(req, res);
+    if (!resolved) {
+      const returnTo = encodeURIComponent('/pages/agent-portal.html');
+      return res.redirect(302, `/pages/login.html?returnTo=${returnTo}`);
+    }
+    if (resolved.user.role !== 'real_estate_agent') {
+      return res.status(403).type('text/plain').send('This page is available to real estate agents only.');
+    }
+    res.set({
+      'Cache-Control': 'private, no-store, max-age=0',
+      Pragma: 'no-cache',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    return res.sendFile(path.join(__dirname, '../pages/agent-portal.html'));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function serveCommercialPortal(req, res, next) {
+  try {
+    const resolved = await resolveSession(req, res);
+    if (!resolved) {
+      const returnTo = encodeURIComponent('/pages/commercial-portal.html');
+      return res.redirect(302, `/pages/login.html?returnTo=${returnTo}`);
+    }
+    if (resolved.user.role !== 'commercial') {
+      return res.status(403).type('text/plain').send('This page is available to commercial clients only.');
+    }
+    res.set({ 'Cache-Control': 'private, no-store, max-age=0', Pragma: 'no-cache', 'X-Content-Type-Options': 'nosniff' });
+    return res.sendFile(path.join(__dirname, '../pages/commercial-portal.html'));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function serveVendorPortal(req, res, next) {
+  try {
+    const resolved = await resolveSession(req, res);
+    if (!resolved) return res.redirect(302, `/pages/login.html?returnTo=${encodeURIComponent('/pages/vendor-portal.html')}`);
+    if (resolved.user.role !== 'vendor') return res.status(403).type('text/plain').send('This page is available to authorized vendors only.');
+    res.set({ 'Cache-Control': 'private, no-store, max-age=0', Pragma: 'no-cache', 'X-Content-Type-Options': 'nosniff' });
+    return res.sendFile(path.join(__dirname, '../pages/vendor-portal.html'));
+  } catch (error) { return next(error); }
+}
+
 async function serveProtectedPage(req, res, next) {
   try {
     const resolved = await resolveSession(req, res);
     if (!resolved) {
       const returnTo = encodeURIComponent(req.originalUrl.startsWith('/') ? req.originalUrl : '/pages/admin-dashboard.html');
       return res.redirect(302, `/pages/login.html?returnTo=${returnTo}`);
+    }
+    if (!STAFF_ROLES.includes(resolved.user.role)) {
+      return res.status(403).type('text/plain').send('This page is available to SMPLfix staff only.');
     }
     const fileName = path.posix.basename(req.path);
     res.set({ 'Cache-Control': 'private, no-store, max-age=0', Pragma: 'no-cache' });
@@ -219,6 +306,10 @@ async function serveProtectedPage(req, res, next) {
 }
 
 app.get(['/pages/admin-dashboard.html', '/admin-dashboard.html'], serveDashboard);
+app.get(['/pages/residential-portal.html', '/residential-portal.html'], serveResidentialPortal);
+app.get(['/pages/agent-portal.html', '/agent-portal.html'], serveAgentPortal);
+app.get(['/pages/commercial-portal.html', '/commercial-portal.html'], serveCommercialPortal);
+app.get(['/pages/vendor-portal.html', '/vendor-portal.html'], serveVendorPortal);
 
 // Public static content is deliberately limited; the repository root and the
 // protected dashboard HTML are never exposed through static middleware.
@@ -228,7 +319,10 @@ app.use('/components', express.static(path.join(__dirname, '../components'), sta
 app.use('/pages', (req, res, next) => {
   const fileName = path.posix.basename(req.path).toLowerCase();
   if (fileName === 'admin-dashboard.html') return serveDashboard(req, res, next);
-  const publicPages = new Set(['login.html', 'signup.html', 'forgot-password.html', 'reset-password.html', 'vendor-onboarding.html', 'vendor-quote.html', 'customer-quote.html', 'vendor-schedule.html', 'vendor-completion.html', 'customer-satisfaction.html', 'complete-request.html']);
+  if (fileName === 'agent-portal.html') return serveAgentPortal(req, res, next);
+  if (fileName === 'commercial-portal.html') return serveCommercialPortal(req, res, next);
+  if (fileName === 'vendor-portal.html') return serveVendorPortal(req, res, next);
+  const publicPages = new Set(['login.html', 'signup.html', 'vendor-signup.html', 'forgot-password.html', 'reset-password.html', 'agent-invitation.html', 'commercial-invitation.html', 'vendor-onboarding.html', 'vendor-quote.html', 'customer-quote.html', 'vendor-schedule.html', 'vendor-completion.html', 'customer-satisfaction.html', 'complete-request.html']);
   if (fileName.endsWith('.html') && !publicPages.has(fileName)) return serveProtectedPage(req, res, next);
   if (['complete-request.html','vendor-completion.html','customer-satisfaction.html'].includes(fileName)) res.set({ 'Cache-Control': 'no-store, max-age=0', Pragma: 'no-cache' });
   return next();
@@ -274,6 +368,10 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB THEN start server
+const { createCommercialReportWorker } = require('./utils/commercialReportWorker');
+const commercialReportWorker = createCommercialReportWorker({ run: () => require('./run-commercial-report-scheduler').run(), connected: () => mongoose.connection.readyState === 1 });
+process.once('SIGTERM', () => commercialReportWorker.stop());
+process.once('SIGINT', () => commercialReportWorker.stop());
 async function startServer() {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
@@ -289,6 +387,7 @@ async function startServer() {
       console.log(' API Base: http://localhost:' + PORT + '/api');
       console.log(' Health check: http://localhost:' + PORT + '/api/health');
       startIntakeEmailWorker();
+      if (process.env.COMMERCIAL_REPORT_SCHEDULER_ENABLED !== 'false') commercialReportWorker.start();
     });
   } catch (error) {
     console.error(' Failed to start server:', error);

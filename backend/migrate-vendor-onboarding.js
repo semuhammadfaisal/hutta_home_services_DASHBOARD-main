@@ -2,6 +2,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const Vendor = require('./models/Vendor');
+const VendorPortalMembership = require('./models/VendorPortalMembership');
 const { encryptTaxId } = require('./utils/taxIdCrypto');
 
 const APPLY = process.argv.includes('--apply');
@@ -11,7 +12,7 @@ async function main() {
   if (APPLY && !process.env.TAX_ID_ENCRYPTION_KEY) throw new Error('TAX_ID_ENCRYPTION_KEY is required in apply mode');
   await mongoose.connect(process.env.MONGODB_URI);
   const vendors = await Vendor.collection.find({}).toArray();
-  const summary = { mode: APPLY ? 'apply' : 'dry-run', vendors: vendors.length, onboardingBackfills: 0, taxIdsToEncrypt: 0, taxIdsEncrypted: 0 };
+  const summary = { mode: APPLY ? 'apply' : 'dry-run', vendors: vendors.length, onboardingBackfills: 0, portalStatusBackfills: 0, taxIdsToEncrypt: 0, taxIdsEncrypted: 0 };
 
   for (const vendor of vendors) {
     const update = {};
@@ -23,6 +24,12 @@ async function main() {
     if (!vendor.onboardingStatus) {
       update.onboardingStatus = 'approved';
       summary.onboardingBackfills++;
+    }
+    if (!vendor.portalStatus) {
+      const legacyStatus = vendor.onboardingStatus || update.onboardingStatus || 'approved';
+      update.portalStatus = legacyStatus === 'approved' ? 'approved_active' : legacyStatus === 'rejected' ? 'rejected' : legacyStatus === 'pending_review' ? 'under_review' : 'compliance_incomplete';
+      update.portalStatusUpdatedAt = new Date();
+      summary.portalStatusBackfills++;
     }
     if (vendor.einTaxId && !vendor.einTaxIdEncrypted) {
       summary.taxIdsToEncrypt++;
@@ -43,6 +50,8 @@ async function main() {
       await Vendor.collection.updateOne({ _id: vendor._id }, operation);
     }
   }
+
+  if (APPLY) await Promise.all([Vendor.createIndexes(), VendorPortalMembership.createIndexes()]);
 
   console.log('Vendor onboarding migration complete. No documents were modified or deleted.');
   console.log(JSON.stringify(summary, null, 2));

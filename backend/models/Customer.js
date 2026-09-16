@@ -33,6 +33,7 @@ const customFieldSchema = new mongoose.Schema({
 }, { _id: false });
 
 const customerSchema = new mongoose.Schema({
+  portalOwnerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', select: false },
   name: { type: String, required: true },
   email: String,
   phone: String,
@@ -59,10 +60,16 @@ const customerSchema = new mongoose.Schema({
   totalSpent: { type: Number, default: 0 },
   documents: { type: [attachmentSchema], default: [] },
   customFields: { type: [customFieldSchema], default: [] }
+  , paymentProvider: {
+    name: { type: String, enum: ['stripe'], select: false },
+    customerId: { type: String, trim: true, maxlength: 255, select: false }
+  }
 }, { timestamps: true });
 
 customerSchema.index({ email: 1, 'addresses.address': 1 });
 customerSchema.index({ createdAt: -1 });
 customerSchema.index({ status: 1 });
+customerSchema.index({ portalOwnerUserId: 1 }, { unique: true, sparse: true });
+customerSchema.index({ 'paymentProvider.customerId': 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Customer', customerSchema);

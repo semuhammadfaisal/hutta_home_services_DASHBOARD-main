@@ -71,7 +71,8 @@ function invoiceSnapshotHash(value) {
     customerSnapshot: value.customerSnapshot,
     jobSnapshot: value.jobSnapshot,
     quoteSnapshot: value.quoteSnapshot,
-    paymentInstructionsSnapshot: value.paymentInstructionsSnapshot || {}
+    paymentInstructionsSnapshot: value.paymentInstructionsSnapshot || {},
+    commercialBilling: value.commercialBilling
   }));
 }
 function evidenceSnapshotHash(value) {

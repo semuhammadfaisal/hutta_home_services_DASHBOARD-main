@@ -1,7 +1,33 @@
 // Signup System Manager
 class SignupManager {
     constructor() {
+        this.portalNames = { crm: 'Internal / CRM', residential: 'Residential Client Portal', real_estate_agent: 'Real Estate Agent Portal', commercial: 'Commercial Client Portal', vendor: 'Vendor Portal' };
         this.initializeEventListeners();
+        const portal = new URLSearchParams(window.location.search).get('portal');
+        if (this.portalNames[portal]) document.getElementById('signupPortal').value = portal;
+        this.updatePortal();
+    }
+
+    updatePortal() {
+        const portal = document.getElementById('signupPortal').value;
+        const crm = portal === 'crm';
+        document.getElementById('crmRoleGroup').hidden = !crm;
+        document.getElementById('requestedRole').required = crm;
+        document.getElementById('requestedRole').disabled = !crm;
+        const vendorFields = document.getElementById('vendorSignupFields');
+        vendorFields.hidden = portal !== 'vendor';
+        vendorFields.disabled = portal !== 'vendor';
+        document.getElementById('signupPortalHelp').textContent = portal === 'vendor'
+            ? 'Enter your company details below. Your full name is the company contact name. Compliance is completed securely after registration.'
+            : 'Account access requires staff approval. Property, organization, and transaction access must be authorized separately.';
+        document.querySelector('#signupBtn .submit-btn__text').textContent = portal === 'vendor' ? 'Create vendor account' : 'Request account';
+        this.updateRocRequirement();
+    }
+
+    updateRocRequirement() {
+        const required = document.getElementById('signupPortal').value === 'vendor' && document.getElementById('vendorLicensedTrade').checked;
+        document.getElementById('vendorRocNumber').required = required;
+        document.getElementById('vendorRocRequired').hidden = !required;
     }
 
     initializeEventListeners() {
@@ -12,6 +38,8 @@ class SignupManager {
         const confirmPasswordInput = document.getElementById('confirmPassword');
 
         signupForm.addEventListener('submit', (e) => this.handleSignup(e));
+        document.getElementById('signupPortal').addEventListener('change', () => this.updatePortal());
+        document.getElementById('vendorLicensedTrade').addEventListener('change', () => this.updateRocRequirement());
 
         togglePassword.addEventListener('click', () => {
             this.togglePasswordVisibility(passwordInput, togglePassword);
@@ -34,6 +62,7 @@ class SignupManager {
         const icon = button.querySelector('i');
         icon.classList.toggle('fa-eye');
         icon.classList.toggle('fa-eye-slash');
+        window.renderSignupIcons?.();
     }
 
     validatePassword() {
@@ -58,12 +87,13 @@ class SignupManager {
 
     async handleSignup(e) {
         e.preventDefault();
+        const requestedPortal = document.getElementById('signupPortal').value;
         
         const fullName = document.getElementById('fullName').value.trim();
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
-        const requestedRole = document.getElementById('requestedRole').value;
+        const requestedRole = requestedPortal === 'crm' ? document.getElementById('requestedRole').value : requestedPortal;
         const agreeTerms = document.getElementById('agreeTerms').checked;
         
         // Validation
@@ -91,11 +121,29 @@ class SignupManager {
         this.hideError();
         
         try {
+            if (requestedPortal === 'vendor') {
+                const form = document.getElementById('signupForm');
+                if (!form.reportValidity()) { this.showLoading(false); return; }
+                const data = new FormData(form);
+                const response = await window.APIService.signupVendor({
+                    companyName: data.get('companyName'), legalBusinessName: data.get('legalBusinessName'),
+                    contactName: fullName, phone: data.get('phone'), email, password,
+                    entityType: data.get('entityType'), businessAddress: data.get('businessAddress'),
+                    tradeClassifications: String(data.get('trades') || '').split(',').map(value => value.trim()).filter(Boolean),
+                    licensedTrade: document.getElementById('vendorLicensedTrade').checked,
+                    rocLicenseNumber: data.get('rocLicenseNumber'), rocClassification: data.get('rocClassification'),
+                    serviceArea: { basePostalCode: data.get('basePostalCode'), radiusMiles: Number(data.get('radiusMiles')) }
+                });
+                window.APIService.setSession(response);
+                window.location.replace('/pages/vendor-portal.html');
+                return;
+            }
             const response = await window.APIService.signup({
                 name: fullName,
                 email: email,
                 password: password,
-                requestedRole: requestedRole
+                requestedRole: requestedRole,
+                requestedPortal
             });
             
             // Show success message and redirect to confirmation page
@@ -110,7 +158,10 @@ class SignupManager {
         const roleNames = {
             'admin': 'Administrator',
             'manager': 'Manager',
-            'account_rep': 'Account Representative'
+            'account_rep': 'Account Representative',
+            residential: 'Residential Client Portal',
+            real_estate_agent: 'Real Estate Agent Portal',
+            commercial: 'Commercial Client Portal'
         };
         
         const formCard = document.querySelector('.form-card');
@@ -138,12 +189,14 @@ class SignupManager {
                 </a>
             </div>
         `;
+        window.renderSignupIcons?.();
     }
 
     showLoading(show) {
         const signupBtn = document.getElementById('signupBtn');
         signupBtn.disabled = show;
         signupBtn.classList.toggle('is-loading', show);
+        document.getElementById('signupForm').setAttribute('aria-busy', String(show));
     }
 
     showError(message) {

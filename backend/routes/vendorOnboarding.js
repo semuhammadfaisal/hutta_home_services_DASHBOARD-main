@@ -550,6 +550,8 @@ router.post('/public/form', publicLimiter, tokenLimiter, findPublicInvitation, u
       addresses: address ? [{ label: 'Primary', address, isPrimary: true }, ...addresses] : addresses,
       onboardingSource: 'invitation',
       onboardingStatus: 'pending_review',
+      portalStatus: 'under_review',
+      portalStatusUpdatedAt: new Date(),
       isActive: false,
       submittedAt: new Date()
     };
@@ -1056,6 +1058,7 @@ router.post('/vendors/:id/decision', async (req, res, next) => {
     const now = new Date();
     const decisionId = crypto.randomUUID();
     const nextStatus = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'changes_requested';
+    const nextPortalStatus = action === 'approve' ? 'approved_active' : action === 'reject' ? 'rejected' : 'compliance_incomplete';
     const historyAction = action === 'request_changes' ? 'changes_requested' : action === 'approve' ? 'approved' : 'rejected';
     const latestInvitation = await VendorInvitation.findOne({ vendor: req.params.id }).sort({ createdAt: -1 });
     const vendor = await Vendor.findOneAndUpdate({
@@ -1065,6 +1068,8 @@ router.post('/vendors/:id/decision', async (req, res, next) => {
     }, {
       $set: {
         onboardingStatus: nextStatus,
+        portalStatus: nextPortalStatus,
+        portalStatusUpdatedAt: now,
         isActive: action === 'approve',
         reviewedAt: now,
         reviewedBy: userId(req),

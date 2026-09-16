@@ -1,4 +1,5 @@
 const express = require('express');
+const { workspaceFilter } = require('../utils/serviceRequestWorkspace');
 const mongoose = require('mongoose');
 const checkRole = require('../middleware/rbac');
 const CustomerQuoteDecision = require('../models/CustomerQuoteDecision');
@@ -172,16 +173,18 @@ function activityLabel(type) {
   })[type] || ['Workflow activity updated', 1, 'info'];
 }
 
-async function loadRecentActivity(limit) {
+async function loadRecentActivity(limit, workspace) {
+  const allowedOrderIds = await Order.find(workspace).distinct('_id');
+  const childFilter = { orderId: { $in: allowedOrderIds } };
   const projectionLimit = Math.max(limit, 8);
   const [intakes, incoming, outgoing, quoteDecisions, scheduleDecisions, completions, satisfaction] = await Promise.all([
-    IntakeSubmission.find({ orderId: { $ne: null } }).select('orderId receivedAt completedAt').sort({ updatedAt: -1 }).limit(projectionLimit).lean(),
-    IncomingQuote.find({ $or: [{ submittedAt: { $ne: null } }, { selectedAt: { $ne: null } }] }).select('orderId submittedAt selectedAt').sort({ updatedAt: -1 }).limit(projectionLimit).lean(),
-    OutgoingQuote.find({ sentAt: { $ne: null } }).select('orderId sentAt').sort({ sentAt: -1 }).limit(projectionLimit).lean(),
-    CustomerQuoteDecision.find().select('orderId decision decisionAt').sort({ decisionAt: -1 }).limit(projectionLimit).lean(),
-    VendorScheduleDecision.find().select('orderId decision decisionAt').sort({ decisionAt: -1 }).limit(projectionLimit).lean(),
-    JobCompletion.find({ completedAt: { $ne: null } }).select('orderId completedAt').sort({ completedAt: -1 }).limit(projectionLimit).lean(),
-    CustomerSatisfactionDecision.find().select('orderId decision decisionAt').sort({ decisionAt: -1 }).limit(projectionLimit).lean()
+    IntakeSubmission.find(childFilter).select('orderId receivedAt completedAt').sort({ updatedAt: -1 }).limit(projectionLimit).lean(),
+    IncomingQuote.find({ ...childFilter, $or: [{ submittedAt: { $ne: null } }, { selectedAt: { $ne: null } }] }).select('orderId submittedAt selectedAt').sort({ updatedAt: -1 }).limit(projectionLimit).lean(),
+    OutgoingQuote.find({ ...childFilter, sentAt: { $ne: null } }).select('orderId sentAt').sort({ sentAt: -1 }).limit(projectionLimit).lean(),
+    CustomerQuoteDecision.find(childFilter).select('orderId decision decisionAt').sort({ decisionAt: -1 }).limit(projectionLimit).lean(),
+    VendorScheduleDecision.find(childFilter).select('orderId decision decisionAt').sort({ decisionAt: -1 }).limit(projectionLimit).lean(),
+    JobCompletion.find({ ...childFilter, completedAt: { $ne: null } }).select('orderId completedAt').sort({ completedAt: -1 }).limit(projectionLimit).lean(),
+    CustomerSatisfactionDecision.find(childFilter).select('orderId decision decisionAt').sort({ decisionAt: -1 }).limit(projectionLimit).lean()
   ]);
   const events = [];
   const push = (orderId, eventType, occurredAt) => {
@@ -220,9 +223,19 @@ async function loadRecentActivity(limit) {
   });
 }
 
+router.get('/requests', allowedRoles, async (req, res, next) => {
+  try {
+    const orders = await Order.find({ ...workspaceFilter(req), workflowStatus: 'request_received' }).populate('employee', 'name').sort({ createdAt: -1 }).limit(200).lean();
+    res.json(orders);
+  } catch (error) { next(error); }
+});
+
 router.get('/overview', allowedRoles, async (req, res, next) => {
   try {
     const workflowStatuses = Object.keys(stageByStatus);
+    const workspace = workspaceFilter(req);
+    const workspaceOrderIds = await Order.find(workspace).distinct('_id');
+    const childFilter = { orderId: { $in: workspaceOrderIds } };
     const now = new Date();
     const satisfactionDeadline = new Date(now.getTime() - (48 * 60 * 60 * 1000));
     const { start: weekStart, end: weekEnd } = phoenixWeekBounds(now);
@@ -235,19 +248,19 @@ router.get('/overview', allowedRoles, async (req, res, next) => {
       scheduledThisWeek, recentActivity
     ] = await Promise.all([
       Order.aggregate([
-        { $match: { workflowStatus: { $in: workflowStatuses } } },
+        { $match: { ...workspace, workflowStatus: { $in: workflowStatuses } } },
         { $group: { _id: '$workflowStatus', total: { $sum: 1 } } }
       ]),
-      EmailOutbox.find({ status: 'permanently_failed', orderId: { $exists: true } }).distinct('orderId'),
-      IncomingQuote.find({ status: 'selected', 'vendorSnapshot.complianceWarnings.0': { $exists: true } }).distinct('orderId'),
-      IntakeSubmission.find({ completionStatus: { $ne: 'completed' }, completionTokenExpiresAt: { $lte: now } }).distinct('orderId'),
-      QuoteInvitation.find({ status: { $in: ['sent', 'delivery_failed', 'processing'] }, expiresAt: { $lte: now } }).distinct('orderId'),
-      OutgoingQuote.find({ status: 'sent', customerDecisionStatus: 'pending', validUntil: { $lte: now } }).distinct('orderId'),
-      JobSchedule.find({ status: 'pending_vendor', tokenExpiresAt: { $lte: now } }).distinct('orderId'),
-      JobCompletion.find({ status: 'pending', tokenExpiresAt: { $lte: now } }).distinct('orderId'),
-      Order.find({ workflowStatus: 'awaiting_customer_closeout', satisfactionStatus: 'pending', closeoutRequestedAt: { $lte: satisfactionDeadline } }).distinct('_id'),
-      Order.countDocuments({ workflowStatus: { $in: workflowStatuses }, scheduledStart: { $gte: weekStart, $lt: weekEnd } }),
-      loadRecentActivity(activityLimit)
+      EmailOutbox.find({ status: 'permanently_failed', orderId: { $exists: true } }).where(childFilter).distinct('orderId'),
+      IncomingQuote.find({ status: 'selected', 'vendorSnapshot.complianceWarnings.0': { $exists: true } }).where(childFilter).distinct('orderId'),
+      IntakeSubmission.find({ completionStatus: { $ne: 'completed' }, completionTokenExpiresAt: { $lte: now } }).where(childFilter).distinct('orderId'),
+      QuoteInvitation.find({ status: { $in: ['sent', 'delivery_failed', 'processing'] }, expiresAt: { $lte: now } }).where(childFilter).distinct('orderId'),
+      OutgoingQuote.find({ status: 'sent', customerDecisionStatus: 'pending', validUntil: { $lte: now } }).where(childFilter).distinct('orderId'),
+      JobSchedule.find({ status: 'pending_vendor', tokenExpiresAt: { $lte: now } }).where(childFilter).distinct('orderId'),
+      JobCompletion.find({ status: 'pending', tokenExpiresAt: { $lte: now } }).where(childFilter).distinct('orderId'),
+      Order.find({ ...workspace, workflowStatus: 'awaiting_customer_closeout', satisfactionStatus: 'pending', closeoutRequestedAt: { $lte: satisfactionDeadline } }).distinct('_id'),
+      Order.countDocuments({ ...workspace, workflowStatus: { $in: workflowStatuses }, scheduledStart: { $gte: weekStart, $lt: weekEnd } }),
+      loadRecentActivity(activityLimit, workspace)
     ]);
     const statusTotals = new Map(statusGroups.map(item => [item._id, item.total]));
     const stageTotal = stage => Object.entries(stageByStatus).reduce((total, [status, mappedStage]) => total + (mappedStage === stage ? (statusTotals.get(status) || 0) : 0), 0);
@@ -268,7 +281,7 @@ router.get('/overview', allowedRoles, async (req, res, next) => {
     const overdueCondition = { _id: { $in: toObjectIds(overdueIds) } };
     const unassignedCondition = { employee: null };
     const allCondition = { $or: [overdueCondition, blockedCondition, unassignedCondition] };
-    const baseWorkflowCondition = { workflowStatus: { $in: workflowStatuses } };
+    const baseWorkflowCondition = { ...workspace, workflowStatus: { $in: workflowStatuses } };
     const [allAttentionCount, overdueCount, blockedCount, unassignedCount, attentionStatusGroups] = await Promise.all([
       Order.countDocuments({ $and: [baseWorkflowCondition, allCondition] }),
       Order.countDocuments({ $and: [baseWorkflowCondition, overdueCondition] }),
@@ -306,6 +319,7 @@ router.get('/overview', allowedRoles, async (req, res, next) => {
       .lean();
     const recent = recentOrders.map(order => summary(order, failedEmailOrderIds, complianceOrderIds));
     const fullyClosed = await Order.countDocuments({
+      ...workspace,
       workflowStatus: 'completed',
       satisfactionStatus: { $in: ['satisfied', 'issue_resolved'] }
     });

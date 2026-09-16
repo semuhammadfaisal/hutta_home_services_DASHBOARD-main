@@ -24,6 +24,15 @@ const historySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { _id: false });
 
+const vendorLineItemSchema = new mongoose.Schema({
+  category: { type: String, enum: ['labor', 'material', 'other'], default: 'other' },
+  description: { type: String, required: true, trim: true, maxlength: 1000 },
+  quantity: { type: Number, required: true, min: 0.0001 },
+  unit: { type: String, required: true, trim: true, maxlength: 40 },
+  unitPrice: { type: Number, required: true, min: 0 },
+  amount: { type: Number, required: true, min: 0 }
+}, { _id: false });
+
 const incomingQuoteSchema = new mongoose.Schema({
   quoteReference: { type: String, required: true, unique: true, index: true },
   quoteChainId: { type: String, required: true, index: true },
@@ -32,6 +41,9 @@ const incomingQuoteSchema = new mongoose.Schema({
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
   vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
   source: { type: String, enum: ['staff', 'vendor'], required: true },
+  vendorEstimateDraftId: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorEstimateDraft' },
+  vendorLineItems: { type: [vendorLineItemSchema], default: [] },
+  vendorEstimateNotes: { type: String, trim: true, maxlength: 10000 },
   status: {
     type: String,
     enum: ['draft', 'submitted', 'selected', 'not_selected', 'superseded', 'withdrawn'],

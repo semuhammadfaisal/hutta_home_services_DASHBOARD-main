@@ -47,6 +47,7 @@
     <link rel="stylesheet" href="../assets/css/closeout.css?v=20260806-workflow-monochrome">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
+    <link rel="stylesheet" href="../assets/css/commercial-approval.css?v=20260916-commercial-completion">
     <link rel="stylesheet" href="../assets/css/smplfix-shell.css?v=20260806-search-polish">
     <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260806-profile-ui">
     <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=20260806-pipeline-board-ux">
@@ -146,6 +147,9 @@
                     <i class="fas fa-calendar-check"></i>
                     <span>Recurring Calendar</span>
                 </a>
+            </li>
+            <li class="menu-item">
+                <a href="#service-requests/overview" data-section="workflow-overview" id="serviceRequestsNav"><i class="fas fa-house"></i><span>Service Requests</span></a>
             </li>
             <li class="menu-item">
                 <a href="#workflow-center/overview" data-section="workflow-overview" id="workflowCenterNav">
@@ -958,6 +962,7 @@
                     <main class="scheduling-workspace-main">
                         <form id="scheduleProposalForm" class="scheduling-panel schedule-grid">
                             <div class="schedule-panel-heading full"><span><i class="fas fa-calendar-plus"></i></span><div><h3>Send vendor schedule proposal</h3><p>Propose an exact start and end time in Arizona. The vendor must confirm before the job is scheduled.</p></div></div>
+                            <label class="full">Vendor assignment<select id="scheduleAssignmentInput"><option value="">Primary vendor / legacy assignment</option></select><small>Select the exact service line so multi-vendor Orders remain isolated.</small></label>
                             <label>Arizona start<input id="scheduleStartInput" type="datetime-local" required><small id="scheduleStartPreview">Select a start date and time</small></label>
                             <label>Arizona end<input id="scheduleEndInput" type="datetime-local" required><small id="scheduleEndPreview">Select an end date and time</small></label>
                             <div class="schedule-timezone-note full"><i class="fas fa-clock"></i><span><strong>America/Phoenix</strong> Arizona time is used for every proposal and confirmation.</span></div>
@@ -1075,6 +1080,18 @@
                     <button type="button" class="btn-secondary" onclick="closeIncomingQuoteWorkspace()"><i class="fas fa-times"></i> Close</button>
                 </div>
                 <div class="incoming-action-grid">
+                    <form id="incomingLeadDistributionForm" class="incoming-panel incoming-lead-distribution">
+                        <div class="incoming-panel-heading"><span><i class="fas fa-bullhorn"></i></span><div><h3>Distribute Lead to Qualified Vendors</h3><p>Send the same client-safe opportunity to multiple vendors. Accepting commits them to bid but does not award the job.</p></div></div>
+                        <div id="incomingLeadCandidates" class="incoming-lead-candidates" aria-live="polite"><p>Loading qualified vendors…</p></div>
+                        <div class="incoming-invite-fields">
+                            <label>Vendor response due<input id="incomingLeadResponseDue" type="datetime-local" required></label>
+                            <label>Estimate due<input id="incomingLeadBidDue" type="datetime-local" required></label>
+                            <label>Requested date / window<input id="incomingLeadWindow" maxlength="500" placeholder="Example: Tuesday, 8 AM–12 PM"></label>
+                            <label class="full">Safe scope<textarea id="incomingLeadScope" rows="4" maxlength="5000" required placeholder="Describe only the work vendors need to price"></textarea></label>
+                            <label class="full">Relevant vendor notes <span class="incoming-optional">Optional</span><textarea id="incomingLeadNotes" rows="3" maxlength="2000" placeholder="Site or bidding notes only—do not enter customer contact information"></textarea></label>
+                        </div>
+                        <div class="incoming-primary-actions"><p><i class="fas fa-user-shield"></i> Each vendor receives an isolated invitation and cannot see competitors or customer contact details.</p><button class="btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Distribute Lead</button></div>
+                    </form>
                     <form id="incomingInvitationForm" class="incoming-panel">
                         <div class="incoming-panel-heading"><span><i class="fas fa-paper-plane"></i></span><div><h3>Request Vendor Quote</h3><p>Send a secure seven-day link for this vendor to submit job-specific pricing.</p></div></div>
                         <div class="incoming-invite-fields">
@@ -1286,6 +1303,7 @@
                     </div>
                 </div>
                 <div class="order-detail-actions">
+                    <button type="button" class="btn-primary" id="residentialReviewVendorsButton" hidden onclick="window.reviewResidentialVendorRequest(window.currentDetailOrderData._id)">Review &amp; Send to Vendors →</button>
                     <button type="button" class="btn-secondary order-detail-edit-btn" onclick="editCurrentDetailOrder()">
                         <i class="fas fa-edit"></i> Edit
                     </button>
@@ -4762,6 +4780,14 @@
                         <input type="text" id="orderAssignmentService" maxlength="500" required autocomplete="off" placeholder="e.g. Plumbing repair">
                     </div>
                     <div class="form-group">
+                        <label for="orderAssignmentBillingLane">Vendor billing lane *</label>
+                        <select id="orderAssignmentBillingLane" required>
+                            <option value="smplfix_direct">SMPLfix-paid direct lane</option>
+                            <option value="owner_billed">Billed to owner</option>
+                        </select>
+                        <small>Licensed contractors are always billed directly to the owner.</small>
+                    </div>
+                    <div class="form-group">
                         <label for="orderAssignmentScheduledStart">Scheduled day and time *</label>
                         <input type="datetime-local" id="orderAssignmentScheduledStart" required>
                         <small>Arizona time (MST)</small>
@@ -4778,7 +4804,8 @@
     </div>
 
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20260828-multi-vendor"></script>
+    <script src="../assets/js/api-service.js?v=20260916-commercial-completion"></script>
+    <script src="../assets/js/commercial-approval.js?v=20260916-commercial-completion"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
     <script src="../assets/js/custom-fields.js?v=20260807-form-rebrand"></script>
@@ -4793,13 +4820,13 @@
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260828-multi-vendor"></script>
-    <script src="../assets/js/incoming-quotes.js?v=20260828-vendor-compliance-fields"></script>
+    <script src="../assets/js/dashboard-script.js?v=20260916-commercial-completion"></script>
+    <script src="../assets/js/incoming-quotes.js?v=20260916-residential-handoff"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
     <script src="../assets/js/closeout.js?v=20260727-customer-engagement"></script>
-    <script src="../assets/js/workflow-hub.js?v=20260806-activity-clean"></script>
+    <script src="../assets/js/workflow-hub.js?v=20260916-workspace-isolation"></script>
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260807-recipient1"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js?v=20260806-search-polish"></script>

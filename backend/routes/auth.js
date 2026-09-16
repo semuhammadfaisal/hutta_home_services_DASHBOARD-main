@@ -9,6 +9,12 @@ const {
   revokeUserSessions
 } = require('../utils/authSessions');
 const { sendPasswordResetEmail } = require('../utils/emailService');
+const AgentClientInvitation = require('../models/AgentClientInvitation');
+const { hashInvitationToken } = require('../utils/agentAccess');
+const CommercialUserInvitation = require('../models/CommercialUserInvitation');
+const { hashToken: hashCommercialInvitationToken } = require('../utils/commercialPermissions');
+const Vendor = require('../models/Vendor');
+const VendorPortalMembership = require('../models/VendorPortalMembership');
 const router = express.Router();
 
 const noteOwnerModels = [
@@ -132,7 +138,7 @@ router.post('/login', async (req, res) => {
     const session = await createSession(user, res);
     req.authSession = session;
     req.authUser = user;
-    res.set('Cache-Control', 'no-store').json(authenticateToken.sessionPayload(req));
+    res.set('Cache-Control', 'no-store').json(authenticateToken.sessionPayload(req, req.body.returnTo));
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -143,6 +149,11 @@ router.post('/login', async (req, res) => {
 router.post('/signup', async (req, res) => {
   try {
     const { name, email, password, requestedRole } = req.body;
+    const requestedPortal = req.body.requestedPortal || 'crm';
+    const externalRoles = ['residential', 'real_estate_agent', 'commercial'];
+    if (!['crm', ...externalRoles].includes(requestedPortal) || (requestedPortal !== 'crm' && requestedRole !== requestedPortal)) {
+      return res.status(400).json({ message: 'Invalid requested portal or role' });
+    }
     
     if (!name || !email || !password || !requestedRole) {
       return res.status(400).json({ message: 'All fields are required' });
@@ -151,7 +162,7 @@ router.post('/signup', async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ message: 'Password must be at least 8 characters' });
     }
-    if (!['admin', 'manager', 'account_rep'].includes(requestedRole)) {
+    if (requestedPortal === 'crm' ? !['admin', 'manager', 'account_rep'].includes(requestedRole) : !externalRoles.includes(requestedRole)) {
       return res.status(400).json({ message: 'Invalid requested role' });
     }
     
@@ -171,6 +182,7 @@ router.post('/signup', async (req, res) => {
       lastName,
       role: 'pending',
       requestedRole,
+      requestedPortal,
       isActive: false
     });
     await user.save();
@@ -189,6 +201,94 @@ router.post('/signup', async (req, res) => {
     console.error('Signup error details:', error);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+// Vendor self-registration creates one login-to-vendor membership. Compliance is completed in the portal.
+router.post('/vendor-signup', async (req, res) => {
+  try {
+    const companyName = normalizeProfileText(req.body.companyName, 'Company name', 160, { required: true });
+    const contactName = normalizeProfileText(req.body.contactName, 'Contact name', 160, { required: true });
+    const email = normalizeProfileText(req.body.email, 'Email address', PROFILE_LIMITS.email, { required: true }).toLowerCase();
+    const password = String(req.body.password || '');
+    const phone = normalizeProfileText(req.body.phone, 'Phone number', PROFILE_LIMITS.phone, { required: true });
+    const entityType = normalizeProfileText(req.body.entityType, 'Entity type', 80, { required: true });
+    const trades = [...new Set((Array.isArray(req.body.tradeClassifications) ? req.body.tradeClassifications : []).map(value => String(value || '').trim()).filter(Boolean))].slice(0, 30);
+    const licensedTrade = req.body.licensedTrade === true;
+    const rocLicenseNumber = String(req.body.rocLicenseNumber || '').trim().slice(0, 100);
+    const serviceArea = req.body.serviceArea || {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || !trades.length) return res.status(400).json({ message: 'Valid email, password of at least 8 characters, and at least one trade classification are required' });
+    if (licensedTrade && !rocLicenseNumber) return res.status(400).json({ message: 'ROC license number is required for licensed trades' });
+    if (await User.exists({ email })) return res.status(409).json({ message: 'An account already exists for this email' });
+    if (await Vendor.exists({ $or: [{ email }, ...(rocLicenseNumber ? [{ rocLicenseNumber }] : [])] })) return res.status(409).json({ message: 'A vendor application already exists for this email or ROC license' });
+    const [firstName, ...lastParts] = contactName.split(/\s+/);
+    const vendor = await Vendor.create({
+      name: companyName, legalBusinessName: String(req.body.legalBusinessName || companyName).trim().slice(0, 200), primaryOwnerName: contactName,
+      email, phone, businessEntityType: entityType, businessAddress: String(req.body.businessAddress || '').trim().slice(0, 500),
+      category: trades[0], tradeClassifications: trades, licensedTrade, rocLicenseNumber,
+      rocLicenseTypeClassification: String(req.body.rocClassification || '').trim().slice(0, 160),
+      serviceArea: { basePostalCode: String(serviceArea.basePostalCode || '').trim().slice(0, 20), radiusMiles: Math.max(0, Math.min(500, Number(serviceArea.radiusMiles || 0))), counties: (Array.isArray(serviceArea.counties) ? serviceArea.counties : []).slice(0, 30), postalCodes: (Array.isArray(serviceArea.postalCodes) ? serviceArea.postalCodes : []).slice(0, 100) },
+      onboardingSource: 'self_signup', onboardingStatus: 'pending_review', portalStatus: 'compliance_incomplete', portalStatusUpdatedAt: new Date(), isActive: false,
+      onboardingHistory: [{ action: 'submitted', message: 'Vendor created a portal account and started compliance onboarding', createdAt: new Date() }]
+    });
+    let user;
+    try {
+      user = await User.create({ email, password, firstName, lastName: lastParts.join(' ') || firstName, phone, role: 'vendor', isActive: true });
+      await VendorPortalMembership.create({ userId: user._id, vendorId: vendor._id, role: 'owner', permissions: { profile: true, compliance: true, team: true, assignments: true, invoices: true } });
+    } catch (error) {
+      if (user?._id) await User.deleteOne({ _id: user._id }).catch(() => {});
+      await Vendor.deleteOne({ _id: vendor._id, onboardingSource: 'self_signup' }).catch(() => {});
+      throw error;
+    }
+    const session = await createSession(user, res); req.authSession = session; req.authUser = user;
+    res.status(201).set('Cache-Control', 'no-store').json(authenticateToken.sessionPayload(req, '/pages/vendor-portal.html'));
+  } catch (error) {
+    if (error?.code === 11000) return res.status(409).json({ message: 'This vendor login or vendor record already exists' });
+    res.status(error?.statusCode || (error?.name === 'ValidationError' ? 400 : 500)).json({ message: error?.message || 'Vendor account creation failed' });
+  }
+});
+
+// Residential signup is available only to the homeowner named by an active agent invitation.
+// The password is accepted and hashed by User; it is never written to invitation/customer records.
+router.post('/residential-invite-signup', async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim(); const email = String(req.body?.email || '').trim().toLowerCase(); const password = String(req.body?.password || ''); const token = String(req.body?.token || '');
+    if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || !/^[A-Za-z0-9_-]{32,100}$/.test(token)) return res.status(400).json({ message: 'Name, valid email, password of at least 8 characters, and invitation token are required' });
+    const invitation = await AgentClientInvitation.findOne({ tokenHash: hashInvitationToken(token), homeownerEmail: email, status: 'pending', expiresAt: { $gt: new Date() } }).lean();
+    if (!invitation) return res.status(410).json({ message: 'This invitation is invalid, expired, revoked, already used, or belongs to another email' });
+    const existing = await User.findOne({ email }).lean();
+    if (existing) return res.status(409).json({ message: 'An account already exists for this email. Sign in to continue.', code: 'EXISTING_ACCOUNT' });
+    const [firstName, ...parts] = name.split(/\s+/); const lastName = parts.join(' ') || firstName;
+    const user = await User.create({ email, password, firstName, lastName, role: 'residential', isActive: true });
+    const session = await createSession(user, res); req.authSession = session; req.authUser = user;
+    res.status(201).set('Cache-Control', 'no-store').json(authenticateToken.sessionPayload(req, '/pages/agent-invitation.html'));
+  } catch (error) {
+    if (error?.code === 11000) return res.status(409).json({ message: 'An account already exists for this email. Sign in to continue.', code: 'EXISTING_ACCOUNT' });
+    console.error('Residential invitation signup error:', error?.name || 'Error', error?.message || '');
+    res.status(error?.name === 'ValidationError' ? 400 : 500).json({ message: error?.name === 'ValidationError' ? error.message : 'Account creation failed' });
+  }
+});
+
+router.post('/commercial-invitation/preview', async (req, res) => {
+  try {
+    const token = String(req.body?.token || '');
+    if (!/^[A-Za-z0-9_-]{32,100}$/.test(token)) return res.status(400).json({ message: 'Invitation token is required' });
+    const invitation = await CommercialUserInvitation.findOne({ tokenHash: hashCommercialInvitationToken(token), status: 'pending', expiresAt: { $gt: new Date() } }).lean();
+    if (!invitation) return res.status(410).json({ message: 'This invitation is invalid, expired, revoked, or already used' });
+    res.json({ invitation: { email: invitation.email, scopeType: invitation.scopeType, role: invitation.role, permissions: invitation.permissions, expiresAt: invitation.expiresAt }, existingAccount: Boolean(await User.exists({ email: invitation.email })) });
+  } catch (_error) { res.status(500).json({ message: 'Invitation could not be loaded' }); }
+});
+
+router.post('/commercial-invite-signup', async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim(); const email = String(req.body?.email || '').trim().toLowerCase(); const password = String(req.body?.password || ''); const token = String(req.body?.token || '');
+    if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || !/^[A-Za-z0-9_-]{32,100}$/.test(token)) return res.status(400).json({ message: 'Name, matching email, password of at least 8 characters, and invitation token are required' });
+    const invitation = await CommercialUserInvitation.findOne({ tokenHash: hashCommercialInvitationToken(token), email, status: 'pending', expiresAt: { $gt: new Date() } }).lean();
+    if (!invitation) return res.status(410).json({ message: 'This invitation is invalid, expired, revoked, used, or belongs to another email' });
+    if (await User.exists({ email })) return res.status(409).json({ message: 'An account already exists. Sign in to accept this invitation.', code: 'EXISTING_ACCOUNT' });
+    const [firstName, ...parts] = name.split(/\s+/); const user = await User.create({ email, password, firstName, lastName: parts.join(' ') || firstName, role: 'commercial', isActive: true });
+    const session = await createSession(user, res); req.authSession = session; req.authUser = user;
+    res.status(201).set('Cache-Control', 'no-store').json(authenticateToken.sessionPayload(req, '/pages/commercial-invitation.html'));
+  } catch (error) { if (error?.code === 11000) return res.status(409).json({ message: 'An account already exists. Sign in to continue.', code: 'EXISTING_ACCOUNT' }); res.status(500).json({ message: 'Commercial account creation failed' }); }
 });
 
 // Read the current profile from the database instead of relying on cached browser data.

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111213">
+  <meta name="application-name" content="SMPLfix Agent">
+  <title>Agent Portal | SMPLfix</title>
+  <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
+  <link rel="stylesheet" href="/assets/css/agent-portal.css?v=20260907-agent-portal">
+  <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
+</head>
+<body>
+  <a class="skip-link" href="#agentMain">Skip to main content</a>
+  <div id="offlineBanner" class="offline-banner" role="status" hidden>You’re offline. Saved information remains visible; updates will resume when you reconnect.</div>
+
+  <div class="agent-shell">
+    <aside class="agent-sidebar" id="agentSidebar" aria-label="Agent portal navigation">
+      <div class="sidebar-brand">
+        <a href="#overview" aria-label="SMPLfix Agent Portal home"><img src="/assets/images/smplfix-logo-reversed.png?v=20260806" alt="SMPLfix"></a>
+        <button class="icon-button sidebar-close" id="sidebarClose" type="button" aria-label="Close navigation">×</button>
+      </div>
+      <p class="portal-kicker">Agent workspace</p>
+      <nav class="agent-nav" aria-label="Portal sections">
+        <a href="#overview" data-route="overview" class="nav-link is-active"><span aria-hidden="true">⌂</span>Overview</a>
+        <a href="#portfolio" data-route="portfolio" class="nav-link"><span aria-hidden="true">◇</span>Portfolio</a>
+        <a href="#transactions" data-route="transactions" class="nav-link"><span aria-hidden="true">◫</span>Transactions</a>
+        <a href="#requests" data-route="requests" class="nav-link"><span aria-hidden="true">＋</span>Requests</a>
+        <a href="#documents" data-route="documents" class="nav-link"><span aria-hidden="true">▤</span>Documents</a>
+        <a href="#referrals" data-route="referrals" class="nav-link"><span aria-hidden="true">↗</span>Referrals</a>
+        <a href="#notifications" data-route="notifications" class="nav-link"><span aria-hidden="true">●</span>Notifications <span class="nav-badge" id="notificationBadge" hidden>0</span></a>
+        <a href="#account" data-route="account" class="nav-link"><span aria-hidden="true">○</span>Account</a>
+      </nav>
+      <div class="sidebar-note">
+        <strong>Client-controlled approvals</strong>
+        <p>Homeowners approve estimates and manage payment from their own account.</p>
+      </div>
+      <button class="sidebar-user" id="sidebarUser" type="button" data-route-button="account">
+        <span class="avatar" id="agentAvatar" aria-hidden="true">A</span>
+        <span><strong id="sidebarAgentName">Agent</strong><small id="sidebarBrokerage">Real estate portal</small></span>
+      </button>
+    </aside>
+    <button class="sidebar-scrim" id="sidebarScrim" type="button" aria-label="Close navigation" tabindex="-1" hidden></button>
+
+    <div class="agent-workspace">
+      <header class="agent-header">
+        <button class="icon-button menu-button" id="menuButton" type="button" aria-controls="agentSidebar" aria-expanded="false" aria-label="Open navigation">☰</button>
+        <div class="header-title"><span id="routeEyebrow">Agent portal</span><h1 id="routeTitle">Overview</h1></div>
+        <div class="header-actions">
+          <label class="global-search"><span class="visually-hidden">Search current section</span><span aria-hidden="true">⌕</span><input id="globalSearch" type="search" placeholder="Search transactions, clients, properties…" autocomplete="off"></label>
+          <button class="primary-button compact" type="button" data-route-button="requests">Request service</button>
+        </div>
+      </header>
+
+      <main id="agentMain" class="agent-main" tabindex="-1">
+        <div id="portalLoading" class="state-panel loading-state" role="status">
+          <span class="spinner" aria-hidden="true"></span><strong>Preparing your portfolio</strong><p>Checking current transaction access and work items.</p>
+        </div>
+        <div id="portalError" class="state-panel error-state" role="alert" hidden>
+          <strong>We couldn’t load the agent portal</strong><p id="portalErrorMessage">Try again in a moment.</p><button class="secondary-button" id="retryButton" type="button">Try again</button>
+        </div>
+        <div id="expiredState" class="state-panel expired-state" hidden>
+          <strong>No active transaction access</strong><p>Your property access may have expired at closing, been revoked, or not yet been accepted. Contact SMPLfix if an extension is needed.</p>
+        </div>
+
+        <div id="portalContent" hidden>
+          <section class="portal-view is-active" data-view="overview" aria-labelledby="overviewHeading">
+            <div class="page-intro"><div><p class="eyebrow">White-glove transaction support</p><h2 id="overviewHeading">Good <span id="dayPeriod">morning</span>, <span id="welcomeName">Agent</span>.</h2><p>Keep every property moving toward a clean close.</p></div><button class="primary-button" type="button" data-route-button="requests">New service request</button></div>
+            <div class="metric-grid" id="overviewMetrics" aria-label="Portfolio summary"></div>
+            <div class="overview-grid">
+              <section class="panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">Priority queue</p><h3>Closing soon</h3></div><button class="text-button" type="button" data-route-button="transactions">View all</button></div><div id="closingSoonList" class="stack-list"></div></section>
+              <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Schedule</p><h3>Next appointments</h3></div></div><div id="appointmentList" class="stack-list"></div></section>
+              <section class="panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">Action needed</p><h3>Open work items</h3></div><button class="text-button" type="button" data-route-button="requests">View requests</button></div><div id="openItemsList" class="stack-list"></div></section>
+              <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Latest</p><h3>Recent activity</h3></div></div><div id="activityList" class="timeline"></div></section>
+            </div>
+          </section>
+
+          <section class="portal-view" data-view="portfolio" aria-labelledby="portfolioHeading" hidden>
+            <div class="page-intro"><div><p class="eyebrow">Authorized relationships</p><h2 id="portfolioHeading">Client portfolio</h2><p>Only clients and properties connected to active transactions appear here.</p></div><button class="primary-button" id="openInviteButton" type="button">Invite a homeowner</button></div>
+            <section class="panel invitation-panel"><div class="panel-heading"><div><p class="eyebrow">Agent-to-client access</p><h3>Invitations</h3></div><label class="filter-control">Status<select id="invitationFilter"><option value="all">All invitations</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="expired">Expired</option><option value="revoked">Revoked</option></select></label></div><div id="invitationList" class="invitation-list"></div><div id="invitationEmpty" class="empty-state" hidden><strong>No invitations in this view</strong><p>Create an invitation or change the status filter.</p></div></section>
+            <div id="portfolioList" class="portfolio-grid"></div>
+            <div id="portfolioEmpty" class="empty-state" hidden><strong>No matching portfolio records</strong><p>Try a different search.</p></div>
+          </section>
+
+          <section class="portal-view" data-view="transactions" aria-labelledby="transactionsHeading" hidden>
+            <div class="page-intro"><div><p class="eyebrow">Closing command center</p><h2 id="transactionsHeading">Transactions</h2><p>Deadlines, open work, and completion readiness in one view.</p></div><label class="filter-control">Status<select id="transactionFilter"><option value="all">All active</option><option value="risk">At risk</option><option value="ready">Ready to close</option><option value="open">Open work</option></select></label></div>
+            <div id="transactionList" class="transaction-list"></div>
+            <div id="transactionEmpty" class="empty-state" hidden><strong>No matching transactions</strong><p>Change the filter or search phrase.</p></div>
+            <section class="archive-panel"><div class="panel-heading"><div><p class="eyebrow">Summary only</p><h3>Archived transaction history</h3><p>Closed and revoked transactions remain visible for referral history, but protected records cannot be opened.</p></div></div><div id="archivedTransactionList" class="archive-list"></div></section>
+          </section>
+
+          <section class="portal-view" data-view="requests" aria-labelledby="requestsHeading" hidden>
+            <div class="page-intro"><div><p class="eyebrow">Service coordination</p><h2 id="requestsHeading">Requests</h2><p>Request work and follow status. The homeowner remains responsible for approvals and payment.</p></div></div>
+            <div class="split-layout">
+              <form id="requestForm" class="panel form-panel" enctype="multipart/form-data">
+                <div class="panel-heading"><div><p class="eyebrow">New request</p><h3>What does the property need?</h3></div></div>
+                <label>Transaction<select id="requestTransaction" required><option value="">Select a transaction</option></select></label>
+                <div id="requestPropertySummary" class="request-property" role="status">Select a transaction to confirm the authorized property.</div>
+                <label>Service category<select id="requestService" name="serviceCategory" required><option value="">Select a service</option><option>Appliance</option><option>Electrical</option><option>General Handyman</option><option>HVAC</option><option>Landscaping</option><option>Pest Control</option><option>Plumbing</option><option>Pool</option><option>Roofing</option><option>Other</option></select></label>
+                <label>Scope of work<textarea id="requestDescription" name="scopeOfWork" rows="5" minlength="10" maxlength="5000" required placeholder="Describe the inspection finding, issue, and work needed."></textarea></label>
+                <div class="form-grid two-column"><label>Urgency<select id="requestUrgency" name="urgency" required><option value="routine">Routine</option><option value="soon">Soon</option><option value="urgent">Urgent</option><option value="emergency">Emergency</option></select></label><label>Target completion deadline<input id="requestDeadline" name="targetCompletionDeadline" type="date" required></label></div>
+                <label>Preferred timing<input id="requestTiming" name="preferredTiming" maxlength="500" required placeholder="Before Friday afternoon"></label>
+                <label>Access instructions<textarea id="requestAccess" name="accessInstructions" rows="2" maxlength="1000" placeholder="Gate, lockbox, or site instructions"></textarea></label>
+                <fieldset class="request-upload"><legend>Inspection and supporting files</legend><label>Inspection report<input id="requestInspection" name="inspectionReport" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"></label><label>Supporting photos or documents<input id="requestSupporting" name="supportingFiles" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" multiple></label><small id="requestFileSummary">Up to 1 inspection report and 4 supporting files; 10 MB per file.</small></fieldset>
+                <section id="requestGuidance" class="request-guidance" aria-live="polite"><strong>Planning guidance</strong><p>Select a transaction and service category. Guidance appears only when backed by recorded SMPLfix data.</p></section>
+                <p class="form-note">Original uploads are retained in the protected transaction record. Automated extraction is not enabled. Submitting does not approve an estimate or authorize payment.</p>
+                <p id="requestError" class="form-error" role="alert" hidden></p>
+                <button id="requestSubmit" class="primary-button" type="submit">Submit request</button>
+              </form>
+              <div class="request-side"><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Active work</p><h3>Request status</h3></div></div><div id="requestList" class="stack-list"></div></section><section class="panel message-panel"><div class="panel-heading"><div><p class="eyebrow">Logged relay</p><h3>Order communication</h3></div></div><label>Work item<select id="messageOrder"><option value="">Select an active work item</option></select></label><div id="messageList" class="message-list" aria-live="polite"></div><form id="messageForm" class="message-form"><label for="messageBody" class="visually-hidden">Message</label><textarea id="messageBody" maxlength="3000" rows="3" required placeholder="Message the homeowner through SMPLfix"></textarea><p class="form-note">Direct contact information is hidden. Messages are logged to the order.</p><p id="messageError" class="form-error" role="alert" hidden></p><button id="messageSubmit" class="secondary-button" type="submit">Send message</button></form></section></div>
+            </div>
+          </section>
+
+          <section class="portal-view" data-view="documents" aria-labelledby="documentsHeading" hidden>
+            <div class="page-intro"><div><p class="eyebrow">Transaction files</p><h2 id="documentsHeading">Documents</h2><p>Inspection reports and authorized completion records, grouped by transaction.</p></div></div>
+            <div id="packageList" class="package-grid"></div><div id="documentList" class="document-groups"></div>
+            <div id="documentEmpty" class="empty-state" hidden><strong>No documents available</strong><p>Inspection and completion documents will appear here when added.</p></div>
+          </section>
+
+          <section class="portal-view" data-view="referrals" aria-labelledby="referralsHeading" hidden>
+            <div class="page-intro"><div><p class="eyebrow">Relationship history</p><h2 id="referralsHeading">Referrals</h2><p>Track business attributed to your agent portfolio.</p></div></div>
+            <div id="referralMetrics" class="metric-grid"></div><section id="referralProgram" class="panel referral-program"></section><div id="referralList" class="panel table-panel"></div>
+          </section>
+
+          <section class="portal-view" data-view="notifications" aria-labelledby="notificationsHeading" hidden>
+            <div class="page-intro"><div><p class="eyebrow">Important updates</p><h2 id="notificationsHeading">Notifications</h2><p>Focused alerts for work and transaction activity.</p></div></div>
+            <div id="notificationList" class="notification-list"></div><div id="notificationEmpty" class="empty-state" hidden><strong>You’re all caught up</strong><p>New transaction alerts will appear here.</p></div>
+          </section>
+
+          <section class="portal-view" data-view="account" aria-labelledby="accountHeading" hidden>
+            <div class="page-intro"><div><p class="eyebrow">Agent identity</p><h2 id="accountHeading">Account</h2><p>Your portal identity and access boundaries.</p></div></div>
+            <div class="account-grid"><section class="panel profile-card" id="profileCard"></section><section class="panel boundary-card"><p class="eyebrow">Permission boundary</p><h3>Your clients stay in control</h3><ul><li>You can request service and view authorized status.</li><li>You cannot approve estimates or manage payment.</li><li>Access is property-specific and expires by transaction rules.</li><li>SMPLfix staff must approve extensions.</li></ul><button class="secondary-button" id="logoutButton" type="button">Sign out</button></section></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="transactionDialog" class="detail-dialog" aria-labelledby="transactionDialogTitle">
+    <div class="dialog-header"><div><p class="eyebrow">Transaction detail</p><h2 id="transactionDialogTitle">Transaction</h2></div><button class="icon-button" id="closeTransactionDialog" type="button" aria-label="Close transaction detail">×</button></div>
+    <div id="transactionDialogBody" class="dialog-body"></div>
+  </dialog>
+  <dialog id="inviteDialog" class="detail-dialog invite-dialog" aria-labelledby="inviteDialogTitle">
+    <div class="dialog-header"><div><p class="eyebrow">Agent-to-client invitation</p><h2 id="inviteDialogTitle">Invite a homeowner</h2></div><button class="icon-button" id="closeInviteDialog" type="button" aria-label="Close invitation form">×</button></div>
+    <form id="inviteForm" class="dialog-body invite-form">
+      <div class="form-grid two-column"><label>Homeowner name<input id="inviteName" maxlength="160" autocomplete="name" placeholder="Jordan Ellis"></label><label>Homeowner email<input id="inviteEmail" type="email" maxlength="254" autocomplete="email" required placeholder="jordan@example.com"></label></div>
+      <label>Property option<select id="invitePropertyMode"><option value="proposed">Propose a property</option><option value="existing">Choose a previously connected property</option></select></label>
+      <label id="inviteExistingField" hidden>Previously connected property<select id="inviteExistingProperty"></select></label>
+      <fieldset id="invitePropertyFields"><legend>Proposed property</legend><div class="form-grid two-column"><label>Property label<input id="invitePropertyLabel" maxlength="120" placeholder="Cactus Ridge"></label><label>Street address<input id="inviteAddress" maxlength="240" required autocomplete="street-address"></label><label>City<input id="inviteCity" maxlength="120" required autocomplete="address-level2"></label><label>State<input id="inviteState" maxlength="80" required value="AZ" autocomplete="address-level1"></label><label>ZIP code<input id="invitePostal" maxlength="24" required autocomplete="postal-code"></label><label>Property type<input id="invitePropertyType" maxlength="80" placeholder="Single-family home"></label></div></fieldset>
+      <div class="form-grid two-column"><label>Transaction label<input id="inviteTransactionLabel" maxlength="180" required placeholder="Cactus Ridge closing"></label><label>Close date<input id="inviteCloseDate" type="date" required></label></div>
+      <fieldset><legend>Requested permission scope</legend><div class="permission-grid"><label><input id="inviteView" type="checkbox" checked disabled> View work status</label><label><input id="inviteRequest" type="checkbox" checked> Request service</label><label><input id="inviteDocuments" type="checkbox" checked> View documents</label><label><input id="inviteUpload" type="checkbox" checked> Upload inspection reports</label><label><input id="inviteMessage" type="checkbox" checked> Message through SMPLfix</label></div><p class="form-note">Estimate approval and payment authority are never included.</p></fieldset>
+      <label>Delivery<select id="inviteDelivery"><option value="email">Email the secure link</option><option value="copy">Create link to copy</option></select></label>
+      <p id="inviteError" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button class="secondary-button" id="cancelInviteButton" type="button">Cancel</button><button class="primary-button" id="inviteSubmit" type="submit">Create invitation</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/assets/js/api-service.js?v=20260907-agent-api"></script>
+  <script src="/assets/js/agent-portal.js?v=20260916-agent-completion"></script>
+</body>
+</html>

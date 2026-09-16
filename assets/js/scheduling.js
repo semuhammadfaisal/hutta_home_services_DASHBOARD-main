@@ -91,6 +91,12 @@
     const { order, schedules = [], decisions = [], workOrders = [], emailMessages = [] } = workspace;
     $('schedulingWorkspaceTitle').textContent = `${order.requestReference || order.orderId} · ${order.customer?.name || 'Customer'}`;
     $('schedulingWorkspaceSummary').textContent = `${order.service} · ${order.vendor?.name || 'Selected vendor'} · Arizona time`;
+    const assignmentSelect = $('scheduleAssignmentInput');
+    if (assignmentSelect) {
+      assignmentSelect.innerHTML = '<option value="">Primary vendor / legacy assignment</option>' + (order.vendorAssignments || []).map(item => `<option value="${esc(item._id)}">${esc(item.service)} · ${esc(item.vendor?.name || 'Assigned vendor')}</option>`).join('');
+      const currentAssignmentId = schedules.find(item => item.status === 'pending_vendor')?.assignmentId || '';
+      assignmentSelect.value = String(currentAssignmentId || '');
+    }
 
     const decisionMap = new Map(decisions.map(decision => [String(decision.jobScheduleId), decision]));
     const workMap = new Map(workOrders.map(workOrder => [String(workOrder.jobScheduleId), workOrder]));
@@ -177,6 +183,7 @@
     const payload = {
       proposedStart: iso($('scheduleStartInput').value),
       proposedEnd: iso($('scheduleEndInput').value),
+      assignmentId: $('scheduleAssignmentInput')?.value || undefined,
       accessInstructions: $('scheduleAccessInput').value,
       internalNotes: $('scheduleInternalNotes').value,
       conflictAcknowledged: $('scheduleConflictAck').checked

@@ -32,6 +32,14 @@
       <span class="secure-session"><span aria-hidden="true">&#128274;</span> Private one-time link</span>
     </header>
     <section id="quoteLoading" class="quote-state"><div class="spinner"></div><h2>Opening quote request</h2><p>Validating your secure invitation&hellip;</p></section>
+    <section id="leadDecision" class="quote-card hidden" aria-labelledby="leadDecisionHeading">
+      <span class="quote-kicker">Lead invitation</span><h2 id="leadDecisionHeading">Would you like to bid?</h2>
+      <p>Accepting commits your company to submit an estimate by the bid deadline. It does not award the job.</p>
+      <div class="job-brief"><dl><div><dt>Service</dt><dd id="leadService"></dd></div><div><dt>Property</dt><dd id="leadAddress"></dd></div><div><dt>Requested window</dt><dd id="leadWindow"></dd></div><div><dt>Respond by</dt><dd id="leadResponseDue"></dd></div><div><dt>Bid due</dt><dd id="leadBidDue"></dd></div></dl><div class="customer-details"><span>Safe job scope</span><p id="leadScope"></p></div></div>
+      <div class="secure-wizard-actions"><button id="declineLeadToggle" class="secure-back" type="button">Decline</button><button id="acceptLead" class="secure-next" type="button">Accept to bid</button></div>
+      <form id="declineLeadForm" hidden><label><span>Reason</span><select name="declineReasonCode" required><option value="capacity">At capacity</option><option value="outside_scope">Outside scope</option><option value="outside_service_area">Outside service area</option><option value="schedule">Schedule conflict</option><option value="pricing">Pricing limitation</option><option value="compliance">Compliance issue</option><option value="other">Other</option></select></label><label><span>Explanation</span><textarea name="declineReason" maxlength="1000" required></textarea></label><button type="submit">Confirm decline</button></form>
+    </section>
+    <section id="leadAccepted" class="quote-state hidden"><div class="state-icon success">✓</div><h2>Lead accepted</h2><p>Sign in to the Vendor Portal to upload the original estimate, review line items, and confirm submission.</p><a class="secure-next" href="/pages/login.html?returnTo=%2Fpages%2Fvendor-portal.html">Open Vendor Portal</a></section>
     <section id="quoteError" class="quote-state hidden" role="alert"><div class="state-icon error">!</div><h2>Quote request unavailable</h2><p id="quoteErrorMessage"></p></section>
     <section id="quoteSuccess" class="quote-state hidden"><div class="state-icon success">&#10003;</div><h2>Quote submitted</h2><p>Your quote was received securely. smplfix will contact you if a revision is needed.</p><strong id="quoteSuccessReference"></strong></section>
 

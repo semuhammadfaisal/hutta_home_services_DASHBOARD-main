@@ -4,6 +4,8 @@
   let workspace = null;
   let currentOrderId = '';
   let editingQuoteId = '';
+  let leadCandidates = [];
+  const leadSubmissionKeys = new Map();
 
   const $ = id => document.getElementById(id);
   const escapeHtml = value => typeof window.escapePaymentHtml === 'function'
@@ -116,13 +118,15 @@
 
   function renderWorkspace() {
     if (!workspace) return;
-    const { order, quotes = [], invitations = [], emailMessages = [] } = workspace;
+    const { order, quotes = [], invitations = [], emailMessages = [], estimateDrafts = [] } = workspace;
     $('incomingWorkspaceTitle').textContent = `${order.requestReference || order.orderId} · ${order.customer?.name || 'Customer'}`;
     $('incomingWorkspaceSummary').textContent = `${order.service} · ${order.customer?.address || 'No address'} · ${order.workflowStatus.replaceAll('_', ' ')}`;
     $('incomingInviteVendor').innerHTML = vendorOptions();
     $('incomingStaffVendor').innerHTML = vendorOptions();
     renderVendorCompliance('incomingInviteVendor');
     renderVendorCompliance('incomingStaffVendor');
+    renderLeadCandidates();
+    renderResidentialReview(order);
     const body = $('incomingComparisonBody');
     const comparableQuotes = quotes.filter(quote => ['submitted', 'selected'].includes(quote.status));
     const lowestTotal = comparableQuotes.length ? Math.min(...comparableQuotes.map(quote => Number(quote.total || 0))) : null;
@@ -143,13 +147,15 @@
         const compliance = quote.vendorSnapshot?.complianceStatus || 'missing';
         const warnings = quote.vendorSnapshot?.complianceWarnings || [];
         const docs = (quote.documents || []).filter(document => document.status !== 'archived');
+        const estimateDraft = estimateDrafts.find(draft => String(draft.quoteId) === String(quote._id));
+        const estimateSources = estimateDraft?.attachments || [];
         const actionAllowed = quote.status === 'submitted' && order.workflowStatus === 'quote_collection';
         const isLowest = comparableQuotes.length > 1 && Number(quote.total || 0) === lowestTotal && ['submitted', 'selected'].includes(quote.status);
         const quoteAvailability = new Date(quote.earliestAvailableDate).getTime();
         const isEarliest = comparableQuotes.length > 1 && Number.isFinite(quoteAvailability) && quoteAvailability === earliestAvailability && ['submitted', 'selected'].includes(quote.status);
         const statusClass = quote.status === 'selected' ? 'selected' : quote.status === 'submitted' ? 'submitted' : quote.status === 'draft' ? 'draft' : 'historical';
         return `<tr class="${quote.status === 'selected' ? 'is-selected' : ''}">
-          <td data-label="Vendor"><div class="incoming-vendor-cell"><span class="incoming-vendor-avatar">${escapeHtml(String(vendor.name || quote.vendorSnapshot?.name || 'V').charAt(0).toUpperCase())}</span><span><strong>${escapeHtml(vendor.name || quote.vendorSnapshot?.name || 'Vendor')}</strong><small>${escapeHtml(quote.quoteReference)} · Revision ${Number(quote.revisionNumber || 1)}</small><small>${escapeHtml(quote.source === 'vendor' ? 'Vendor submitted' : 'Staff entered')}</small></span></div>${docs.length ? `<div class="incoming-documents">${docs.map(doc => `<a href="/api/attachments/incoming-quote/${encodeURIComponent(quote._id)}/${encodeURIComponent(doc.documentId)}" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> ${escapeHtml(doc.name)}</a>`).join('')}</div>` : ''}</td>
+          <td data-label="Vendor"><div class="incoming-vendor-cell"><span class="incoming-vendor-avatar">${escapeHtml(String(vendor.name || quote.vendorSnapshot?.name || 'V').charAt(0).toUpperCase())}</span><span><strong>${escapeHtml(vendor.name || quote.vendorSnapshot?.name || 'Vendor')}</strong><small>${escapeHtml(quote.quoteReference)} · Revision ${Number(quote.revisionNumber || 1)}</small><small>${escapeHtml(quote.source === 'vendor' ? 'Vendor submitted' : 'Staff entered')}</small></span></div>${docs.length ? `<div class="incoming-documents">${docs.map(doc => `<a href="/api/attachments/incoming-quote/${encodeURIComponent(quote._id)}/${encodeURIComponent(doc.documentId)}" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> ${escapeHtml(doc.name)}</a>`).join('')}</div>` : ''}${estimateSources.length ? `<div class="incoming-documents"><small>Original vendor estimate · parser ${escapeHtml(estimateDraft.parser?.status || 'not requested')}</small>${estimateSources.map(doc => `<a href="${escapeHtml(doc.downloadUrl)}" target="_blank" rel="noopener"><i class="fas fa-file-shield"></i> ${escapeHtml(doc.name)}</a>`).join('')}</div>` : ''}</td>
           <td data-label="Compliance"><span class="incoming-compliance ${escapeHtml(compliance)}" title="${escapeHtml(warnings.join('; '))}"><i class="fas ${warnings.length ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>${escapeHtml(compliance)}</span>${warnings.length ? `<small class="incoming-risk-copy">${escapeHtml(warnings[0])}</small>` : ''}</td>
           <td data-label="Pricing"><div class="incoming-pricing-summary"><span class="incoming-primary-value">${money(quote.total)}</span>${isLowest ? '<em class="incoming-best-badge"><i class="fas fa-arrow-down"></i> Lowest</em>' : ''}<span class="incoming-supporting-value">Labor ${money(quote.laborAmount)} <i>·</i> Materials ${money(quote.materialsAmount)}</span></div></td>
           <td data-label="Schedule"><div class="incoming-schedule-summary"><span class="incoming-primary-value">${date(quote.earliestAvailableDate)}</span>${isEarliest ? '<em class="incoming-best-badge fastest"><i class="fas fa-bolt"></i> Earliest</em>' : ''}<span class="incoming-supporting-value">${escapeHtml(quote.estimatedDuration?.value || '—')} ${escapeHtml(quote.estimatedDuration?.unit || '')} estimated</span></div></td>
@@ -165,6 +171,43 @@
     deliveryList.innerHTML = emailMessages.length ? emailMessages.map(message => `<div class="incoming-invitation-row"><div><strong>${escapeHtml(message.type.replaceAll('_', ' '))}</strong><small>${escapeHtml((message.recipients || []).join(', '))} · ${Number(message.attempts || 0)} attempt${Number(message.attempts || 0) === 1 ? '' : 's'}</small></div><span class="incoming-state">${escapeHtml(message.status.replaceAll('_', ' '))}</span><div>${message.status === 'permanently_failed' ? `<button class="incoming-mini-btn" onclick="retryIncomingQuoteEmail('${escapeHtml(message._id)}')">Retry</button>` : ''}</div></div>`).join('') : '<p>No quote emails have been queued for this Order.</p>';
   }
 
+  function renderLeadCandidates() {
+    const node = $('incomingLeadCandidates'); if (!node) return;
+    if (!leadCandidates.length) { node.innerHTML = '<p>No vendors are available for qualification.</p>'; return; }
+    node.innerHTML = leadCandidates.map(vendor => `<label class="incoming-lead-candidate ${vendor.eligible ? '' : 'is-blocked'}"><input type="checkbox" name="leadVendor" value="${escapeHtml(vendor.id)}" ${vendor.eligible ? '' : 'disabled'}><span><strong>${escapeHtml(vendor.name)}</strong><small>${escapeHtml((vendor.tradeClassifications || []).join(', ') || vendor.category || 'No trade')}</small><small>${vendor.eligible ? `Rating ${Number(vendor.qualification?.rating || 0).toFixed(1)} · Performance ${Number(vendor.qualification?.performanceScore || 0)}` : escapeHtml((vendor.reasons || []).join(' · '))}</small></span></label>`).join('');
+  }
+
+  function renderResidentialReview(order) {
+    let panel = $('incomingResidentialReview');
+    if (!panel) {
+      panel = document.createElement('section'); panel.id = 'incomingResidentialReview'; panel.className = 'incoming-panel';
+      $('incomingLeadDistributionForm').prepend(panel);
+    }
+    panel.hidden = order.source !== 'residential_portal';
+    panel.style.display = panel.hidden ? 'none' : '';
+    if (panel.hidden) return;
+    const reviewed = Boolean(order.employee && order.residentialStaffReview?.reviewedAt);
+    panel.innerHTML = `<h3>Review residential request</h3><p>${escapeHtml(order.description || '')}</p><p>Urgency: ${escapeHtml(order.residentialRequest?.urgency || 'normal')} · Preferred timing: ${escapeHtml(order.customerIntake?.preferredTiming || 'Not specified')}</p><p>${reviewed ? 'Review confirmed. Select qualified vendors and send the lead below.' : 'Assign a coordinator and confirm scope before sending. The request stays under review until leads are sent.'}</p>${order.workflowStatus === 'request_received' ? `<label>Coordinator<select id="incomingResidentialCoordinator"><option value="">Loading coordinators…</option></select></label><label>Reviewed scope<textarea id="incomingResidentialScope" rows="4" maxlength="5000">${escapeHtml(order.residentialStaffReview?.scope || order.description || order.service)}</textarea></label><label><input type="checkbox" id="incomingResidentialConfirmed"> I reviewed the property, scope, urgency and preferred timing.</label><button type="button" class="btn-secondary" id="incomingResidentialReviewSave">Confirm review &amp; coordinator</button><p id="incomingResidentialReviewStatus" role="status"></p>` : ''}`;
+    if ($('incomingResidentialCoordinator')) {
+      window.APIService.getEmployees().then(employees => {
+        if (String(currentOrderId) !== String(order._id)) return;
+        const select = $('incomingResidentialCoordinator'); if (!select) return;
+        const list = Array.isArray(employees) ? employees : employees.data || [];
+        select.innerHTML = '<option value="">Select coordinator</option>' + list.filter(item => item.isActive !== false).map(item => `<option value="${escapeHtml(item._id)}">${escapeHtml(item.name)}</option>`).join('');
+        select.value = String(order.employee?._id || order.employee || '');
+      }).catch(error => { if ($('incomingResidentialReviewStatus')) $('incomingResidentialReviewStatus').textContent = error.message; });
+      $('incomingResidentialReviewSave').addEventListener('click', async event => {
+        const button = event.currentTarget; button.disabled = true;
+        try {
+          await window.APIService.reviewResidentialRequest(currentOrderId, { employeeId: $('incomingResidentialCoordinator').value, scope: $('incomingResidentialScope').value.trim(), confirmReviewed: $('incomingResidentialConfirmed').checked });
+          await refreshWorkspace(); toast('Review confirmed. Select qualified vendors and send the lead.');
+        } catch (error) { toast(error.message, 'error'); } finally { if (button.isConnected) button.disabled = false; }
+      });
+    }
+    $('incomingLeadScope').value = order.residentialStaffReview?.scope || order.description || order.service;
+    $('incomingLeadWindow').value = order.customerIntake?.preferredTiming || '';
+  }
+
   async function openIncomingQuoteWorkspace(orderId, scroll = true) {
     try {
       if (currentOrderId && String(currentOrderId) !== String(orderId)) {
@@ -173,7 +216,8 @@
         if ($('incomingStaffVendor')) $('incomingStaffVendor').disabled = false;
       }
       currentOrderId = orderId;
-      workspace = await window.APIService.getIncomingQuoteWorkspace(orderId);
+      const [loadedWorkspace, candidates] = await Promise.all([window.APIService.getIncomingQuoteWorkspace(orderId), window.APIService.getIncomingLeadCandidates(orderId)]);
+      workspace = loadedWorkspace; leadCandidates = candidates.candidates || [];
       $('incomingQuoteWorkspace').hidden = false;
       renderWorkspace();
       if (scroll) $('incomingQuoteWorkspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -193,7 +237,8 @@
 
   async function refreshWorkspace() {
     if (!currentOrderId) return;
-    workspace = await window.APIService.getIncomingQuoteWorkspace(currentOrderId);
+    const [loadedWorkspace, candidates] = await Promise.all([window.APIService.getIncomingQuoteWorkspace(currentOrderId), window.APIService.getIncomingLeadCandidates(currentOrderId)]);
+    workspace = loadedWorkspace; leadCandidates = candidates.candidates || [];
     renderWorkspace();
     const loaded = await window.APIService.getIncomingQuoteOrders();
     orders = loaded || [];
@@ -275,6 +320,24 @@
   $('incomingInviteVendor')?.addEventListener('change', event => {
     const vendor = vendors.find(item => String(item._id) === String(event.target.value));
     $('incomingInviteEmail').value = vendor?.primaryEmail || '';
+  });
+
+  $('incomingLeadDistributionForm')?.addEventListener('submit', async event => {
+    event.preventDefault(); const form = event.currentTarget; const button = event.submitter;
+    if (workspace?.order?.source === 'residential_portal' && (!workspace.order.employee || !workspace.order.residentialStaffReview?.reviewedAt)) return toast('Confirm residential review and coordinator first.', 'error');
+    const vendorIds = [...form.querySelectorAll('[name="leadVendor"]:checked')].map(input => input.value);
+    if (!vendorIds.length) return toast('Select at least one qualified vendor.', 'error');
+    const responseDueAt = new Date($('incomingLeadResponseDue').value); const bidDueAt = new Date($('incomingLeadBidDue').value);
+    if (Number.isNaN(responseDueAt.getTime()) || Number.isNaN(bidDueAt.getTime())) return toast('Enter valid response and estimate deadlines.', 'error');
+    if (button) button.disabled = true;
+    try {
+      const submissionSignature = `${currentOrderId}:${[...vendorIds].sort().join(',')}:${responseDueAt.toISOString()}:${bidDueAt.toISOString()}`;
+      if (!leadSubmissionKeys.has(submissionSignature)) leadSubmissionKeys.set(submissionSignature, globalThis.crypto?.randomUUID?.() || `lead-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      const idempotencyKey = leadSubmissionKeys.get(submissionSignature);
+      const result = await window.APIService.distributeIncomingLead(currentOrderId, { vendorIds, responseDueAt: responseDueAt.toISOString(), bidDueAt: bidDueAt.toISOString(), requestedWindow: $('incomingLeadWindow').value.trim(), scope: $('incomingLeadScope').value.trim(), relevantNotes: $('incomingLeadNotes').value.trim() }, idempotencyKey);
+      form.reset(); toast(`Lead sent to ${result.leads?.length || vendorIds.length} qualified vendor${vendorIds.length === 1 ? '' : 's'}.`); await refreshWorkspace();
+    } catch (error) { toast(error.message, 'error'); }
+    finally { if (button?.isConnected) button.disabled = false; }
   });
 
   $('incomingInvitationForm')?.addEventListener('submit', async event => {

@@ -16,7 +16,7 @@ const customerQuoteDecisionSchema = new mongoose.Schema({
   quoteSnapshotHash: { type: String, required: true, match: /^[a-f0-9]{64}$/, immutable: true },
   ipAddress: { type: String, maxlength: 128, immutable: true },
   userAgent: { type: String, maxlength: 1000, immutable: true },
-  source: { type: String, enum: ['secure_quote_link'], default: 'secure_quote_link', immutable: true }
+  source: { type: String, enum: ['secure_quote_link', 'residential_portal', 'commercial_portal'], default: 'secure_quote_link', immutable: true }
 }, { timestamps: true });
 
 customerQuoteDecisionSchema.index({ orderId: 1, decisionAt: -1 });

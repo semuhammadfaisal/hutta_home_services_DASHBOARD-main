@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101714">
+  <meta name="application-name" content="SMPLfix Commercial">
+  <title>Commercial Client Portal | SMPLfix</title>
+  <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
+  <link rel="stylesheet" href="/assets/css/commercial-portal.css?v=20260907-commercial-portal">
+  <link rel="stylesheet" href="/assets/css/commercial-workflows.css?v=20260916-commercial-completion">
+  <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
+</head>
+<body>
+  <a class="skip-link" href="#commercialMain">Skip to main content</a>
+  <div id="offlineBanner" class="offline-banner" role="status" hidden>You’re offline. Displayed portfolio data may be out of date.</div>
+  <div class="portal-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Commercial portal navigation">
+      <div class="brand-row"><a href="#overview" aria-label="SMPLfix Commercial Portal home"><img src="/assets/images/smplfix-logo-reversed.png?v=20260806" alt="SMPLfix"></a><button id="sidebarClose" class="icon-button sidebar-close" type="button" aria-label="Close navigation">×</button></div>
+      <p class="portal-label">Commercial workspace</p>
+      <nav id="portalNavigation" aria-label="Portal sections">
+        <a href="#overview" data-route="overview" class="nav-link is-active"><span aria-hidden="true">⌂</span>Overview</a>
+        <a href="#properties" data-route="properties" class="nav-link"><span aria-hidden="true">◇</span>Properties</a>
+        <a href="#orders" data-route="orders" class="nav-link"><span aria-hidden="true">≡</span>Open Orders</a>
+        <a href="#activity" data-route="activity" class="nav-link"><span aria-hidden="true">◷</span>Activity</a>
+        <a href="#invoices" data-route="invoices" class="nav-link"><span aria-hidden="true">▤</span>Invoices</a>
+        <a href="#reports" data-route="reports" class="nav-link"><span aria-hidden="true">↗</span>Reports</a>
+        <a href="#documents" data-route="documents" class="nav-link"><span aria-hidden="true">▱</span>Documents</a>
+        <a href="#users" data-route="users" class="nav-link"><span aria-hidden="true">◎</span>Users</a>
+        <a href="#warranty" data-route="warranty" class="nav-link"><span aria-hidden="true">◈</span>Warranty Claims</a>
+        <a href="#notifications" data-route="notifications" class="nav-link"><span aria-hidden="true">●</span>Notifications <b id="notificationBadge" hidden>0</b></a>
+        <a href="#account" data-route="account" class="nav-link"><span aria-hidden="true">○</span>Account</a>
+      </nav>
+      <div class="sidebar-note"><strong>One operating view</strong><p>Orders, visits, invoices, and reports stay connected to each location.</p></div>
+      <button id="accountShortcut" class="account-shortcut" type="button"><span id="userInitials">CC</span><span><strong id="sidebarUserName">Commercial client</strong><small id="sidebarOrgName">Portfolio access</small></span></button>
+    </aside>
+    <button id="sidebarScrim" class="sidebar-scrim" type="button" aria-label="Close navigation" hidden></button>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button id="menuButton" class="icon-button menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">☰</button>
+        <div class="route-title"><span>Commercial portal</span><h1 id="routeTitle">Overview</h1></div>
+        <div class="scope-controls">
+          <label><span>Organization</span><select id="organizationSelect" aria-label="Choose organization"></select></label>
+          <label><span>Portfolio</span><select id="portfolioSelect" aria-label="Choose portfolio"><option value="">All portfolios</option></select></label>
+        </div>
+        <label class="global-search"><span aria-hidden="true">⌕</span><span class="sr-only">Search current section</span><input id="globalSearch" type="search" placeholder="Search locations, orders…" autocomplete="off"></label>
+      </header>
+
+      <main id="commercialMain" class="main" tabindex="-1">
+        <section id="loadingState" class="state-panel" role="status"><span class="spinner" aria-hidden="true"></span><strong>Opening your portfolio</strong><p>Loading only the locations and actions assigned to your account.</p></section>
+        <section id="errorState" class="state-panel state-error" role="alert" hidden><strong>We couldn’t load this workspace</strong><p id="errorMessage">Try again in a moment.</p><button id="retryButton" class="secondary-button" type="button">Try again</button></section>
+        <section id="emptyAccessState" class="state-panel" hidden><strong id="setupHeading">Your commercial workspace needs setup</strong><p id="setupDescription">Your organization and location access must be confirmed by an administrator.</p><button id="requestSetupButton" class="primary-button" type="button">Request workspace setup</button> <button id="refreshSetupButton" class="secondary-button" type="button">Refresh access</button><p id="setupStatus" role="status" aria-live="polite"></p></section>
+
+        <div id="portalContent" hidden>
+          <section class="portal-view is-active" data-view="overview" aria-labelledby="overviewHeading">
+            <div class="page-intro"><div><p class="eyebrow">Portfolio operations</p><h2 id="overviewHeading">Every location, one clear view.</h2><p id="scopeSummary">Live service activity across your authorized properties.</p></div><button class="primary-button" type="button" data-route-button="orders">Review open work</button></div>
+            <div id="overviewMetrics" class="metric-grid" aria-label="Portfolio summary"></div>
+            <div class="overview-layout">
+              <section class="panel panel-wide"><div class="panel-heading"><div><p class="eyebrow">Action queue</p><h3>Urgent and open work</h3></div><button class="text-button" type="button" data-route-button="orders">View all</button></div><div id="priorityOrders" class="stack-list"></div></section>
+              <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Approvals</p><h3>Estimates requiring action</h3></div></div><div id="estimateList" class="stack-list"></div></section>
+              <section class="panel panel-wide"><div class="panel-heading"><div><p class="eyebrow">Locations</p><h3>Portfolio pulse</h3></div><button class="text-button" type="button" data-route-button="properties">All properties</button></div><div id="propertyPulse" class="property-pulse"></div></section>
+              <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Latest</p><h3>Recent activity</h3></div></div><div id="activityList" class="timeline"></div></section>
+            </div>
+          </section>
+
+          <section class="portal-view" data-view="properties" aria-labelledby="propertiesHeading" hidden><div class="page-intro"><div><p class="eyebrow">Portfolio directory</p><h2 id="propertiesHeading">Properties</h2><p>Service tier, open work, visits, and spend by location.</p></div><label class="filter-control">Tier<select id="tierFilter"><option value="all">All tiers</option><option value="tier_1">Tier 1</option><option value="tier_2">Tier 2</option><option value="tier_3">Tier 3</option></select></label></div><div id="propertyGrid" class="property-grid"></div><div id="propertyEmpty" class="empty-state" hidden><strong>No matching properties</strong><p>Change the portfolio, tier, or search phrase.</p></div></section>
+
+          <section class="portal-view" data-view="orders" aria-labelledby="ordersHeading" hidden><div class="page-intro"><div><p class="eyebrow">Across all authorized locations</p><h2 id="ordersHeading">Open Orders</h2><p>Track current work without exposing internal vendor pricing.</p></div><div><button id="newRequestButton" class="primary-button" type="button">New request</button> <label class="filter-control">Status<select id="orderFilter"><option value="all">All open work</option><option value="urgent">Urgent</option><option value="scheduled">Scheduled</option><option value="approval">Awaiting approval</option></select></label></div></div><section class="panel table-panel"><div id="orderList" class="data-list"></div><div id="orderEmpty" class="empty-state" hidden><strong>No matching open orders</strong><p>Your current filters returned no work.</p></div></section></section>
+
+          <section class="portal-view" data-view="activity" aria-labelledby="activityHeading" hidden><div class="page-intro"><div><p class="eyebrow">Portfolio timeline</p><h2 id="activityHeading">Activity</h2><p>Consolidated service activity across every authorized location.</p></div></div><section class="panel"><div id="consolidatedActivity" class="timeline"></div><div id="activityEmpty" class="empty-state" hidden><strong>No activity available</strong></div></section></section>
+
+          <section class="portal-view" data-view="invoices" aria-labelledby="invoicesHeading" hidden><div class="page-intro"><div><p class="eyebrow">Client-visible billing</p><h2 id="invoicesHeading">Invoices</h2><p>Tier 1 shows coordination-fee invoices only. Tier 2 and 3 show consolidated billing.</p></div><div class="billing-filters"><label class="filter-control">Property<select id="billingProperty"><option value="">All properties</option></select></label><label class="filter-control">From<input id="billingDateFrom" type="date"></label><label class="filter-control">To<input id="billingDateTo" type="date"></label><button id="applyBillingFilters" class="secondary-button" type="button">Apply</button></div></div><section class="panel table-panel"><div id="invoiceList" class="data-list"></div><div id="invoiceEmpty" class="empty-state" hidden><strong>No invoices available</strong><p>Invoices will appear when released for an authorized property.</p></div></section></section>
+
+          <section class="portal-view" data-view="reports" aria-labelledby="reportsHeading" hidden><div class="page-intro"><div><p class="eyebrow">Monthly summaries</p><h2 id="reportsHeading">Reports</h2><p>Canonical invoice totals grouped by month and authorized property.</p></div></div><div id="reportGrid" class="report-grid"></div><div id="reportEmpty" class="empty-state" hidden><strong>No reports available</strong><p>No released invoices match this portfolio and date range.</p></div></section>
+
+          <section class="portal-view" data-view="users" aria-labelledby="usersHeading" hidden><div class="page-intro"><div><p class="eyebrow">Account access</p><h2 id="usersHeading">Users</h2><p>Organization and property roles control every action.</p></div><button id="inviteUserButton" class="primary-button" type="button">Invite user</button></div><section class="panel table-panel"><div id="invitationList" class="data-list"></div><div id="userList" class="data-list"></div><div id="userEmpty" class="empty-state" hidden><strong>No account users</strong></div></section></section>
+
+          <section class="portal-view" data-view="warranty" aria-labelledby="warrantyHeading" hidden><div class="page-intro"><div><p class="eyebrow">Tier 3 service</p><h2 id="warrantyHeading">Warranty Claims</h2><p>Track claims managed by SMPLfix for eligible locations.</p></div></div><section class="panel table-panel"><div id="warrantyList" class="data-list"></div><div id="warrantyEmpty" class="empty-state" hidden><strong>No warranty claims</strong><p>Eligible locations have no active or historical claims.</p></div></section></section>
+
+          <section class="portal-view" data-view="documents" aria-labelledby="documentsHeading" hidden><div class="page-intro"><div><p class="eyebrow">Authorized records</p><h2 id="documentsHeading">Documents</h2><p>Property, order, and Tier 3 warranty documents for your assigned locations.</p></div></div><section class="panel table-panel"><div id="documentList" class="data-list"></div><div id="documentEmpty" class="empty-state" hidden><strong>No documents available</strong><p>Documents appear after they are attached to an authorized record.</p></div></section></section>
+
+          <section class="portal-view" data-view="notifications" aria-labelledby="notificationsHeading" hidden><div class="page-intro"><div><p class="eyebrow">Account alerts</p><h2 id="notificationsHeading">Notifications</h2><p>Important updates across your authorized properties.</p></div></div><section class="panel"><div id="notificationList" class="notification-list"></div><div id="notificationEmpty" class="empty-state" hidden><strong>No notifications</strong><p>You’re all caught up.</p></div></section></section>
+
+          <section class="portal-view" data-view="account" aria-labelledby="accountHeading" hidden><div class="page-intro"><div><p class="eyebrow">Workspace settings</p><h2 id="accountHeading">Account</h2><p>Your identity, report delivery, notifications, and permission boundaries.</p></div></div><div class="account-grid"><section id="profileCard" class="panel profile-card"></section><form id="accountForm" class="panel form-stack"><p class="eyebrow">Profile</p><label>First name<input id="accountFirstName" maxlength="80" required></label><label>Last name<input id="accountLastName" maxlength="80" required></label><label>Phone<input id="accountPhone" maxlength="40" autocomplete="tel"></label><button class="primary-button" type="submit">Save profile</button></form><form id="preferenceForm" class="panel form-stack"><p class="eyebrow">Notifications and reports</p><label><input id="preferenceEmail" type="checkbox"> Email notifications</label><label><input id="preferenceOrders" type="checkbox"> Order updates</label><label><input id="preferenceBilling" type="checkbox"> Billing updates</label><label><input id="preferenceWarranty" type="checkbox"> Warranty updates</label><label><input id="reportEnabled" type="checkbox"> Schedule monthly reports</label><label>Delivery day<select id="reportDay"><option value="1">1st</option><option value="5">5th</option><option value="10">10th</option><option value="15">15th</option><option value="20">20th</option><option value="28">28th</option></select></label><label>Format<select id="reportFormat"><option value="pdf">PDF</option><option value="csv">CSV</option><option value="both">PDF and CSV</option></select></label><fieldset><legend>Included properties</legend><div id="reportProperties"></div></fieldset><button class="primary-button" type="submit">Save preferences</button></form><section class="panel boundary-card"><p class="eyebrow">Protected by design</p><h3>Your view follows your role</h3><ul><li>Property access comes from active server-side memberships.</li><li>Owner and billing contacts stay hidden outside authorized scope.</li><li>Tier and billing behavior follow each location’s service agreement.</li></ul><button id="logoutButton" class="secondary-button" type="button">Sign out</button></section></div></section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="propertyDialog" class="detail-dialog"><div class="dialog-header"><div><p class="eyebrow">Location detail</p><h2 id="dialogTitle">Property</h2></div><button id="dialogClose" class="icon-button" type="button" aria-label="Close property details">×</button></div><div id="dialogBody" class="dialog-body"></div></dialog>
+  <dialog id="requestDialog" class="detail-dialog"><form id="requestForm"><div class="dialog-header"><div><p class="eyebrow">Shared order workflow</p><h2>Request service</h2></div><button class="icon-button" type="button" data-close-dialog="requestDialog" aria-label="Close">×</button></div><div class="dialog-body form-stack"><label>Property<select id="requestProperty" required></select></label><input id="requestAgreement" type="hidden"><label>Service<select id="requestService" required><option value="">Select service</option><option>HVAC</option><option>Electrical</option><option>Plumbing</option><option>Roofing</option><option>General Handyman</option><option>Landscaping</option><option>Other</option></select></label><label>Description<textarea id="requestDescription" minlength="10" maxlength="5000" required></textarea></label><label>Urgency<select id="requestUrgency"><option value="routine">Routine</option><option value="soon">Soon</option><option value="urgent">Urgent</option><option value="emergency">Emergency</option></select></label><label>Preferred timing<input id="requestTiming" required maxlength="500"></label><label id="poField">PO number<input id="requestPo" maxlength="120"><small id="poHelp"></small></label><p id="requestError" class="form-error" role="alert" hidden></p><button class="primary-button" type="submit">Submit request</button></div></form></dialog>
+  <dialog id="inviteDialog" class="detail-dialog"><form id="inviteForm"><div class="dialog-header"><div><p class="eyebrow">Least-privilege access</p><h2>Invite account user</h2></div><button class="icon-button" type="button" data-close-dialog="inviteDialog" aria-label="Close">×</button></div><div class="dialog-body form-stack"><label>Email<input id="inviteEmail" type="email" required></label><label>Scope<select id="inviteScopeType"><option value="organization">Organization</option><option value="portfolio">Portfolio</option><option value="property">Property</option></select></label><label>Applies to<select id="inviteScope" required></select></label><label>Role<select id="inviteRole" required></select></label><fieldset><legend>Permissions</legend><label><input type="checkbox" data-permission="view" checked disabled> View</label><label><input type="checkbox" data-permission="requestService"> Request service</label><label><input type="checkbox" data-permission="approveEstimates"> Approve estimates</label><label><input type="checkbox" data-permission="viewInvoices"> View billing</label><label><input type="checkbox" data-permission="makePayments"> Make payments</label><label><input type="checkbox" data-permission="viewReports"> View reports</label><label><input type="checkbox" data-permission="manageUsers"> Manage users</label></fieldset><p id="inviteError" class="form-error" role="alert" hidden></p><button class="primary-button" type="submit">Send secure invitation</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/assets/js/api-service.js?v=20260916-commercial-completion"></script>
+  <script src="/assets/js/commercial-request-state.js?v=20260916-commercial-completion"></script>
+  <script src="/assets/js/commercial-portal.js?v=20260916-commercial-setup"></script>
+  <script src="/assets/js/commercial-workflows.js?v=20260916-commercial-completion"></script>
+</body>
+</html>

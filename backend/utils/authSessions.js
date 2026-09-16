@@ -81,7 +81,7 @@ async function resolveSession(req, res, { touch = true } = {}) {
   }
 
   const user = await User.findById(session.userId);
-  if (!user || !user.isActive || !['admin', 'manager', 'account_rep'].includes(user.role)) {
+  if (!user || !user.isActive || !['admin', 'manager', 'account_rep', 'residential', 'real_estate_agent', 'commercial'].includes(user.role)) {
     await session.deleteOne();
     clearSessionCookie(res);
     return null;

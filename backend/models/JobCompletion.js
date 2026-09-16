@@ -3,7 +3,8 @@ const attachmentSchema = require('./attachmentSchema');
 
 const schema = new mongoose.Schema({
   completionReference: { type: String, required: true, unique: true, index: true },
-  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, unique: true, index: true },
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
+  assignmentId: { type: mongoose.Schema.Types.ObjectId, index: true },
   jobScheduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobSchedule', required: true },
   outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote', required: true },
   vendorWorkOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorWorkOrder', required: true },
@@ -48,5 +49,7 @@ const schema = new mongoose.Schema({
 schema.index({ publicTokenHash: 1 }, { unique: true, sparse: true });
 schema.index({ satisfactionTokenHash: 1 }, { unique: true, sparse: true });
 schema.index({ status: 1, completedAt: -1 });
+schema.index({ orderId: 1, assignmentId: 1 }, { unique: true, partialFilterExpression: { assignmentId: { $type: 'objectId' } }, name: 'one_completion_per_vendor_assignment' });
+schema.index({ orderId: 1 }, { unique: true, partialFilterExpression: { assignmentId: { $exists: false } }, name: 'one_legacy_completion_per_order' });
 
 module.exports = mongoose.model('JobCompletion', schema);

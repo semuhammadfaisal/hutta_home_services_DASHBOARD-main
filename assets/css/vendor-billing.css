@@ -1,0 +1,21 @@
+.invoice-list, .performance-summary, .vendor-reminders { display: grid; gap: 10px; }
+.invoice-card, .metric-card, .vendor-reminder { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fafaf8; }
+.invoice-card header { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.invoice-card h3, .metric-card h3 { margin: 2px 0; }
+.invoice-card dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.invoice-card dt { color: #68716d; font-size: 11px; }
+.invoice-card dd { margin: 2px 0; font-weight: 700; }
+.invoice-flag { padding: 9px; border-radius: 8px; background: #fff0d8; color: #6f4700; }
+.payout-status { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: var(--soft); font-weight: 800; text-transform: capitalize; }
+.vendor-reminder.critical { border-color: #d88c80; background: #fae4df; color: var(--red); }
+.metric-value { font-size: 28px; font-weight: 800; }
+.metric-card progress { width: 100%; accent-color: var(--green); }
+.metric-context { color: #68716d; line-height: 1.5; }
+.invoice-lines { display: grid; gap: 8px; }
+.invoice-line { display: grid; grid-template-columns: minmax(160px,2fr) repeat(3,minmax(80px,1fr)) auto; gap: 8px; align-items: end; }
+.invoice-line button { min-height: 42px; }
+@media (max-width: 700px) {
+  .invoice-card header, .invoice-card dl { display: grid; grid-template-columns: 1fr; }
+  .invoice-line { grid-template-columns: 1fr 1fr; }
+  .invoice-line label:first-child { grid-column: 1 / -1; }
+}

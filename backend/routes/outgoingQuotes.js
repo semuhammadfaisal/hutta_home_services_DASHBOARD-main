@@ -1,4 +1,5 @@
 const express = require('express');
+const { workspaceFilter } = require('../utils/serviceRequestWorkspace');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const authenticateToken = require('../middleware/auth');
@@ -247,7 +248,7 @@ router.put('/settings', checkRole(['admin']), async (req, res, next) => {
 
 router.get('/approvals', async (_req, res, next) => {
   try {
-    const orders = await Order.find({ $or: [{ workflowStatus: { $in: ['quote_sent', 'quote_changes_requested', 'customer_approved'] } }, { approvedOutgoingQuoteId: { $exists: true, $ne: null } }] })
+    const orders = await Order.find({ ...workspaceFilter(_req), $or: [{ workflowStatus: { $in: ['quote_sent', 'quote_changes_requested', 'customer_approved'] } }, { approvedOutgoingQuoteId: { $exists: true, $ne: null } }] })
       .select('orderId requestReference customer service amount workflowStatus currentOutgoingQuoteId approvedOutgoingQuoteId customerApprovedAt updatedAt')
       .sort({ updatedAt: -1 }).lean();
     const quoteIds = orders.map(order => order.currentOutgoingQuoteId).filter(Boolean);
@@ -304,7 +305,7 @@ router.post('/approvals/outbox/:messageId/retry', async (req, res, next) => {
 
 router.get('/orders', async (_req, res, next) => {
   try {
-    const orders = await Order.find({ workflowStatus: { $in: ['vendor_selected', 'outgoing_quote_draft', 'quote_sent', 'quote_changes_requested'] } })
+    const orders = await Order.find({ ...workspaceFilter(_req), workflowStatus: { $in: ['vendor_selected', 'outgoing_quote_draft', 'quote_sent', 'quote_changes_requested'] } })
       .populate('vendor', 'name legalBusinessName').sort({ updatedAt: -1 }).lean();
     const ids = orders.map(item => item._id);
     const quotes = await OutgoingQuote.find({ orderId: { $in: ids } }).sort({ revisionNumber: -1 }).lean();

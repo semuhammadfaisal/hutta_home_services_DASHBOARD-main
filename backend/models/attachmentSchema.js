@@ -21,7 +21,8 @@ const attachmentSchema = new mongoose.Schema({
   restoredAt: Date,
   restoredBy: String,
   complianceDocumentType: String,
-  complianceDocumentLabel: String
+  complianceDocumentLabel: String,
+  portalDocumentType: { type: String, enum: ['inspection_report', 'supporting_photo', 'supporting_document'] }
 }, { _id: false });
 
 module.exports = attachmentSchema;

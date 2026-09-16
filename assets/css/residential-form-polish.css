@@ -1,0 +1,51 @@
+/* Residential dialogs: one scroll container and consistent, touch-friendly controls. */
+body:has(.portal-dialog[open]) { overflow: hidden; }
+.portal-dialog { width: min(760px, calc(100vw - 40px)); max-width: calc(100vw - 40px); max-height: min(88dvh, 860px); overflow: hidden; border: 1px solid #deddd7; border-radius: 24px; box-shadow: 0 24px 80px rgba(0,0,0,.22); }
+.portal-dialog::backdrop { background: rgba(11,11,12,.48); backdrop-filter: blur(4px); }
+.portal-dialog[open] { display: flex; flex-direction: column; }
+.portal-dialog > form { max-height: min(calc(88dvh - 2px), 858px); min-height: 0; overflow: hidden; margin: 0; }
+.portal-dialog .dialog-header, .portal-dialog .dialog-footer { flex: 0 0 auto; padding: 24px 30px; }
+.portal-dialog .dialog-header { align-items: flex-start; background: #fff; }
+.portal-dialog .dialog-header > div { min-width: 0; }
+.portal-dialog .dialog-header .eyebrow { margin: 0 0 8px; color: #696965; }
+.portal-dialog .dialog-header h2 { font-size: clamp(22px, 2.5vw, 28px); letter-spacing: -.04em; line-height: 1.2; }
+.portal-dialog .dialog-header p:last-child { font-size: 13px; line-height: 1.6; margin-top: 8px; }
+.portal-dialog .dialog-close { width: 40px; height: 40px; min-width: 40px; display: grid; place-items: center; padding: 0; border-radius: 12px; background: #f7f6f3; border: 1px solid #deddd7; }
+.portal-dialog svg { width: 20px; height: 20px; display: block; flex-shrink: 0; }
+.portal-dialog .dialog-body { flex: 1 1 auto; min-height: 0; overflow: auto; overflow-x: hidden; padding: 28px 30px; gap: 24px; scrollbar-width: thin; scrollbar-color: #c5c4bd transparent; }
+.portal-dialog .dialog-body > *, .portal-dialog .form-grid > *, .portal-dialog .field { min-width: 0; }
+.portal-dialog .form-grid { gap: 20px; }
+.portal-dialog .field { gap: 9px; font-size: 13px; font-weight: 650; }
+.portal-dialog .field :where(input:not([type="checkbox"]), select, textarea) { min-width: 0; max-width: 100%; border-radius: 12px; border-color: #d5d4ce; background: #fff; font-size: 14px; line-height: 1.5; transition: border-color .15s, box-shadow .15s; }
+.portal-dialog .field :where(input:not([type="checkbox"]), select) { min-height: 48px; padding: 11px 14px; }
+.portal-dialog .field select { padding-right: 32px; }
+.portal-dialog .field textarea { padding: 13px 14px; min-height: 88px; }
+.portal-dialog .field :where(input, textarea)::placeholder { color: #85857f; opacity: 1; }
+.portal-dialog .field :where(input, select, textarea):focus-visible { outline: 2px solid #0b0b0c; outline-offset: 2px; box-shadow: none; }
+.portal-dialog .field input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; padding: 0; margin: 0 8px 0 0; vertical-align: middle; accent-color: #0b0b0c; }
+.portal-dialog .issue-fieldset legend { font-size: 13px; font-weight: 650; margin-bottom: 12px; }
+.portal-dialog .issue-fieldset legend small { font-size: 11px; }
+.portal-dialog .issue-chips { gap: 9px; }
+.portal-dialog .issue-chips span { min-height: 40px; display: flex; align-items: center; padding: 10px 14px; font-size: 12px; font-weight: 600; background: #faf9f6; border-color: #deddd7; }
+.portal-dialog .issue-chips label:hover span { border-color: #696965; }
+.portal-dialog .issue-chips input:checked + span { background: #0b0b0c; border-color: #0b0b0c; color: #fff; }
+.portal-dialog .upload-field { grid-template-columns: minmax(0,1fr); padding: 20px; gap: 12px; background: #faf9f6; border-radius: 14px; border-color: #bbb9af; }
+.portal-dialog .upload-field strong { font-size: 14px; }
+.portal-dialog .upload-field small { font-size: 11px; line-height: 1.6; margin-top: 4px; }
+.portal-dialog .upload-field input { width: 100%; min-width: 0; font-size: 12px; }
+.portal-dialog .upload-field input::file-selector-button { padding: 10px 14px; margin-right: 12px; border: 1px solid #d5d4ce; border-radius: 9px; background: #fff; color: #0b0b0c; font: inherit; font-weight: 600; cursor: pointer; }
+.portal-dialog .upload-field:focus-within { outline: 2px solid #0b0b0c; outline-offset: 2px; }
+.portal-dialog .dialog-footer { gap: 12px; background: #faf9f6; }
+.portal-dialog .dialog-footer .button { min-height: 46px; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 650; }
+.portal-dialog .form-error, .portal-dialog [role="alert"] { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.portal-dialog .emergency-ack { font-size: 12px; line-height: 1.6; }
+@media (max-width: 600px) {
+  .portal-dialog { width: calc(100vw - 20px); max-width: calc(100vw - 20px); max-height: calc(100dvh - 24px); border-radius: 18px; }
+  .portal-dialog > form { max-height: calc(100dvh - 26px); }
+  .portal-dialog .dialog-header, .portal-dialog .dialog-footer { padding: 18px; }
+  .portal-dialog .dialog-body { padding: 22px 18px; gap: 20px; }
+  .portal-dialog .form-grid { grid-template-columns: minmax(0,1fr); gap: 18px; }
+  .portal-dialog .field :where(input,select,textarea) { font-size: 16px; }
+  .portal-dialog .dialog-footer .button { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .portal-dialog .field :where(input,select,textarea) { transition: none; } .portal-dialog::backdrop { backdrop-filter: none; } }

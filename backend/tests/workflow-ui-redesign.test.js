@@ -174,7 +174,7 @@ test('Workflow Center buttons provide pointer and keyboard interaction feedback'
   assert.match(css, /@keyframes workflow-button-ripple/);
   assert.match(css, /@media\(hover:hover\)/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(html, /workflow-hub\.js\?v=20260806-activity-clean/);
+  assert.match(html, /workflow-hub\.js\?v=20260916-workspace-isolation/);
 });
 
 test('Workflow Center filter bar uses the final labeled responsive toolbar', () => {
@@ -206,7 +206,7 @@ test('Workflow Center overview follows the monochrome SMPLFix brand system', () 
   assert.match(components, /workflow-activity-list::before\s*\{[\s\S]*?content:\s*none\s*!important/);
   assert.doesNotMatch(hub, /<span class="workflow-activity-dot">/);
   assert.match(html, /smplfix-components\.css\?v=20260806-profile-ui/);
-  assert.match(html, /workflow-hub\.js\?v=20260806-activity-clean/);
+  assert.match(html, /workflow-hub\.js\?v=20260916-workspace-isolation/);
 });
 
 test('all six Workflow Center stages share the final branded inner-workspace system', () => {

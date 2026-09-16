@@ -53,6 +53,19 @@ function parseVendorAssignmentInput(body = {}, { partial = false } = {}) {
     }
     payload.scheduledStart = scheduledStart;
   }
+  if (body.scheduledEnd !== undefined) {
+    const rawEnd = String(body.scheduledEnd || ''); const scheduledEnd = /(?:Z|[+-]\d{2}:\d{2})$/i.test(rawEnd) ? new Date(rawEnd) : null;
+    if (!scheduledEnd || Number.isNaN(scheduledEnd.getTime())) throw Object.assign(new Error('Scheduled end must include a timezone'), { status: 400 });
+    if (payload.scheduledStart && scheduledEnd <= payload.scheduledStart) throw Object.assign(new Error('Scheduled end must be after scheduled start'), { status: 400 });
+    payload.scheduledEnd = scheduledEnd;
+  }
+  if (body.scope !== undefined) payload.scope = String(body.scope || '').trim().slice(0, 10000);
+  if (body.accessInstructions !== undefined) payload.accessInstructions = String(body.accessInstructions || '').trim().slice(0, 5000);
+  if (body.billingLane !== undefined) {
+    if (!['smplfix_direct', 'owner_billed'].includes(body.billingLane)) throw Object.assign(new Error('Billing lane must be SMPLfix direct or owner billed'), { status: 400 });
+    payload.billingLane = body.billingLane;
+  }
+  if (body.completionRules !== undefined) payload.completionRules = { requireServiceNotes: body.completionRules.requireServiceNotes !== false, requireBeforePhotos: body.completionRules.requireBeforePhotos !== false, requireAfterPhotos: body.completionRules.requireAfterPhotos !== false };
   payload.timezone = 'America/Phoenix';
   return payload;
 }

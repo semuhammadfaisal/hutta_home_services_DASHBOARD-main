@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Agent invitation | SMPLfix</title>
+  <link rel="stylesheet" href="/assets/css/agent-invitation.css?v=20260907">
+  <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
+</head>
+<body>
+  <header class="brand-bar"><img src="/assets/images/smplfix-logo-reversed.png" alt="SMPLfix"><span>Secure homeowner invitation</span></header>
+  <main class="invitation-shell" id="mainContent" tabindex="-1">
+    <section class="invitation-card">
+      <div id="loadingState" class="state-block"><span class="spinner" aria-hidden="true"></span><h1 id="pageTitle">Opening your invitation…</h1><p>We are checking the secure link and your account.</p></div>
+
+      <div id="authState" hidden>
+        <p class="eyebrow">Your account stays yours</p><h1>Sign in to review the invitation</h1><p>The agent will never receive your password, payment method, or estimate-approval authority.</p>
+        <div class="tab-list" role="tablist" aria-label="Account option"><button id="signInTab" role="tab" aria-selected="true" type="button">I have an account</button><button id="createTab" role="tab" aria-selected="false" type="button">Create my account</button></div>
+        <form id="authForm" class="stack-form"><label id="nameField" hidden>Full name<input id="accountName" autocomplete="name" maxlength="160"></label><label>Email<input id="accountEmail" type="email" autocomplete="email" required maxlength="254"></label><label>Password<input id="accountPassword" type="password" autocomplete="current-password" minlength="8" required></label><p id="authError" class="form-error" role="alert" hidden></p><button id="authSubmit" class="primary" type="submit">Sign in securely</button></form>
+      </div>
+
+      <div id="reviewState" hidden>
+        <p class="eyebrow">Review before connecting</p><h1>Approve agent access</h1><p id="agentSummary"></p>
+        <section class="property-summary" aria-labelledby="propertyTitle"><h2 id="propertyTitle">Property and transaction</h2><strong id="propertyLabel"></strong><span id="propertyAddress"></span><dl><div><dt>Transaction</dt><dd id="transactionLabel"></dd></div><div><dt>Close date</dt><dd id="closeDate"></dd></div><div><dt>Access ends</dt><dd id="accessEnds"></dd></div></dl></section>
+        <form id="consentForm" class="stack-form">
+          <fieldset><legend>Choose the access you approve</legend><label><input id="permissionView" type="checkbox" checked disabled> View work status (required)</label><label id="permissionRequestRow"><input id="permissionRequest" type="checkbox"> Request service</label><label id="permissionDocumentsRow"><input id="permissionDocuments" type="checkbox"> View authorized documents</label><label id="permissionUploadRow"><input id="permissionUpload" type="checkbox"> Upload inspection reports</label><label id="permissionMessageRow"><input id="permissionMessage" type="checkbox"> Message through SMPLfix</label></fieldset>
+          <div class="boundary"><strong>You remain in control.</strong><p>The agent cannot approve estimates, enter payment information, manage billing, or own your account.</p></div>
+          <label class="check"><input id="propertyConfirmed" type="checkbox" required> I confirm the property information above is correct.</label>
+          <label class="check"><input id="consentAccepted" type="checkbox" required> <span id="consentText"></span></label>
+          <label>Type your full name to approve<input id="typedName" autocomplete="name" required maxlength="160"></label>
+          <p id="consentError" class="form-error" role="alert" hidden></p><button id="acceptButton" class="primary" type="submit">Approve and connect</button>
+        </form>
+      </div>
+
+      <div id="successState" class="state-block success" hidden><span class="success-mark" aria-hidden="true">✓</span><h1>Agent access approved</h1><p>Your transaction is connected. You still own the account and retain all approval and payment authority.</p><a class="primary link-button" href="/pages/residential-portal.html#account">Open my homeowner portal</a></div>
+      <div id="terminalState" class="state-block" hidden><h1 id="terminalTitle">This link is unavailable</h1><p id="terminalMessage"></p><a class="secondary link-button" href="/pages/login.html">Go to sign in</a></div>
+    </section>
+    <aside class="trust-note"><strong>What your agent can do</strong><p>Help coordinate property work for this transaction. You choose the exact scope, and you or SMPLfix staff can revoke it.</p></aside>
+  </main>
+  <script src="/assets/js/api-service.js?v=20260907-invitation"></script>
+  <script src="/assets/js/agent-invitation.js?v=20260907"></script>
+</body>
+</html>

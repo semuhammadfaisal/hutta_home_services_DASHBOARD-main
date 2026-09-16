@@ -28,9 +28,29 @@
     "migrate:stage6-customer-closeout:apply": "node migrate-stage6-customer-closeout.js --apply",
     "migrate:workflow-pipeline-sync": "node migrate-workflow-pipeline-sync.js",
     "migrate:workflow-pipeline-sync:apply": "node migrate-workflow-pipeline-sync.js --apply",
-    "test": "node --test tests/*.test.js"
+    "migrate:residential-properties": "node migrate-residential-properties.js",
+    "migrate:residential-properties:apply": "node migrate-residential-properties.js --apply",
+    "migrate:agent-client-invitations": "node migrate-agent-client-invitations.js",
+    "migrate:agent-client-invitations:apply": "node migrate-agent-client-invitations.js --apply",
+    "migrate:commercial-accounts": "node migrate-commercial-accounts.js",
+    "migrate:commercial-accounts:apply": "node migrate-commercial-accounts.js --apply",
+    "migrate:vendor-leads": "node migrate-vendor-leads.js",
+    "migrate:vendor-leads:apply": "node migrate-vendor-leads.js --apply",
+    "migrate:vendor-assignments": "node migrate-vendor-assignments.js",
+    "migrate:vendor-assignments:apply": "node migrate-vendor-assignments.js --apply",
+    "seed:vendor-billing-demo": "node seed-vendor-billing-demo.js",
+    "seed:residential-demo": "node seed-residential-demo.js",
+    "seed:residential-demo:apply": "node seed-residential-demo.js --apply",
+    "seed:agent-demo": "node seed-agent-demo.js",
+    "seed:agent-demo:apply": "node seed-agent-demo.js --apply",
+    "test": "node --test tests/*.test.js",
+    "commercial:reports": "node run-commercial-report-scheduler.js",
+    "vendor:lead-performance": "node run-vendor-lead-performance.js",
+    "seed:commercial": "node seed-commercial-demo.js",
+    "seed:commercial:apply": "node seed-commercial-demo.js --apply"
   },
   "dependencies": {
+    "archiver": "^8.0.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.10.0",
     "compression": "^1.7.4",
@@ -43,7 +63,8 @@
     "nodemailer": "^6.9.7",
     "pdfkit": "^0.19.1",
     "resend": "^4.8.0",
-    "sharp": "^0.34.3"
+    "sharp": "^0.34.3",
+    "stripe": "^18.5.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

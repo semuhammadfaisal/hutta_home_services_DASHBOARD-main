@@ -371,6 +371,18 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   });
 };
 
+const sendAgentApprovalEmail = async (email, firstName, delivery = deliverEmail) => {
+  const url = buildPublicUrl('/pages/login.html');
+  return delivery({ to: email, subject: 'Your SMPLfix Agent Portal is ready',
+    text: `Hello ${firstName || 'there'}, your Agent Portal access is approved. Sign in using your existing password: ${url}`,
+    html: emailShell('Your Agent Portal is ready', `<p>Hello ${escapeHtml(firstName || 'there')},</p><p>Your agent account has been approved. Invite homeowners, track transactions, and request property services.</p><p><a class="btn" href="${url}">Sign in to SMPLfix</a></p><p>Use your existing password. Homeowners retain approval and payment control.</p>`) });
+};
+
+const sendCommercialApprovalEmail = async (email, firstName, delivery = deliverEmail) => {
+  const url = buildPublicUrl('/pages/login.html');
+  return delivery({ to: email, subject: 'Your SMPLfix Commercial Portal is ready', text: `Hello ${firstName || 'there'}, your commercial account is approved. Sign in with your existing password: ${url}`, html: emailShell('Your Commercial Portal is ready', `<p>Hello ${escapeHtml(firstName || 'there')},</p><p>Your commercial workspace access has been approved.</p><p><a class="btn" href="${url}">Sign in to SMPLfix</a></p><p>Use the password you created. Your assigned permissions control the properties and actions available to you.</p>`) });
+};
+
 const sendWelcomeEmail = async (email, password, firstName) => {
   const loginUrl = getPublicAppUrl();
   return deliverEmail({
@@ -744,6 +756,17 @@ const sendStaffPaymentProofEmail = ({ recipients, customerName, proofReference, 
   const url=buildPublicUrl('/pages/admin-dashboard.html','workflow-center/stage-6');
   return deliverEmail({to:recipients,subject:`Payment proof awaiting review — ${proofReference}`,text:`${customerName} submitted ${proofReference} for ${invoiceNumber}, $${Number(amount||0).toFixed(2)}.\n\n${url}`,html:emailShell('Payment Proof Awaiting Review',`<div class="panel"><p><strong>Proof:</strong> ${escapeHtml(proofReference)}</p><p><strong>Request:</strong> ${escapeHtml(requestReference)}</p><p><strong>Customer:</strong> ${escapeHtml(customerName)}</p><p><strong>Invoice:</strong> ${escapeHtml(invoiceNumber)}</p><p><strong>Amount:</strong> $${escapeHtml(Number(amount||0).toFixed(2))}</p></div><p><a class="btn" href="${url}">Review Payment Proof</a></p>`)});
 };
+const sendAgentClientInvitationEmail = ({ recipients, homeownerName, agentName, brokerageName, transactionLabel, closeDate, token, expiresAt }) => {
+  const url = buildPublicUrl('/pages/agent-invitation.html', `invitation=${encodeURIComponent(token)}`);
+  const greeting = homeownerName || 'Homeowner';
+  const agent = brokerageName ? `${agentName} at ${brokerageName}` : agentName;
+  return deliverEmail({
+    to: recipients,
+    subject: `${agentName} invited you to coordinate property services with SMPLfix`,
+    text: `Hello ${greeting},\n\n${agent} invited you to connect ${transactionLabel} with SMPLfix through closing on ${scheduleTime(closeDate)}.\n\nReview and approve access: ${url}\n\nYou must sign in or create your own account. Your agent will never receive your password or payment authority. This link expires ${scheduleTime(expiresAt)}.`,
+    html: emailShell('Review Your Agent Invitation', `<p>Hello ${escapeHtml(greeting)},</p><p><strong>${escapeHtml(agent)}</strong> invited you to coordinate property services for <strong>${escapeHtml(transactionLabel)}</strong>.</p><div class="panel"><p><strong>Close date:</strong> ${escapeHtml(scheduleTime(closeDate))}</p><p><strong>Account control:</strong> You keep estimate approval and payment authority.</p></div><p><a class="btn" href="${url}">Review Invitation</a></p><p class="muted">You must sign in or create your own residential account. This private link expires ${escapeHtml(scheduleTime(expiresAt))} and should not be forwarded.</p>`)
+  });
+};
 
 module.exports = {
   deliverEmail,
@@ -752,6 +775,8 @@ module.exports = {
   vendorLifecycleEmailShell,
   sendPasswordResetEmail,
   sendWelcomeEmail,
+  sendAgentApprovalEmail,
+  sendCommercialApprovalEmail,
   sendVendorInvitationEmail,
   sendVendorSubmissionReceivedEmail,
   sendVendorDecisionEmail,
@@ -776,4 +801,5 @@ module.exports = {
   ,sendStaffCloseoutEmail
   ,sendCustomerPaymentProofEmail
   ,sendStaffPaymentProofEmail
+  ,sendAgentClientInvitationEmail
 };

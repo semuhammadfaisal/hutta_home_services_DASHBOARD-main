@@ -1,0 +1,40 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap");
+
+/* Shared portal branding, matching smplfix-theme.css without CRM layout rules. */
+:root {
+  --smpl-font-ui: "Space Grotesk", "Avenir Next", Avenir, "Segoe UI", Arial, sans-serif;
+  --smpl-font-mono: "Space Mono", "SFMono-Regular", Consolas, monospace;
+  --ink: #0b0b0c; --ink-2: #242426; --ink-soft: #242426;
+  --paper: #f6f6f4; --surface: #fff; --surface-2: #ececed;
+  --line: #ececed; --line-dark: #b6b6ba;
+  --muted: #626266; --muted-light: #626266;
+  --green: #0b0b0c; --green-soft: #ececed; --mint: #ececed; --soft: #ececed;
+  --blue: #0b0b0c;
+  --success: #176b4a; --success-soft: #edf8f2;
+  --warning: #775600; --warning-soft: #fff9e8;
+  --amber: #775600; --amber-soft: #fff9e8;
+  --danger: #b42318; --danger-soft: #fff4f2;
+  --red: #b42318; --red-soft: #fff4f2;
+}
+html, body { font-family: var(--smpl-font-ui); }
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button, input, select, textarea, input::file-selector-button { font-family: var(--smpl-font-ui); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--smpl-font-ui); font-weight: 700; letter-spacing: -.03em; }
+.eyebrow, .portal-label, .sidebar-label { font-family: var(--smpl-font-mono); color: var(--muted); }
+.metric-card strong, .row-meta strong, .package-counts strong, .notification-dot { font-family: var(--smpl-font-ui); }
+.page-intro h2, .hero h1, .auth-copy h1, .auth-card h2, .panel h2,
+.dialog-header h2, .property-card h3, .report-card h3 { font-family: var(--smpl-font-ui); font-weight: 700; }
+.sidebar, .topbar { background: var(--ink); }
+.sidebar .portal-label, .sidebar .sidebar-label { color: #b6b6ba; }
+.sidebar .nav-link { color: #b6b6ba; }
+.sidebar .nav-link:hover, .sidebar .nav-link:focus-visible { background: #242426; color: #fff; }
+.sidebar .nav-link.is-active { background: #fff; color: var(--ink); }
+.sidebar-footer, .sidebar-note { border-color: #353537; }
+.sidebar-footer p, .sidebar-note p { color: #b6b6ba; }
+.estimate-dropzone, .assignment-card, .invoice-card, .vendor-reminder, .lead-card { background: var(--paper); }
+.estimate-dropzone { border-color: #b6b6ba; }
+.estimate-dropzone span, .estimate-parser-status, .assignment-meta small,
+.assignment-thread small, .invoice-card dt, .metric-context { color: var(--muted); }
+.package-card.ready { border-color: var(--line-dark); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.sidebar :focus-visible, .topbar :focus-visible { outline-color: #fff; }

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const schema = new mongoose.Schema({
   workOrderReference: { type: String, required: true, unique: true, immutable: true, index: true },
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, immutable: true, index: true },
+  assignmentId: { type: mongoose.Schema.Types.ObjectId, index: true, immutable: true },
   jobScheduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobSchedule', required: true, unique: true, immutable: true },
   outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote', required: true, immutable: true },
   vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true, immutable: true },

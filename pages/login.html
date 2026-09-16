@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@700&amp;display=swap">
     <link rel="stylesheet" href="../assets/css/smplfix-theme.css?v=20260804-final">
     <link rel="stylesheet" href="../assets/css/smplfix-components.css?v=20260804-final">
-    <link rel="stylesheet" href="../assets/css/login-styles.css?v=20260808-benefit-icon-alignment">
+    <link rel="stylesheet" href="../assets/css/login-styles.css?v=20260907-portal-selector">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
@@ -73,10 +73,25 @@
                 <header class="auth-card__header">
                     <span class="auth-badge"><i class="fa-solid fa-lock" aria-hidden="true"></i> Secure sign-in</span>
                     <h1 id="loginTitle">Welcome back.</h1>
-                    <p>Sign in to continue to your operations dashboard.</p>
+                    <p id="loginSubtitle">Sign in to continue to the SMPLfix CRM.</p>
                 </header>
 
                 <form id="loginForm" class="auth-form" novalidate>
+                    <div class="field-group portal-selector">
+                        <label for="portalType">Sign in to</label>
+                        <div class="field-control">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                            <select id="portalType" name="portalType" aria-describedby="portalDescription securityRoutingNote">
+                                <option value="crm" selected>CRM — Internal team</option>
+                                <option value="residential">Residential Client Portal</option>
+                                <option value="real_estate_agent">Real Estate Agent Portal</option>
+                                <option value="commercial">Commercial Client Portal</option>
+                                <option value="vendor">Vendor Portal</option>
+                            </select>
+                        </div>
+                        <small id="portalDescription" aria-live="polite">Manage company operations, orders, vendors, and accounting.</small>
+                    </div>
+
                     <div class="field-group">
                         <label for="email">Email address</label>
                         <div class="field-control">
@@ -111,15 +126,16 @@
                     </div>
 
                     <button type="submit" class="submit-btn" id="loginBtn">
-                        <span class="submit-btn__text">Sign in</span>
+                        <span class="submit-btn__text">Sign in to CRM</span>
                         <span class="submit-btn__arrow" aria-hidden="true">&#8594;</span>
                         <i class="fa-solid fa-circle-notch fa-spin submit-btn__spinner" aria-hidden="true"></i>
                     </button>
+                    <p class="security-routing-note" id="securityRoutingNote"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Your account permissions securely determine the portal you can open.</p>
                 </form>
 
                 <footer class="auth-card__footer">
                     <span>New to smplfix?</span>
-                    <a href="signup.html">Create an account</a>
+                    <a id="createAccountLink" href="signup.html">Create an account</a>
                 </footer>
             </section>
 
@@ -128,7 +144,7 @@
     </div>
 
     <script src="../assets/js/api-service.js"></script>
-    <script src="../assets/js/login-script.js?v=20260806-login-button-icon"></script>
+    <script src="../assets/js/login-script.js?v=20260907-commercial-portal"></script>
     <script src="../assets/js/icon-system.js?v=20260807-icon-reliability"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const jobScheduleSchema = new mongoose.Schema({
   scheduleReference: { type: String, required: true, unique: true, index: true },
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
+  assignmentId: { type: mongoose.Schema.Types.ObjectId, index: true },
   outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote', required: true },
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
@@ -31,9 +32,9 @@ const jobScheduleSchema = new mongoose.Schema({
   history: [{ action: String, actorId: mongoose.Schema.Types.ObjectId, actorEmail: String, message: String, createdAt: { type: Date, default: Date.now } }]
 }, { timestamps: true });
 
-jobScheduleSchema.index({ orderId: 1, revisionNumber: 1 }, { unique: true });
+jobScheduleSchema.index({ orderId: 1, assignmentId: 1, revisionNumber: 1 }, { unique: true });
 jobScheduleSchema.index({ publicTokenHash: 1 }, { unique: true, sparse: true });
 jobScheduleSchema.index({ vendorId: 1, status: 1, proposedStart: 1, proposedEnd: 1 });
-jobScheduleSchema.index({ orderId: 1 }, { unique: true, partialFilterExpression: { status: 'pending_vendor' }, name: 'one_pending_schedule_per_order' });
+jobScheduleSchema.index({ orderId: 1, assignmentId: 1 }, { unique: true, partialFilterExpression: { status: 'pending_vendor' }, name: 'one_pending_schedule_per_assignment' });
 
 module.exports = mongoose.model('JobSchedule', jobScheduleSchema);

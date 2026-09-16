@@ -3,8 +3,15 @@ const router = express.Router();
 const User = require('../models/User');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
-const { getEmailDeliveryStatus, sendWelcomeEmail } = require('../utils/emailService');
+const { getEmailDeliveryStatus, sendWelcomeEmail, sendAgentApprovalEmail, sendCommercialApprovalEmail } = require('../utils/emailService');
 const { revokeUserSessions } = require('../utils/authSessions');
+const { ensureAgentProfile } = require('../utils/agentProfileProvisioning');
+const { approveCommercialUser, parseOrganizationChoice } = require('../utils/commercialUserApproval');
+const CommercialOrganization = require('../models/CommercialOrganization');
+router.get('/commercial-organizations', authenticateToken, checkRole(['admin']), async (_req, res, next) => {
+  try { res.json({ data: await CommercialOrganization.find({ status: 'active' }).select('_id name').sort({ name: 1 }).lean() }); }
+  catch (error) { next(error); }
+});
 
 // Get all users (admin only, paginated)
 router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
@@ -36,6 +43,10 @@ router.get('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const { email, password, firstName, lastName, role } = req.body;
+    if (role === 'commercial') {
+      const choice = parseOrganizationChoice(req.body);
+      if (!choice.organizationId && !choice.newOrganizationName) return res.status(400).json({ message: 'Choose a commercial organization before creating this account' });
+    }
     
     // Validate required fields
     if (!email || !password || !firstName || !lastName || !role) {
@@ -43,7 +54,7 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
     }
     
     // Validate role
-    if (!['admin', 'manager', 'account_rep'].includes(role)) {
+    if (!['admin', 'manager', 'account_rep', 'residential', 'real_estate_agent', 'commercial'].includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
     }
     
@@ -60,13 +71,15 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
       firstName,
       lastName,
       role,
-      isActive: true
+      isActive: role !== 'commercial'
     });
     
     await user.save();
+    if (role === 'commercial') await approveCommercialUser(user._id, req.body, req.user.userId);
+    if (user.role === 'real_estate_agent') await ensureAgentProfile(user._id);
     
     // Send welcome email with credentials (non-blocking)
-    sendWelcomeEmail(email, password, firstName)
+    (role === 'real_estate_agent' ? sendAgentApprovalEmail(email, firstName) : sendWelcomeEmail(email, password, firstName))
       .then(() => {
         console.log('Welcome email sent successfully to:', email);
       })
@@ -94,8 +107,23 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 router.patch('/:id/role', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const { role } = req.body;
+    if (role === 'commercial') {
+      try {
+        const user = await approveCommercialUser(req.params.id, req.body, req.user.userId);
+        await revokeUserSessions(user._id);
+        try {
+          const delivery = await sendCommercialApprovalEmail(user.email, user.firstName);
+          user.commercialApprovalEmail = { status: 'accepted', attemptedAt: new Date(), messageId: delivery.messageId };
+        } catch (error) {
+          user.commercialApprovalEmail = { status: 'failed', attemptedAt: new Date() };
+          console.error('Commercial approval email failed:', error.message);
+        }
+        await user.save();
+        return res.json(user);
+      } catch (error) { return res.status(error.status || 500).json({ message: error.status ? error.message : 'Commercial approval failed' }); }
+    }
     
-    if (!['admin', 'manager', 'account_rep'].includes(role)) {
+    if (!['admin', 'manager', 'account_rep', 'residential', 'real_estate_agent', 'commercial'].includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
     }
     
@@ -109,6 +137,22 @@ router.patch('/:id/role', authenticateToken, checkRole(['admin']), async (req, r
       return res.status(404).json({ message: 'User not found' });
     }
     await revokeUserSessions(user._id);
+    if (user.role === 'real_estate_agent') {
+      const profile = await ensureAgentProfile(user._id);
+      if (profile?.status === 'active') {
+        try {
+          const delivery = await sendAgentApprovalEmail(user.email, user.firstName);
+          user.agentApprovalEmail = { status: 'accepted', attemptedAt: new Date(), messageId: delivery.messageId };
+          await user.save();
+          res.set('X-Approval-Email-Status', 'sent');
+        } catch (error) {
+          console.error('Agent approval email delivery failed:', error.message);
+          user.agentApprovalEmail = { status: 'failed', attemptedAt: new Date() };
+          await user.save();
+          res.set('X-Approval-Email-Status', 'failed');
+        }
+      }
+    }
     
     res.json(user);
   } catch (error) {

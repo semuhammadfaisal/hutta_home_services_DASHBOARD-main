@@ -1,6 +1,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const endpoint = '/api/incoming-quotes/public/form';
+  const leadEndpoint = '/api/incoming-quotes/public/lead';
   let token = '';
   let currentStep = 1;
   let highestStep = 1;
@@ -16,8 +17,8 @@
     return token;
   }
 
-  async function request(options = {}) {
-    const response = await fetch(endpoint, { ...options, headers: { 'X-Vendor-Quote-Token': token, ...(options.headers || {}) } });
+  async function request(options = {}, url = endpoint) {
+    const response = await fetch(url, { ...options, headers: { 'X-Vendor-Quote-Token': token, ...(options.headers || {}) } });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.message || `Request failed (${response.status})`);
     return payload;
@@ -41,6 +42,21 @@
     document.title = `${payload.quoteReference} | Secure Vendor Quote`;
     $('quoteLoading').classList.add('hidden');
     $('vendorQuoteForm').classList.remove('hidden');
+  }
+
+  function showLeadDecision(lead) {
+    $('quoteLoading').classList.add('hidden'); $('leadDecision').classList.remove('hidden');
+    $('leadService').textContent = lead.service || 'Service request'; $('leadAddress').textContent = lead.propertyAddress || 'Provided after acceptance'; $('leadWindow').textContent = lead.requestedWindow || 'Not specified'; $('leadScope').textContent = lead.scope || 'No additional scope supplied.';
+    $('leadResponseDue').textContent = lead.responseDueAt ? new Date(lead.responseDueAt).toLocaleString() : 'Not specified'; $('leadBidDue').textContent = lead.bidDueAt ? new Date(lead.bidDueAt).toLocaleString() : 'Not specified';
+  }
+
+  function showPortalHandoff() { $('quoteLoading').classList.add('hidden'); $('leadDecision').classList.add('hidden'); $('leadAccepted').classList.remove('hidden'); }
+
+  async function initialize() {
+    const { lead } = await request({}, leadEndpoint);
+    if (!lead.responseRequired) return request().then(populate);
+    if (lead.status === 'accepted_to_bid') return showPortalHandoff();
+    showLeadDecision(lead);
   }
 
   function updateTotal() {
@@ -143,10 +159,13 @@
   document.querySelectorAll('[data-next-step]').forEach(button => button.addEventListener('click', () => showStep(button.dataset.nextStep)));
   document.querySelectorAll('.secure-progress-step').forEach(button => button.addEventListener('click', () => { const next=Number(button.dataset.stepTarget); if(next<=highestStep)showStep(next,next>currentStep); }));
   $('vendorQuoteForm').addEventListener('submit', submit);
+  $('declineLeadToggle').addEventListener('click', () => { $('declineLeadForm').hidden = !$('declineLeadForm').hidden; });
+  $('acceptLead').addEventListener('click', async () => { const button = $('acceptLead'); button.disabled = true; try { await request({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ response: 'accept' }) }, `${leadEndpoint}/respond`); showPortalHandoff(); } catch (error) { button.disabled = false; showError(error.message); } });
+  $('declineLeadForm').addEventListener('submit', async event => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); try { await request({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ response: 'decline', declineReasonCode: data.declineReasonCode, declineReason: data.declineReason }) }, `${leadEndpoint}/respond`); $('leadDecision').classList.add('hidden'); $('quoteSuccess').classList.remove('hidden'); $('quoteSuccess').querySelector('h2').textContent = 'Lead declined'; $('quoteSuccess').querySelector('p').textContent = 'Your response was recorded. No estimate is required.'; } catch (error) { showError(error.message); } });
   const earliestDate = document.querySelector('[name="earliestAvailableDate"]');
   if (earliestDate) earliestDate.min = new Date().toISOString().slice(0, 10);
   updateAccess();
   showStep(1, false);
   if (!readToken()) return showError('The secure quote token is missing. Open the complete link from your latest invitation email.');
-  request().then(populate).catch(error => showError(error.message));
+  initialize().catch(error => showError(error.message));
 })();
