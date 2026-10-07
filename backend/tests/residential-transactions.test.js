@@ -120,6 +120,8 @@ test('transactional portal UI includes estimates, job tracking, completion evide
   }
   assert.match(client, /decideResidentialEstimate/);
   assert.match(client, /trackerMarkup/);
+  assert.match(client, /job-progress-card/);
+  assert.match(client, /job-request-card/);
   assert.match(client, /state\.schedules\.find\(item => safeId\(item\.orderId\) === safeId\(order\.id\)\)/);
   assert.match(client, /order\.scheduledStart \|\| schedule\?\.proposedStart/);
   assert.match(client, /completion\.completionNotes/);
@@ -130,5 +132,8 @@ test('transactional portal UI includes estimates, job tracking, completion evide
   assert.match(client, /checkout\|billing/);
   assert.match(client, /stripe\\\.com/);
   assert.match(css, /\.workflow-tracker/);
+  assert.match(css, /\.job-detail-dialog/);
+  assert.match(css, /\.job-summary/);
+  assert.match(css, /repeat\(9, 76px\)/);
   assert.match(css, /\.completion-photos/);
 });

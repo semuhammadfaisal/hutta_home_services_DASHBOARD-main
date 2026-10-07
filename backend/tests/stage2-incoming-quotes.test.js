@@ -7,7 +7,9 @@ const Order = require('../models/Order');
 const QuoteInvitation = require('../models/QuoteInvitation');
 const Vendor = require('../models/Vendor');
 const EmailOutbox = require('../models/EmailOutbox');
+const VendorRequirementApproval = require('../models/VendorRequirementApproval');
 const { complianceForVendor, orderReadyForQuotes, parseQuotePayload } = require('../utils/incomingQuotes');
+const { approvalPayloadHash, vendorRequirementIssues } = require('../utils/vendorRequirementGate');
 
 test('incoming quote payload calculates from labor and materials and validates submission fields', () => {
   const { payload, errors } = parseQuotePayload({
@@ -49,9 +51,40 @@ test('Stage 2 models expose required workflow, revision, and email states', () =
   assert.ok(IncomingQuote.schema.path('status').enumValues.includes('superseded'));
   assert.ok(QuoteInvitation.schema.path('status').enumValues.includes('processing'));
   assert.ok(EmailOutbox.schema.path('type').enumValues.includes('vendor_quote_invitation'));
+  assert.ok(EmailOutbox.schema.path('type').enumValues.includes('vendor_compliance_update_request'));
+  assert.ok(VendorRequirementApproval.schema.path('status').enumValues.includes('approved'));
   assert.ok(Vendor.schema.path('contractorLicenseNumber'));
   assert.ok(Vendor.schema.path('insuranceExpirationDate'));
   assert.ok(IncomingQuote.schema.indexes().some(([fields, options]) => fields.orderId === 1 && options.partialFilterExpression?.status === 'selected'));
+});
+
+test('vendor requirement overrides are bound to the exact action payload and ignore only the approval id', () => {
+  const payload = { vendorId: 'vendor-1', email: 'vendor@example.com', personalMessage: 'Please quote' };
+  const original = approvalPayloadHash('quote_invitation', 'order-1', ['vendor-1'], payload);
+  const approvedRetry = approvalPayloadHash('quote_invitation', 'order-1', ['vendor-1'], { ...payload, requirementApprovalId: 'approval-1' });
+  const changedRecipient = approvalPayloadHash('quote_invitation', 'order-1', ['vendor-1'], { ...payload, email: 'other@example.com', requirementApprovalId: 'approval-1' });
+  assert.equal(original, approvedRetry);
+  assert.notEqual(original, changedRecipient);
+  assert.ok(vendorRequirementIssues({}).some(item => item.includes('ROC number')));
+});
+
+test('both service-request and workflow workspaces expose update-email and admin-approved send-anyway controls', () => {
+  const route = fs.readFileSync(path.join(__dirname, '../routes/incomingQuotes.js'), 'utf8');
+  const ui = fs.readFileSync(path.join(__dirname, '../../assets/js/incoming-quotes.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '../../pages/admin-dashboard.html'), 'utf8');
+  assert.match(route, /VENDOR_REQUIREMENTS_BLOCKED/);
+  assert.match(route, /vendor_compliance_update_request/);
+  assert.match(route, /vendor_requirement_override_approved/);
+  assert.match(ui, /Email vendor to update/);
+  assert.match(ui, /Send anyway/);
+  assert.match(ui, /requirementDialog\?\.close\(\);[\s\S]*WorkflowDialog\?\.confirm/);
+  assert.match(ui, /!confirmed[\s\S]*requirementDialog\.showModal\(\)/);
+  assert.match(ui, /response\.approval\.status === 'approved'/);
+  assert.match(ui, /ensureResidentialReviewBeforeSend/);
+  assert.doesNotMatch(ui, /incomingResidentialConfirmed/);
+  assert.match(route, /pending\.status === 'approved'[\s\S]*reusedApproval: true/);
+  assert.match(ui, /window\.ServiceRequestsActive \? 'service-requests' : 'workflow-center'/);
+  assert.match(html, /id="incomingRequirementApprovals"/);
 });
 
 test('public quote page and route withhold customer contact and internal selection keeps Order unquoted', () => {

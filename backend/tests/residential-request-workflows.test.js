@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const root = path.resolve(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const Order = require('../models/Order');
-const { serializeOrder } = require('../utils/residentialSerializers');
+const { serializeActivity, serializeOrder } = require('../utils/residentialSerializers');
 const {
   requestCapabilities,
   submissionKey,
@@ -85,6 +85,27 @@ test('Order stores portal intake and audit data while the residential serializer
   assert.equal(output.portalSubmissionKey, undefined);
   assert.equal(output.customerRequestHistory, undefined);
   assert.equal(output.request.submittedBy, undefined);
+});
+
+test('residential activity presents request submissions in customer-facing language', () => {
+  const output = serializeActivity({
+    _id: objectId(),
+    title: 'Service request received',
+    message: 'REQ-2026-000018 was received for My home.',
+    createdAt: new Date('2026-09-21T12:00:00Z')
+  });
+  assert.equal(output.title, 'Service request submitted');
+  assert.equal(output.summary, 'REQ-2026-000018 was submitted for My home.');
+});
+
+test('homeowner notifications use submitted wording and keep the unread badge on the bell', () => {
+  const route = read('backend/routes/residential.js');
+  const features = read('backend/routes/residentialFeatures.js');
+  const shell = read('assets/css/portal-crm-shell.css');
+  assert.match(route, /title: emergency \? 'Emergency request submitted' : 'Service request submitted'/);
+  assert.match(features, /replace\(\/Service request received\/g, 'Service request submitted'\)/);
+  assert.match(shell, /#openNotificationsButton \{ position: relative; overflow: visible; \}/);
+  assert.match(shell, /#notificationBadge \{[\s\S]*?position: absolute;[\s\S]*?inset: -5px -5px auto auto;/);
 });
 
 test('residential mutation routes enforce membership, limits, workflow sync, audit, and notifications', () => {

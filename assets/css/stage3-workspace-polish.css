@@ -445,7 +445,8 @@ body #outgoing-quotes .outgoing-sticky-actions > div small {
 }
 
 body #outgoing-quotes .outgoing-sticky-actions .btn-primary,
-body #outgoing-quotes .outgoing-sticky-actions .btn-secondary {
+body #outgoing-quotes .outgoing-sticky-actions .btn-secondary,
+body #outgoing-quotes .outgoing-sticky-actions .btn-danger {
   min-height: 40px;
   padding: 0 13px;
   border-radius: 9px;
@@ -583,6 +584,10 @@ body #outgoing-quotes .outgoing-sent-note small {
   body #outgoing-quotes .outgoing-sticky-actions .btn-primary {
     grid-column: 1 / -1;
     grid-row: 1;
+  }
+
+  body #outgoing-quotes .outgoing-sticky-actions .outgoing-send-anyway {
+    grid-column: 1 / -1;
   }
 
   body #outgoing-quotes .outgoing-history-panel {

@@ -174,7 +174,7 @@
     try {
       const response = await window.APIService.createResidentialRequest(formData, state.requestSubmissionKey, state.requestMode === 'emergency');
       closeDialog(elements.requestDialog);
-      showToast(response.duplicate ? 'This request was already received.' : state.requestMode === 'emergency' ? 'Priority request received. Dispatch is not guaranteed.' : 'Service request received.');
+      showToast(response.duplicate ? 'This request was already submitted.' : state.requestMode === 'emergency' ? 'Priority request submitted. Dispatch is not guaranteed.' : 'Service request submitted.');
       state.requestSubmissionKey = null;
       await loadPortal();
     } catch (error) {
@@ -296,6 +296,7 @@
       if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
     });
     const labels = { home: 'Home dashboard', properties: 'Properties', estimates: 'Estimates', invoices: 'Invoices and receipts', billing: 'Payment methods', autopilot: 'Autopilot management', passport: 'Property Passport', utilities: 'Utility tracker', messages: 'Order messages', notifications: 'Notifications', referrals: 'Referrals and rewards', account: 'Account settings' };
+    elements.headerRouteTitle.textContent = labels[state.route];
     elements.routeStatus.textContent = `${labels[state.route]} shown`;
     document.title = `${labels[state.route]} | SMPLfix`;
     if (state.route === 'billing') loadBilling();
@@ -517,7 +518,11 @@
   }
 
   function trackerMarkup(items = []) {
-    return `<ol class="workflow-tracker" aria-label="Job progress">${items.map(item => `<li class="workflow-step is-${escapeHtml(item.state)}"><span class="workflow-dot" aria-hidden="true"></span><span>${escapeHtml(item.label)}</span></li>`).join('')}</ol>`;
+    const currentIndex = items.findIndex(item => item.state === 'current');
+    const completedIndex = items.reduce((last, item, index) => item.state === 'complete' ? index : last, 0);
+    const activeIndex = currentIndex >= 0 ? currentIndex : completedIndex;
+    const active = items[activeIndex] || items.find(item => item.state === 'complete') || {};
+    return `<section class="job-progress-card"><div class="job-progress-heading"><div><span>Service progress</span><strong>${escapeHtml(active.label || 'Request received')}</strong></div><small>Step ${Math.min(activeIndex + 1, items.length || 1)} of ${items.length || 1}</small></div><ol class="workflow-tracker" aria-label="Job progress">${items.map((item, index) => `<li class="workflow-step is-${escapeHtml(item.state)}" ${item.state === 'current' ? 'aria-current="step"' : ''}><span class="workflow-dot" aria-hidden="true">${item.state === 'complete' ? '<span>✓</span>' : `<span>${index + 1}</span>`}</span><span class="workflow-label">${escapeHtml(item.label)}</span></li>`).join('')}</ol></section>`;
   }
 
   function photoGroup(title, photos = []) {
@@ -534,8 +539,8 @@
       elements.jobDialogTitle.textContent = order.service || 'Service job';
       elements.jobDialogReference.textContent = order.requestReference || order.orderReference || '';
       elements.jobDialogBody.innerHTML = `${trackerMarkup(detail.tracker)}
-        <div class="transaction-summary"><div><small>Status</small><strong>${escapeHtml(titleCase(order.workflowStatus || order.status))}</strong></div><div><small>Scheduled window</small><strong>${escapeHtml(schedule ? `${dateTime(schedule.proposedStart)} – ${dateTime(schedule.proposedEnd)}` : 'Pending')}</strong></div><div><small>Service professional</small><strong>${escapeHtml(vendor.name || 'Matching in progress')}</strong>${vendor.rocNumber ? `<span>ROC ${escapeHtml(vendor.rocNumber)}</span>` : ''}</div></div>
-        <div class="transaction-copy"><h3>Service request</h3>${escapeHtml(order.description || 'No description provided.')}</div>
+        <div class="transaction-summary job-summary"><div><span class="job-summary-icon" aria-hidden="true"><svg><use href="#icon-clock"/></svg></span><span><small>Current status</small><strong>${escapeHtml(titleCase(order.workflowStatus || order.status))}</strong></span></div><div><span class="job-summary-icon" aria-hidden="true"><svg><use href="#icon-calendar"/></svg></span><span><small>Scheduled window</small><strong>${escapeHtml(schedule ? `${dateTime(schedule.proposedStart)} – ${dateTime(schedule.proposedEnd)}` : 'To be confirmed')}</strong></span></div><div><span class="job-summary-icon" aria-hidden="true"><svg><use href="#icon-wrench"/></svg></span><span><small>Service professional</small><strong>${escapeHtml(vendor.name || 'Matching in progress')}</strong>${vendor.rocNumber ? `<em>ROC ${escapeHtml(vendor.rocNumber)}</em>` : ''}</span></div></div>
+        <section class="job-request-card"><div class="job-request-heading"><span>Request summary</span><h3>What you asked us to handle</h3></div><p>${escapeHtml(order.description || 'No description provided.')}</p></section>
         ${completion ? `<section class="completion-review"><div class="transaction-copy"><h3>Service notes</h3>${escapeHtml(completion.completionNotes || 'No service note was provided.')}</div><div class="completion-photos">${photoGroup('Before', completion.beforePhotos)}${photoGroup('After', completion.afterPhotos)}</div></section>` : ''}
         ${detail.invoice ? `<div class="transaction-actions"><a class="button button--dark" href="${escapeHtml(detail.invoice.pdfUrl)}" target="_blank" rel="noopener">Download invoice</a>${detail.invoice.receiptPdfUrl ? `<a class="button" href="${escapeHtml(detail.invoice.receiptPdfUrl)}" target="_blank" rel="noopener">Download receipt</a>` : ''}</div>` : ''}`;
       elements.jobDialog.showModal();
@@ -792,7 +797,7 @@
       main: byId('portalMain'), loading: byId('portalLoading'), error: byId('portalError'), unauthorized: byId('portalUnauthorized'),
       errorMessage: byId('portalErrorMessage'), retry: byId('retryButton'), offlineBanner: byId('offlineBanner'),
       sidebar: byId('portalSidebar'), navScrim: byId('navScrim'), openNav: byId('openNavButton'), closeNav: byId('closeNavButton'),
-      propertySwitcher: byId('propertySwitcher'), welcomeName: byId('welcomeName'), welcomeAddress: byId('welcomeAddress'),
+      propertySwitcher: byId('propertySwitcher'), headerRouteTitle: byId('residentialRouteTitle'), welcomeName: byId('welcomeName'), welcomeAddress: byId('welcomeAddress'),
       sidebarName: byId('sidebarName'), sidebarEmail: byId('sidebarEmail'), sidebarAvatar: byId('sidebarAvatar'),
       accountButton: byId('accountButton'), accountMenu: byId('accountMenu'), logout: byId('logoutButton'),
       estimateCount: byId('estimateCount'), estimateList: byId('estimateList'), activeJobCount: byId('activeJobCount'),

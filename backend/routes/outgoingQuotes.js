@@ -11,12 +11,14 @@ const Notification = require('../models/Notification');
 const Order = require('../models/Order');
 const OutgoingQuote = require('../models/OutgoingQuote');
 const QuoteSettings = require('../models/QuoteSettings');
+const SecurityAuditEvent = require('../models/SecurityAuditEvent');
 const Vendor = require('../models/Vendor');
 const User = require('../models/User');
 const { createOutgoingQuotePdf } = require('../utils/quotePdf');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const memCache = require('../utils/memoryCache');
 const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
+const { applyVendorComplianceOverride, hasVendorComplianceOverride } = require('../utils/vendorComplianceOverride');
 const {
   calculatePricing, cleanText, encryptToken, generateToken, hashToken,
   legalDisclosure, nextOutgoingQuoteReference, publicQuote
@@ -403,6 +405,15 @@ router.patch('/:quoteId', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+function vendorComplianceSendErrors(vendor) {
+  const errors = [];
+  const now = new Date();
+  if (!vendor?.certificateOfInsuranceOnFile) errors.push('Vendor COI must be on file');
+  if (!vendor?.insuranceExpirationDate || new Date(vendor.insuranceExpirationDate) <= now) errors.push('Vendor insurance must be current');
+  if (vendor?.rocLicenseExpirationDate && new Date(vendor.rocLicenseExpirationDate) <= now) errors.push('Vendor ROC license is expired');
+  return errors;
+}
+
 function validateSend(quote, vendor) {
   const errors = [];
   const email = String(quote.customerSnapshot?.email || '').trim();
@@ -410,11 +421,7 @@ function validateSend(quote, vendor) {
   if (!quote.termsAndConditions?.trim()) errors.push('Approved terms and conditions are required');
   if (!(new Date(quote.validUntil) > new Date())) errors.push('Quote expiration must be in the future');
   for (const [value, label] of [[quote.vendorSnapshot?.licensedContractorName, 'Licensed contractor name'], [quote.vendorSnapshot?.contractorLicenseNumber, 'Contractor license number'], [quote.vendorSnapshot?.licenseType, 'License type'], [quote.vendorSnapshot?.rocNumber, 'ROC number']]) if (!String(value || '').trim()) errors.push(`${label} is required`);
-  const now = new Date();
-  if (!vendor?.certificateOfInsuranceOnFile) errors.push('Vendor COI must be on file');
-  if (!vendor?.insuranceExpirationDate || new Date(vendor.insuranceExpirationDate) <= now) errors.push('Vendor insurance must be current');
-  if (vendor?.rocLicenseExpirationDate && new Date(vendor.rocLicenseExpirationDate) <= now) errors.push('Vendor ROC license is expired');
-  return errors;
+  return [...errors, ...vendorComplianceSendErrors(vendor)];
 }
 
 function outgoingOutbox(quote, token, sendNumber = 1) {
@@ -437,12 +444,29 @@ router.post('/:quoteId/send', async (req, res, next) => {
         Order.findById(quote.orderId).session(session), IncomingQuote.findById(quote.incomingQuoteId).session(session), Vendor.findById(quote.vendorId).session(session)
       ]);
       if (!order || !incoming || !vendor || String(order.selectedIncomingQuoteId) !== String(incoming._id) || incoming.status !== 'selected') throw Object.assign(new Error('The selected vendor quote is no longer current'), { status: 409 });
+      const complianceErrors = vendorComplianceSendErrors(vendor);
       const errors = validateSend(quote, vendor);
-      if (errors.length) throw Object.assign(new Error(errors.join('. ')), { status: 409 });
+      const blockingErrors = errors.filter(message => !complianceErrors.includes(message));
+      if (blockingErrors.length) throw Object.assign(new Error(blockingErrors.join('. ')), { status: 409 });
+      const complianceOverride = req.body?.complianceOverride === true;
+      const existingOrderOverride = complianceErrors.length ? await hasVendorComplianceOverride(order, vendor._id, session) : false;
+      if (complianceErrors.length && !existingOrderOverride && !complianceOverride) throw Object.assign(new Error(complianceErrors.join('. ')), {
+        status: 409,
+        code: 'VENDOR_COMPLIANCE_OVERRIDE_AVAILABLE',
+        exposeDetails: { requirements: complianceErrors, canOverride: req.user.role === 'admin' }
+      });
+      if (complianceErrors.length && !existingOrderOverride && req.user.role !== 'admin') throw Object.assign(new Error('Only an administrator can send a customer quote while vendor compliance is expired or incomplete'), { status: 403 });
+      if (complianceErrors.length && complianceOverride && !existingOrderOverride) applyVendorComplianceOverride(order, {
+        vendorId: vendor._id,
+        approvedBy: actorId(req),
+        approvedByEmail: req.user.email,
+        source: 'outgoing_quote_override',
+        requirements: complianceErrors
+      });
       const token = generateToken();
       quote.publicTokenHash = hashToken(token); quote.status = 'sent'; quote.sentAt = new Date(); quote.sentBy = actorId(req); quote.deliveryStatus = 'pending'; quote.customerDecisionStatus = 'pending';
       quote.legalDisclosure = legalDisclosure(quote.vendorSnapshot);
-      quote.history.push({ action: 'sent', actorId: actorId(req), actorEmail: req.user.email });
+      quote.history.push({ action: complianceErrors.length ? 'sent_under_order_compliance_override' : 'sent', actorId: actorId(req), actorEmail: req.user.email, message: complianceErrors.length ? complianceErrors.join('. ') : undefined });
       if (quote.previousVersionId) {
         await OutgoingQuote.updateOne({ _id: quote.previousVersionId, status: 'sent' }, { $set: { status: 'superseded', supersededAt: new Date(), supersededBy: actorId(req) }, $unset: { publicTokenHash: '' }, $push: { history: { action: 'superseded', actorId: actorId(req), actorEmail: req.user.email } } }, { session });
       }
@@ -450,6 +474,12 @@ router.post('/:quoteId/send', async (req, res, next) => {
       await EmailOutbox.create([outgoingOutbox(quote, token)], { session });
       order.currentOutgoingQuoteId = quote._id; order.amount = quote.customerTotal; order.pricingStatus = 'quoted'; order.profit = quote.customerTotal - Number(order.vendorCost || 0) - Number(order.processingFee || 0);
       const sync = await synchronizeWorkflowOrder(order, 'quote_sent', { session });
+      if (complianceErrors.length && complianceOverride && !existingOrderOverride) await SecurityAuditEvent.create([{
+        action: 'outgoing_quote_compliance_override', userId: actorId(req), userEmail: req.user.email,
+        entityType: 'OutgoingQuote', entityId: String(quote._id),
+        metadata: { orderId: String(order._id), vendorId: String(vendor._id), requirements: complianceErrors },
+        ipAddress: req.ip, userAgent: req.get('user-agent')
+      }], { session });
       sent = { ...quote.toObject(), sync };
     });
     invalidateCaches(); res.json(sent);

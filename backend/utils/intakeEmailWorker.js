@@ -16,6 +16,7 @@ const VendorWorkOrder = require('../models/VendorWorkOrder');
 const User = require('../models/User');
 const {
   sendVendorQuoteInvitationEmail,
+  sendVendorComplianceUpdateRequestEmail,
   sendVendorQuoteStaffAlertEmail,
   sendVendorQuoteSubmissionConfirmationEmail,
   sendCustomerOutgoingQuoteEmail,
@@ -215,6 +216,7 @@ async function deliverMessage(message) {
     website_operations_alert: sendWebsiteOperationsAlertEmail,
     vendor_quote_invitation: sendVendorQuoteInvitationEmail,
     vendor_quote_revision_request: sendVendorQuoteInvitationEmail,
+    vendor_compliance_update_request: sendVendorComplianceUpdateRequestEmail,
     vendor_quote_submission_confirmation: sendVendorQuoteSubmissionConfirmationEmail,
     vendor_quote_staff_alert: sendVendorQuoteStaffAlertEmail,
     customer_outgoing_quote: sendCustomerOutgoingQuoteEmail,

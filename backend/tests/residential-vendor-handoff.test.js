@@ -25,7 +25,9 @@ test('vendor distribution uses shared stage transition and transactional homeown
 });
 test('CRM handoff is discoverable and homeowner tracker distinguishes review from collection', () => {
   assert.match(read('pages/admin-dashboard.html'), /Review &amp; Send to Vendors/);
-  assert.match(read('assets/js/incoming-quotes.js'), /Confirm review &amp; coordinator/);
+  assert.match(read('assets/js/incoming-quotes.js'), /Confirm review &amp; continue/);
+  assert.match(read('assets/js/incoming-quotes.js'), /confirmReviewed: true/);
+  assert.doesNotMatch(read('assets/js/incoming-quotes.js'), /incomingResidentialConfirmed/);
   assert.match(read('assets/js/incoming-quotes.js'), /leadSubmissionKeys/);
   const received = workflowTracker({ workflowStatus: 'request_received' }, {});
   assert.match(received[0].label, /SMPLfix reviewing/);

@@ -39,7 +39,7 @@
     <link rel="stylesheet" href="../assets/css/vendor-review-detail-polish.css?v=20260807-vendor-reviews-monochrome">
     <link rel="stylesheet" href="../assets/css/workflow-center.css?v=20260806-workflow-monochrome">
     <link rel="stylesheet" href="../assets/css/incoming-quotes.css?v=20260806-workflow-monochrome">
-    <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20261007-visible-send-anyway">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css?v=20260806-workflow-monochrome">
     <link rel="stylesheet" href="../assets/css/scheduling.css?v=20260806-workflow-monochrome">
     <link rel="stylesheet" href="../assets/css/workflow-redesign.css?v=20260806-workflow-monochrome">
@@ -56,7 +56,7 @@
     <link rel="stylesheet" href="../assets/css/vendor-automation-branding.css?v=20260812-review-toolbar-polish">
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
     <link rel="stylesheet" href="../assets/css/stage2-workspace-polish.css?v=20260812-stage2-workspace">
-    <link rel="stylesheet" href="../assets/css/stage3-workspace-polish.css?v=20260812-stage3-workspace">
+    <link rel="stylesheet" href="../assets/css/stage3-workspace-polish.css?v=20261007-visible-send-anyway">
     <link rel="stylesheet" href="../assets/css/workflow-filterbar-polish.css?v=20260812-filterbar-polish">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
@@ -1079,6 +1079,7 @@
                     <div><p class="workflow-eyebrow">Quote workspace</p><h2 id="incomingWorkspaceTitle">Order</h2><p id="incomingWorkspaceSummary"></p></div>
                     <button type="button" class="btn-secondary" onclick="closeIncomingQuoteWorkspace()"><i class="fas fa-times"></i> Close</button>
                 </div>
+                <section id="incomingRequirementApprovals" class="incoming-panel vendor-requirement-approvals" hidden aria-live="polite"></section>
                 <div class="incoming-action-grid">
                     <form id="incomingLeadDistributionForm" class="incoming-panel incoming-lead-distribution">
                         <div class="incoming-panel-heading"><span><i class="fas fa-bullhorn"></i></span><div><h3>Distribute Lead to Qualified Vendors</h3><p>Send the same client-safe opportunity to multiple vendors. Accepting commits them to bid but does not award the job.</p></div></div>
@@ -4804,7 +4805,7 @@
     </div>
 
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20260916-commercial-completion"></script>
+    <script src="../assets/js/api-service.js?v=20261007-customer-quote-override"></script>
     <script src="../assets/js/commercial-approval.js?v=20260916-commercial-completion"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
@@ -4821,8 +4822,8 @@
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
     <script src="../assets/js/dashboard-script.js?v=20260916-commercial-completion"></script>
-    <script src="../assets/js/incoming-quotes.js?v=20260916-residential-handoff"></script>
-    <script src="../assets/js/outgoing-quotes.js?v=20260725-sent-summary"></script>
+    <script src="../assets/js/incoming-quotes.js?v=20261007-invitation-flow"></script>
+    <script src="../assets/js/outgoing-quotes.js?v=20261008-order-compliance-override"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
     <script src="../assets/js/scheduling.js?v=20260725-scheduling-workspace"></script>
     <script src="../assets/js/closeout.js?v=20260727-customer-engagement"></script>

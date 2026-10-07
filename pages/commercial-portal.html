@@ -10,15 +10,16 @@
   <link rel="stylesheet" href="/assets/css/commercial-portal.css?v=20260907-commercial-portal">
   <link rel="stylesheet" href="/assets/css/commercial-workflows.css?v=20260916-commercial-completion">
   <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
+  <link rel="stylesheet" href="/assets/css/portal-crm-shell.css?v=20260921-crm-shell">
 </head>
-<body>
+<body class="crm-portal crm-portal--commercial">
   <a class="skip-link" href="#commercialMain">Skip to main content</a>
   <div id="offlineBanner" class="offline-banner" role="status" hidden>You’re offline. Displayed portfolio data may be out of date.</div>
   <div class="portal-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Commercial portal navigation">
-      <div class="brand-row"><a href="#overview" aria-label="SMPLfix Commercial Portal home"><img src="/assets/images/smplfix-logo-reversed.png?v=20260806" alt="SMPLfix"></a><button id="sidebarClose" class="icon-button sidebar-close" type="button" aria-label="Close navigation">×</button></div>
+    <aside class="portal-sidebar-shell sidebar" id="sidebar" aria-label="Commercial portal navigation">
+      <div class="portal-sidebar-brand brand-row"><a href="#overview" aria-label="SMPLfix Commercial Portal home"><img src="/assets/images/smplfix-logo-reversed.png?v=20260806" alt="SMPLfix"></a><button id="sidebarClose" class="icon-button portal-sidebar-close sidebar-close" type="button" aria-label="Close navigation">×</button></div>
       <p class="portal-label">Commercial workspace</p>
-      <nav id="portalNavigation" aria-label="Portal sections">
+      <nav id="portalNavigation" class="portal-sidebar-nav" aria-label="Portal sections">
         <a href="#overview" data-route="overview" class="nav-link is-active"><span aria-hidden="true">⌂</span>Overview</a>
         <a href="#properties" data-route="properties" class="nav-link"><span aria-hidden="true">◇</span>Properties</a>
         <a href="#orders" data-route="orders" class="nav-link"><span aria-hidden="true">≡</span>Open Orders</a>
@@ -31,20 +32,22 @@
         <a href="#notifications" data-route="notifications" class="nav-link"><span aria-hidden="true">●</span>Notifications <b id="notificationBadge" hidden>0</b></a>
         <a href="#account" data-route="account" class="nav-link"><span aria-hidden="true">○</span>Account</a>
       </nav>
-      <div class="sidebar-note"><strong>One operating view</strong><p>Orders, visits, invoices, and reports stay connected to each location.</p></div>
-      <button id="accountShortcut" class="account-shortcut" type="button"><span id="userInitials">CC</span><span><strong id="sidebarUserName">Commercial client</strong><small id="sidebarOrgName">Portfolio access</small></span></button>
+      <div class="portal-sidebar-card sidebar-note"><strong>One operating view</strong><p>Orders, visits, invoices, and reports stay connected to each location.</p></div>
+      <button id="accountShortcut" class="portal-sidebar-account account-shortcut" type="button"><span id="userInitials">CC</span><span><strong id="sidebarUserName">Commercial client</strong><small id="sidebarOrgName">Portfolio access</small></span><span class="portal-account-chevron" aria-hidden="true">›</span></button>
     </aside>
-    <button id="sidebarScrim" class="sidebar-scrim" type="button" aria-label="Close navigation" hidden></button>
+    <button id="sidebarScrim" class="portal-sidebar-scrim sidebar-scrim" type="button" aria-label="Close navigation" hidden></button>
 
     <div class="workspace">
-      <header class="topbar">
+      <header class="portal-header topbar">
         <button id="menuButton" class="icon-button menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">☰</button>
-        <div class="route-title"><span>Commercial portal</span><h1 id="routeTitle">Overview</h1></div>
-        <div class="scope-controls">
-          <label><span>Organization</span><select id="organizationSelect" aria-label="Choose organization"></select></label>
-          <label><span>Portfolio</span><select id="portfolioSelect" aria-label="Choose portfolio"><option value="">All portfolios</option></select></label>
+        <div class="portal-header-title route-title"><span>Commercial portal</span><h1 id="routeTitle">Overview</h1></div>
+        <div class="portal-header-tools">
+          <div class="scope-controls">
+            <label><span>Organization</span><select id="organizationSelect" aria-label="Choose organization"></select></label>
+            <label><span>Portfolio</span><select id="portfolioSelect" aria-label="Choose portfolio"><option value="">All portfolios</option></select></label>
+          </div>
+          <label class="global-search"><span aria-hidden="true">⌕</span><span class="sr-only">Search current section</span><input id="globalSearch" type="search" placeholder="Search locations, orders…" autocomplete="off"></label>
         </div>
-        <label class="global-search"><span aria-hidden="true">⌕</span><span class="sr-only">Search current section</span><input id="globalSearch" type="search" placeholder="Search locations, orders…" autocomplete="off"></label>
       </header>
 
       <main id="commercialMain" class="main" tabindex="-1">

@@ -94,7 +94,11 @@ function safePassport(profile, propertyId) {
 }
 
 function safeNotification(item) {
-  return { id: String(item._id), title: item.title, message: item.message, type: item.type, priority: item.priority, isRead: item.isRead, actionUrl: /^#[a-z-]+$/.test(item.actionUrl || '') ? item.actionUrl : undefined, createdAt: item.createdAt };
+  const customerCopy = value => String(value || '')
+    .replace(/Emergency request received/g, 'Emergency request submitted')
+    .replace(/Service request received/g, 'Service request submitted')
+    .replace(/was received for/g, 'was submitted for');
+  return { id: String(item._id), title: customerCopy(item.title), message: customerCopy(item.message), type: item.type, priority: item.priority, isRead: item.isRead, actionUrl: /^#[a-z-]+$/.test(item.actionUrl || '') ? item.actionUrl : undefined, createdAt: item.createdAt };
 }
 
 async function activity(req, found, type, title, summary, orderId) {

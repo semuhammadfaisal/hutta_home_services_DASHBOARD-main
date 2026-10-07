@@ -10,6 +10,20 @@
   const inputDate = value => value ? new Date(value).toISOString().slice(0, 10) : '';
   const toast = (message, type = 'success') => window.showToast ? window.showToast(message, type) : alert(message);
 
+  function quoteComplianceWarnings(quote) {
+    const vendor = quote?.vendorSnapshot || {};
+    const now = Date.now();
+    const warnings = [];
+    if (!vendor.coiOnFile) warnings.push('Vendor COI must be on file');
+    if (!vendor.insuranceExpirationDate || new Date(vendor.insuranceExpirationDate).getTime() <= now) warnings.push('Vendor insurance must be current');
+    if (vendor.rocLicenseExpirationDate && new Date(vendor.rocLicenseExpirationDate).getTime() <= now) warnings.push('Vendor ROC license is expired');
+    return warnings;
+  }
+
+  function hasOrderComplianceOverride(vendorId) {
+    return Boolean((workspace?.order?.vendorComplianceOverrides || []).some(item => item.active !== false && String(item.vendorId) === String(vendorId)));
+  }
+
   function renderOrders() {
     const ready = orders.filter(order => order.workflowStatus === 'vendor_selected').length;
     const drafts = orders.filter(order => order.outgoingQuote?.status === 'draft').length;
@@ -95,10 +109,14 @@
       </section>`;
     }
     const v = quote.vendorSnapshot || {};
+    const complianceWarnings = quoteComplianceWarnings(quote);
+    const orderComplianceOverride = hasOrderComplianceOverride(quote.vendorId);
+    const canOverrideCompliance = window.AuthSession?.user?.role === 'admin' && complianceWarnings.length > 0 && !orderComplianceOverride;
     const readiness = [
       ['Customer email', Boolean(quote.customerSnapshot?.email), 'Required for secure delivery'],
       ['Terms and conditions', Boolean(quote.termsAndConditions), 'Approved terms must be included'],
       ['Contractor disclosure', Boolean(v.companyName && v.licensedContractorName && v.contractorLicenseNumber && v.licenseType && v.rocNumber), 'License and ROC details required'],
+      ['Vendor compliance', complianceWarnings.length === 0 || orderComplianceOverride, orderComplianceOverride ? 'Admin Send Anyway approval applies throughout this order' : complianceWarnings.length ? complianceWarnings.join(' · ') : 'Insurance, COI, and ROC dates are current'],
       ['Quote expiration', Boolean(inputDate(quote.validUntil)), 'A future valid-until date is required']
     ];
     const readyCount = readiness.filter(item => item[1]).length;
@@ -117,7 +135,7 @@
           <section class="outgoing-sidebar-card outgoing-delivery-card"><div class="outgoing-sidebar-title"><span><i class="fas fa-paper-plane"></i> Delivery</span></div><p>The customer receives one final total, terms, contractor disclosure, and a secure PDF link.</p><a class="btn-secondary" href="/api/outgoing-quotes/${encodeURIComponent(quote._id)}/pdf" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> Preview PDF</a></section>
         </aside>
       </div>
-      <div class="outgoing-sticky-actions"><div><span>Draft changes are not automatic</span><small>Save before previewing or sending.</small></div><button class="btn-secondary outgoing-void-button" type="button" onclick="voidOutgoingQuote('${escapeHtml(quote._id)}')"><i class="fas fa-ban"></i> Void</button><a class="btn-secondary" href="/api/outgoing-quotes/${encodeURIComponent(quote._id)}/pdf" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Preview</a><button class="btn-secondary" type="submit"><i class="fas fa-save"></i> Save Draft</button><button class="btn-primary" type="button" onclick="sendOutgoingQuote('${escapeHtml(quote._id)}')"><i class="fas fa-paper-plane"></i> Send to Customer</button></div>
+      <div class="outgoing-sticky-actions"><div><span>Draft changes are not automatic</span><small>Save before previewing or sending.</small></div><button class="btn-secondary outgoing-void-button" type="button" onclick="voidOutgoingQuote('${escapeHtml(quote._id)}')"><i class="fas fa-ban"></i> Void</button><a class="btn-secondary" href="/api/outgoing-quotes/${encodeURIComponent(quote._id)}/pdf" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Preview</a><button class="btn-secondary" type="submit"><i class="fas fa-save"></i> Save Draft</button>${canOverrideCompliance ? `<button class="btn-danger outgoing-send-anyway" type="button" onclick="sendOutgoingQuoteAnyway('${escapeHtml(quote._id)}')"><i class="fas fa-exclamation-triangle"></i> Send Anyway</button>` : ''}<button class="btn-primary" type="button" onclick="sendOutgoingQuote('${escapeHtml(quote._id)}')"><i class="fas fa-paper-plane"></i> Send to Customer</button></div>
     </form>`;
   }
 
@@ -144,7 +162,46 @@
     const payload = { customerSnapshot: { name: $('oqCustomerName').value, email: $('oqCustomerEmail').value, address: $('oqCustomerAddress').value }, jobSnapshot: { service: $('oqService').value }, scopeOfWork: $('oqScope').value, estimatedDuration: { value: Number($('oqDurationValue').value), unit: $('oqDurationUnit').value }, earliestAvailableDate: $('oqEarliest').value, siteAccessRequired: $('oqSiteAccess').value === 'true', accessNotes: $('oqAccessNotes').value, exclusionsConditions: $('oqConditions').value, markupType: $('oqMarkupType').value, markupValue: Number($('oqMarkupValue').value), validUntil: $('oqValidUntil').value, vendorSnapshot: { companyName: $('oqVendorCompany').value, licensedContractorName: $('oqContractor').value, contractorLicenseNumber: $('oqLicenseNumber').value, licenseType: $('oqLicenseType').value, rocNumber: $('oqRoc').value }, termsAndConditions: $('oqTerms').value };
     try { await window.APIService.updateOutgoingQuote(quote._id, payload); toast('Draft saved and pricing recalculated.'); await refresh(); } catch (error) { toast(error.message, 'error'); } finally { if (submitButton?.isConnected) submitButton.disabled = false; }
   }
-  async function sendOutgoingQuote(id) { const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Send customer quote?', message: 'The current quote snapshot will be frozen and sent through a secure customer link.', impact: 'Sent quotes cannot be edited. Any later change requires a new revision.', confirmLabel: 'Send to Customer' }) || Promise.resolve(false)); if (!confirmed) return; try { await window.APIService.sendOutgoingQuote(id); toast('Quote sent and customer email queued.'); await refresh(); } catch (error) { toast(error.message, 'error'); } }
+  async function completeOutgoingQuoteSend(id, complianceOverride = false) {
+    await window.APIService.sendOutgoingQuote(id, complianceOverride);
+    toast(complianceOverride ? 'Quote sent with an audited vendor compliance override.' : 'Quote sent and customer email queued.');
+    await refresh();
+  }
+
+  async function sendOutgoingQuote(id) {
+    const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Send customer quote?', message: 'The current quote snapshot will be frozen and sent through a secure customer link.', impact: 'Sent quotes cannot be edited. Any later change requires a new revision.', confirmLabel: 'Send to Customer' }) || Promise.resolve(false));
+    if (!confirmed) return;
+    try {
+      await completeOutgoingQuoteSend(id);
+    } catch (error) {
+      if (error.data?.code !== 'VENDOR_COMPLIANCE_OVERRIDE_AVAILABLE') return toast(error.message, 'error');
+      const requirements = error.data?.details?.requirements || [error.message];
+      if (!error.data?.details?.canOverride) return toast(`${requirements.join('. ')}. Ask an administrator to send anyway.`, 'error');
+      const sendAnyway = await (window.WorkflowDialog?.confirm?.({
+        title: 'Send customer quote anyway?',
+        message: requirements.join('. '),
+        impact: 'Administrator override: the customer quote will be sent now and the expired vendor requirements will be written to the permanent audit history.',
+        confirmLabel: 'Send Anyway',
+        tone: 'danger'
+      }) || Promise.resolve(false));
+      if (!sendAnyway) return;
+      try { await completeOutgoingQuoteSend(id, true); } catch (overrideError) { toast(overrideError.message, 'error'); }
+    }
+  }
+
+  async function sendOutgoingQuoteAnyway(id) {
+    const quote = workspace?.quotes?.find(item => String(item._id) === String(id));
+    const requirements = quoteComplianceWarnings(quote);
+    const confirmed = await (window.WorkflowDialog?.confirm?.({
+      title: 'Send customer quote anyway?',
+      message: requirements.join('. ') || 'Vendor compliance is incomplete or expired.',
+      impact: 'Administrator override: the quote will be sent now and this exception will be written to the permanent audit history.',
+      confirmLabel: 'Send Anyway',
+      tone: 'danger'
+    }) || Promise.resolve(false));
+    if (!confirmed) return;
+    try { await completeOutgoingQuoteSend(id, true); } catch (error) { toast(error.message, 'error'); }
+  }
   async function reviseOutgoingQuote(id) { try { await window.APIService.reviseOutgoingQuote(id); toast('Revision draft created.'); await refresh(); } catch (error) { toast(error.message, 'error'); } }
   async function resendOutgoingQuote(id) { const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Rotate and resend secure link?', message: 'A new customer link will be generated and another email queued.', impact: 'The previous customer link will immediately stop working.', confirmLabel: 'Rotate and Resend' }) || Promise.resolve(false)); if (!confirmed) return; try { await window.APIService.resendOutgoingQuote(id); toast('New secure link queued.'); await refresh(); } catch (error) { toast(error.message, 'error'); } }
   async function voidOutgoingQuote(id) { const reason = window.WorkflowDialog ? await window.WorkflowDialog.prompt({ title: 'Void outgoing quote?', message: 'Provide a reason for the permanent audit history.', impact: 'The secure customer link will stop working and this quote cannot be sent.', placeholder: 'Reason for voiding', confirmLabel: 'Void Quote', tone: 'danger' }) : null; if (reason === null) return; try { await window.APIService.voidOutgoingQuote(id, reason); toast('Quote voided.'); await refresh(); } catch (error) { toast(error.message, 'error'); } }
@@ -176,5 +233,5 @@
   });
   $('outgoingSettingsForm')?.addEventListener('submit', async event => { event.preventDefault(); try { await window.APIService.updateOutgoingQuoteSettings({ defaultMarkupType: $('outgoingDefaultMarkupType').value, defaultMarkupValue: Number($('outgoingDefaultMarkupValue').value), defaultValidityDays: Number($('outgoingDefaultValidityDays').value), company: { name: $('outgoingCompanyName').value, address: $('outgoingCompanyAddress').value, phone: $('outgoingCompanyPhone').value, email: $('outgoingCompanyEmail').value, website: $('outgoingCompanyWebsite').value }, termsAndConditions: $('outgoingDefaultTerms').value }); toast('Outgoing quote settings saved.'); toggleOutgoingSettings(false); } catch (error) { toast(error.message, 'error'); } });
 
-  Object.assign(window, { loadOutgoingQuotes, openOutgoingQuoteWorkspace, closeOutgoingQuoteWorkspace, convertOutgoingQuote, sendOutgoingQuote, reviseOutgoingQuote, resendOutgoingQuote, voidOutgoingQuote, retryOutgoingQuoteEmail, toggleOutgoingSettings });
+  Object.assign(window, { loadOutgoingQuotes, openOutgoingQuoteWorkspace, closeOutgoingQuoteWorkspace, convertOutgoingQuote, sendOutgoingQuote, sendOutgoingQuoteAnyway, reviseOutgoingQuote, resendOutgoingQuote, voidOutgoingQuote, retryOutgoingQuoteEmail, toggleOutgoingSettings });
 })();

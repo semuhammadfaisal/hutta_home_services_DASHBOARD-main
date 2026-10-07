@@ -38,6 +38,17 @@ const customerRequestActionSchema = new mongoose.Schema({
   previousOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' }
 }, { _id: true });
 
+const vendorComplianceOverrideSchema = new mongoose.Schema({
+  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true },
+  approvedAt: { type: Date, required: true },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvedByEmail: String,
+  source: { type: String, enum: ['vendor_requirement_approval', 'outgoing_quote_override'], required: true },
+  approvalId: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorRequirementApproval' },
+  requirements: { type: [String], default: [] },
+  active: { type: Boolean, default: true }
+}, { _id: true });
+
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
   workOrderNumber: { type: String },
@@ -143,6 +154,7 @@ const orderSchema = new mongoose.Schema({
   processingFee: { type: Number, default: 0 },
   profit: { type: Number, default: 0 },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
+  vendorComplianceOverrides: { type: [vendorComplianceOverrideSchema], default: [] },
   vendorAssignments: { type: [vendorAssignmentSchema], default: [] },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
   residentialStaffReview: { reviewedAt: Date, reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, scope: String },

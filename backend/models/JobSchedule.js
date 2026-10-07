@@ -17,6 +17,11 @@ const jobScheduleSchema = new mongoose.Schema({
   internalNotes: { type: String, trim: true, maxlength: 5000, select: false },
   conflictAcknowledged: { type: Boolean, default: false },
   conflictSnapshot: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  vendorComplianceOverride: {
+    approved: { type: Boolean, default: false },
+    approvedAt: Date,
+    source: { type: String, enum: ['order_vendor_override'] }
+  },
   customerSnapshot: { name: String, email: String, phone: String, address: String },
   vendorSnapshot: { name: String, email: String, phone: String },
   jobSnapshot: { requestReference: String, orderReference: String, service: String, description: String, scopeOfWork: String },

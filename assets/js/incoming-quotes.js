@@ -5,6 +5,9 @@
   let currentOrderId = '';
   let editingQuoteId = '';
   let leadCandidates = [];
+  let requirementApprovals = [];
+  let canApproveRequirements = false;
+  let pendingRequirementAction = null;
   const leadSubmissionKeys = new Map();
 
   const $ = id => document.getElementById(id);
@@ -18,6 +21,125 @@
     return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
   };
   const toast = (message, type = 'success') => typeof window.showToast === 'function' ? window.showToast(message, type) : alert(message);
+
+  function vendorIdsForAction(action, payload) {
+    return action === 'quote_invitation' ? [payload.vendorId] : (payload.vendorIds || []);
+  }
+
+  function requirementIssueMarkup(issues = []) {
+    return issues.map(item => `<article><strong>${escapeHtml(item.vendorName || 'Vendor')}</strong><ul>${(item.requirements || item.reasons || []).map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul></article>`).join('');
+  }
+
+  function ensureRequirementDialog() {
+    if ($('vendorRequirementGateDialog')) return $('vendorRequirementGateDialog');
+    const dialog = document.createElement('dialog');
+    dialog.id = 'vendorRequirementGateDialog';
+    dialog.className = 'vendor-requirement-dialog';
+    dialog.innerHTML = `<form method="dialog" class="vendor-requirement-card"><button class="vendor-requirement-close" value="cancel" aria-label="Close"><i class="fas fa-times"></i></button><div class="vendor-requirement-icon"><i class="fas fa-shield-alt"></i></div><p class="workflow-eyebrow">Vendor requirements</p><h2>Information is required before sending</h2><p class="vendor-requirement-intro">Choose how to continue. The order stays paused while the vendor updates their portal profile.</p><div id="vendorRequirementIssues" class="vendor-requirement-issues"></div><div class="vendor-requirement-options"><button type="button" class="vendor-requirement-option" id="emailVendorUpdateButton"><i class="fas fa-envelope"></i><span><strong>Email vendor to update</strong><small>Sends the Vendor Portal login link and keeps this action waiting.</small></span></button><button type="button" class="vendor-requirement-option danger" id="sendVendorAnywayButton"><i class="fas fa-exclamation-triangle"></i><span><strong>Send anyway</strong><small>Requires recorded admin approval before anything is sent.</small></span></button></div><p id="vendorRequirementStatus" class="vendor-requirement-status" role="status"></p></form>`;
+    document.body.appendChild(dialog);
+    $('emailVendorUpdateButton').addEventListener('click', emailVendorForUpdate);
+    $('sendVendorAnywayButton').addEventListener('click', requestSendAnyway);
+    return dialog;
+  }
+
+  function openRequirementGate(action, payload, idempotencyKey, issues) {
+    pendingRequirementAction = { action, payload, idempotencyKey: idempotencyKey || '' };
+    const dialog = ensureRequirementDialog();
+    $('vendorRequirementIssues').innerHTML = requirementIssueMarkup(issues);
+    $('vendorRequirementStatus').textContent = '';
+    dialog.showModal();
+  }
+
+  async function emailVendorForUpdate() {
+    if (!pendingRequirementAction) return;
+    const button = $('emailVendorUpdateButton'); button.disabled = true;
+    try {
+      const vendorIds = vendorIdsForAction(pendingRequirementAction.action, pendingRequirementAction.payload);
+      await window.APIService.requestVendorProfileUpdate(currentOrderId, vendorIds);
+      $('vendorRequirementGateDialog').close();
+      toast('Vendor update email queued. This send is waiting for the vendor to update their portal profile.');
+    } catch (error) { $('vendorRequirementStatus').textContent = error.message; }
+    finally { button.disabled = false; }
+  }
+
+  async function requestSendAnyway() {
+    if (!pendingRequirementAction) return;
+    // A native <dialog> is rendered in the browser's top layer. The shared
+    // WorkflowDialog is a regular fixed-position element, so it cannot receive
+    // clicks while this modal remains open, regardless of its z-index.
+    const requirementDialog = $('vendorRequirementGateDialog');
+    requirementDialog?.close();
+    const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Request permission to send anyway?', message: 'Vendor requirements are missing or expired.', impact: 'An admin must approve this exact send. The exception and final send are written to the audit history.', confirmLabel: 'Request Admin Approval', danger: true }) || Promise.resolve(false));
+    if (!confirmed) {
+      if (pendingRequirementAction && requirementDialog && !requirementDialog.open) requirementDialog.showModal();
+      return;
+    }
+    const button = $('sendVendorAnywayButton'); button.disabled = true;
+    try {
+      const response = await window.APIService.requestVendorRequirementApproval(currentOrderId, { ...pendingRequirementAction, workspace: window.ServiceRequestsActive ? 'service-requests' : 'workflow-center' });
+      if (response.canApprove) {
+        const approval = response.approval.status === 'approved'
+          ? response.approval
+          : (await window.APIService.approveVendorRequirement(response.approval._id, 'Approved from vendor requirement confirmation.')).approval;
+        await executeApprovedRequirement(approval);
+      } else {
+        toast('Admin approval requested. Sending is paused until an admin approves it.');
+        await refreshWorkspace();
+      }
+    } catch (error) {
+      $('vendorRequirementStatus').textContent = error.message;
+      if (requirementDialog && !requirementDialog.open) requirementDialog.showModal();
+    }
+    finally { button.disabled = false; }
+  }
+
+  async function executeApprovedRequirement(approval) {
+    if (!await ensureResidentialReviewBeforeSend()) {
+      toast('The exception is approved. Confirm the coordinator and scope to finish sending.', 'warning');
+      return false;
+    }
+    const payload = { ...(approval.actionPayload || {}), requirementApprovalId: approval._id };
+    if (approval.action === 'lead_distribution') {
+      await window.APIService.distributeIncomingLead(approval.orderId, payload, approval.idempotencyKey);
+    } else {
+      await window.APIService.sendIncomingQuoteInvitation(approval.orderId, payload);
+    }
+    toast('Admin approved the exception and the vendor item was sent.');
+    await refreshWorkspace();
+    return true;
+  }
+
+  function renderRequirementApprovals() {
+    const panel = $('incomingRequirementApprovals');
+    if (!panel) return;
+    const active = requirementApprovals.filter(item => ['pending', 'approved'].includes(item.status));
+    panel.hidden = !active.length;
+    if (!active.length) { panel.innerHTML = ''; return; }
+    panel.innerHTML = `<div class="incoming-panel-heading"><span><i class="fas fa-user-shield"></i></span><div><h3>Vendor Send Approvals</h3><p>Exceptions remain paused until an admin approves and sends them.</p></div></div><div class="vendor-approval-list">${active.map(item => `<article><div><strong>${escapeHtml(item.action.replaceAll('_', ' '))}</strong><small>${escapeHtml((item.issues || []).map(issue => issue.vendorName).join(', '))} · ${escapeHtml(item.status)}</small></div><div class="vendor-approval-actions">${item.status === 'approved' ? `<button type="button" class="btn-primary" data-requirement-send="${escapeHtml(item._id)}">Send approved</button>` : canApproveRequirements ? `<button type="button" class="btn-secondary" data-requirement-reject="${escapeHtml(item._id)}">Reject</button><button type="button" class="btn-danger" data-requirement-approve="${escapeHtml(item._id)}">Approve &amp; send</button>` : '<span class="workflow-badge warning">Waiting for admin</span>'}</div></article>`).join('')}</div>`;
+    panel.onclick = async event => {
+      const approve = event.target.closest('[data-requirement-approve]');
+      const reject = event.target.closest('[data-requirement-reject]');
+      const send = event.target.closest('[data-requirement-send]');
+      const id = approve?.dataset.requirementApprove || reject?.dataset.requirementReject || send?.dataset.requirementSend;
+      if (!id) return;
+      const item = requirementApprovals.find(entry => String(entry._id) === String(id));
+      try {
+        if (reject) {
+          const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Reject send exception?', message: 'The requested vendor send will remain blocked.', confirmLabel: 'Reject Request', danger: true }) || Promise.resolve(false));
+          if (!confirmed) return;
+          await window.APIService.rejectVendorRequirement(id, 'Rejected from vendor send approvals.');
+          toast('Send exception rejected.'); await refreshWorkspace(); return;
+        }
+        if (approve) {
+          const confirmed = await (window.WorkflowDialog?.confirm?.({ title: 'Approve and send anyway?', message: 'This vendor is missing required information.', impact: 'This exception is recorded. The exact pending item will be sent immediately.', confirmLabel: 'Approve & Send', danger: true }) || Promise.resolve(false));
+          if (!confirmed) return;
+          const response = await window.APIService.approveVendorRequirement(id, 'Approved from the order workspace.');
+          await executeApprovedRequirement(response.approval); return;
+        }
+        await executeApprovedRequirement(item);
+      } catch (error) { toast(error.message, 'error'); }
+    };
+  }
 
   function vendorOptions(selected = '') {
     return `<option value="">Select vendor</option>${vendors.map(vendor => `<option value="${escapeHtml(vendor._id)}" ${String(vendor._id) === String(selected) ? 'selected' : ''}>${escapeHtml(vendor.name)} · ${escapeHtml(vendor.category || 'Uncategorized')} · ${escapeHtml(vendor.compliance?.status || 'missing')}</option>`).join('')}`;
@@ -127,6 +249,7 @@
     renderVendorCompliance('incomingStaffVendor');
     renderLeadCandidates();
     renderResidentialReview(order);
+    renderRequirementApprovals();
     const body = $('incomingComparisonBody');
     const comparableQuotes = quotes.filter(quote => ['submitted', 'selected'].includes(quote.status));
     const lowestTotal = comparableQuotes.length ? Math.min(...comparableQuotes.map(quote => Number(quote.total || 0))) : null;
@@ -174,7 +297,7 @@
   function renderLeadCandidates() {
     const node = $('incomingLeadCandidates'); if (!node) return;
     if (!leadCandidates.length) { node.innerHTML = '<p>No vendors are available for qualification.</p>'; return; }
-    node.innerHTML = leadCandidates.map(vendor => `<label class="incoming-lead-candidate ${vendor.eligible ? '' : 'is-blocked'}"><input type="checkbox" name="leadVendor" value="${escapeHtml(vendor.id)}" ${vendor.eligible ? '' : 'disabled'}><span><strong>${escapeHtml(vendor.name)}</strong><small>${escapeHtml((vendor.tradeClassifications || []).join(', ') || vendor.category || 'No trade')}</small><small>${vendor.eligible ? `Rating ${Number(vendor.qualification?.rating || 0).toFixed(1)} · Performance ${Number(vendor.qualification?.performanceScore || 0)}` : escapeHtml((vendor.reasons || []).join(' · '))}</small></span></label>`).join('');
+    node.innerHTML = leadCandidates.map(vendor => `<label class="incoming-lead-candidate ${vendor.sendableWithApproval ? 'needs-approval' : vendor.eligible ? '' : 'is-blocked'}"><input type="checkbox" name="leadVendor" value="${escapeHtml(vendor.id)}" ${vendor.eligible || vendor.sendableWithApproval ? '' : 'disabled'}><span><strong>${escapeHtml(vendor.name)}</strong><small>${escapeHtml((vendor.tradeClassifications || []).join(', ') || vendor.category || 'No trade')}</small><small>${vendor.eligible ? `Rating ${Number(vendor.qualification?.rating || 0).toFixed(1)} · Performance ${Number(vendor.qualification?.performanceScore || 0)}` : vendor.sendableWithApproval ? `Update required · ${escapeHtml((vendor.requirements || []).join(' · '))}` : escapeHtml((vendor.reasons || []).join(' · '))}</small></span></label>`).join('');
   }
 
   function renderResidentialReview(order) {
@@ -187,7 +310,7 @@
     panel.style.display = panel.hidden ? 'none' : '';
     if (panel.hidden) return;
     const reviewed = Boolean(order.employee && order.residentialStaffReview?.reviewedAt);
-    panel.innerHTML = `<h3>Review residential request</h3><p>${escapeHtml(order.description || '')}</p><p>Urgency: ${escapeHtml(order.residentialRequest?.urgency || 'normal')} · Preferred timing: ${escapeHtml(order.customerIntake?.preferredTiming || 'Not specified')}</p><p>${reviewed ? 'Review confirmed. Select qualified vendors and send the lead below.' : 'Assign a coordinator and confirm scope before sending. The request stays under review until leads are sent.'}</p>${order.workflowStatus === 'request_received' ? `<label>Coordinator<select id="incomingResidentialCoordinator"><option value="">Loading coordinators…</option></select></label><label>Reviewed scope<textarea id="incomingResidentialScope" rows="4" maxlength="5000">${escapeHtml(order.residentialStaffReview?.scope || order.description || order.service)}</textarea></label><label><input type="checkbox" id="incomingResidentialConfirmed"> I reviewed the property, scope, urgency and preferred timing.</label><button type="button" class="btn-secondary" id="incomingResidentialReviewSave">Confirm review &amp; coordinator</button><p id="incomingResidentialReviewStatus" role="status"></p>` : ''}`;
+    panel.innerHTML = `<h3>Review residential request</h3><p>${escapeHtml(order.description || '')}</p><p>Urgency: ${escapeHtml(order.residentialRequest?.urgency || 'normal')} · Preferred timing: ${escapeHtml(order.customerIntake?.preferredTiming || 'Not specified')}</p><p>${reviewed ? 'Review confirmed. Select qualified vendors and send the lead below.' : 'Choose the coordinator and check the scope once. Clicking confirm records your review; sending an invitation will also confirm these completed fields automatically.'}</p>${order.workflowStatus === 'request_received' ? `<label>Coordinator<select id="incomingResidentialCoordinator"><option value="">Loading coordinators…</option></select></label><label>Reviewed scope<textarea id="incomingResidentialScope" rows="4" maxlength="5000">${escapeHtml(order.residentialStaffReview?.scope || order.description || order.service)}</textarea></label><button type="button" class="btn-secondary" id="incomingResidentialReviewSave">Confirm review &amp; continue</button><p id="incomingResidentialReviewStatus" role="status"></p>` : ''}`;
     if ($('incomingResidentialCoordinator')) {
       window.APIService.getEmployees().then(employees => {
         if (String(currentOrderId) !== String(order._id)) return;
@@ -199,13 +322,45 @@
       $('incomingResidentialReviewSave').addEventListener('click', async event => {
         const button = event.currentTarget; button.disabled = true;
         try {
-          await window.APIService.reviewResidentialRequest(currentOrderId, { employeeId: $('incomingResidentialCoordinator').value, scope: $('incomingResidentialScope').value.trim(), confirmReviewed: $('incomingResidentialConfirmed').checked });
-          await refreshWorkspace(); toast('Review confirmed. Select qualified vendors and send the lead.');
-        } catch (error) { toast(error.message, 'error'); } finally { if (button.isConnected) button.disabled = false; }
+          if (await ensureResidentialReviewBeforeSend()) {
+            await refreshWorkspace(); toast('Review confirmed. You can send the invitation now.');
+          }
+        } finally { if (button.isConnected) button.disabled = false; }
       });
     }
     $('incomingLeadScope').value = order.residentialStaffReview?.scope || order.description || order.service;
     $('incomingLeadWindow').value = order.customerIntake?.preferredTiming || '';
+  }
+
+  async function ensureResidentialReviewBeforeSend() {
+    const order = workspace?.order;
+    if (!order || order.source !== 'residential_portal' || (order.employee && order.residentialStaffReview?.reviewedAt)) return true;
+    const panel = $('incomingResidentialReview');
+    const coordinator = $('incomingResidentialCoordinator');
+    const scope = $('incomingResidentialScope');
+    const employeeId = coordinator?.value || '';
+    const reviewedScope = scope?.value.trim() || '';
+    if (!employeeId || !reviewedScope) {
+      const missing = !employeeId ? coordinator : scope;
+      toast(!employeeId ? 'Choose a coordinator to continue.' : 'Add the reviewed scope to continue.', 'error');
+      panel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      missing?.focus();
+      return false;
+    }
+    const status = $('incomingResidentialReviewStatus');
+    if (status) status.textContent = 'Confirming review…';
+    try {
+      await window.APIService.reviewResidentialRequest(currentOrderId, { employeeId, scope: reviewedScope, confirmReviewed: true });
+      order.employee = { _id: employeeId };
+      order.residentialStaffReview = { ...(order.residentialStaffReview || {}), scope: reviewedScope, reviewedAt: new Date().toISOString() };
+      if (status) status.textContent = 'Review confirmed.';
+      return true;
+    } catch (error) {
+      if (status) status.textContent = error.message;
+      toast(error.message, 'error');
+      panel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
   }
 
   async function openIncomingQuoteWorkspace(orderId, scroll = true) {
@@ -216,8 +371,8 @@
         if ($('incomingStaffVendor')) $('incomingStaffVendor').disabled = false;
       }
       currentOrderId = orderId;
-      const [loadedWorkspace, candidates] = await Promise.all([window.APIService.getIncomingQuoteWorkspace(orderId), window.APIService.getIncomingLeadCandidates(orderId)]);
-      workspace = loadedWorkspace; leadCandidates = candidates.candidates || [];
+      const [loadedWorkspace, candidates, approvals] = await Promise.all([window.APIService.getIncomingQuoteWorkspace(orderId), window.APIService.getIncomingLeadCandidates(orderId), window.APIService.getVendorRequirementApprovals(orderId)]);
+      workspace = loadedWorkspace; leadCandidates = candidates.candidates || []; requirementApprovals = approvals.approvals || []; canApproveRequirements = approvals.canApprove === true;
       $('incomingQuoteWorkspace').hidden = false;
       renderWorkspace();
       if (scroll) $('incomingQuoteWorkspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -237,8 +392,8 @@
 
   async function refreshWorkspace() {
     if (!currentOrderId) return;
-    const [loadedWorkspace, candidates] = await Promise.all([window.APIService.getIncomingQuoteWorkspace(currentOrderId), window.APIService.getIncomingLeadCandidates(currentOrderId)]);
-    workspace = loadedWorkspace; leadCandidates = candidates.candidates || [];
+    const [loadedWorkspace, candidates, approvals] = await Promise.all([window.APIService.getIncomingQuoteWorkspace(currentOrderId), window.APIService.getIncomingLeadCandidates(currentOrderId), window.APIService.getVendorRequirementApprovals(currentOrderId)]);
+    workspace = loadedWorkspace; leadCandidates = candidates.candidates || []; requirementApprovals = approvals.approvals || []; canApproveRequirements = approvals.canApprove === true;
     renderWorkspace();
     const loaded = await window.APIService.getIncomingQuoteOrders();
     orders = loaded || [];
@@ -324,19 +479,25 @@
 
   $('incomingLeadDistributionForm')?.addEventListener('submit', async event => {
     event.preventDefault(); const form = event.currentTarget; const button = event.submitter;
-    if (workspace?.order?.source === 'residential_portal' && (!workspace.order.employee || !workspace.order.residentialStaffReview?.reviewedAt)) return toast('Confirm residential review and coordinator first.', 'error');
     const vendorIds = [...form.querySelectorAll('[name="leadVendor"]:checked')].map(input => input.value);
     if (!vendorIds.length) return toast('Select at least one qualified vendor.', 'error');
     const responseDueAt = new Date($('incomingLeadResponseDue').value); const bidDueAt = new Date($('incomingLeadBidDue').value);
     if (Number.isNaN(responseDueAt.getTime()) || Number.isNaN(bidDueAt.getTime())) return toast('Enter valid response and estimate deadlines.', 'error');
     if (button) button.disabled = true;
+    let payload;
+    let idempotencyKey;
     try {
+      if (!await ensureResidentialReviewBeforeSend()) return;
       const submissionSignature = `${currentOrderId}:${[...vendorIds].sort().join(',')}:${responseDueAt.toISOString()}:${bidDueAt.toISOString()}`;
       if (!leadSubmissionKeys.has(submissionSignature)) leadSubmissionKeys.set(submissionSignature, globalThis.crypto?.randomUUID?.() || `lead-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-      const idempotencyKey = leadSubmissionKeys.get(submissionSignature);
-      const result = await window.APIService.distributeIncomingLead(currentOrderId, { vendorIds, responseDueAt: responseDueAt.toISOString(), bidDueAt: bidDueAt.toISOString(), requestedWindow: $('incomingLeadWindow').value.trim(), scope: $('incomingLeadScope').value.trim(), relevantNotes: $('incomingLeadNotes').value.trim() }, idempotencyKey);
+      idempotencyKey = leadSubmissionKeys.get(submissionSignature);
+      payload = { vendorIds, responseDueAt: responseDueAt.toISOString(), bidDueAt: bidDueAt.toISOString(), requestedWindow: $('incomingLeadWindow').value.trim(), scope: $('incomingLeadScope').value.trim(), relevantNotes: $('incomingLeadNotes').value.trim() };
+      const result = await window.APIService.distributeIncomingLead(currentOrderId, payload, idempotencyKey);
       form.reset(); toast(`Lead sent to ${result.leads?.length || vendorIds.length} qualified vendor${vendorIds.length === 1 ? '' : 's'}.`); await refreshWorkspace();
-    } catch (error) { toast(error.message, 'error'); }
+    } catch (error) {
+      if (error.data?.code === 'VENDOR_REQUIREMENTS_BLOCKED') openRequirementGate('lead_distribution', payload, idempotencyKey, error.data.details?.issues || []);
+      else toast(error.message, 'error');
+    }
     finally { if (button?.isConnected) button.disabled = false; }
   });
 
@@ -344,15 +505,20 @@
     event.preventDefault();
     const form = event.currentTarget;
     const submitButton = event.submitter;
+    const payload = { vendorId: $('incomingInviteVendor').value, email: $('incomingInviteEmail').value.trim(), personalMessage: $('incomingInviteMessage').value.trim() };
     if (submitButton) submitButton.disabled = true;
     try {
-      const result = await window.APIService.sendIncomingQuoteInvitation(currentOrderId, { vendorId: $('incomingInviteVendor').value, email: $('incomingInviteEmail').value.trim(), personalMessage: $('incomingInviteMessage').value.trim() });
+      if (!await ensureResidentialReviewBeforeSend()) return;
+      const result = await window.APIService.sendIncomingQuoteInvitation(currentOrderId, payload);
       form.reset();
       $('incomingInviteVendor').innerHTML = vendorOptions();
       renderVendorCompliance('incomingInviteVendor');
       toast(result?.reusedInvitation ? 'Invitation sent again to this vendor using the active quote request.' : 'Secure vendor quote invitation queued.');
       await refreshWorkspace();
-    } catch (error) { toast(error.message, 'error'); }
+    } catch (error) {
+      if (error.data?.code === 'VENDOR_REQUIREMENTS_BLOCKED') openRequirementGate('quote_invitation', payload, '', error.data.details?.issues || []);
+      else toast(error.message, 'error');
+    }
     finally { if (submitButton?.isConnected) submitButton.disabled = false; }
   });
   $('incomingInviteVendor')?.addEventListener('change', () => renderVendorCompliance('incomingInviteVendor'));

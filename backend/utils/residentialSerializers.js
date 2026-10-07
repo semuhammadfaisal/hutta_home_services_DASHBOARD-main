@@ -358,13 +358,20 @@ function serializeCompletion(completion) {
   });
 }
 
+function customerFacingActivityCopy(value) {
+  return String(value || '')
+    .replace(/Emergency request received/g, 'Emergency request submitted')
+    .replace(/Service request received/g, 'Service request submitted')
+    .replace(/was received for/g, 'was submitted for');
+}
+
 function serializeActivity(activity) {
   const item = plain(activity);
   return seal({
     id: id(item),
     type: item.type,
-    title: item.title,
-    summary: item.summary || item.message,
+    title: customerFacingActivityCopy(item.title),
+    summary: customerFacingActivityCopy(item.summary || item.message),
     propertyId: id(item.propertyId),
     orderId: id(item.orderId),
     occurredAt: item.occurredAt || item.createdAt,

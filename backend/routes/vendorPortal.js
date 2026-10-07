@@ -27,6 +27,7 @@ const VendorScheduleDecision = require('../models/VendorScheduleDecision');
 const VendorWorkOrder = require('../models/VendorWorkOrder');
 const { vendorSnapshot } = require('../utils/incomingQuotes');
 const { activeCompliance } = require('../utils/vendorLeadDistribution');
+const { hasVendorComplianceOverride } = require('../utils/vendorComplianceOverride');
 const { recordBidSubmission, respondToLead } = require('../utils/vendorLeadResponses');
 const { serializeVendorLead } = require('../utils/vendorLeadSerializers');
 const { cents, clean: cleanEstimate, dollars, normalizeLineItems, serializeVendorEstimateDraft } = require('../utils/vendorEstimateDrafts');
@@ -178,7 +179,7 @@ router.post('/assignments/:assignmentId/schedule-response', requireVendorPermiss
     const action = clean(req.body.action, 40); const typedName = clean(req.body.typedName, 160); const changeRequestMessage = clean(req.body.changeRequestMessage, 3000);
     if (!['accept', 'request_changes'].includes(action) || typedName.length < 2) return res.status(400).json({ message: 'Choose a schedule response and enter your full name' });
     if (action === 'request_changes' && changeRequestMessage.length < 10) return res.status(400).json({ message: 'Explain the requested schedule change using at least 10 characters' });
-    if (action === 'accept' && !activeCompliance(req.vendorRecord, schedule.proposedEnd)) return res.status(409).json({ message: 'Compliance must remain current through the scheduled visit' });
+    if (action === 'accept' && !activeCompliance(req.vendorRecord, schedule.proposedEnd) && !await hasVendorComplianceOverride(scoped.order, req.vendorRecord._id)) return res.status(409).json({ message: 'Compliance must remain current through the scheduled visit' });
     if (action === 'accept') {
       const conflict = await JobSchedule.findOne({ _id: { $ne: schedule._id }, vendorId: req.vendorRecord._id, status: 'accepted', proposedStart: { $lt: schedule.proposedEnd }, proposedEnd: { $gt: schedule.proposedStart } }).select('scheduleReference proposedStart proposedEnd').lean();
       if (conflict) return res.status(409).json({ message: 'This visit conflicts with another confirmed assignment', conflict: { reference: conflict.scheduleReference, start: conflict.proposedStart, end: conflict.proposedEnd } });
@@ -346,7 +347,11 @@ router.get('/leads/:invitationId', requireVendorPermission('assignments'), async
 router.post('/leads/:invitationId/respond', requireVendorPermission('assignments'), async (req, res, next) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.invitationId)) return res.status(404).json({ message: 'Lead not found' });
-    if (req.body.response === 'accept' && !activeCompliance(req.vendorRecord)) return res.status(409).json({ message: 'Vendor compliance is no longer active and current' });
+    if (req.body.response === 'accept' && !activeCompliance(req.vendorRecord)) {
+      const invitation = await QuoteInvitation.findOne({ _id: req.params.invitationId, vendorId: req.vendorRecord._id, responseRequired: true }).select('orderId').lean();
+      const order = invitation ? await Order.findById(invitation.orderId) : null;
+      if (!invitation || !await hasVendorComplianceOverride(order, req.vendorRecord._id)) return res.status(409).json({ message: 'Vendor compliance is no longer active and current' });
+    }
     const result = await respondToLead({ invitationId: req.params.invitationId, vendorId: req.vendorRecord._id, response: req.body.response, declineReasonCode: req.body.declineReasonCode, declineReason: req.body.declineReason, actorId: req.user.userId });
     if (!result.reused) {
       await Promise.all([
@@ -420,9 +425,12 @@ router.post('/leads/:invitationId/estimate-draft/submit', requireVendorPermissio
   let claimed;
   try {
     if (req.body.confirmed !== true) return res.status(400).json({ message: 'Review confirmation is required before submission' });
-    if (!activeCompliance(req.vendorRecord)) return res.status(409).json({ message: 'Vendor compliance is no longer active and current' });
     const invitation = await scopedLead(req);
     if (!invitation) return res.status(404).json({ message: 'Accepted lead not found' });
+    if (!activeCompliance(req.vendorRecord)) {
+      const order = await Order.findById(invitation.orderId);
+      if (!await hasVendorComplianceOverride(order, req.vendorRecord._id)) return res.status(409).json({ message: 'Vendor compliance is no longer active and current' });
+    }
     const draft = await VendorEstimateDraft.findOne({ invitationId: invitation._id, vendorId: req.vendorRecord._id, status: 'draft' });
     if (!draft || !draft.reviewedAt) return res.status(409).json({ message: 'Save and review the estimate draft before submitting' });
     const normalized = normalizeLineItems(draft.lineItems, { requireItems: true, verifyAmounts: true });

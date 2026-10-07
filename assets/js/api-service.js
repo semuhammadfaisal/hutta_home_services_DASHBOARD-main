@@ -540,6 +540,26 @@ class APIService {
         return this.request(`/incoming-quotes/orders/${encodeURIComponent(orderId)}/leads/distribute`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(payload) });
     }
 
+    async getVendorRequirementApprovals(orderId) {
+        return this.request(`/incoming-quotes/requirement-approvals${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ''}`);
+    }
+
+    async requestVendorRequirementApproval(orderId, payload) {
+        return this.request(`/incoming-quotes/orders/${encodeURIComponent(orderId)}/requirement-approvals`, { method: 'POST', body: JSON.stringify(payload) });
+    }
+
+    async approveVendorRequirement(approvalId, note = '') {
+        return this.request(`/incoming-quotes/requirement-approvals/${encodeURIComponent(approvalId)}/approve`, { method: 'POST', body: JSON.stringify({ note }) });
+    }
+
+    async rejectVendorRequirement(approvalId, note = '') {
+        return this.request(`/incoming-quotes/requirement-approvals/${encodeURIComponent(approvalId)}/reject`, { method: 'POST', body: JSON.stringify({ note }) });
+    }
+
+    async requestVendorProfileUpdate(orderId, vendorIds) {
+        return this.request(`/incoming-quotes/orders/${encodeURIComponent(orderId)}/vendor-update-request`, { method: 'POST', body: JSON.stringify({ vendorIds }) });
+    }
+
     async selectIncomingQuote(quoteId, complianceAcknowledged) {
         return this.request(`/incoming-quotes/quotes/${quoteId}/select`, { method: 'POST', body: JSON.stringify({ complianceAcknowledged }) });
     }
@@ -580,7 +600,7 @@ class APIService {
 
     async convertOutgoingQuote(orderId) { return this.request(`/outgoing-quotes/orders/${orderId}/convert`, { method: 'POST', body: '{}' }); }
     async updateOutgoingQuote(quoteId, payload) { return this.request(`/outgoing-quotes/${quoteId}`, { method: 'PATCH', body: JSON.stringify(payload) }); }
-    async sendOutgoingQuote(quoteId) { return this.request(`/outgoing-quotes/${quoteId}/send`, { method: 'POST', body: '{}' }); }
+    async sendOutgoingQuote(quoteId, complianceOverride = false) { return this.request(`/outgoing-quotes/${quoteId}/send`, { method: 'POST', body: JSON.stringify({ complianceOverride }) }); }
     async reviseOutgoingQuote(quoteId) { return this.request(`/outgoing-quotes/${quoteId}/revise`, { method: 'POST', body: '{}' }); }
     async voidOutgoingQuote(quoteId, reason) { return this.request(`/outgoing-quotes/${quoteId}/void`, { method: 'POST', body: JSON.stringify({ reason }) }); }
     async resendOutgoingQuote(quoteId) { return this.request(`/outgoing-quotes/${quoteId}/resend`, { method: 'POST', body: '{}' }); }

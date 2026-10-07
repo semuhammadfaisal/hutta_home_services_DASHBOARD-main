@@ -141,7 +141,7 @@
 .outgoing-delivery-card>a{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:36px;border-radius:8px;font-size:.64rem}
 .outgoing-sticky-actions{position:sticky;bottom:0;z-index:4;display:flex;align-items:center;gap:8px;padding:12px 14px;border-top:1px solid var(--smpl-line);background:rgba(255,255,255,.97);box-shadow:0 -7px 20px rgba(50,50,50,.07);backdrop-filter:blur(8px)}
 .outgoing-sticky-actions>div{margin-right:auto}.outgoing-sticky-actions>div span,.outgoing-sticky-actions>div small{display:block}.outgoing-sticky-actions>div span{color:var(--smpl-ink);font-size:.65rem;font-weight:800}.outgoing-sticky-actions>div small{margin-top:2px;color:var(--smpl-text-muted);font-size:.55rem}
-.outgoing-sticky-actions .btn-primary,.outgoing-sticky-actions .btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:37px;border-radius:8px;padding:8px 11px;font-size:.64rem;font-weight:800}
+.outgoing-sticky-actions .btn-primary,.outgoing-sticky-actions .btn-secondary,.outgoing-sticky-actions .btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:37px;border-radius:8px;padding:8px 11px;font-size:.64rem;font-weight:800}
 .outgoing-void-button{color:#a23b3b!important}
 
 /* Immutable sent quote */
@@ -213,6 +213,7 @@
   .outgoing-sticky-actions{display:grid;grid-template-columns:1fr 1fr;padding:11px 12px}
   .outgoing-sticky-actions>div{display:none}
   .outgoing-sticky-actions .btn-primary{grid-column:1/-1;grid-row:1}
+  .outgoing-sticky-actions .outgoing-send-anyway{grid-column:1/-1}
   .outgoing-sent-head{padding:16px}
   .outgoing-sent-pricing{grid-template-columns:1fr;margin:13px 16px}
   .outgoing-sent-pricing>div{border-right:0;border-bottom:1px solid var(--smpl-line)}

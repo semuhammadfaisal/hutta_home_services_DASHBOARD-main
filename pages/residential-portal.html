@@ -8,11 +8,12 @@
   <title>My Home | SMPLfix</title>
   <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/assets/css/residential-portal.css?v=20260916-property-icon-centered">
+  <link rel="stylesheet" href="/assets/css/residential-portal.css?v=20260922-service-details">
   <link rel="stylesheet" href="/assets/css/residential-form-polish.css?v=20260916-dialog-polish">
   <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
+  <link rel="stylesheet" href="/assets/css/portal-crm-shell.css?v=20260921-crm-shell">
 </head>
-<body>
+<body class="crm-portal crm-portal--residential">
   <a class="skip-link" href="#portalMain">Skip to main content</a>
 
   <svg class="icon-sprite" aria-hidden="true">
@@ -40,19 +41,19 @@
   </div>
 
   <div class="portal-shell" id="portalShell">
-    <div class="nav-scrim" id="navScrim" hidden></div>
-    <aside class="portal-sidebar" id="portalSidebar" aria-label="Residential portal navigation">
-      <div class="sidebar-heading">
+    <div class="portal-sidebar-scrim nav-scrim" id="navScrim" hidden></div>
+    <aside class="portal-sidebar-shell portal-sidebar" id="portalSidebar" aria-label="Residential portal navigation">
+      <div class="portal-sidebar-brand sidebar-heading">
         <a class="brand-link" href="#home" aria-label="SMPLfix home">
           <img src="/assets/images/smplfix-logo-reversed.png" alt="SMPLfix" width="139" height="80">
         </a>
-        <button class="icon-button mobile-only" id="closeNavButton" type="button" aria-label="Close navigation">
+        <button class="icon-button portal-sidebar-close mobile-only" id="closeNavButton" type="button" aria-label="Close navigation">
           <svg aria-hidden="true"><use href="#icon-close"/></svg>
         </button>
       </div>
 
       <p class="portal-label">Homeowner portal</p>
-      <nav class="portal-nav" aria-label="Main navigation">
+      <nav class="portal-sidebar-nav portal-nav" aria-label="Main navigation">
         <a href="#home" class="nav-link is-active" data-route="home" aria-current="page">
           <svg aria-hidden="true"><use href="#icon-home"/></svg><span>Home</span>
         </a>
@@ -77,14 +78,14 @@
         <a href="#account" class="nav-link" data-route="account"><svg aria-hidden="true"><use href="#icon-home"/></svg><span>Account</span></a>
       </nav>
 
-      <div class="sidebar-help">
+      <div class="portal-sidebar-card sidebar-help">
         <svg aria-hidden="true"><use href="#icon-spark"/></svg>
         <strong>Need a hand?</strong>
         <p>Our home care team is here when you need us.</p>
         <a href="mailto:support@smplfix.com">Contact support</a>
       </div>
 
-      <button class="sidebar-account" id="accountButton" type="button" aria-label="Account options" aria-expanded="false">
+      <button class="portal-sidebar-account sidebar-account" id="accountButton" type="button" aria-label="Account options" aria-expanded="false">
         <span class="account-avatar" id="sidebarAvatar" aria-hidden="true">H</span>
         <span><strong id="sidebarName">Homeowner</strong><small id="sidebarEmail">Loading account…</small></span>
         <svg aria-hidden="true"><use href="#icon-chevron"/></svg>
@@ -100,20 +101,26 @@
           <svg aria-hidden="true"><use href="#icon-menu"/></svg>
         </button>
 
-        <div class="property-control">
-          <label for="propertySwitcher">Viewing property</label>
-          <select id="propertySwitcher" aria-describedby="propertySwitcherHint" disabled>
-            <option>Loading properties…</option>
-          </select>
-          <span id="propertySwitcherHint" class="visually-hidden">Changes all property-specific information on this page.</span>
+        <div class="portal-header-title">
+          <span>Residential portal</span>
+          <h1 id="residentialRouteTitle">Home dashboard</h1>
         </div>
 
-        <div class="header-actions">
-          <span class="secure-label">Secure client portal</span>
-          <button class="icon-button" id="openNotificationsButton" type="button" aria-label="Open notifications">
-            <svg aria-hidden="true"><use href="#icon-bell"/></svg>
-            <span id="notificationBadge" class="notification-dot" aria-label="0 unread notifications" hidden>0</span>
-          </button>
+        <div class="portal-header-tools">
+          <div class="property-control">
+            <label for="propertySwitcher">Viewing property</label>
+            <select id="propertySwitcher" aria-describedby="propertySwitcherHint" disabled>
+              <option>Loading properties…</option>
+            </select>
+            <span id="propertySwitcherHint" class="visually-hidden">Changes all property-specific information on this page.</span>
+          </div>
+
+          <div class="header-actions">
+            <button class="icon-button" id="openNotificationsButton" type="button" aria-label="Open notifications">
+              <svg aria-hidden="true"><use href="#icon-bell"/></svg>
+              <span id="notificationBadge" class="notification-dot" aria-label="0 unread notifications" hidden>0</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -341,8 +348,11 @@
     </form>
   </dialog>
 
-  <dialog class="portal-dialog transaction-dialog" id="jobDialog" aria-labelledby="jobDialogTitle">
-    <div class="dialog-header"><div><p class="eyebrow">Service details</p><h2 id="jobDialogTitle">Job</h2><p id="jobDialogReference"></p></div><button class="icon-button dialog-close" type="button" data-close-dialog="jobDialog" aria-label="Close job details"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></div>
+  <dialog class="portal-dialog transaction-dialog job-detail-dialog" id="jobDialog" aria-labelledby="jobDialogTitle">
+    <div class="dialog-header job-dialog-header">
+      <div class="job-dialog-heading"><span class="job-dialog-mark" aria-hidden="true"><svg><use href="#icon-wrench"/></svg></span><div><p class="eyebrow">Service details</p><h2 id="jobDialogTitle">Job</h2><p id="jobDialogReference"></p></div></div>
+      <button class="icon-button dialog-close" type="button" data-close-dialog="jobDialog" aria-label="Close job details"><svg aria-hidden="true"><use href="#icon-close"/></svg></button>
+    </div>
     <div class="dialog-body" id="jobDialogBody"></div>
   </dialog>
 
@@ -350,7 +360,7 @@
   <div id="routeStatus" class="visually-hidden" role="status" aria-live="polite"></div>
 
   <script src="/assets/js/api-service.js?v=20260916-csrf-refresh"></script>
-  <script src="/assets/js/residential-portal.js?v=20260916-property-record"></script>
+  <script src="/assets/js/residential-portal.js?v=20260922-service-details"></script>
   <script src="/assets/js/residential-features.js?v=20260904-residential-features"></script>
 </body>
 </html>

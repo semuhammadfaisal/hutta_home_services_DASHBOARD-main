@@ -9,19 +9,20 @@
   <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
   <link rel="stylesheet" href="/assets/css/agent-portal.css?v=20260907-agent-portal">
   <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
+  <link rel="stylesheet" href="/assets/css/portal-crm-shell.css?v=20260921-crm-shell">
 </head>
-<body>
+<body class="crm-portal crm-portal--agent">
   <a class="skip-link" href="#agentMain">Skip to main content</a>
   <div id="offlineBanner" class="offline-banner" role="status" hidden>You’re offline. Saved information remains visible; updates will resume when you reconnect.</div>
 
   <div class="agent-shell">
-    <aside class="agent-sidebar" id="agentSidebar" aria-label="Agent portal navigation">
-      <div class="sidebar-brand">
+    <aside class="portal-sidebar-shell agent-sidebar" id="agentSidebar" aria-label="Agent portal navigation">
+      <div class="portal-sidebar-brand sidebar-brand">
         <a href="#overview" aria-label="SMPLfix Agent Portal home"><img src="/assets/images/smplfix-logo-reversed.png?v=20260806" alt="SMPLfix"></a>
-        <button class="icon-button sidebar-close" id="sidebarClose" type="button" aria-label="Close navigation">×</button>
+        <button class="icon-button portal-sidebar-close sidebar-close" id="sidebarClose" type="button" aria-label="Close navigation">×</button>
       </div>
       <p class="portal-kicker">Agent workspace</p>
-      <nav class="agent-nav" aria-label="Portal sections">
+      <nav class="portal-sidebar-nav agent-nav" aria-label="Portal sections">
         <a href="#overview" data-route="overview" class="nav-link is-active"><span aria-hidden="true">⌂</span>Overview</a>
         <a href="#portfolio" data-route="portfolio" class="nav-link"><span aria-hidden="true">◇</span>Portfolio</a>
         <a href="#transactions" data-route="transactions" class="nav-link"><span aria-hidden="true">◫</span>Transactions</a>
@@ -31,22 +32,23 @@
         <a href="#notifications" data-route="notifications" class="nav-link"><span aria-hidden="true">●</span>Notifications <span class="nav-badge" id="notificationBadge" hidden>0</span></a>
         <a href="#account" data-route="account" class="nav-link"><span aria-hidden="true">○</span>Account</a>
       </nav>
-      <div class="sidebar-note">
+      <div class="portal-sidebar-card sidebar-note">
         <strong>Client-controlled approvals</strong>
         <p>Homeowners approve estimates and manage payment from their own account.</p>
       </div>
-      <button class="sidebar-user" id="sidebarUser" type="button" data-route-button="account">
+      <button class="portal-sidebar-account sidebar-user" id="sidebarUser" type="button" data-route-button="account">
         <span class="avatar" id="agentAvatar" aria-hidden="true">A</span>
         <span><strong id="sidebarAgentName">Agent</strong><small id="sidebarBrokerage">Real estate portal</small></span>
+        <span class="portal-account-chevron" aria-hidden="true">›</span>
       </button>
     </aside>
-    <button class="sidebar-scrim" id="sidebarScrim" type="button" aria-label="Close navigation" tabindex="-1" hidden></button>
+    <button class="portal-sidebar-scrim sidebar-scrim" id="sidebarScrim" type="button" aria-label="Close navigation" tabindex="-1" hidden></button>
 
     <div class="agent-workspace">
-      <header class="agent-header">
+      <header class="portal-header agent-header">
         <button class="icon-button menu-button" id="menuButton" type="button" aria-controls="agentSidebar" aria-expanded="false" aria-label="Open navigation">☰</button>
-        <div class="header-title"><span id="routeEyebrow">Agent portal</span><h1 id="routeTitle">Overview</h1></div>
-        <div class="header-actions">
+        <div class="portal-header-title header-title"><span id="routeEyebrow">Agent portal</span><h1 id="routeTitle">Overview</h1></div>
+        <div class="portal-header-tools header-actions">
           <label class="global-search"><span class="visually-hidden">Search current section</span><span aria-hidden="true">⌕</span><input id="globalSearch" type="search" placeholder="Search transactions, clients, properties…" autocomplete="off"></label>
           <button class="primary-button compact" type="button" data-route-button="requests">Request service</button>
         </div>

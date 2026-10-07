@@ -17,6 +17,7 @@ const Vendor = require('../models/Vendor');
 const Property = require('../models/Property');
 const VendorPortalMembership = require('../models/VendorPortalMembership');
 const VendorEstimateDraft = require('../models/VendorEstimateDraft');
+const VendorRequirementApproval = require('../models/VendorRequirementApproval');
 const SecurityAuditEvent = require('../models/SecurityAuditEvent');
 const { buildPublicUrl } = require('../utils/publicAppUrl');
 const memCache = require('../utils/memoryCache');
@@ -40,9 +41,12 @@ const { activeCompliance, distributionKey, evaluateVendorLeadEligibility } = req
 const { recordBidSubmission, respondToLead } = require('../utils/vendorLeadResponses');
 const { serializeVendorLead } = require('../utils/vendorLeadSerializers');
 const { serializeVendorEstimateDraft } = require('../utils/vendorEstimateDrafts');
+const { approvalPayloadHash, safeApproval, vendorRequirementIssues } = require('../utils/vendorRequirementGate');
+const { applyVendorComplianceOverride, hasVendorComplianceOverride } = require('../utils/vendorComplianceOverride');
 
 const router = express.Router();
 const staffRoles = checkRole(['admin', 'manager', 'account_rep']);
+const adminOnly = checkRole(['admin']);
 const MAX_FILE_BYTES = parseInt(process.env.MAX_UPLOAD_BYTES || `${50 * 1024 * 1024}`, 10);
 const MAX_FILES = 10;
 const allowedExtensions = new Set(['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png']);
@@ -93,6 +97,49 @@ function uploadMiddleware(req, res, next) {
 
 function validObjectId(value) {
   return mongoose.Types.ObjectId.isValid(String(value || ''));
+}
+
+function requirementBlockedError(issues) {
+  return Object.assign(new Error('Vendor information must be updated before this can be sent'), {
+    status: 409,
+    code: 'VENDOR_REQUIREMENTS_BLOCKED',
+    details: { issues },
+    exposeDetails: { issues }
+  });
+}
+
+async function approvedRequirementOverride(req, { action, orderId, vendorIds, payload, idempotencyKey, session }) {
+  const approvalId = req.body?.requirementApprovalId;
+  if (!approvalId || !validObjectId(approvalId)) return null;
+  const expectedHash = approvalPayloadHash(action, orderId, vendorIds, payload, idempotencyKey);
+  return VendorRequirementApproval.findOne({
+    _id: approvalId,
+    orderId,
+    action,
+    status: 'approved',
+    payloadHash: expectedHash
+  }).session(session || null);
+}
+
+async function markRequirementOverrideExecuted(req, approval) {
+  if (!approval) return;
+  const order = await Order.findById(approval.orderId);
+  if (order) {
+    for (const vendorId of approval.vendorIds || []) {
+      const issue = (approval.issues || []).find(item => String(item.vendorId) === String(vendorId));
+      applyVendorComplianceOverride(order, {
+        vendorId,
+        approvedBy: approval.reviewedBy || actorId(req),
+        approvedByEmail: req.user.email,
+        source: 'vendor_requirement_approval',
+        approvalId: approval._id,
+        requirements: issue?.requirements || []
+      });
+    }
+    await order.save();
+  }
+  await VendorRequirementApproval.updateOne({ _id: approval._id, status: 'approved' }, { $set: { status: 'executed', executedAt: new Date() } });
+  await SecurityAuditEvent.create({ action: 'vendor_requirement_override_executed', userId: actorId(req), userEmail: req.user.email, entityType: 'VendorRequirementApproval', entityId: String(approval._id), metadata: { orderId: approval.orderId, action: approval.action, vendorIds: approval.vendorIds }, ipAddress: req.ip, userAgent: req.get('user-agent') });
 }
 
 async function activeVendor(id, session) {
@@ -332,8 +379,8 @@ router.get('/public/lead', publicLimiter, findPublicInvitation, async (req, res,
 router.post('/public/lead/respond', publicLimiter, findPublicInvitation, async (req, res, next) => {
   try {
     if (req.body.response === 'accept') {
-      const vendor = await Vendor.findById(req.quoteInvitation.vendorId).select('+stripeConnect.accountId');
-      if (!activeCompliance(vendor)) return res.status(409).json({ message: 'Vendor compliance is no longer active and current' });
+      const [vendor, order] = await Promise.all([Vendor.findById(req.quoteInvitation.vendorId).select('+stripeConnect.accountId'), Order.findById(req.quoteInvitation.orderId)]);
+      if (!activeCompliance(vendor) && !await hasVendorComplianceOverride(order, req.quoteInvitation.vendorId)) return res.status(409).json({ message: 'Vendor compliance is no longer active and current' });
     }
     const result = await respondToLead({ invitationId: req.quoteInvitation._id, vendorId: req.quoteInvitation.vendorId, response: req.body.response, declineReasonCode: req.body.declineReasonCode, declineReason: req.body.declineReason });
     if (!result.reused) await notifyStaffOfLeadResponse(result.invitation, req.body.response);
@@ -395,7 +442,7 @@ router.post('/public/form', publicLimiter, findPublicInvitation, uploadMiddlewar
     if (!quote || !vendor || !order || order.workflowStatus === 'vendor_selected') throw Object.assign(new Error('This quote request is closed'), { status: 409 });
     if (claimed.responseRequired) {
       const currentVendor = await Vendor.findById(claimed.vendorId).select('+stripeConnect.accountId');
-      if (!activeCompliance(currentVendor)) throw Object.assign(new Error('Vendor compliance is no longer active and current'), { status: 409 });
+      if (!activeCompliance(currentVendor) && !await hasVendorComplianceOverride(order, claimed.vendorId)) throw Object.assign(new Error('Vendor compliance is no longer active and current'), { status: 409 });
     }
     const documents = await storePublicFiles(req.files, quote, claimed);
     Object.assign(quote, payload, {
@@ -456,6 +503,147 @@ router.post('/public/form', publicLimiter, findPublicInvitation, uploadMiddlewar
 });
 
 router.use(authenticateToken, staffRoles);
+
+router.get('/requirement-approvals', async (req, res, next) => {
+  try {
+    const query = {};
+    if (req.query.orderId) {
+      if (!validObjectId(req.query.orderId)) return res.status(400).json({ message: 'Valid order ID is required' });
+      query.orderId = req.query.orderId;
+    }
+    if (req.user.role !== 'admin') query.requestedBy = actorId(req);
+    const approvals = await VendorRequirementApproval.find(query)
+      .populate('requestedBy', 'firstName lastName email')
+      .populate('reviewedBy', 'firstName lastName email')
+      .sort({ createdAt: -1 }).limit(100).lean();
+    const pending = approvals.filter(item => item.status === 'pending');
+    if (pending.length) {
+      const vendors = await Vendor.find({ _id: { $in: pending.flatMap(item => item.vendorIds) } }).select('+stripeConnect.accountId').lean();
+      const vendorMap = new Map(vendors.map(vendor => [String(vendor._id), vendor]));
+      const resolvedIds = pending.filter(item => item.vendorIds.every(id => {
+        const vendor = vendorMap.get(String(id));
+        return vendor && (item.action === 'lead_distribution' ? activeCompliance(vendor) : vendorRequirementIssues(vendor).length === 0);
+      })).map(item => item._id);
+      if (resolvedIds.length) {
+        await VendorRequirementApproval.updateMany({ _id: { $in: resolvedIds }, status: 'pending' }, { $set: { status: 'cancelled', reviewNote: 'Vendor requirements were completed before approval.' } });
+        approvals.forEach(item => { if (resolvedIds.some(id => String(id) === String(item._id))) item.status = 'cancelled'; });
+      }
+    }
+    res.json({ approvals: approvals.map(safeApproval), canApprove: req.user.role === 'admin' });
+  } catch (error) { next(error); }
+});
+
+router.post('/orders/:orderId/requirement-approvals', async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.orderId)) return res.status(400).json({ message: 'Valid order ID is required' });
+    const action = cleanText(req.body.action, 40);
+    if (!['quote_invitation', 'lead_distribution'].includes(action)) return res.status(400).json({ message: 'Unsupported vendor send action' });
+    const payload = req.body.payload && typeof req.body.payload === 'object' ? req.body.payload : {};
+    const vendorIds = action === 'quote_invitation' ? [String(payload.vendorId || '')] : [...new Set((payload.vendorIds || []).map(String))];
+    if (!vendorIds.length || vendorIds.some(id => !validObjectId(id))) return res.status(400).json({ message: 'Valid vendor selection is required' });
+    const [order, vendors] = await Promise.all([Order.findById(req.params.orderId).lean(), Vendor.find({ _id: { $in: vendorIds } }).lean()]);
+    if (!order || vendors.length !== vendorIds.length) return res.status(404).json({ message: 'Order or vendor not found' });
+    const issues = vendors.map(vendor => ({ vendorId: vendor._id, vendorName: vendor.name, requirements: vendorRequirementIssues(vendor) })).filter(item => item.requirements.length);
+    if (!issues.length) return res.status(409).json({ message: 'Vendor requirements are now current. Send the item normally.' });
+    const idempotencyKey = cleanText(req.body.idempotencyKey, 120);
+    const payloadHash = approvalPayloadHash(action, order._id, vendorIds, payload, idempotencyKey);
+    let approval = await VendorRequirementApproval.findOne({ payloadHash, requestedBy: actorId(req), status: { $in: ['pending', 'approved'] } });
+    if (!approval) approval = await VendorRequirementApproval.create({
+      orderId: order._id,
+      action,
+      workspace: req.body.workspace === 'service-requests' ? 'service-requests' : 'workflow-center',
+      vendorIds,
+      issues,
+      actionPayload: payload,
+      payloadHash,
+      idempotencyKey,
+      requestedBy: actorId(req),
+      requestedByEmail: req.user.email
+    });
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id').lean();
+    if (approval.status === 'pending' && admins.length) await Notification.insertMany(admins.map(admin => ({
+      userId: admin._id,
+      title: 'Vendor send approval required',
+      message: `${req.user.email || 'A staff member'} requested permission to send ${order.requestReference || order.orderId} despite missing vendor requirements.`,
+      type: 'warning', priority: 'high',
+      actionUrl: approval.workspace === 'service-requests' ? '#service-requests/incoming-quotes' : '#workflow-center/stage-2',
+      metadata: { orderId: order._id, vendorRequirementApprovalId: approval._id }
+    })));
+    await SecurityAuditEvent.create({ action: 'vendor_requirement_override_requested', userId: actorId(req), userEmail: req.user.email, entityType: 'Order', entityId: String(order._id), metadata: { approvalId: approval._id, action, vendorIds, requirements: issues }, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.status(approval.status === 'pending' ? 201 : 200).json({ approval: safeApproval(approval), canApprove: req.user.role === 'admin' });
+  } catch (error) { next(error); }
+});
+
+router.post('/requirement-approvals/:approvalId/approve', adminOnly, async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.approvalId)) return res.status(400).json({ message: 'Valid approval ID is required' });
+    const pending = await VendorRequirementApproval.findById(req.params.approvalId).lean();
+    if (!pending) return res.status(404).json({ message: 'Approval request not found' });
+    if (pending.status === 'approved') return res.json({ approval: safeApproval(pending), reusedApproval: true });
+    if (pending.status !== 'pending') return res.status(409).json({ message: 'This approval request is no longer pending' });
+    const vendors = await Vendor.find({ _id: { $in: pending.vendorIds } }).select('+stripeConnect.accountId').lean();
+    const requirementsCurrent = vendors.length === pending.vendorIds.length && vendors.every(vendor => pending.action === 'lead_distribution' ? activeCompliance(vendor) : vendorRequirementIssues(vendor).length === 0);
+    if (requirementsCurrent) {
+      await VendorRequirementApproval.updateOne({ _id: pending._id, status: 'pending' }, { $set: { status: 'cancelled', reviewedBy: actorId(req), reviewedAt: new Date(), reviewNote: 'Vendor requirements were completed; no exception is needed.' } });
+      return res.status(409).json({ message: 'Vendor requirements are now current. Send the item normally.' });
+    }
+    const approval = await VendorRequirementApproval.findOneAndUpdate(
+      { _id: req.params.approvalId, status: 'pending' },
+      { $set: { status: 'approved', reviewedBy: actorId(req), reviewedAt: new Date(), reviewNote: cleanText(req.body.note, 2000) } },
+      { new: true }
+    );
+    if (!approval) return res.status(409).json({ message: 'This approval request is no longer pending' });
+    await SecurityAuditEvent.create({ action: 'vendor_requirement_override_approved', userId: actorId(req), userEmail: req.user.email, entityType: 'VendorRequirementApproval', entityId: String(approval._id), metadata: { orderId: approval.orderId, action: approval.action, vendorIds: approval.vendorIds }, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.json({ approval: safeApproval(approval) });
+  } catch (error) { next(error); }
+});
+
+router.post('/requirement-approvals/:approvalId/reject', adminOnly, async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.approvalId)) return res.status(400).json({ message: 'Valid approval ID is required' });
+    const approval = await VendorRequirementApproval.findOneAndUpdate(
+      { _id: req.params.approvalId, status: 'pending' },
+      { $set: { status: 'rejected', reviewedBy: actorId(req), reviewedAt: new Date(), reviewNote: cleanText(req.body.note, 2000) } },
+      { new: true }
+    );
+    if (!approval) return res.status(409).json({ message: 'This approval request is no longer pending' });
+    await SecurityAuditEvent.create({ action: 'vendor_requirement_override_rejected', userId: actorId(req), userEmail: req.user.email, entityType: 'VendorRequirementApproval', entityId: String(approval._id), metadata: { orderId: approval.orderId, action: approval.action }, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.json({ approval: safeApproval(approval) });
+  } catch (error) { next(error); }
+});
+
+router.post('/orders/:orderId/vendor-update-request', async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.orderId)) return res.status(400).json({ message: 'Valid order ID is required' });
+    const vendorIds = [...new Set((req.body.vendorIds || []).map(String))];
+    if (!vendorIds.length || vendorIds.some(id => !validObjectId(id))) return res.status(400).json({ message: 'Select at least one valid vendor' });
+    const [order, vendors] = await Promise.all([Order.findById(req.params.orderId).lean(), Vendor.find({ _id: { $in: vendorIds } }).lean()]);
+    if (!order || vendors.length !== vendorIds.length) return res.status(404).json({ message: 'Order or vendor not found' });
+    const queued = [];
+    for (const vendor of vendors) {
+      const requirements = vendorRequirementIssues(vendor);
+      if (!requirements.length) continue;
+      const email = vendorPrimaryEmail(vendor);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw Object.assign(new Error(`${vendor.name} does not have a valid email`), { status: 409 });
+      const message = await EmailOutbox.create({
+        type: 'vendor_compliance_update_request',
+        dedupeKey: `${order._id}:vendor-compliance-update:${vendor._id}:${crypto.randomUUID()}`,
+        recipients: [email],
+        payload: { vendorName: vendor.name, requestReference: order.requestReference || order.orderId, requirements },
+        orderId: order._id
+      });
+      queued.push({ vendorId: vendor._id, vendorName: vendor.name, requirements, messageId: message._id });
+    }
+    if (!queued.length) return res.status(409).json({ message: 'Selected vendor requirements are already current' });
+    const memberships = await VendorPortalMembership.find({ vendorId: { $in: queued.map(item => item.vendorId) }, status: 'active' }).select('userId vendorId').lean();
+    if (memberships.length) await Notification.insertMany(memberships.map(membership => {
+      const item = queued.find(entry => String(entry.vendorId) === String(membership.vendorId));
+      return { userId: membership.userId, title: 'Vendor profile update required', message: `Please update: ${item.requirements.join(', ')}.`, type: 'warning', priority: 'high', actionUrl: '/pages/vendor-portal.html#compliance', metadata: { orderId: order._id, vendorId: membership.vendorId } };
+    }));
+    await SecurityAuditEvent.create({ action: 'vendor_compliance_update_requested', userId: actorId(req), userEmail: req.user.email, entityType: 'Order', entityId: String(order._id), metadata: { vendors: queued }, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.status(201).json({ queued });
+  } catch (error) { next(error); }
+});
 
 router.get('/vendor-options', async (_req, res, next) => {
   try {
@@ -665,7 +853,9 @@ router.get('/orders/:orderId/eligible-vendors', async (req, res, next) => {
     const candidates = vendors.map(vendor => {
       const result = evaluateVendorLeadEligibility(vendor, order, property, leadRules());
       const alreadyActive = unavailable.has(String(vendor._id));
-      return { id: String(vendor._id), name: vendor.name, category: vendor.category || '', tradeClassifications: vendor.tradeClassifications || [], eligible: result.eligible && !alreadyActive, reasons: [...result.reasons, ...(alreadyActive ? ['Vendor already has an active quote or invitation for this order'] : [])], qualification: result.snapshot };
+      const reasons = [...result.reasons, ...(alreadyActive ? ['Vendor already has an active quote or invitation for this order'] : [])];
+      const requirementsOnly = reasons.length > 0 && reasons.every(reason => reason === 'Vendor compliance is not active and current');
+      return { id: String(vendor._id), name: vendor.name, category: vendor.category || '', tradeClassifications: vendor.tradeClassifications || [], eligible: result.eligible && !alreadyActive, sendableWithApproval: requirementsOnly, requirements: requirementsOnly ? (vendorRequirementIssues(vendor).length ? vendorRequirementIssues(vendor) : ['Vendor portal compliance is not active and current']) : [], reasons, qualification: result.snapshot };
     });
     res.json({ candidates });
   } catch (error) { next(error); }
@@ -682,6 +872,7 @@ router.post('/orders/:orderId/leads/distribute', async (req, res, next) => {
     const dates = distributionDates(req.body);
     let output = [];
     let sync;
+    let overrideApproval;
     await session.withTransaction(async () => {
       const order = await Order.findById(req.params.orderId).session(session);
       if (!order) throw Object.assign(new Error('Order not found'), { status: 404 });
@@ -692,7 +883,16 @@ router.post('/orders/:orderId/leads/distribute', async (req, res, next) => {
       if (vendors.length !== vendorIds.length) throw Object.assign(new Error('One or more selected vendors do not exist'), { status: 400 });
       const evaluated = vendors.map(vendor => ({ vendor, result: evaluateVendorLeadEligibility(vendor, order, property, leadRules()) }));
       const blocked = evaluated.filter(item => !item.result.eligible).map(item => ({ vendorId: String(item.vendor._id), vendorName: item.vendor.name, reasons: item.result.reasons }));
-      if (blocked.length) throw Object.assign(new Error('One or more vendors are not eligible for this lead'), { status: 409, details: { blocked } });
+      const hardBlocked = blocked.filter(item => item.reasons.some(reason => reason !== 'Vendor compliance is not active and current'));
+      if (hardBlocked.length) throw Object.assign(new Error('One or more vendors are not eligible for this lead'), { status: 409, details: { blocked: hardBlocked }, exposeDetails: { blocked: hardBlocked } });
+      const requirementIssues = evaluated.filter(item => !item.result.eligible).map(item => ({
+        vendorId: String(item.vendor._id), vendorName: item.vendor.name,
+        requirements: vendorRequirementIssues(item.vendor).length ? vendorRequirementIssues(item.vendor) : ['Vendor portal compliance is not active and current']
+      }));
+      if (requirementIssues.length) {
+        overrideApproval = await approvedRequirementOverride(req, { action: 'lead_distribution', orderId: order._id, vendorIds, payload: req.body, idempotencyKey, session });
+        if (!overrideApproval) throw requirementBlockedError(requirementIssues);
+      }
       sync = await ensureQuoteStage(order, session);
       const leadSnapshot = {
         propertyAddress: propertyAddress(property, order),
@@ -729,6 +929,7 @@ router.post('/orders/:orderId/leads/distribute', async (req, res, next) => {
       if (order.residentialRequest?.submittedBy) await require('../models/Notification').create([{ userId: order.residentialRequest.submittedBy, title: 'Collecting vendor estimates', message: 'Your request was reviewed and sent to qualified vendors. We will notify you when an estimate is ready.', type: 'order', priority: 'medium', actionUrl: '#home', metadata: { orderId: order._id } }], { session });
     }
     });
+    if (overrideApproval) await markRequirementOverrideExecuted(req, overrideApproval);
     await notifyDistributedVendors(output.filter(item => !item.reused));
     invalidateQuoteCaches();
     res.status(output.every(item => item.reused) ? 200 : 201).json({
@@ -804,6 +1005,9 @@ router.post('/orders/:orderId/invitations', async (req, res, next) => {
     const [order, vendor] = await Promise.all([Order.findById(req.params.orderId), activeVendor(req.body.vendorId)]);
     if (!order) return res.status(404).json({ message: 'Order not found' });
     if (!vendor) return res.status(400).json({ message: 'Select an active approved vendor' });
+    const requirements = vendorRequirementIssues(vendor);
+    const overrideApproval = requirements.length ? await approvedRequirementOverride(req, { action: 'quote_invitation', orderId: order._id, vendorIds: [vendor._id], payload: req.body }) : null;
+    if (requirements.length && !overrideApproval) throw requirementBlockedError([{ vendorId: String(vendor._id), vendorName: vendor.name, requirements }]);
     const sync = await ensureQuoteStage(order);
     const email = cleanText(req.body.email || vendorPrimaryEmail(vendor), 320).toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -813,12 +1017,14 @@ router.post('/orders/:orderId/invitations', async (req, res, next) => {
     const activeInvite = await QuoteInvitation.findOne({ orderId: order._id, vendorId: vendor._id, status: { $in: ['sent', 'delivery_failed', 'processing'] } }).sort({ createdAt: -1 }).select('+tokenHash');
     if (activeInvite) {
       const result = await sendAdditionalInvitation({ invitation: activeInvite, order, vendor, email, personalMessage, req });
+      if (overrideApproval) await markRequirementOverrideExecuted(req, overrideApproval);
       return res.json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote: result.quote, reusedInvitation: true, sync });
     }
     const existing = await IncomingQuote.findOne({ orderId: order._id, vendorId: vendor._id, status: { $nin: ['withdrawn', 'not_selected', 'superseded'] } });
     if (existing) return res.status(409).json({ message: 'This vendor already has an active quote; request a revision instead' });
     const quote = await createDraft({ order, vendor, source: 'vendor', req });
     const result = await queueInvitation({ order, vendor, quote, invitedBy: actorId(req), invitedByEmail: req.user.email, email, personalMessage });
+    if (overrideApproval) await markRequirementOverrideExecuted(req, overrideApproval);
     res.status(201).json({ invitation: safeInvitation(result.invitation), inviteUrl: result.inviteUrl, quote, reusedInvitation: false, sync });
   } catch (error) {
     next(error);

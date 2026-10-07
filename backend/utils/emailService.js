@@ -586,6 +586,23 @@ const sendVendorQuoteInvitationEmail = ({ recipients, token, quoteReference, req
   });
 };
 
+const sendVendorComplianceUpdateRequestEmail = ({ recipients, vendorName, requestReference, requirements }) => {
+  const portalUrl = buildPublicUrl('/pages/login.html');
+  const items = (requirements || []).filter(Boolean);
+  return deliverEmail({
+    to: recipients,
+    subject: `Action required: update your SMPLfix vendor profile${requestReference ? ` for ${requestReference}` : ''}`,
+    text: `Hello ${vendorName || 'Vendor'},\n\nBefore SMPLfix can send the next item${requestReference ? ` for ${requestReference}` : ''}, please sign in to the Vendor Portal and update: ${items.join('; ') || 'your compliance information'}.\n\nSign in: ${portalUrl}`,
+    html: emailShell('Vendor Profile Update Required', `
+      <p>Hello ${escapeHtml(vendorName || 'Vendor')},</p>
+      <p>Before SMPLfix can continue${requestReference ? ` with <strong>${escapeHtml(requestReference)}</strong>` : ''}, please update your Vendor Portal profile.</p>
+      <div class="warning"><p><strong>Required updates</strong></p><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Review and complete your compliance profile.</li>'}</ul></div>
+      <p><a class="btn" href="${portalUrl}">Sign In to Vendor Portal</a></p>
+      <p class="muted">After the information is updated, the SMPLfix team can continue the order workflow.</p>
+    `, { preheader: 'Your vendor profile needs an update before the workflow can continue.' })
+  });
+};
+
 const sendVendorQuoteSubmissionConfirmationEmail = ({ recipients, quoteReference, requestReference, vendorName, total }) => deliverEmail({
   to: recipients,
   subject: `Quote received: ${quoteReference}`,
@@ -785,6 +802,7 @@ module.exports = {
   sendWebsiteRequestConfirmationEmail,
   sendWebsiteOperationsAlertEmail,
   sendVendorQuoteInvitationEmail,
+  sendVendorComplianceUpdateRequestEmail,
   sendVendorQuoteSubmissionConfirmationEmail,
   sendVendorQuoteStaffAlertEmail,
   sendCustomerOutgoingQuoteEmail,

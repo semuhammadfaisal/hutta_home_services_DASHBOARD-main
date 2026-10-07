@@ -364,6 +364,49 @@ h3 { margin: 0; font-size: 18px; line-height: 1.2; }
 .workflow-step.is-current { color: var(--ink); }
 .workflow-step.is-current .workflow-dot { border: 5px solid var(--ink); }
 .workflow-step.is-unavailable { opacity: .45; }
+.job-detail-dialog { width: min(880px, calc(100vw - 32px)); overflow: hidden; border-color: rgba(11,11,12,.14); border-radius: 20px; box-shadow: 0 32px 100px rgba(0,0,0,.34); }
+.job-detail-dialog[open] { animation: job-dialog-in .2s ease-out; }
+.job-dialog-header { align-items: center; padding: 25px 29px; background: #fff; }
+.job-dialog-heading { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.job-dialog-mark { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; border-radius: 13px; background: var(--ink); color: #fff; }
+.job-dialog-mark svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.job-dialog-header h2 { margin-top: 3px; font-size: clamp(22px, 3vw, 28px); letter-spacing: -.035em; }
+.job-dialog-header #jobDialogReference { display: inline-flex; margin-top: 7px; padding: 4px 7px; border-radius: 6px; background: #f1f1ee; color: #61615d; font: 700 9px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .03em; }
+.job-detail-dialog .dialog-close { width: 38px; height: 38px; border-color: transparent; border-radius: 11px; background: #f4f4f1; }
+.job-detail-dialog .dialog-close:hover { border-color: var(--line-dark); background: #fff; }
+.job-detail-dialog #jobDialogBody { gap: 16px; padding: 22px 29px 29px; background: #f7f7f4; }
+.job-progress-card { overflow: hidden; padding: 19px 20px 17px; border: 1px solid #e2e2de; border-radius: 16px; background: #fff; box-shadow: 0 7px 24px rgba(11,11,12,.035); }
+.job-progress-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+.job-progress-heading div > span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+.job-progress-heading strong { display: block; font-size: 15px; letter-spacing: -.015em; }
+.job-progress-heading > small { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; background: #f0f0ed; color: #62625e; font-size: 9px; font-weight: 800; }
+.job-progress-card .workflow-tracker { grid-template-columns: repeat(9, minmax(66px, 1fr)); margin: 21px 0 0; padding: 0 2px 2px; }
+.job-progress-card .workflow-step { gap: 8px; padding-inline: 3px; color: #a4a49f; font-size: 8px; font-weight: 750; line-height: 1.25; }
+.job-progress-card .workflow-step::before { top: 10px; height: 1px; background: #deded9; }
+.job-progress-card .workflow-dot { display: grid; width: 21px; height: 21px; place-items: center; border: 1px solid #cfcfca; color: #8a8a85; font-size: 7px; font-weight: 900; }
+.job-progress-card .workflow-dot > span { line-height: 1; }
+.job-progress-card .workflow-step.is-complete { color: #363633; }
+.job-progress-card .workflow-step.is-complete::before, .job-progress-card .workflow-step.is-current::before { background: var(--ink); }
+.job-progress-card .workflow-step.is-complete .workflow-dot { border-color: var(--ink); background: var(--ink); color: #fff; }
+.job-progress-card .workflow-step.is-current { color: var(--ink); }
+.job-progress-card .workflow-step.is-current .workflow-dot { border: 6px solid var(--ink); background: #fff; color: transparent; box-shadow: 0 0 0 3px rgba(11,11,12,.08); }
+.job-progress-card .workflow-step.is-unavailable { opacity: .52; }
+.job-progress-card .workflow-label { max-width: 78px; }
+.job-summary { gap: 11px; }
+.job-summary > div { display: flex; align-items: flex-start; gap: 11px; min-height: 82px; padding: 15px; border-color: #e2e2de; border-radius: 14px; background: #fff; box-shadow: 0 5px 18px rgba(11,11,12,.025); }
+.job-summary-icon { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: #f0f0ed; color: var(--ink); }
+.job-summary-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.job-summary > div > span:last-child { min-width: 0; }
+.job-summary small { margin-top: 1px; font-size: 8px; letter-spacing: .08em; }
+.job-summary strong { margin-top: 5px; font-size: 11px; line-height: 1.4; }
+.job-summary em { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; font-style: normal; font-weight: 700; }
+.job-request-card { padding: 19px 20px 20px; border: 1px solid #e2e2de; border-radius: 16px; background: #fff; box-shadow: 0 5px 18px rgba(11,11,12,.025); }
+.job-request-heading > span { display: block; color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.job-request-heading h3 { margin: 5px 0 0; font-size: 14px; letter-spacing: -.01em; }
+.job-request-card p { margin: 13px 0 0; padding-top: 13px; border-top: 1px solid #ecece8; color: #555551; font-size: 12px; line-height: 1.65; white-space: pre-line; }
+.job-detail-dialog .completion-review { padding: 19px 20px; border: 1px solid #e2e2de; border-radius: 16px; background: #fff; }
+.job-detail-dialog .transaction-actions { padding-top: 2px; }
+@keyframes job-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
 .completion-review { display: grid; gap: 12px; padding-top: 4px; }
 .completion-photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .photo-group { padding: 13px; border: 1px solid var(--line); border-radius: 11px; }
@@ -531,6 +574,15 @@ h3 { margin: 0; font-size: 18px; line-height: 1.2; }
   .transaction-summary { grid-template-columns: 1fr; }
   .workflow-tracker { grid-template-columns: repeat(5, minmax(55px, 1fr)); gap: 14px 0; overflow-x: auto; padding: 3px; }
   .workflow-step::before { display: none; }
+  .job-dialog-header { padding: 18px 17px; }
+  .job-dialog-mark { width: 40px; height: 40px; flex-basis: 40px; }
+  .job-detail-dialog #jobDialogBody { padding: 15px 12px 18px; }
+  .job-progress-card { padding: 16px 12px 13px; }
+  .job-progress-card .workflow-tracker { grid-template-columns: repeat(9, 76px); gap: 0; margin-inline: -2px; padding: 1px 2px 8px; }
+  .job-progress-card .workflow-step::before { display: block; }
+  .job-progress-heading { align-items: center; }
+  .job-summary { grid-template-columns: 1fr; }
+  .job-summary > div { min-height: 0; }
   .completion-photos { grid-template-columns: 1fr; }
   .billing-actions { display: grid; }
   .feature-grid, .preference-grid { grid-template-columns: 1fr; }

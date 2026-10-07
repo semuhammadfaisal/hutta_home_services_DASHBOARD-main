@@ -64,6 +64,25 @@ test('routes mount before auth and enforce send lifecycle without creating Payme
   assert.doesNotMatch(route, /require\('\.\.\/models\/Payment'\)|new Payment|Payment\.create/);
 });
 
+test('admins can explicitly send a customer quote with an audited vendor compliance override', () => {
+  const route = read('backend/routes/outgoingQuotes.js');
+  const api = read('assets/js/api-service.js');
+  const ui = read('assets/js/outgoing-quotes.js');
+  assert.match(route, /VENDOR_COMPLIANCE_OVERRIDE_AVAILABLE/);
+  assert.match(route, /req\.body\?\.complianceOverride === true/);
+  assert.match(route, /req\.user\.role !== 'admin'/);
+  assert.match(route, /sent_under_order_compliance_override/);
+  assert.match(route, /outgoing_quote_compliance_override/);
+  assert.match(api, /sendOutgoingQuote\(quoteId, complianceOverride = false\)/);
+  assert.match(ui, /Send customer quote anyway\?/);
+  assert.match(ui, /confirmLabel: 'Send Anyway'/);
+  assert.match(ui, /completeOutgoingQuoteSend\(id, true\)/);
+  assert.match(ui, /quoteComplianceWarnings/);
+  assert.match(ui, /Vendor compliance/);
+  assert.match(ui, /class="btn-danger outgoing-send-anyway"/);
+  assert.match(ui, /sendOutgoingQuoteAnyway/);
+});
+
 test('public quote endpoints are no-store and retain the downloadable customer document', () => {
   const route = read('backend/routes/outgoingQuotes.js');
   const page = read('pages/customer-quote.html');

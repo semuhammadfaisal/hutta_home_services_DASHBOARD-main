@@ -299,8 +299,8 @@ async function notifyRequestCreated({ session, userId, order, property, emergenc
   const notifications = [
     {
       userId,
-      title: emergency ? 'Emergency request received' : 'Service request received',
-      message: `${order.requestReference} was received for ${property.label || property.addressLine1}.`,
+      title: emergency ? 'Emergency request submitted' : 'Service request submitted',
+      message: `${order.requestReference} was submitted for ${property.label || property.addressLine1}.`,
       type: 'order', priority,
       actionUrl: '#home',
       metadata: { orderId: order._id, propertyId: property._id, requestReference: order.requestReference }

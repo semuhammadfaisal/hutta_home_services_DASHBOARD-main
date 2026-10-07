@@ -1,0 +1,500 @@
+/* Shared CRM shell for the agent, commercial, residential, and vendor portals. */
+.crm-portal {
+  --crm-sidebar: 264px;
+  --crm-header: 72px;
+  --crm-ink: #0b0b0c;
+  --crm-ink-hover: #242426;
+  --crm-paper: #f6f6f4;
+  --crm-surface: #ffffff;
+  --crm-line: #e1e1df;
+  --crm-line-strong: #c8c8c5;
+  --crm-muted: #626266;
+  --crm-radius: 12px;
+  --crm-shadow: 0 8px 24px rgba(11, 11, 12, .055);
+  margin: 0;
+  min-width: 320px;
+  background: var(--crm-paper);
+  color: var(--crm-ink);
+  font-family: var(--smpl-font-ui, "Space Grotesk", "Segoe UI", Arial, sans-serif);
+}
+
+.crm-portal :is(button, input, select, textarea) { font: inherit; }
+.crm-portal :is(h1, h2, h3, h4) { color: var(--crm-ink); font-weight: 700; letter-spacing: -.03em; }
+.crm-portal :is(.eyebrow, .portal-label, .portal-kicker) {
+  color: var(--crm-muted);
+  font-family: var(--smpl-font-mono, "Space Mono", Consolas, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+/* One sidebar rhythm across every external workspace. */
+.crm-portal :is(.agent-sidebar, .portal-sidebar, .sidebar, .vendor-sidebar) {
+  position: fixed;
+  z-index: 300;
+  inset: 0 auto 0 0;
+  width: var(--crm-sidebar);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 16px;
+  border-right: 1px solid #252527;
+  background: var(--crm-ink);
+  color: #fff;
+}
+.crm-portal :is(.sidebar-brand, .sidebar-heading, .brand-row, .vendor-sidebar-brand) {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+.crm-portal :is(.sidebar-brand, .sidebar-heading, .brand-row, .vendor-sidebar-brand) img {
+  width: 112px;
+  height: auto;
+  max-height: 44px;
+  object-fit: contain;
+}
+.crm-portal :is(.portal-label, .portal-kicker) { margin: 22px 12px 9px; color: #929297; }
+.crm-portal :is(.agent-nav, .portal-nav, .sidebar nav, .vendor-nav) {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  overflow-y: auto;
+  padding: 0 2px 2px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #48484d transparent;
+}
+.crm-portal :is(.agent-nav, .portal-nav, .sidebar nav, .vendor-nav) .nav-link {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #b6b6ba;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background .15s ease, color .15s ease;
+}
+.crm-portal :is(.agent-nav, .portal-nav, .sidebar nav, .vendor-nav) .nav-link:hover,
+.crm-portal :is(.agent-nav, .portal-nav, .sidebar nav, .vendor-nav) .nav-link:focus-visible {
+  background: var(--crm-ink-hover);
+  color: #fff;
+  transform: none;
+}
+.crm-portal :is(.agent-nav, .portal-nav, .sidebar nav, .vendor-nav) .nav-link.is-active {
+  background: #fff;
+  color: var(--crm-ink);
+}
+.crm-portal :is(.nav-link > span:first-child, .nav-link > svg) {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: currentColor;
+  text-align: center;
+}
+.crm-portal :is(.sidebar-note, .sidebar-help, .vendor-sidebar-note) {
+  margin: auto 3px 10px;
+  padding: 14px;
+  border: 1px solid #353537;
+  border-radius: 10px;
+  background: #171719;
+}
+.crm-portal :is(.sidebar-note, .sidebar-help, .vendor-sidebar-note) strong { color: #fff; font-size: 11px; }
+.crm-portal :is(.sidebar-note, .sidebar-help, .vendor-sidebar-note) p {
+  margin: 5px 0 0;
+  color: #aaaab0;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.crm-portal :is(.sidebar-user, .sidebar-account, .account-shortcut, .vendor-account) {
+  min-height: 48px;
+  margin-top: 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+}
+.crm-portal :is(.sidebar-user, .sidebar-account, .account-shortcut, .vendor-account):hover { background: var(--crm-ink-hover); }
+
+/* Canonical sidebar component shared by every non-CRM portal. */
+.crm-portal .portal-sidebar-shell {
+  width: var(--crm-sidebar);
+  padding: 18px 14px 14px;
+  border-right: 1px solid #252527;
+  overflow: hidden;
+}
+.crm-portal .portal-sidebar-brand {
+  min-height: 48px;
+  flex: 0 0 48px;
+  padding: 0 8px;
+}
+.crm-portal .portal-sidebar-brand > a {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  border-radius: 7px;
+}
+.crm-portal .portal-sidebar-brand img {
+  width: 112px;
+  height: auto;
+  max-height: 44px;
+  display: block;
+  object-fit: contain;
+}
+.crm-portal .portal-sidebar-shell :is(.portal-label, .portal-kicker) {
+  flex: 0 0 auto;
+  margin: 20px 12px 9px;
+  color: #929297;
+  font: 700 9px/1.4 var(--smpl-font-mono, "Space Mono", Consolas, monospace);
+  letter-spacing: .13em;
+}
+.crm-portal .portal-sidebar-nav {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-content: initial;
+  gap: 3px;
+  padding: 0 3px 0 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #49494e transparent;
+}
+.crm-portal .portal-sidebar-nav::-webkit-scrollbar { width: 4px; }
+.crm-portal .portal-sidebar-nav::-webkit-scrollbar-thumb { border-radius: 999px; background: #49494e; }
+.crm-portal .portal-sidebar-nav .nav-link {
+  width: 100%;
+  min-height: 42px;
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #b6b6ba;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  transform: none;
+}
+.crm-portal .portal-sidebar-nav .nav-link:hover,
+.crm-portal .portal-sidebar-nav .nav-link:focus-visible { background: #242426; color: #fff; transform: none; }
+.crm-portal .portal-sidebar-nav .nav-link.is-active,
+.crm-portal .portal-sidebar-nav .nav-link[aria-current="page"] { background: #fff; color: var(--crm-ink); }
+.crm-portal .portal-sidebar-nav .nav-link > :first-child {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  color: currentColor;
+  font-size: 15px;
+  line-height: 1;
+  text-align: center;
+}
+.crm-portal .portal-sidebar-nav .nav-link > svg:first-child { fill: none; stroke: currentColor; stroke-width: 1.8; }
+.crm-portal .portal-sidebar-nav .nav-link > :is(.nav-badge, b):last-child {
+  width: auto;
+  height: auto;
+  min-width: 20px;
+  min-height: 18px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #fff4f2;
+  color: #b42318;
+  font-size: 9px;
+  font-weight: 700;
+}
+.crm-portal .portal-sidebar-card {
+  width: auto;
+  height: 104px;
+  min-height: 104px;
+  flex: 0 0 104px;
+  margin: 10px 3px 8px;
+  padding: 13px;
+  overflow: hidden;
+  border: 1px solid #353537;
+  border-radius: 10px;
+  background: #171719;
+}
+.crm-portal .portal-sidebar-card > svg { display: none; }
+.crm-portal .portal-sidebar-card strong { display: block; color: #fff; font-size: 11px; font-weight: 700; }
+.crm-portal .portal-sidebar-card p { margin: 5px 0 0; color: #aaaab0; font-size: 10px; line-height: 1.45; }
+.crm-portal .portal-sidebar-card a { display: inline-block; margin-top: 6px; color: #fff; font-size: 10px; font-weight: 700; }
+.crm-portal .portal-sidebar-account {
+  width: 100%;
+  height: 52px;
+  min-height: 52px;
+  flex: 0 0 52px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.crm-portal .portal-sidebar-account:hover,
+.crm-portal .portal-sidebar-account:focus-visible { background: #242426; }
+.crm-portal .portal-sidebar-account > :is(.avatar, .account-avatar, #userInitials, .portal-account-avatar):first-child {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #45454a;
+  border-radius: 8px;
+  background: #252528;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.crm-portal .portal-sidebar-account strong,
+.crm-portal .portal-sidebar-account small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-portal .portal-sidebar-account strong { color: #fff; font-size: 11px; font-weight: 700; }
+.crm-portal .portal-sidebar-account small { margin-top: 2px; color: #929297; font-size: 9px; }
+.crm-portal .portal-account-chevron,
+.crm-portal .portal-sidebar-account > svg:last-child { width: 14px; color: #929297; font-size: 16px; }
+.crm-portal .portal-sidebar-close {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  display: none;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #39393e;
+  border-radius: 8px;
+  background: #202023;
+  color: #fff;
+  font-size: 20px;
+}
+.crm-portal .portal-sidebar-scrim { position: fixed; z-index: 250; inset: 0; border: 0; background: rgba(0, 0, 0, .48); }
+.crm-portal .portal-sidebar-scrim[hidden] { display: none !important; }
+
+/* CRM-style top navigation and workspace alignment. */
+.crm-portal :is(.agent-workspace, .portal-workspace, .workspace, .vendor-workspace) {
+  min-height: 100vh;
+  margin-left: var(--crm-sidebar);
+}
+.crm-portal :is(.agent-header, .portal-header, .topbar, .vendor-header) {
+  position: sticky;
+  z-index: 200;
+  top: 0;
+  min-height: var(--crm-header);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: var(--crm-header);
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--crm-line);
+  background: rgba(255, 255, 255, .96);
+  color: var(--crm-ink);
+  backdrop-filter: blur(14px);
+}
+.crm-portal .portal-header-title {
+  min-width: 150px;
+  flex: 0 0 auto;
+}
+.crm-portal .portal-header-title > span {
+  display: block;
+  color: var(--crm-muted);
+  font-family: var(--smpl-font-mono, "Space Mono", Consolas, monospace);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.crm-portal .portal-header-title h1 {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.2;
+}
+.crm-portal .portal-header-tools {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+.crm-portal .portal-header-tools .header-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.crm-portal .portal-header .global-search {
+  width: min(390px, 34vw);
+  height: 40px;
+  min-height: 40px;
+  border: 1px solid var(--crm-line);
+  border-radius: 8px;
+  background: #f8f8f7;
+  box-shadow: none;
+}
+.crm-portal .portal-header :is(.icon-button, .primary-button, .secondary-button, .primary, .secondary) { min-height: 40px; }
+.crm-portal .portal-header .icon-button { width: 40px; height: 40px; }
+.crm-portal--residential .portal-header #openNotificationsButton { position: relative; overflow: visible; }
+.crm-portal--residential .portal-header #notificationBadge {
+  position: absolute;
+  inset: -5px -5px auto auto;
+  z-index: 2;
+  margin: 0;
+}
+.crm-portal .portal-header .scope-controls { margin-left: 0; }
+.crm-portal .portal-header .scope-controls select {
+  height: 40px;
+  border-color: var(--crm-line);
+  border-radius: 8px;
+}
+.crm-portal .portal-header .property-control {
+  min-width: 220px;
+  padding: 4px 10px;
+  border: 1px solid var(--crm-line);
+  border-radius: 8px;
+  background: #fff;
+}
+.crm-portal .portal-header .property-control select {
+  width: 100%;
+  min-height: 23px;
+  padding-block: 0;
+}
+.crm-portal :is(.agent-main, .main, .portal-main, .portal-workspace > main) {
+  width: min(1500px, 100%);
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 32px clamp(22px, 3.2vw, 48px) 72px;
+}
+.crm-portal :is(.page-intro, .welcome-row, .hero) { margin-bottom: 24px; }
+.crm-portal :is(.page-intro h2, .welcome-row h1, .hero h1) {
+  font-size: clamp(30px, 3.2vw, 42px);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+/* Internal CRM surface language. */
+.crm-portal :is(.panel, .metric-card, .property-card, .report-card, .client-card, .package-card) {
+  border: 1px solid var(--crm-line);
+  border-radius: var(--crm-radius);
+  background: var(--crm-surface);
+  box-shadow: var(--crm-shadow);
+}
+.crm-portal :is(.panel-heading h3, .panel h2, .panel h3, .section-heading h2) { font-weight: 700; }
+.crm-portal :is(.primary-button, .button--dark, .primary) {
+  border-color: var(--crm-ink);
+  border-radius: 8px;
+  background: var(--crm-ink);
+  color: #fff;
+}
+.crm-portal :is(.secondary-button, .secondary, .button:not(.button--dark), .icon-button) {
+  border-color: var(--crm-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--crm-ink);
+}
+.crm-portal :is(input, select, textarea) { border-color: var(--crm-line-strong); border-radius: 8px; }
+.crm-portal :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--crm-ink);
+  outline-offset: 2px;
+}
+.crm-portal :is(.agent-sidebar, .portal-sidebar, .sidebar, .vendor-sidebar) :focus-visible {
+  outline-color: #fff;
+}
+
+/* Vendor portal shell additions. */
+.crm-portal--vendor .vendor-nav { flex: 1 1 auto; }
+.crm-portal--vendor .vendor-nav .nav-link span:first-child { font-size: 15px; }
+.crm-portal--vendor .vendor-account {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.crm-portal--vendor .vendor-account strong,
+.crm-portal--vendor .vendor-account small { display: block; }
+.crm-portal--vendor .vendor-account strong { font-size: 11px; }
+.crm-portal--vendor .vendor-account small { margin-top: 2px; color: #929297; font-size: 9px; }
+.crm-portal--vendor .vendor-account > span:last-child { color: #929297; }
+.crm-portal--vendor .portal-sidebar-account {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 14px;
+  justify-content: normal;
+}
+.crm-portal--vendor .vendor-header .secondary { margin-left: 0; }
+.crm-portal--vendor .portal-main { max-width: 1450px; }
+.crm-portal--vendor :is(#workspace, #assignments, #billing, #opportunities, #company-profile, #compliance, #documents-section) { scroll-margin-top: calc(var(--crm-header) + 18px); }
+.crm-portal--vendor #company-profile { position: absolute; margin-top: -18px; }
+.crm-portal--vendor .hero { align-items: flex-end; }
+.crm-portal--vendor .panel { border-radius: var(--crm-radius); box-shadow: var(--crm-shadow); }
+.crm-portal--vendor .menu-button,
+.crm-portal--vendor .sidebar-close { display: none; }
+.crm-portal--vendor .vendor-scrim { position: fixed; z-index: 250; inset: 0; border: 0; background: rgba(0, 0, 0, .48); }
+
+@media (max-width: 860px) {
+  .crm-portal { --crm-sidebar: min(300px, 86vw); }
+  .crm-portal :is(.agent-sidebar, .portal-sidebar, .sidebar, .vendor-sidebar) {
+    width: var(--crm-sidebar);
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+    box-shadow: 18px 0 45px rgba(0, 0, 0, .25);
+  }
+  .crm-portal :is(.agent-sidebar, .portal-sidebar, .sidebar, .vendor-sidebar).is-open { transform: none; }
+  .crm-portal :is(.agent-workspace, .portal-workspace, .workspace, .vendor-workspace) { margin-left: 0; }
+  .crm-portal :is(.agent-header, .portal-header, .topbar, .vendor-header) { min-height: 68px; height: 68px; padding: 9px 16px; }
+  .crm-portal .portal-header-title { min-width: 0; flex: 1 1 auto; }
+  .crm-portal .portal-header-title > span { display: none; }
+  .crm-portal .portal-header-title h1 { overflow: hidden; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+  .crm-portal .portal-header-tools { flex: 0 1 auto; margin-left: 0; }
+  .crm-portal--agent .portal-header-tools .global-search,
+  .crm-portal--commercial .portal-header-tools .global-search { display: none; }
+  .crm-portal :is(.menu-button, .sidebar-close),
+  .crm-portal--vendor :is(.menu-button, .sidebar-close) { display: inline-grid; }
+  .crm-portal .portal-sidebar-close { display: inline-grid; }
+  .crm-portal :is(.agent-main, .main, .portal-main, .portal-workspace > main) { padding: 28px 16px 56px; }
+  .crm-portal--vendor .vendor-scrim:not([hidden]) { display: block; }
+}
+
+@media (max-width: 560px) {
+  .crm-portal :is(.agent-header, .portal-header, .topbar, .vendor-header) { gap: 10px; }
+  .crm-portal :is(.page-intro h2, .welcome-row h1, .hero h1) { font-size: 30px; }
+  .crm-portal :is(.panel, .metric-card, .property-card, .report-card, .client-card, .package-card) { border-radius: 10px; }
+  .crm-portal--vendor .vendor-header .secondary { min-width: 76px; padding: 0 10px; }
+  .crm-portal--agent .portal-header-tools .global-search,
+  .crm-portal--commercial .portal-header-tools .global-search,
+  .crm-portal--commercial .portal-header-tools .scope-controls,
+  .crm-portal--residential .portal-header-tools .secure-label { display: none; }
+  .crm-portal--residential .portal-header-title { display: none; }
+  .crm-portal--residential .portal-header-tools { flex: 1 1 auto; justify-content: space-between; }
+  .crm-portal--residential .portal-header .property-control { width: min(180px, 52vw); min-width: 0; flex: 0 1 min(180px, 52vw); padding-inline: 8px; }
+  .crm-portal--residential .portal-header .property-control label { display: none; }
+  .crm-portal--residential .portal-header .property-control select { font-size: 12px; }
+  .crm-portal--residential .portal-header .header-actions .icon-button { display: inline-grid; }
+}
+
+@media print {
+  .crm-portal :is(.agent-sidebar, .portal-sidebar, .sidebar, .vendor-sidebar, .agent-header, .portal-header, .topbar, .vendor-header) { display: none !important; }
+  .crm-portal :is(.agent-workspace, .portal-workspace, .workspace, .vendor-workspace) { margin: 0; }
+}

@@ -363,6 +363,8 @@ app.use((err, req, res, next) => {
   }
   res.status(err.status || 500).json({
     message: err.message || 'Internal server error',
+    ...(err.code ? { code: err.code } : {}),
+    ...(err.exposeDetails ? { details: err.exposeDetails } : {}),
     error: process.env.NODE_ENV === 'development' && !websiteIntakeRequest ? err : {}
   });
 });
