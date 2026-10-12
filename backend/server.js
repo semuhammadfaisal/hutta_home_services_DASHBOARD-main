@@ -162,6 +162,7 @@ try {
   app.use('/api/users', checkRole(['admin']), require('./routes/users'));
   app.use('/api/dashboard', staffOnly, require('./routes/dashboard'));
   app.use('/api/orders', staffOnly, require('./routes/orders'));
+  app.use('/api/autopilot-plans', staffOnly, require('./routes/autopilotPlans'));
   app.use('/api/customers', staffOnly, require('./routes/customers'));
   app.use('/api/vendors', staffOnly, require('./routes/vendors'));
   app.use('/api/employees', staffOnly, require('./routes/employees'));

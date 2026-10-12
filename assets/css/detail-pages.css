@@ -705,6 +705,76 @@
     justify-content: flex-start;
 }
 
+#order-detail .note-reply-btn,
+#orderDetailModal .note-reply-btn {
+    border-color: #111827;
+    background: #111827;
+    color: #ffffff;
+}
+
+#order-detail .note-reply-btn:hover,
+#orderDetailModal .note-reply-btn:hover {
+    background: #2f3743;
+    border-color: #2f3743;
+}
+
+.note-reply-modal {
+    width: min(620px, 100%);
+    border-color: #d1d5db;
+    border-radius: 12px;
+}
+
+.note-reply-kicker {
+    display: block;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.note-reply-context {
+    margin-bottom: 16px;
+    padding: 13px 14px;
+    border: 1px solid #e5e7eb;
+    border-left: 3px solid #111827;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.note-reply-context span,
+.note-edit-body label {
+    display: block;
+    margin-bottom: 7px;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.note-reply-context p {
+    margin: 0;
+    color: #111827;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+}
+
+.note-reply-delivery {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 2px 0 0;
+    color: #4b5563;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.note-reply-delivery i {
+    margin-top: 2px;
+    color: #111827;
+}
+
 #order-detail .order-notes-card .btn-add-note,
 #customer-profile .order-notes-card .btn-add-note,
 #vendor-detail .order-notes-card .btn-add-note,

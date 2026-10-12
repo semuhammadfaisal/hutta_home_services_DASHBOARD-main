@@ -7,6 +7,7 @@
         'workflow-overview': 'Command',
         orders: 'Operations',
         pipeline: 'Operations',
+        'autopilot-plans': 'Operations',
         customers: 'Operations',
         vendors: 'Operations',
         'vendor-reviews': 'Operations',
@@ -168,7 +169,12 @@
 
         if (!activeLink) return;
         const sectionId = activeLink.dataset.section;
-        if (group) group.textContent = groupNames[sectionId] || 'smplfix';
+        const singleLevelBreadcrumb = sectionId === 'autopilot-plans';
+        if (group) {
+            group.hidden = singleLevelBreadcrumb;
+            group.textContent = groupNames[sectionId] || 'smplfix';
+        }
+        if (group?.nextElementSibling) group.nextElementSibling.hidden = singleLevelBreadcrumb;
         if (current) current.textContent = currentTitle(activeLink);
     }
 
@@ -195,6 +201,7 @@
 
     function initPageEyebrows() {
         document.querySelectorAll('.content-section').forEach((section) => {
+            if (section.id === 'autopilot-plans') return;
             const header = section.querySelector(':scope > .page-header, :scope > .reports-header');
             const heading = header?.querySelector('h1');
             if (!header || !heading || header.querySelector('.overview-eyebrow, .page-eyebrow, .order-detail-eyebrow')) return;

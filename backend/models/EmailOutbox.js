@@ -41,6 +41,7 @@ const emailOutboxSchema = new mongoose.Schema({
       ,'staff_payment_proof_alert'
       ,'customer_payment_proof_verified'
       ,'customer_payment_proof_rejected'
+      ,'residential_order_message_alert'
     ],
     required: true
   },

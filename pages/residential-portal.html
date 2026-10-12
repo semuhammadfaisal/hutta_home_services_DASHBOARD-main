@@ -8,7 +8,7 @@
   <title>My Home | SMPLfix</title>
   <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/assets/css/residential-portal.css?v=20260922-service-details">
+    <link rel="stylesheet" href="/assets/css/residential-portal.css?v=20261011-invoice-dialog-display-fix">
   <link rel="stylesheet" href="/assets/css/residential-form-polish.css?v=20260916-dialog-polish">
   <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
   <link rel="stylesheet" href="/assets/css/portal-crm-shell.css?v=20260921-crm-shell">
@@ -33,6 +33,12 @@
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 5H5v14h5m4-3 4-4-4-4m4 4H9"/></symbol>
     <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Zm7 13 .6 2.4L22 19l-2.4.6L19 22l-.6-2.4L16 19l2.4-.6L19 16Z"/></symbol>
     <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5m0 3h.01"/></symbol>
+    <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></symbol>
+    <symbol id="icon-drop" viewBox="0 0 24 24"><path d="M12 2S5 10 5 15a7 7 0 0 0 14 0c0-5-7-13-7-13Z"/></symbol>
+    <symbol id="icon-flame" viewBox="0 0 24 24"><path d="M13 2s1 4-2 7c-2-2-1-5-1-5s-6 5-6 11a8 8 0 0 0 16 0c0-4-3-8-5-10 0 3-2 5-2 5s1-4 0-8Z"/></symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></symbol>
   </svg>
 
   <div id="offlineBanner" class="offline-banner" role="status" hidden>
@@ -132,20 +138,19 @@
 
         <section id="portalError" class="portal-state portal-state--error" role="alert" hidden>
           <svg aria-hidden="true"><use href="#icon-alert"/></svg>
-          <div><p class="eyebrow">We couldn’t load your dashboard</p><h1>Your home information is temporarily unavailable.</h1><p id="portalErrorMessage">Please check your connection and try again.</p></div>
+          <div><h1>Your home information is temporarily unavailable.</h1><p id="portalErrorMessage">Please check your connection and try again.</p></div>
           <button class="button button--dark" id="retryButton" type="button"><svg aria-hidden="true"><use href="#icon-refresh"/></svg> Try again</button>
         </section>
 
         <section id="portalUnauthorized" class="portal-state portal-state--error" role="alert" hidden>
           <svg aria-hidden="true"><use href="#icon-alert"/></svg>
-          <div><p class="eyebrow">Access unavailable</p><h1>This account does not have Residential Portal access.</h1><p>Please sign in with a homeowner account or contact SMPLfix support.</p></div>
+          <div><h1>This account does not have Residential Portal access.</h1><p>Please sign in with a homeowner account or contact SMPLfix support.</p></div>
           <a class="button button--dark" href="/pages/login.html">Return to sign in</a>
         </section>
 
         <section id="homeView" class="portal-view" data-view="home" aria-labelledby="homeTitle" hidden>
           <div class="welcome-row">
             <div>
-              <p class="eyebrow">Your home, handled</p>
               <h1 id="homeTitle">Good day, <span id="welcomeName">homeowner</span>.</h1>
               <p id="welcomeAddress">Here’s what’s happening at your property.</p>
             </div>
@@ -160,18 +165,18 @@
           <div class="home-grid home-grid--overview">
             <article class="panel health-panel" aria-labelledby="healthTitle">
               <div class="panel-heading">
-                <div><p class="eyebrow">Property health</p><h2 id="healthTitle">Autopilot score</h2></div>
+                <div><h2 id="healthTitle">Autopilot score</h2></div>
                 <span class="status-pill status-pill--preview">Preview</span>
               </div>
               <div class="health-content">
-                <div class="score-ring" role="img" aria-label="Autopilot score will appear when maintenance plans are activated"><span>—</span><small>/ 100</small></div>
+                <div class="score-ring" role="img" aria-label="Autopilot score will appear when recurring services are activated"><span>—</span><small>/ 100</small></div>
                 <div><strong>Maintenance intelligence is on its way.</strong><p>As your service history grows, SMPLfix will help you stay ahead of seasonal and recurring maintenance.</p></div>
               </div>
             </article>
 
             <article class="panel attention-panel" aria-labelledby="attentionTitle">
               <div class="panel-heading">
-                <div><p class="eyebrow">Needs your attention</p><h2 id="attentionTitle">Estimates to review</h2></div>
+                <div><h2 id="attentionTitle">Estimates to review</h2></div>
                 <span class="count-badge" id="estimateCount">0</span>
               </div>
               <div id="estimateList" class="compact-list" aria-live="polite"></div>
@@ -186,92 +191,207 @@
 
           <div class="home-grid home-grid--feed">
             <article class="panel jobs-panel" aria-labelledby="activeJobsTitle">
-              <div class="panel-heading panel-heading--border"><div><p class="eyebrow">In progress</p><h2 id="activeJobsTitle">Active jobs</h2></div><button class="text-button" type="button" data-route-button="properties">View properties <svg aria-hidden="true"><use href="#icon-arrow"/></svg></button></div>
+              <div class="panel-heading panel-heading--border"><div><h2 id="activeJobsTitle">Active jobs</h2></div><button class="text-button" type="button" data-route-button="properties">View properties <svg aria-hidden="true"><use href="#icon-arrow"/></svg></button></div>
               <div id="activeJobsList" class="job-list" aria-live="polite"></div>
             </article>
 
             <article class="panel activity-panel" aria-labelledby="activityTitle">
-              <div class="panel-heading panel-heading--border"><div><p class="eyebrow">Latest updates</p><h2 id="activityTitle">Recent activity</h2></div></div>
+              <div class="panel-heading panel-heading--border"><div><h2 id="activityTitle">Recent activity</h2></div></div>
               <ol id="activityList" class="activity-list" aria-live="polite"></ol>
             </article>
           </div>
 
           <article class="panel book-again-panel" aria-labelledby="bookAgainTitle">
-            <div class="panel-heading"><div><p class="eyebrow">Faster next time</p><h2 id="bookAgainTitle">Book again</h2><p>Repeat a completed service without starting from scratch.</p></div></div>
+            <div class="panel-heading"><div><h2 id="bookAgainTitle">Book again</h2><p>Repeat a completed service without starting from scratch.</p></div></div>
             <div id="bookAgainList" class="book-again-list" aria-live="polite"></div>
           </article>
         </section>
 
         <section id="propertiesView" class="portal-view" data-view="properties" aria-labelledby="propertiesTitle" hidden>
           <div class="section-heading">
-            <div><p class="eyebrow">Your portfolio</p><h1 id="propertiesTitle">Properties</h1><p>Every service, visit, and document stays connected to the right address.</p></div>
+            <div><h1 id="propertiesTitle">Properties</h1><p>Every service, visit, and document stays connected to the right address.</p></div>
             <button class="button button--dark" id="addPropertyButton" type="button"><svg aria-hidden="true"><use href="#icon-plus"/></svg> Add property</button>
           </div>
           <div id="propertyList" class="property-list" aria-live="polite"></div>
 
           <section id="propertyDetail" class="property-detail" aria-labelledby="propertyDetailTitle" hidden>
             <div class="property-detail-heading">
-              <div><p class="eyebrow">Property record</p><h2 id="propertyDetailTitle" tabindex="-1">Property details</h2><p id="propertyDetailAddress"></p></div>
-              <span class="status-pill" id="propertyDetailStatus">Active</span>
+              <div><h2 id="propertyDetailTitle" tabindex="-1">Property details</h2><p id="propertyDetailAddress"></p></div>
+              <div class="property-detail-actions"><span class="status-pill" id="propertyDetailStatus">Active</span><button class="button" id="editPropertyButton" type="button">Edit property</button></div>
             </div>
             <div class="property-summary-grid">
               <article><small>Open jobs</small><strong id="propertyOpenJobs">0</strong></article>
               <article><small>Completed services</small><strong id="propertyCompletedJobs">0</strong></article>
+              <article><small>Appointments</small><strong id="propertyAppointmentCount">0</strong></article>
+              <article><small>Invoices</small><strong id="propertyInvoiceCount">0</strong></article>
               <article><small>Documents</small><strong id="propertyDocumentCount">0</strong></article>
             </div>
-            <article class="panel service-history-panel" aria-labelledby="serviceHistoryTitle">
-              <div class="panel-heading panel-heading--border"><div><p class="eyebrow">Living home record</p><h3 id="serviceHistoryTitle">Service history</h3></div></div>
-              <div id="serviceHistoryList" class="history-list"></div>
-            </article>
+            <div class="property-record-grid">
+                            <article class="panel property-record-panel property-record-panel--wide property-profile-panel"><div class="panel-heading panel-heading--border"><div class="property-profile-heading"><h3>Property details</h3></div></div><div id="propertyCoreDetails" class="property-fact-grid"></div></article>
+              <article class="panel property-record-panel property-record-panel--wide requested-services-panel" aria-labelledby="requestedServicesTitle"><div class="panel-heading panel-heading--border"><div><h3 id="requestedServicesTitle">Requested Services</h3><p>Active and recent service requests with estimate, invoice, and payment progress.</p></div></div><div id="requestedServicesList" class="requested-services-list" aria-live="polite"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Active &amp; past service requests</h3></div></div><div id="propertyRequestsList" class="property-record-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Open &amp; completed jobs</h3></div></div><div id="propertyJobsList" class="property-record-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Scheduled appointments</h3></div></div><div id="propertyAppointmentsList" class="property-record-list"></div></article>
+              <article class="panel property-record-panel property-record-panel--wide service-history-panel" aria-labelledby="serviceHistoryTitle"><div class="panel-heading panel-heading--border"><div><h3 id="serviceHistoryTitle">Service history</h3></div></div><div id="serviceHistoryList" class="history-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Completion photos</h3></div></div><div id="propertyCompletionPhotos" class="property-photo-grid"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Service notes</h3></div></div><div id="propertyServiceNotes" class="property-record-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Invoices &amp; receipts</h3></div></div><div id="propertyInvoicesList" class="property-record-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Property documents</h3></div><button class="text-button" type="button" data-property-route="passport">Manage</button></div><div id="propertyDocumentsList" class="property-record-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Maintenance calendar</h3></div><button class="text-button" type="button" data-property-route="autopilot">Manage</button></div><div id="propertyMaintenanceList" class="property-record-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Utility readings</h3></div><button class="text-button" type="button" data-property-route="utilities">Manage</button></div><div id="propertyUtilitiesList" class="property-record-list"></div></article>
+              <article class="panel property-record-panel"><div class="panel-heading panel-heading--border"><div><h3>Autopilot settings</h3></div><button class="text-button" type="button" data-property-route="autopilot">Edit</button></div><div id="propertyAutopilotSummary" class="property-record-list"></div></article>
+            </div>
           </section>
         </section>
 
         <section id="estimatesView" class="portal-view" data-view="estimates" aria-labelledby="estimatesTitle" hidden>
-          <div class="section-heading"><div><p class="eyebrow">Review and decide</p><h1 id="estimatesTitle">Estimates</h1><p>Approve current estimates or tell us what needs to change.</p></div></div>
+          <div class="section-heading"><div><h1 id="estimatesTitle">Estimates</h1><p>Approve current estimates or tell us what needs to change.</p></div></div>
           <div id="estimatesPageList" class="transaction-list" aria-live="polite"></div>
         </section>
 
         <section id="invoicesView" class="portal-view" data-view="invoices" aria-labelledby="invoicesTitle" hidden>
-          <div class="section-heading"><div><p class="eyebrow">Billing history</p><h1 id="invoicesTitle">Invoices & receipts</h1><p>Download authorized invoices and receipts for your properties.</p></div></div>
+          <div class="section-heading"><div><h1 id="invoicesTitle">Invoices & receipts</h1><p>Review invoice details, download records, and pay securely online.</p></div></div>
           <div id="invoiceList" class="transaction-list" aria-live="polite"></div>
         </section>
 
         <section id="billingView" class="portal-view" data-view="billing" aria-labelledby="billingTitle" hidden>
-          <div class="section-heading"><div><p class="eyebrow">Secure billing</p><h1 id="billingTitle">Payment methods</h1><p>Card details are entered and stored only on our payment provider’s hosted pages.</p></div></div>
+          <div class="section-heading"><div><h1 id="billingTitle">Payment methods</h1><p>Card details are entered and stored only on our payment provider’s hosted pages.</p></div></div>
           <article class="panel billing-panel">
-            <div class="panel-heading panel-heading--border"><div><p class="eyebrow">Saved cards</p><h2>Cards on file</h2></div><span class="secure-label">Tokenized by Stripe</span></div>
+            <div class="panel-heading panel-heading--border"><div><h2>Cards on file</h2></div><span class="secure-label">Tokenized by Stripe</span></div>
             <div id="paymentMethodList" class="payment-method-list" aria-live="polite"></div>
             <div class="billing-actions"><button class="button button--dark" id="addCardButton" type="button">Add or replace a card</button><button class="button" id="manageCardsButton" type="button">Manage with Stripe</button></div>
             <p class="billing-disclosure">SMPLfix never receives or stores your full card number, security code, or raw card details.</p>
           </article>
         </section>
 
-        <section id="autopilotView" class="portal-view" data-view="autopilot" aria-labelledby="autopilotTitle" hidden>
-          <div class="section-heading"><div><p class="eyebrow">Proactive home care</p><h1 id="autopilotTitle">Autopilot management</h1><p>Choose recurring services, review the maintenance calendar, and control optional auto-approval.</p></div></div>
-          <div class="feature-grid"><form id="autopilotForm" class="panel feature-panel"><div class="panel-heading panel-heading--border"><div><p class="eyebrow">Your plan</p><h2>Service controls</h2></div><label class="switch-label"><input id="autopilotEnabled" type="checkbox"><span>Autopilot on</span></label></div><div id="autopilotServices" class="service-toggle-list" aria-live="polite"></div><fieldset class="consent-box"><legend>Optional auto-approval</legend><label class="switch-label"><input id="autoApprovalEnabled" type="checkbox"><span>Automatically approve eligible services</span></label><label class="field"><span>Per-service limit</span><input id="autoApprovalThreshold" type="number" min="0" max="10000" step="1" inputmode="decimal"></label><label class="field"><span>Type your full name to consent</span><input id="autopilotTypedName" maxlength="160" autocomplete="name"></label><label class="check-label"><input id="autopilotConsent" type="checkbox"><span id="autopilotConsentText">I authorize this setting.</span></label></fieldset><div class="form-error" id="autopilotError" role="alert" hidden></div><button class="button button--dark" type="submit">Save Autopilot settings</button></form><div class="feature-stack"><article class="panel feature-panel"><div class="panel-heading panel-heading--border"><div><p class="eyebrow">Arizona timing</p><h2>Seasonal recommendations</h2></div></div><div id="seasonalRecommendations" class="recommendation-list"></div></article><article class="panel feature-panel"><div class="panel-heading panel-heading--border"><div><p class="eyebrow">Coming up</p><h2>Maintenance calendar</h2></div></div><div id="maintenanceCalendar" class="compact-list"></div></article></div></div>
+        <section id="autopilotView" class="portal-view autopilot-view" data-view="autopilot" aria-labelledby="autopilotTitle" hidden>
+          <div class="section-heading autopilot-page-heading"><div><span class="page-kicker">Preventive home care</span><h1 id="autopilotTitle">Autopilot service requests</h1><p>Tell SMPLfix which recurring services you want handled and how often you need them.</p></div><span class="autopilot-status-pill" id="autopilotStatusPill"><span aria-hidden="true"></span> Requests paused</span></div>
+          <div class="autopilot-summary" aria-label="Autopilot service summary"><article><span><svg aria-hidden="true"><use href="#icon-spark"/></svg></span><div><small>Request status</small><strong id="autopilotSummaryStatus">Paused</strong><p>Your recurring service requests</p></div></article><article><span><svg aria-hidden="true"><use href="#icon-wrench"/></svg></span><div><small>Requested services</small><strong id="autopilotSummaryServices">0 of 5</strong><p>Sent to the SMPLfix team</p></div></article><article><span><svg aria-hidden="true"><use href="#icon-calendar"/></svg></span><div><small>Next service</small><strong id="autopilotSummaryNext">Not scheduled</strong><p>Earliest requested service</p></div></article><article><span><svg aria-hidden="true"><use href="#icon-check"/></svg></span><div><small>Auto-approval</small><strong id="autopilotSummaryApproval">Off</strong><p id="autopilotSummaryApprovalMeta">You approve each estimate</p></div></article></div>
+          <div class="autopilot-workspace">
+            <form id="autopilotForm" class="panel autopilot-plan-card">
+              <header class="autopilot-card-header"><span class="autopilot-card-icon"><svg aria-hidden="true"><use href="#icon-spark"/></svg></span><div><span class="autopilot-card-kicker">Your recurring requests</span><h2>Choose services</h2><p>Select the work you want SMPLfix to arrange and how often you need it.</p></div><label class="autopilot-master-switch"><input id="autopilotEnabled" type="checkbox"><span aria-hidden="true"></span><strong>Requests active</strong></label></header>
+              <div class="autopilot-plan-body"><fieldset class="autopilot-property-picker"><legend>Properties for this request</legend><p>Select every property where you want the chosen services performed.</p><div id="autopilotPropertyOptions" class="autopilot-property-options"></div></fieldset><div class="autopilot-section-label"><span>Recurring services</span><small>Select at least one service to send requests to SMPLfix</small></div><div id="autopilotServices" class="autopilot-service-list" aria-live="polite"></div>
+                <label class="autopilot-request-note"><span>Message or instructions for SMPLfix <small>Optional</small></span><textarea id="autopilotRequestNote" maxlength="2000" rows="4" placeholder="Share access instructions, preferred timing, equipment details, or anything our team should know."></textarea><small>Your note is shown to the CRM team with this service request.</small></label>
+                <fieldset class="autopilot-consent-card"><legend><span><svg aria-hidden="true"><use href="#icon-check"/></svg></span><div><strong>Optional auto-approval</strong><small>Control whether eligible maintenance estimates can proceed automatically.</small></div></legend><label class="autopilot-approval-switch"><span><strong>Automatically approve eligible services</strong><small>You set the maximum amount allowed for each service.</small></span><input id="autoApprovalEnabled" type="checkbox"></label><div class="autopilot-consent-fields"><label class="field"><span>Per-service limit</span><span class="autopilot-money-input"><span>$</span><input id="autoApprovalThreshold" type="number" min="0" max="10000" step="1" inputmode="decimal" placeholder="0"></span></label><label class="field"><span>Type your full name to consent</span><input id="autopilotTypedName" maxlength="160" autocomplete="name" placeholder="Your full legal name"></label></div><label class="autopilot-consent-check"><input id="autopilotConsent" type="checkbox"><span id="autopilotConsentText">I authorize this setting.</span></label></fieldset><div class="form-error" id="autopilotError" role="alert" hidden></div>
+              </div>
+              <footer class="autopilot-form-footer"><span><svg aria-hidden="true"><use href="#icon-check"/></svg> Your service choices are sent to the SMPLfix CRM.</span><button class="button button--dark" type="submit"><svg aria-hidden="true"><use href="#icon-check"/></svg> Save service requests</button></footer>
+            </form>
+            <div class="autopilot-side-stack">
+              <article class="panel autopilot-side-card"><header><span><svg aria-hidden="true"><use href="#icon-spark"/></svg></span><div><small>Arizona home care</small><h2>Seasonal recommendations</h2><p>Timely suggestions based on local conditions.</p></div></header><div id="seasonalRecommendations" class="autopilot-recommendations"></div></article>
+              <article class="panel autopilot-side-card"><header><span><svg aria-hidden="true"><use href="#icon-calendar"/></svg></span><div><small>Upcoming care</small><h2>Maintenance calendar</h2><p>Your next enabled services.</p></div></header><div id="maintenanceCalendar" class="autopilot-calendar"></div></article>
+              <article class="panel autopilot-side-card"><header><span><svg aria-hidden="true"><use href="#icon-clock"/></svg></span><div><small>Request activity</small><h2>Recent changes</h2><p>Latest Autopilot service history.</p></div></header><div id="autopilotAuditHistory" class="autopilot-audit-list"></div></article>
+            </div>
+          </div>
         </section>
 
-        <section id="passportView" class="portal-view" data-view="passport" aria-labelledby="passportTitle" hidden>
-          <div class="section-heading"><div><p class="eyebrow">Permanent property record</p><h1 id="passportTitle">Property Passport</h1><p>Keep appliance details, paint colors, filters, warranties, permits, and private documents together.</p></div></div>
-          <div class="feature-grid"><form id="passportEntryForm" class="panel feature-panel"><h2>Add property detail</h2><label class="field"><span>Category</span><select name="category"><option>appliance</option><option>paint</option><option>filter</option><option>warranty</option><option>permit</option><option>other</option></select></label><label class="field"><span>Title</span><input name="title" maxlength="160" required></label><label class="field"><span>Value</span><textarea name="value" maxlength="1000" required></textarea></label><label class="field"><span>Notes</span><textarea name="notes" maxlength="2000"></textarea></label><button class="button button--dark" type="submit">Add detail</button></form><form id="passportDocumentForm" class="panel feature-panel" enctype="multipart/form-data"><h2>Secure document vault</h2><label class="field"><span>Category</span><select name="category"><option>warranty</option><option>permit</option><option>appliance</option><option>inspection</option><option>other</option></select></label><label class="field"><span>Document title</span><input name="title" maxlength="160" required></label><label class="upload-field"><span><strong>Choose a document</strong><small>PDF, JPG, PNG, or WebP · 10 MB maximum</small></span><input name="document" type="file" required accept="application/pdf,image/jpeg,image/png,image/webp"></label><button class="button button--dark" type="submit">Upload securely</button></form></div><div class="feature-grid"><article class="panel feature-panel"><h2>Property details</h2><div id="passportEntries" class="record-list"></div></article><article class="panel feature-panel"><h2>Documents</h2><div id="passportDocuments" class="record-list"></div></article></div>
+        <section id="passportView" class="portal-view passport-view" data-view="passport" aria-labelledby="passportTitle" hidden>
+          <div class="section-heading passport-page-heading"><div><span class="page-kicker">Home record</span><h1 id="passportTitle">Property Passport</h1><p>Keep the information future service professionals need—without searching through drawers, emails, or old paperwork.</p></div><span class="passport-secure-pill"><svg aria-hidden="true"><use href="#icon-check"/></svg> Private &amp; property-scoped</span></div>
+          <div class="passport-summary" aria-label="Property Passport summary">
+            <article><span><svg aria-hidden="true"><use href="#icon-building"/></svg></span><div><small>Saved details</small><strong id="passportDetailCount">0</strong><p>Home facts on record</p></div></article>
+            <article><span><svg aria-hidden="true"><use href="#icon-file"/></svg></span><div><small>Documents</small><strong id="passportDocumentCount">0</strong><p>Files in the secure vault</p></div></article>
+            <article><span><svg aria-hidden="true"><use href="#icon-spark"/></svg></span><div><small>Categories covered</small><strong id="passportCategoryCount">0</strong><p>Organized for quick access</p></div></article>
+          </div>
+          <div class="passport-create-grid">
+            <form id="passportEntryForm" class="panel passport-form-card">
+              <header class="passport-card-header"><span><svg aria-hidden="true"><use href="#icon-plus"/></svg></span><div><small>Property knowledge</small><h2>Add a home detail</h2><p>Record a model number, paint color, filter size, or permit reference.</p></div></header>
+              <div class="passport-form-body"><label class="field"><span>Category</span><select name="category"><option value="appliance">Appliance</option><option value="paint">Paint</option><option value="filter">Filter</option><option value="warranty">Warranty</option><option value="permit">Permit</option><option value="other">Other</option></select></label><label class="field"><span>Title</span><input name="title" maxlength="160" required placeholder="e.g. Kitchen refrigerator"></label><label class="field"><span>Value</span><textarea name="value" rows="3" maxlength="1000" required placeholder="Model, color, size, reference number…"></textarea></label><label class="field"><span>Notes <small>Optional</small></span><textarea name="notes" rows="2" maxlength="2000" placeholder="Location, purchase date, replacement instructions…"></textarea></label><div id="passportEntryError" class="form-error" role="alert" hidden></div></div>
+              <footer class="passport-form-footer"><p><svg aria-hidden="true"><use href="#icon-wrench"/></svg> Available when planning future service.</p><button class="button button--dark" type="submit"><svg aria-hidden="true"><use href="#icon-plus"/></svg> Add detail</button></footer>
+            </form>
+            <form id="passportDocumentForm" class="panel passport-form-card" enctype="multipart/form-data">
+              <header class="passport-card-header"><span><svg aria-hidden="true"><use href="#icon-file"/></svg></span><div><small>Secure storage</small><h2>Upload a document</h2><p>Store warranties, permits, inspections, and property records safely.</p></div></header>
+              <div class="passport-form-body"><label class="field"><span>Document category</span><select name="category"><option value="warranty">Warranty</option><option value="permit">Permit</option><option value="appliance">Appliance</option><option value="inspection">Inspection</option><option value="floor_plan">Floor plan</option><option value="deed">Deed</option><option value="tax_record">Tax record</option><option value="survey">Survey</option><option value="disclosure">Disclosure</option><option value="hoa">HOA</option><option value="proof_of_ownership">Proof of ownership</option><option value="other">Other</option></select></label><label class="field"><span>Document title</span><input id="passportDocumentTitle" name="title" maxlength="160" required placeholder="e.g. Water heater warranty"></label><label class="passport-upload-zone" id="passportUploadZone"><input id="passportDocumentFile" name="document" type="file" required accept="application/pdf,image/jpeg,image/png,image/webp"><span class="passport-upload-icon"><svg aria-hidden="true"><use href="#icon-file"/></svg></span><strong id="passportFileName">Choose a document</strong><span id="passportFileMeta">PDF, JPG, PNG, or WebP · 10 MB maximum</span><span class="passport-choose-file">Browse files</span></label><div id="passportDocumentError" class="form-error" role="alert" hidden></div></div>
+              <footer class="passport-form-footer"><p><svg aria-hidden="true"><use href="#icon-check"/></svg> Files are visible only to authorized users.</p><button class="button button--dark" type="submit"><svg aria-hidden="true"><use href="#icon-file"/></svg> Upload securely</button></footer>
+            </form>
+          </div>
+          <div class="passport-library-grid">
+            <article class="panel passport-library-card"><header class="passport-library-header"><div><small>Quick reference</small><h2>Property details</h2><p>Information saved for this property.</p></div><label><span>Filter</span><select id="passportEntryFilter"><option value="all">All categories</option><option value="appliance">Appliances</option><option value="paint">Paint</option><option value="filter">Filters</option><option value="warranty">Warranties</option><option value="permit">Permits</option><option value="other">Other</option></select></label></header><div id="passportEntries" class="passport-record-list" aria-live="polite"></div></article>
+            <article class="panel passport-library-card"><header class="passport-library-header"><div><small>Secure vault</small><h2>Documents</h2><p>Open your saved property files.</p></div><label><span>Filter</span><select id="passportDocumentFilter"><option value="all">All documents</option><option value="warranty">Warranties</option><option value="permit">Permits</option><option value="appliance">Appliances</option><option value="inspection">Inspections</option><option value="property">Property records</option><option value="other">Other</option></select></label></header><div id="passportDocuments" class="passport-record-list" aria-live="polite"></div></article>
+          </div>
         </section>
 
-        <section id="utilitiesView" class="portal-view" data-view="utilities" aria-labelledby="utilitiesTitle" hidden><div class="section-heading"><div><p class="eyebrow">Usage foundation</p><h1 id="utilitiesTitle">Utility tracker</h1><p>Log bills over time so unusual changes can become useful maintenance signals.</p></div></div><div class="feature-grid"><form id="utilityForm" class="panel feature-panel"><h2>Add a reading</h2><label class="field"><span>Utility</span><select name="utilityType"><option value="electricity">Electricity</option><option value="water">Water</option><option value="gas">Gas</option></select></label><div class="form-grid"><label class="field"><span>Period start</span><input name="periodStart" type="date" required></label><label class="field"><span>Period end</span><input name="periodEnd" type="date" required></label></div><div class="form-grid"><label class="field"><span>Usage</span><input name="usage" type="number" min="0" step="0.01" required></label><label class="field"><span>Bill amount</span><input name="cost" type="number" min="0" step="0.01"></label></div><label class="field"><span>Notes</span><input name="notes" maxlength="500"></label><button class="button button--dark" type="submit">Save reading</button></form><article class="panel feature-panel"><h2>Reading history</h2><div id="utilityReadings" class="record-list"></div></article></div></section>
+        <section id="utilitiesView" class="portal-view utilities-view" data-view="utilities" aria-labelledby="utilitiesTitle" hidden>
+          <div class="section-heading utilities-page-heading"><div><span class="page-kicker">Property insights</span><h1 id="utilitiesTitle">Utility tracker</h1><p>Build a simple history of household usage and spot changes before they become expensive problems.</p></div><span class="utilities-private-pill"><svg aria-hidden="true"><use href="#icon-check"/></svg> Private to your property</span></div>
+          <div class="utility-summary" aria-label="Utility reading summary">
+            <article><span class="utility-summary-icon"><svg aria-hidden="true"><use href="#icon-chart"/></svg></span><div><small>Total readings</small><strong id="utilityTotalReadings">0</strong><span>Across all utilities</span></div></article>
+            <article><span class="utility-summary-icon"><svg aria-hidden="true"><use href="#icon-building"/></svg></span><div><small>Latest bill</small><strong id="utilityLatestBill">—</strong><span id="utilityLatestBillMeta">No bill amount yet</span></div></article>
+            <article><span class="utility-summary-icon"><svg aria-hidden="true"><use href="#icon-spark"/></svg></span><div><small>Utilities tracked</small><strong id="utilityTrackedTypes">0 of 3</strong><span>Electricity, water and gas</span></div></article>
+          </div>
+          <div class="utilities-workspace">
+            <form id="utilityForm" class="panel utility-entry-card">
+              <header class="utility-card-header"><span class="utility-card-icon"><svg aria-hidden="true"><use href="#icon-plus"/></svg></span><div><span class="utility-card-kicker">New bill</span><h2>Add a reading</h2><p>Enter the totals shown on your latest utility statement.</p></div></header>
+              <div class="utility-form-body">
+                <label class="field"><span>Utility type</span><select id="utilityType" name="utilityType"><option value="electricity">Electricity</option><option value="water">Water</option><option value="gas">Natural gas</option></select></label>
+                <div class="form-grid"><label class="field"><span>Billing period starts</span><input id="utilityPeriodStart" name="periodStart" type="date" required></label><label class="field"><span>Billing period ends</span><input id="utilityPeriodEnd" name="periodEnd" type="date" required></label></div>
+                <div class="form-grid"><label class="field"><span>Usage</span><span class="utility-input-shell"><input id="utilityUsage" name="usage" type="number" min="0" max="100000000" step="0.01" inputmode="decimal" placeholder="0" required><span id="utilityUsageUnit">kWh</span></span></label><label class="field"><span>Bill amount <small>Optional</small></span><span class="utility-input-shell utility-input-shell--money"><span>$</span><input name="cost" type="number" min="0" max="1000000" step="0.01" inputmode="decimal" placeholder="0.00"></span></label></div>
+                <label class="field"><span>Notes <small>Optional</small></span><textarea name="notes" rows="3" maxlength="500" placeholder="Rate change, estimated bill, unusual usage…"></textarea></label>
+                <div id="utilityFormError" class="form-error" role="alert" hidden></div>
+              </div>
+              <footer class="utility-form-footer"><p><svg aria-hidden="true"><use href="#icon-chart"/></svg> Each reading improves your household baseline.</p><button class="button button--dark" type="submit"><svg aria-hidden="true"><use href="#icon-plus"/></svg> Save reading</button></footer>
+            </form>
+            <article class="panel utility-history-card">
+              <header class="utility-history-header"><div><span class="utility-card-kicker">Usage timeline</span><h2>Reading history</h2><p id="utilityHistorySummary">Your saved readings will appear here.</p></div><span class="utility-history-count" id="utilityHistoryCount">0 readings</span></header>
+              <div class="utility-filters" role="group" aria-label="Filter utility readings"><button type="button" class="is-active" data-utility-filter="all" aria-pressed="true">All</button><button type="button" data-utility-filter="electricity" aria-pressed="false"><svg aria-hidden="true"><use href="#icon-bolt"/></svg> Electricity</button><button type="button" data-utility-filter="water" aria-pressed="false"><svg aria-hidden="true"><use href="#icon-drop"/></svg> Water</button><button type="button" data-utility-filter="gas" aria-pressed="false"><svg aria-hidden="true"><use href="#icon-flame"/></svg> Gas</button></div>
+              <div id="utilityReadings" class="utility-reading-list" aria-live="polite"></div>
+            </article>
+          </div>
+        </section>
 
-        <section id="messagesView" class="portal-view" data-view="messages" aria-labelledby="messagesTitle" hidden><div class="section-heading"><div><p class="eyebrow">Private relay</p><h1 id="messagesTitle">Order messages</h1><p>Messages stay attached to the order. Direct customer and vendor contact details remain hidden.</p></div></div><article class="panel feature-panel message-panel"><label class="field"><span>Service order</span><select id="messageOrder"></select></label><div id="messageThread" class="message-thread" aria-live="polite"></div><form id="messageForm"><label class="field"><span>Message</span><textarea name="body" maxlength="3000" required placeholder="Ask a question about this service"></textarea></label><button class="button button--dark" type="submit">Send through SMPLfix</button></form></article></section>
+        <section id="messagesView" class="portal-view messages-view" data-view="messages" aria-labelledby="messagesTitle" hidden>
+          <div class="section-heading messages-page-heading"><div><h1 id="messagesTitle">Order messages</h1><p>Keep every service conversation organized with its order.</p></div><span class="message-team-status"><span aria-hidden="true"></span> SMPLfix team connected</span></div>
+          <div class="panel messages-workspace">
+            <div class="message-order-toolbar"><label class="field"><span>Select a service order</span><select id="messageOrder"></select></label><div><small>Private order conversation</small><strong>Messages are recorded with this order</strong></div></div>
+            <div class="message-workspace-grid">
+              <article class="message-conversation" aria-labelledby="messageConversationTitle">
+                <header class="message-conversation-header"><span class="message-conversation-icon" aria-hidden="true"><svg><use href="#icon-arrow"/></svg></span><div><small>Conversation</small><h2 id="messageConversationTitle">Order support</h2><p id="messageConversationMeta">Select an order to view its messages.</p></div></header>
+                <div id="messageThread" class="message-thread" aria-live="polite"></div>
+                <form id="messageForm" class="message-composer"><label class="visually-hidden" for="messageBody">Message</label><textarea id="messageBody" name="body" maxlength="3000" rows="4" required placeholder="Type your message about this order…"></textarea><div class="message-composer-footer"><span><strong id="messageCharacterCount">0</strong> / 3000</span><button class="button button--dark" type="submit"><svg aria-hidden="true"><use href="#icon-arrow"/></svg> Send message</button></div></form>
+              </article>
+              <aside class="message-order-context" aria-label="Selected order details"><div id="messageOrderContext"></div><div class="message-routing-note"><span aria-hidden="true"><svg><use href="#icon-check"/></svg></span><div><strong>Your message reaches the right team</strong><p>It is saved to the order notes and alerts SMPLfix support by email.</p></div></div><div class="message-privacy-note"><svg aria-hidden="true"><use href="#icon-alert"/></svg><p>For privacy, personal contact details are removed from relayed messages.</p></div></aside>
+            </div>
+          </div>
+        </section>
 
-        <section id="notificationsView" class="portal-view" data-view="notifications" aria-labelledby="notificationsTitle" hidden><div class="section-heading"><div><p class="eyebrow">Important updates</p><h1 id="notificationsTitle">Notifications</h1><p>Only useful service, scheduling, payment, and seasonal alerts.</p></div></div><div id="notificationList" class="transaction-list" aria-live="polite"></div></section>
+        <section id="notificationsView" class="portal-view" data-view="notifications" aria-labelledby="notificationsTitle" hidden><div class="section-heading"><div><h1 id="notificationsTitle">Notifications</h1><p>Only useful service, scheduling, payment, and seasonal alerts.</p></div></div><div id="notificationList" class="transaction-list" aria-live="polite"></div></section>
 
-        <section id="referralsView" class="portal-view" data-view="referrals" aria-labelledby="referralsTitle" hidden><div class="section-heading"><div><p class="eyebrow">Share SMPLfix</p><h1 id="referralsTitle">Referrals & rewards</h1><p>Invite people you trust and follow reward progress.</p></div></div><article class="panel referral-hero"><div><small>Your referral link</small><strong id="referralUrl">Loading…</strong></div><button id="copyReferralButton" class="button button--dark" type="button">Copy link</button></article><div id="referralSummary" class="metric-grid"></div><article class="panel feature-panel"><h2>Referral history</h2><div id="referralHistory" class="record-list"></div></article></section>
+        <section id="referralsView" class="portal-view" data-view="referrals" aria-labelledby="referralsTitle" hidden><div class="section-heading"><div><h1 id="referralsTitle">Referrals & rewards</h1><p>Invite people you trust and follow reward progress.</p></div></div><article class="panel referral-hero"><div><small>Your referral link</small><strong id="referralUrl">Loading…</strong></div><button id="copyReferralButton" class="button button--dark" type="button">Copy link</button></article><div id="referralSummary" class="metric-grid"></div><article class="panel feature-panel"><h2>Referral history</h2><div id="referralHistory" class="record-list"></div></article></section>
 
-        <section id="accountView" class="portal-view" data-view="account" aria-labelledby="accountTitle" hidden><div class="section-heading"><div><p class="eyebrow">Preferences</p><h1 id="accountTitle">Account settings</h1><p>Manage your details, notifications, and property access.</p></div></div><section class="panel feature-panel"><div class="panel-heading"><div><p class="eyebrow">You remain in control</p><h2>Real estate agent access</h2><p>Review or revoke property-scoped transaction access. Agents can never approve estimates or manage payment.</p></div></div><div id="agentAccessList" class="transaction-list" aria-live="polite"></div></section><form id="accountForm" class="panel feature-panel settings-form"><div class="form-grid"><label class="field"><span>Email</span><input id="accountEmail" disabled></label><label class="field"><span>Preferred name</span><input id="accountPreferredName" maxlength="80"></label><label class="field"><span>Phone</span><input id="accountPhone" maxlength="40" autocomplete="tel"></label><label class="field"><span>Timezone</span><input value="Arizona (no daylight saving)" disabled></label></div><fieldset><legend>Notification preferences</legend><div id="notificationPreferences" class="preference-grid"></div></fieldset><button class="button button--dark" type="submit">Save account settings</button></form></section>
+        <section id="accountView" class="portal-view account-view" data-view="account" aria-labelledby="accountTitle" hidden>
+          <div class="section-heading account-page-heading"><div><h1 id="accountTitle">Account settings</h1><p>Keep your contact details current and choose how SMPLfix keeps you informed.</p></div><span class="account-sync-pill"><svg aria-hidden="true"><use href="#icon-check"/></svg> Synced with CRM</span></div>
+          <form id="accountForm" class="panel settings-form account-profile-card">
+            <div class="account-card-header"><div><span class="account-card-kicker">Customer profile</span><h2>Profile information</h2><p>Your updates are shared securely with the SMPLfix service team.</p></div><div class="profile-completion" id="profileCompletionBadge" aria-live="polite"><strong>0%</strong><span>complete</span></div></div>
+            <div class="account-form-section">
+              <div class="account-section-heading"><span class="account-section-icon" aria-hidden="true"><svg><use href="#icon-user"/></svg></span><div><h3>Contact details</h3><p>How we identify and contact you about service.</p></div></div>
+              <div class="account-profile-grid">
+                <label class="field"><span>First name</span><input id="accountFirstName" maxlength="80" autocomplete="given-name" required></label>
+                <label class="field"><span>Last name</span><input id="accountLastName" maxlength="80" autocomplete="family-name" required></label>
+                <label class="field"><span>Preferred name <small>Optional</small></span><input id="accountPreferredName" maxlength="80" autocomplete="nickname" placeholder="What should we call you?"></label>
+                <label class="field"><span>Email address</span><div class="account-readonly-field"><input id="accountEmail" type="email" autocomplete="email" readonly aria-readonly="true"><span aria-hidden="true">Locked</span></div><small class="field-help">Contact support to change your sign-in email.</small></label>
+                <label class="field"><span>Phone number</span><input id="accountPhone" type="tel" maxlength="40" autocomplete="tel" placeholder="(602) 555-0123"></label>
+                <label class="field"><span>Timezone</span><div class="account-readonly-field"><input value="Arizona (no daylight saving)" readonly aria-readonly="true"><span aria-hidden="true">Fixed</span></div></label>
+              </div>
+            </div>
+            <div class="account-form-section">
+              <div class="account-section-heading"><span class="account-section-icon" aria-hidden="true"><svg><use href="#icon-home"/></svg></span><div><h3>Mailing address</h3><p>Used for customer records, invoices, and service communication.</p></div></div>
+              <div class="account-profile-grid account-address-grid">
+                <label class="field field--full"><span>Street address</span><input id="accountAddressLine1" maxlength="200" autocomplete="street-address" placeholder="123 Main Street"></label>
+                <label class="field"><span>City</span><input id="accountCity" maxlength="100" autocomplete="address-level2" placeholder="Phoenix"></label>
+                <label class="field"><span>State</span><input id="accountState" maxlength="50" autocomplete="address-level1" placeholder="AZ"></label>
+                <label class="field"><span>ZIP / postal code</span><input id="accountPostalCode" maxlength="20" autocomplete="postal-code" placeholder="85001"></label>
+              </div>
+            </div>
+            <div id="accountFormError" class="form-error account-form-error" role="alert" hidden></div>
+            <fieldset class="account-preferences"><legend>Notification preferences</legend><p>Choose which updates you want to receive. You can change these at any time.</p><div id="notificationPreferences" class="preference-grid"></div></fieldset>
+            <div class="account-form-actions"><span><svg aria-hidden="true"><use href="#icon-check"/></svg> Changes update your portal and CRM customer record.</span><button class="button button--dark" type="submit">Save profile and settings</button></div>
+          </form>
+          <section class="panel feature-panel account-access-card"><div class="panel-heading"><div><span class="account-card-kicker">Permissions</span><h2>Real estate agent access</h2><p>Review property-specific access granted for an active transaction.</p></div></div><div id="agentAccessList" class="transaction-list" aria-live="polite"></div><p class="account-access-note">Agents can view only the property information you authorize. They cannot approve estimates or manage payments.</p></section>
+        </section>
       </main>
     </div>
   </div>
 
-  <dialog class="portal-dialog request-dialog" id="addPropertyDialog" aria-labelledby="addPropertyTitle">
-    <form id="addPropertyForm">
-      <header class="dialog-header"><div><p class="eyebrow">Your portfolio</p><h2 id="addPropertyTitle">Add a property</h2></div><button class="icon-button dialog-close" type="button" data-close-dialog="addPropertyDialog" aria-label="Close add property"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></header>
+  <dialog class="portal-dialog request-dialog property-form-dialog" id="addPropertyDialog" aria-labelledby="addPropertyTitle">
+    <form id="addPropertyForm" enctype="multipart/form-data">
+      <header class="dialog-header"><div><h2 id="addPropertyTitle">Add a property</h2></div><button class="icon-button dialog-close" type="button" data-close-dialog="addPropertyDialog" aria-label="Close add property"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></header>
       <div class="dialog-body">
         <div class="form-grid">
           <label class="field"><span>Property label</span><input name="label" maxlength="120" placeholder="My home"></label>
@@ -283,6 +403,8 @@
           <label class="field"><span>ZIP / postal code *</span><input name="postalCode" maxlength="24" autocomplete="postal-code" required></label>
           <label class="field"><span>Country</span><input name="country" maxlength="80" value="US" autocomplete="country" required></label>
         </div>
+        <button class="property-details-toggle" type="button" data-expand-property-details="addPropertyExtendedDetails" aria-expanded="false"><span>＋</span> Add All Details</button>
+        <div id="addPropertyExtendedDetails" class="property-extended-details" hidden></div>
         <label class="field"><span><input type="checkbox" name="confirmAuthority" required> I own this property or am authorized to manage it.</span></label>
         <p>Adding an address does not transfer ownership or unlock an existing account. Conflicts require SMPLfix review.</p>
         <p id="addPropertyError" role="alert" hidden></p>
@@ -291,10 +413,47 @@
     </form>
   </dialog>
 
+  <dialog class="portal-dialog request-dialog property-form-dialog" id="editPropertyDialog" aria-labelledby="editPropertyTitle">
+    <form id="editPropertyForm" enctype="multipart/form-data">
+      <header class="dialog-header"><div><h2 id="editPropertyTitle">Edit property</h2><p>Keep the property name, type, and complete service address current.</p></div><button class="icon-button dialog-close" type="button" data-close-dialog="editPropertyDialog" aria-label="Close edit property"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></header>
+      <div class="dialog-body">
+        <div class="form-grid"><label class="field"><span>Property name</span><input name="label" maxlength="120" required></label><label class="field"><span>Property type</span><select name="propertyType"><option value="">Select type</option><option>Single-family home</option><option>Condo</option><option>Townhouse</option><option>Other</option></select></label></div>
+        <label class="field"><span>Street address</span><input name="addressLine1" maxlength="240" autocomplete="address-line1" required></label>
+        <label class="field"><span>Unit, suite, or building</span><input name="addressLine2" maxlength="240" autocomplete="address-line2"></label>
+        <div class="form-grid"><label class="field"><span>City</span><input name="city" maxlength="120" autocomplete="address-level2" required></label><label class="field"><span>State</span><input name="state" maxlength="80" autocomplete="address-level1" required></label></div>
+        <div class="form-grid"><label class="field"><span>ZIP code</span><input name="postalCode" maxlength="24" autocomplete="postal-code" required></label><label class="field"><span>Country</span><input name="country" maxlength="80" value="US" autocomplete="country-name" required></label></div>
+        <button class="property-details-toggle" type="button" data-expand-property-details="editPropertyExtendedDetails" aria-expanded="false"><span>＋</span> Add All Details</button>
+        <div id="editPropertyExtendedDetails" class="property-extended-details" hidden></div>
+        <label class="field"><span><input type="checkbox" name="confirmAuthority" required> I own this property or am authorized to manage it.</span></label>
+        <div class="form-error" id="editPropertyError" role="alert" hidden></div>
+      </div>
+      <footer class="dialog-footer"><button class="button" type="button" data-close-dialog="editPropertyDialog">Cancel</button><button class="button button--dark" id="updatePropertyButton" type="submit">Save changes</button></footer>
+    </form>
+  </dialog>
+
+  <template id="propertyExtendedDetailsTemplate">
+    <section class="property-form-section"><header><span>1</span><div><h3>Property Details</h3><p>Physical characteristics and general description.</p></div></header><div class="property-form-fields">
+      <div class="form-grid"><label class="field"><span>Property subtype</span><input name="propertySubtype" maxlength="100" placeholder="Ranch, duplex, high-rise…"></label><label class="field"><span>Property title</span><input name="propertyTitle" maxlength="160"></label></div>
+      <label class="field"><span>Property description</span><textarea name="propertyDescription" maxlength="3000" rows="3"></textarea></label>
+      <div class="property-number-grid"><label class="field"><span>Year built</span><input name="yearBuilt" type="number" min="1700" max="2200"></label><label class="field"><span>Bedrooms</span><input name="bedrooms" type="number" min="0" max="100" step="1"></label><label class="field"><span>Full bathrooms</span><input name="fullBathrooms" type="number" min="0" max="100" step="1"></label><label class="field"><span>Half bathrooms</span><input name="halfBathrooms" type="number" min="0" max="100" step="1"></label></div>
+      <div class="property-number-grid"><label class="field"><span>Living area (sq ft)</span><input name="livingAreaSqFt" type="number" min="0" step="1"></label><label class="field"><span>Lot size</span><input name="lotSize" type="number" min="0" step="0.01"></label><label class="field"><span>Lot unit</span><select name="lotSizeUnit"><option value="sq_ft">Square feet</option><option value="acres">Acres</option></select></label><label class="field"><span>Stories</span><input name="stories" type="number" min="0" step="0.5"></label></div>
+      <div class="form-grid"><label class="field"><span>Garage spaces</span><input name="garageSpaces" type="number" min="0" step="1"></label><label class="field"><span>Parking spaces</span><input name="parkingSpaces" type="number" min="0" step="1"></label></div><label class="field"><span>Property condition</span><select name="propertyCondition"><option value="">Select condition</option><option>Excellent</option><option>Good</option><option>Fair</option><option>Needs renovation</option><option>Under construction</option></select></label>
+    </div></section>
+    <section class="property-form-section"><header><span>2</span><div><h3>Property Address</h3><p>Parcel and map information beyond the service address.</p></div></header><div class="property-form-fields"><div class="form-grid"><label class="field"><span>County</span><input name="county" maxlength="120"></label><label class="field"><span>APN / Parcel number</span><input name="parcelNumber" maxlength="120"></label></div><div class="form-grid"><label class="field"><span>Map latitude</span><input name="latitude" type="number" min="-90" max="90" step="any"></label><label class="field"><span>Map longitude</span><input name="longitude" type="number" min="-180" max="180" step="any"></label></div></div></section>
+    <section class="property-form-section"><header><span>3</span><div><h3>Interior Features</h3><p>Finishes, systems, and interior spaces.</p></div></header><div class="property-form-fields"><div class="form-grid"><label class="field"><span>Flooring</span><input name="interiorFlooring" maxlength="500"></label><label class="field"><span>Kitchen</span><input name="interiorKitchen" maxlength="1000"></label><label class="field"><span>Appliances</span><input name="interiorAppliances" maxlength="1000"></label><label class="field"><span>Heating</span><input name="interiorHeating" maxlength="500"></label><label class="field"><span>Cooling / AC</span><input name="interiorCooling" maxlength="500"></label><label class="field"><span>Fireplace</span><input name="interiorFireplace" maxlength="500"></label><label class="field"><span>Laundry</span><input name="interiorLaundry" maxlength="500"></label><label class="field"><span>Basement</span><input name="interiorBasement" maxlength="500"></label><label class="field"><span>Attic</span><input name="interiorAttic" maxlength="500"></label><label class="field"><span>Furnishing</span><select name="interiorFurnishing"><option value="">Not specified</option><option value="furnished">Furnished</option><option value="unfurnished">Unfurnished</option><option value="partially_furnished">Partially furnished</option></select></label></div></div></section>
+    <section class="property-form-section"><header><span>4</span><div><h3>Exterior Features</h3><p>Exterior construction and outdoor amenities.</p></div></header><div class="property-form-fields"><div class="form-grid"><label class="field"><span>Exterior type</span><input name="exteriorType" maxlength="500"></label><label class="field"><span>Roof type</span><input name="roofType" maxlength="500"></label><label class="field"><span>Garage</span><input name="exteriorGarage" maxlength="500"></label><label class="field"><span>Driveway</span><input name="driveway" maxlength="500"></label><label class="field"><span>Yard</span><input name="yard" maxlength="500"></label><label class="field"><span>Patio / Deck</span><input name="patioDeck" maxlength="500"></label><label class="field"><span>Balcony</span><input name="balcony" maxlength="500"></label><label class="field"><span>Pool</span><input name="pool" maxlength="500"></label><label class="field"><span>Fence</span><input name="fence" maxlength="500"></label><label class="field"><span>Landscaping</span><input name="landscaping" maxlength="1000"></label></div></div></section>
+    <section class="property-form-section"><header><span>5</span><div><h3>Utilities</h3><p>Available services, providers, and major equipment.</p></div></header><div class="property-form-fields"><div class="form-grid"><label class="field"><span>Electricity</span><input name="utilityElectricity" maxlength="200" placeholder="Provider or availability"></label><label class="field"><span>Gas</span><input name="utilityGas" maxlength="200"></label><label class="field"><span>Water</span><input name="utilityWater" maxlength="200"></label><label class="field"><span>Sewer / Septic</span><input name="utilitySewerSeptic" maxlength="200"></label><label class="field"><span>Internet</span><input name="utilityInternet" maxlength="200"></label><label class="field"><span>Solar</span><input name="utilitySolar" maxlength="500"></label><label class="field"><span>Water heater</span><input name="utilityWaterHeater" maxlength="500"></label></div></div></section>
+    <section class="property-form-section"><header><span>6</span><div><h3>HOA</h3><p>Association membership, fees, and contact details.</p></div></header><div class="property-form-fields"><label class="check-label"><input name="hasHoa" type="checkbox"><span>This property has an HOA</span></label><div class="form-grid"><label class="field"><span>HOA name</span><input name="hoaName" maxlength="200"></label><label class="field"><span>HOA fee</span><input name="hoaFee" type="number" min="0" step="0.01"></label><label class="field"><span>Fee frequency</span><select name="hoaFrequency"><option value="">Not specified</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Semiannual</option><option value="annual">Annual</option></select></label><label class="field"><span>HOA website / contact</span><input name="hoaWebsiteContact" maxlength="1000"></label></div></div></section>
+    <section class="property-form-section"><header><span>7</span><div><h3>Photos &amp; Media</h3><p>Upload property visuals and link a virtual tour.</p></div></header><div class="property-form-fields"><div class="property-upload-grid"><label class="upload-field"><span><strong>Cover photo</strong><small>JPG, PNG, or WebP</small></span><input name="coverPhoto" type="file" accept="image/jpeg,image/png,image/webp" data-property-upload-category="cover_photo" data-property-upload-title="Cover photo"></label><label class="upload-field"><span><strong>Property photos</strong><small>Select multiple images</small></span><input name="propertyPhotos" type="file" multiple accept="image/jpeg,image/png,image/webp" data-property-upload-category="property_photo" data-property-upload-title="Property photo"></label><label class="upload-field"><span><strong>Floor plan</strong><small>PDF or image</small></span><input name="floorPlan" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="floor_plan" data-property-upload-title="Floor plan"></label><label class="upload-field"><span><strong>Property video</strong><small>MP4 · up to 50 MB</small></span><input name="propertyVideo" type="file" accept="video/mp4" data-property-upload-category="property_video" data-property-upload-title="Property video"></label></div><label class="field"><span>Virtual tour URL</span><input name="virtualTourUrl" type="url" maxlength="1000" placeholder="https://"></label></div></section>
+    <section class="property-form-section"><header><span>8</span><div><h3>Important Documents</h3><p>Securely store ownership and property records.</p></div></header><div class="property-form-fields"><div class="property-upload-grid"><label class="upload-field"><span><strong>Deed / Proof of ownership</strong><small>PDF or image</small></span><input name="deedDocument" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="deed" data-property-upload-title="Deed / Proof of ownership"></label><label class="upload-field"><span><strong>Property tax record</strong><small>PDF or image</small></span><input name="taxRecordDocument" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="tax_record" data-property-upload-title="Property tax record"></label><label class="upload-field"><span><strong>Survey</strong><small>PDF or image</small></span><input name="surveyDocument" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="survey" data-property-upload-title="Survey"></label><label class="upload-field"><span><strong>Home inspection report</strong><small>PDF or image</small></span><input name="inspectionDocument" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="inspection" data-property-upload-title="Home inspection report"></label><label class="upload-field"><span><strong>Property disclosure</strong><small>PDF or image</small></span><input name="disclosureDocument" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="disclosure" data-property-upload-title="Property disclosure"></label><label class="upload-field"><span><strong>HOA documents</strong><small>PDF or image</small></span><input name="hoaDocument" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="hoa" data-property-upload-title="HOA documents"></label><label class="upload-field"><span><strong>Other documents</strong><small>Select multiple files</small></span><input name="otherDocuments" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="other" data-property-upload-title="Property document"></label></div></div></section>
+    <section class="property-form-section"><header><span>9</span><div><h3>Owner Information</h3><p>Property ownership and mailing contact.</p></div></header><div class="property-form-fields"><div class="form-grid"><label class="field"><span>Owner name</span><input name="ownerName" maxlength="200" autocomplete="name"></label><label class="field"><span>Email</span><input name="ownerEmail" type="email" maxlength="320" autocomplete="email"></label><label class="field"><span>Phone</span><input name="ownerPhone" maxlength="60" autocomplete="tel"></label><label class="field"><span>Owner type</span><select name="ownerType"><option value="">Select type</option><option value="individual">Individual</option><option value="joint_owner">Joint owner</option><option value="llc">LLC</option><option value="trust">Trust</option><option value="other">Other</option></select></label></div><label class="field"><span>Mailing address</span><textarea name="ownerMailingAddress" maxlength="1000" rows="2"></textarea></label></div></section>
+    <section class="property-form-section"><header><span>10</span><div><h3>Verification</h3><p>Ownership proof is reviewed by SMPLfix.</p></div></header><div class="property-form-fields"><label class="upload-field"><span><strong>Proof of ownership</strong><small>PDF or image · securely reviewed</small></span><input name="ownershipProof" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-property-upload-category="proof_of_ownership" data-property-upload-title="Proof of ownership"></label><label class="field"><span>Ownership verification status</span><input name="ownershipVerificationStatus" value="Unverified — upload proof for review" disabled></label><label class="check-label"><input name="ownerDeclaration" type="checkbox"><span>I declare that the ownership information provided is accurate.</span></label></div></section>
+  </template>
+
   <dialog class="portal-dialog request-dialog" id="requestDialog" aria-labelledby="requestDialogTitle">
     <form id="requestForm" enctype="multipart/form-data">
       <header class="dialog-header">
-        <div><p class="eyebrow" id="requestDialogEyebrow">New service request</p><h2 id="requestDialogTitle">What can we fix?</h2><p id="requestDialogDescription">Tell us what you need and when works best.</p></div>
+        <div><h2 id="requestDialogTitle">What can we fix?</h2><p id="requestDialogDescription">Tell us what you need and when works best.</p></div>
         <button class="icon-button dialog-close" type="button" data-close-dialog="requestDialog" aria-label="Close request form"><svg aria-hidden="true"><use href="#icon-close"/></svg></button>
       </header>
       <div class="dialog-body">
@@ -323,7 +482,7 @@
 
   <dialog class="portal-dialog action-dialog" id="orderActionDialog" aria-labelledby="orderActionTitle">
     <form id="orderActionForm">
-      <header class="dialog-header"><div><p class="eyebrow">Order update</p><h2 id="orderActionTitle">Request an update</h2><p id="orderActionDescription"></p></div><button class="icon-button dialog-close" type="button" data-close-dialog="orderActionDialog" aria-label="Close order update"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></header>
+      <header class="dialog-header"><div><h2 id="orderActionTitle">Request an update</h2><p id="orderActionDescription"></p></div><button class="icon-button dialog-close" type="button" data-close-dialog="orderActionDialog" aria-label="Close order update"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></header>
       <div class="dialog-body">
         <label class="field" id="actionTimingField"><span>Preferred timing</span><input id="actionPreferredTiming" name="preferredTiming" maxlength="500"></label>
         <label class="field"><span id="actionReasonLabel">Reason</span><textarea id="actionReason" name="reason" rows="3" maxlength="1000" required></textarea></label>
@@ -334,7 +493,7 @@
   </dialog>
 
   <dialog class="portal-dialog transaction-dialog" id="estimateDialog" aria-labelledby="estimateDialogTitle">
-    <div class="dialog-header"><div><p class="eyebrow">Estimate details</p><h2 id="estimateDialogTitle">Estimate</h2><p id="estimateDialogReference"></p></div><button class="icon-button dialog-close" type="button" data-close-dialog="estimateDialog" aria-label="Close estimate"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></div>
+    <div class="dialog-header"><div><h2 id="estimateDialogTitle">Estimate</h2><p id="estimateDialogReference"></p></div><button class="icon-button dialog-close" type="button" data-close-dialog="estimateDialog" aria-label="Close estimate"><svg aria-hidden="true"><use href="#icon-close"/></svg></button></div>
     <div class="dialog-body" id="estimateDialogBody"></div>
     <form id="estimateDecisionForm" class="decision-form">
       <div class="dialog-body decision-fields">
@@ -350,17 +509,31 @@
 
   <dialog class="portal-dialog transaction-dialog job-detail-dialog" id="jobDialog" aria-labelledby="jobDialogTitle">
     <div class="dialog-header job-dialog-header">
-      <div class="job-dialog-heading"><span class="job-dialog-mark" aria-hidden="true"><svg><use href="#icon-wrench"/></svg></span><div><p class="eyebrow">Service details</p><h2 id="jobDialogTitle">Job</h2><p id="jobDialogReference"></p></div></div>
+      <div class="job-dialog-heading"><span class="job-dialog-mark" aria-hidden="true"><svg><use href="#icon-wrench"/></svg></span><div><h2 id="jobDialogTitle">Job</h2><p id="jobDialogReference"></p></div></div>
       <button class="icon-button dialog-close" type="button" data-close-dialog="jobDialog" aria-label="Close job details"><svg aria-hidden="true"><use href="#icon-close"/></svg></button>
     </div>
     <div class="dialog-body" id="jobDialogBody"></div>
   </dialog>
 
+  <dialog class="portal-dialog transaction-dialog invoice-detail-dialog" id="invoiceDialog" aria-labelledby="invoiceDialogTitle">
+    <div class="dialog-header invoice-dialog-header">
+      <div class="job-dialog-heading"><span class="job-dialog-mark" aria-hidden="true"><svg><use href="#icon-file"/></svg></span><div><span class="invoice-dialog-kicker">Invoice details</span><h2 id="invoiceDialogTitle">Invoice</h2><p id="invoiceDialogReference"></p></div></div>
+      <button class="icon-button dialog-close" type="button" data-close-dialog="invoiceDialog" aria-label="Close invoice details"><svg aria-hidden="true"><use href="#icon-close"/></svg></button>
+    </div>
+    <div class="dialog-body" id="invoiceDialogBody"></div>
+    <div class="dialog-footer invoice-dialog-footer">
+      <button class="button" type="button" data-close-dialog="invoiceDialog">Close</button>
+      <a class="button" id="invoiceDialogPdf" target="_blank" rel="noopener">Invoice PDF</a>
+      <a class="button" id="invoiceDialogReceipt" target="_blank" rel="noopener" hidden>Receipt PDF</a>
+      <button class="button button--dark" id="payInvoiceButton" type="button">Pay securely</button>
+    </div>
+  </dialog>
+
   <div class="toast" id="portalToast" role="status" aria-live="polite" hidden></div>
   <div id="routeStatus" class="visually-hidden" role="status" aria-live="polite"></div>
 
-  <script src="/assets/js/api-service.js?v=20260916-csrf-refresh"></script>
-  <script src="/assets/js/residential-portal.js?v=20260922-service-details"></script>
-  <script src="/assets/js/residential-features.js?v=20260904-residential-features"></script>
+  <script src="/assets/js/api-service.js?v=20261011-invoice-checkout"></script>
+  <script src="/assets/js/residential-portal.js?v=20261011-invoice-dialog-close-fix"></script>
+  <script src="/assets/js/residential-features.js?v=20261010-autopilot-confirm-work"></script>
 </body>
 </html>

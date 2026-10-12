@@ -70,6 +70,29 @@ test('contractor identity comes from Vendor records and private pricing never re
   assert.equal(invoice.receiptPdfUrl.startsWith('/api/residential/payments/'), true);
 });
 
+test('invoice checkout is residential-owned, billing-authorized, provider-hosted, and amount verified', () => {
+  const route = read('backend/routes/residential.js');
+  const provider = read('backend/utils/paymentProvider.js');
+  const api = read('assets/js/api-service.js');
+  assert.match(route, /async function authorizedInvoice/);
+  assert.match(route, /activeMembershipFilter\(req\.user\.userId\)/);
+  assert.match(route, /'permissions\.manageBilling': true/);
+  assert.match(route, /membership\.relationship === 'agent'/);
+  assert.match(route, /router\.post\('\/invoices\/:invoiceId\/checkout-session'/);
+  assert.match(route, /router\.post\('\/invoices\/:invoiceId\/confirm-payment'/);
+  assert.match(route, /session\.payment_status !== 'paid'/);
+  assert.match(route, /Number\(session\.amount_total\) !== expectedCents/);
+  assert.match(route, /String\(session\.currency \|\| ''\)\.toLowerCase\(\) !== 'usd'/);
+  assert.match(provider, /mode: 'payment'/);
+  assert.match(provider, /success_url:.*CHECKOUT_SESSION_ID/);
+  assert.match(provider, /metadata\[smplfix_invoice_id\]/);
+  assert.match(provider, /Idempotency-Key/);
+  assert.match(provider, /residential-invoice-/);
+  assert.match(api, /createResidentialInvoiceCheckout/);
+  assert.match(api, /confirmResidentialInvoicePayment/);
+  assert.doesNotMatch(route + provider, /cardNumber|card_number|securityCode/i);
+});
+
 test('estimate decisions are client-only, membership-authorized, and current-state constrained', () => {
   const route = read('backend/routes/residential.js');
   const section = route.slice(route.indexOf("router.post('/estimates/:quoteId/decision'"), route.indexOf("router.get('/billing'"));
@@ -115,7 +138,7 @@ test('transactional portal UI includes estimates, job tracking, completion evide
   const html = read('pages/residential-portal.html');
   const client = read('assets/js/residential-portal.js');
   const css = read('assets/css/residential-portal.css');
-  for (const id of ['estimatesView', 'estimatesPageList', 'invoicesView', 'invoiceList', 'billingView', 'paymentMethodList', 'estimateDialog', 'estimateDecisionForm', 'jobDialog']) {
+  for (const id of ['estimatesView', 'estimatesPageList', 'invoicesView', 'invoiceList', 'billingView', 'paymentMethodList', 'estimateDialog', 'estimateDecisionForm', 'jobDialog', 'invoiceDialog', 'invoiceDialogBody', 'payInvoiceButton']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing ${id}`);
   }
   assert.match(client, /decideResidentialEstimate/);
@@ -128,12 +151,52 @@ test('transactional portal UI includes estimates, job tracking, completion evide
   assert.match(client, /completion\.beforePhotos/);
   assert.match(client, /completion\.afterPhotos/);
   assert.match(client, /invoice\.receiptPdfUrl/);
+  assert.match(client, /data-invoice-detail/);
+  assert.match(client, /Pay securely/);
+  assert.match(client, /confirmReturnedInvoicePayment/);
+  assert.match(client, /invoiceDialog\.querySelectorAll\('\[data-close-dialog="invoiceDialog"\]'\)/);
+  assert.match(client, /invoiceDialog\.addEventListener\('cancel'/);
+  assert.match(client, /event\.target === elements\.invoiceDialog/);
   assert.match(client, /createResidentialCardSetupSession/);
   assert.match(client, /checkout\|billing/);
   assert.match(client, /stripe\\\.com/);
   assert.match(css, /\.workflow-tracker/);
   assert.match(css, /\.job-detail-dialog/);
   assert.match(css, /\.job-summary/);
-  assert.match(css, /repeat\(9, 76px\)/);
+  assert.match(css, /repeat\(10, 76px\)/);
   assert.match(css, /\.completion-photos/);
+  assert.match(css, /\.invoice-detail-dialog/);
+  assert.match(css, /\.invoice-detail-dialog\[open\]\s*\{[^}]*display:\s*grid/);
+  assert.match(css, /\.invoice-detail-dialog:not\(\[open\]\)\s*\{[^}]*display:\s*none/);
+  assert.match(css, /\.invoice-amount-hero/);
+});
+
+test('property portfolio exposes an editable, complete property management record', () => {
+  const html = read('pages/residential-portal.html');
+  const client = read('assets/js/residential-portal.js');
+  const api = read('assets/js/api-service.js');
+  const route = read('backend/routes/residential.js');
+  const css = read('assets/css/residential-portal.css');
+  for (const id of [
+    'editPropertyButton', 'editPropertyDialog', 'propertyCoreDetails', 'propertyRequestsList', 'propertyJobsList',
+    'propertyAppointmentsList', 'serviceHistoryList', 'propertyCompletionPhotos', 'propertyServiceNotes',
+    'propertyInvoicesList', 'propertyDocumentsList', 'propertyMaintenanceList', 'propertyUtilitiesList',
+    'propertyAutopilotSummary'
+  ]) assert.match(html, new RegExp(`id="${id}"`), `missing ${id}`);
+  assert.match(api, /updateResidentialProperty\(propertyId, payload\)/);
+  assert.match(route, /router\.patch\('\/properties\/:propertyId', actionLimiter/);
+  assert.match(route, /permissions\?\.manageProperty !== true/);
+  assert.match(route, /residential_property_updated/);
+  assert.match(client, /getResidentialPassport\(propertyId\)/);
+  assert.match(client, /getResidentialMaintenance\(propertyId\)/);
+  assert.match(client, /getResidentialUtilities\(propertyId\)/);
+  assert.match(client, /getResidentialAutopilot\(propertyId\)/);
+  assert.match(client, /completion\?\.beforePhotos/);
+  assert.match(client, /completion\?\.afterPhotos/);
+  assert.match(html, /property-record-panel--wide property-profile-panel/);
+  assert.match(client, /providedFacts/);
+  assert.match(client, /\['Not provided', 'Date pending'\]/);
+  assert.match(css, /\.property-record-grid/);
+  assert.match(css, /\.property-profile-panel \.property-fact-grid/);
+  assert.match(css, /\.property-photo-grid/);
 });

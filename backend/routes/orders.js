@@ -2,13 +2,17 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
+const Notification = require('../models/Notification');
+const PropertyMembership = require('../models/PropertyMembership');
+const ResidentialMessage = require('../models/ResidentialMessage');
 const Vendor = require('../models/Vendor');
 const authenticateToken = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 const memCache = require('../utils/memoryCache');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const { startOfMonthMDT, dateInputToMDT } = require('../utils/timezone');
-const { seedInitialNote, stripNotesFromUpdate } = require('../utils/notes');
+const { buildNote, seedInitialNote, stripNotesFromUpdate, syncLegacyNotes } = require('../utils/notes');
+const { redactContact } = require('../utils/agentSerializers');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
@@ -277,6 +281,35 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get single order
+router.post('/:id/messages', authenticateToken, checkRole(['admin', 'manager', 'account_rep']), async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ message: 'Invalid order id' });
+  const body = String(req.body?.body || '').trim().slice(0, 3000);
+  if (!body) return res.status(400).json({ message: 'Reply text is required' });
+  const safeBody = redactContact(body);
+  const session = await mongoose.startSession();
+  try {
+    let message;
+    let order;
+    await session.withTransaction(async () => {
+      order = await Order.findById(req.params.id).session(session);
+      if (!order) throw Object.assign(new Error('Order not found'), { status: 404 });
+      if (!order.propertyId || !order.customerId) throw Object.assign(new Error('This order is not connected to a residential conversation'), { status: 409 });
+      [message] = await ResidentialMessage.create([{ orderId: order._id, propertyId: order.propertyId, customerId: order.customerId, senderUserId: req.user.userId, senderType: 'staff', body: safeBody }], { session });
+      order.notesHistory.push(buildNote(`SMPLfix reply to customer:\n${safeBody}`, req));
+      syncLegacyNotes(order);
+      const memberships = await PropertyMembership.find({ propertyId: order.propertyId, customerId: order.customerId, relationship: 'owner', status: 'active', 'permissions.view': true }).select('userId').session(session).lean();
+      await Promise.all([
+        order.save({ session }),
+        memberships.length ? Notification.insertMany(memberships.map(item => ({ userId: item.userId, title: 'New reply from SMPLfix', message: `The SMPLfix team replied on ${order.requestReference || order.orderId}.`, type: 'order', priority: 'medium', actionUrl: '#messages', metadata: { orderId: order._id, propertyId: order.propertyId } })), { session }) : Promise.resolve()
+      ]);
+    });
+    res.status(201).json({ message: { id: String(message._id), sender: 'SMPLfix team', body: message.body, createdAt: message.createdAt }, notesHistory: order.notesHistory, notes: order.notes });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ message: error.message });
+    next(error);
+  } finally { await session.endSession(); }
+});
+
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const existingOrder = await Order.findById(req.params.id).select('documents');

@@ -92,6 +92,19 @@ function serializeProperty(property, membership) {
       country: item.country
     },
     propertyType: item.propertyType,
+    details: item.details,
+    addressDetails: item.addressDetails,
+    interior: item.interior,
+    exterior: item.exterior,
+    utilities: item.utilities,
+    hoa: item.hoa,
+    media: item.media,
+    ownerInformation: item.ownerInformation,
+    ownershipVerification: item.ownershipVerification ? {
+      status: item.ownershipVerification.status,
+      declarationConfirmed: item.ownershipVerification.declarationConfirmed === true,
+      declarationConfirmedAt: item.ownershipVerification.declarationConfirmedAt
+    } : undefined,
     status: item.status,
     relationship: relation.relationship,
     permissions: relation.permissions ? {
@@ -271,6 +284,10 @@ function serializeInvoice(invoice, payment, vendor) {
       phone: item.companySnapshot.phone,
       address: item.companySnapshot.address,
       rocNumber: item.companySnapshot.rocNumber || item.companySnapshot.licenseNumber
+    } : undefined,
+    customer: item.customerSnapshot ? {
+      name: item.customerSnapshot.name,
+      address: item.customerSnapshot.address
     } : undefined,
     job: item.jobSnapshot ? {
       requestReference: item.jobSnapshot.requestReference,

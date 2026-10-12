@@ -141,6 +141,8 @@ class DashboardManager {
                     loadSettingsSection();
                 } else if (targetSection === 'pipeline') {
                     loadPipelineSection();
+                } else if (targetSection === 'autopilot-plans') {
+                    window.loadAutopilotPlans?.();
                 } else if (targetSection === 'accounting') {
                     loadAccountingSection();
                 } else if (targetSection === 'users') {
@@ -6318,6 +6320,7 @@ function renderNotesManager(entity, recordId, record, textareaId) {
             (note.createdBy && currentUserId && String(note.createdBy) === String(currentUserId)) ||
             (note.createdByEmail && currentUserEmail && String(note.createdByEmail) === String(currentUserEmail))
         );
+        const canReply = entity === 'orders' && Boolean(recordId && noteId) && /^Customer portal message:/i.test(String(note.text || ''));
         const latestEdit = Array.isArray(note.edits) && note.edits.length ? note.edits[note.edits.length - 1] : null;
         const audit = latestEdit
             ? `<div class="note-audit">(${escapePaymentHtml(latestEdit.editedByName || 'Unknown User')}) edited this note on ${escapePaymentHtml(formatArizonaNoteDate(latestEdit.editedAt, true))}</div>`
@@ -6330,14 +6333,15 @@ function renderNotesManager(entity, recordId, record, textareaId) {
                 </div>
                 <p>${escapePaymentHtml(note.text || '')}</p>
                 ${audit}
-                ${canManage ? `
+                ${canManage || canReply ? `
                     <div class="note-entry-actions">
-                        <button type="button" class="note-action-btn" onclick="editNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
+                        ${canReply ? `<button type="button" class="note-action-btn note-reply-btn" onclick="replyToCustomerMessage('${recordId}', '${noteId}', '${textareaId}')"><i class="fas fa-reply" aria-hidden="true"></i> Reply to customer</button>` : ''}
+                        ${canManage ? `<button type="button" class="note-action-btn" onclick="editNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
                             <i class="fas fa-pen"></i> Edit
                         </button>
                         <button type="button" class="note-action-btn danger" onclick="deleteNoteEntry('${entity}', '${recordId}', '${noteId}', '${textareaId}')">
                             <i class="fas fa-trash"></i> Delete
-                        </button>
+                        </button>` : ''}
                     </div>
                 ` : ''}
             </article>
@@ -6375,6 +6379,50 @@ async function addNoteEntry(entity, recordId, textareaId) {
             : `Saved the record, but the note could not be added: ${error.message}`;
         showToast(message, 'warning');
         return null;
+    }
+}
+
+function openOrderMessageReplyModal(originalText) {
+    return new Promise((resolve) => {
+        document.querySelector('.note-reply-modal-overlay')?.remove();
+        const originalMessage = String(originalText || '').replace(/^Customer portal message:\s*/i, '').trim();
+        const modal = document.createElement('div');
+        modal.className = 'note-edit-modal-overlay note-reply-modal-overlay show';
+        modal.innerHTML = `
+            <div class="note-edit-modal note-reply-modal" role="dialog" aria-modal="true" aria-labelledby="noteReplyTitle">
+                <div class="note-edit-header"><div><span class="note-reply-kicker">Order conversation</span><h3 id="noteReplyTitle">Reply to customer</h3></div><button type="button" class="note-edit-close" aria-label="Close reply"><i class="fas fa-times" aria-hidden="true"></i></button></div>
+                <div class="note-edit-body"><div class="note-reply-context"><span>Customer message</span><p>${escapePaymentHtml(originalMessage)}</p></div><label for="noteReplyText">Your reply</label><textarea id="noteReplyText" rows="6" maxlength="3000" autocomplete="off" placeholder="Write a clear update for the customer…"></textarea><div class="note-edit-error" role="alert"></div><p class="note-reply-delivery"><i class="fas fa-bell" aria-hidden="true"></i> The reply will appear in the customer portal and notify the homeowner.</p></div>
+                <div class="note-edit-footer"><button type="button" class="note-edit-cancel">Cancel</button><button type="button" class="note-edit-save"><i class="fas fa-reply" aria-hidden="true"></i> Send reply</button></div>
+            </div>`;
+        document.body.appendChild(modal);
+        const textarea = modal.querySelector('#noteReplyText');
+        const finish = value => { closeNoteEditModal(modal); resolve(value); };
+        modal.querySelector('.note-edit-close').addEventListener('click', () => finish(null));
+        modal.querySelector('.note-edit-cancel').addEventListener('click', () => finish(null));
+        modal.addEventListener('click', event => { if (event.target === modal) finish(null); });
+        modal.querySelector('.note-edit-save').addEventListener('click', () => {
+            const value = textarea.value.trim();
+            if (!value) { modal.querySelector('.note-edit-error').textContent = 'Enter a reply before sending.'; textarea.focus(); return; }
+            finish(value);
+        });
+        textarea.addEventListener('input', () => { modal.querySelector('.note-edit-error').textContent = ''; });
+        setTimeout(() => textarea.focus(), 0);
+    });
+}
+
+async function replyToCustomerMessage(orderId, noteId, textareaId) {
+    try {
+        const order = await window.APIService.getOrder(orderId);
+        const note = (order.notesHistory || []).find(item => String(item._id) === String(noteId));
+        if (!note || !/^Customer portal message:/i.test(String(note.text || ''))) throw new Error('The customer message could not be found.');
+        const reply = await openOrderMessageReplyModal(note.text);
+        if (!reply) return;
+        const result = await window.APIService.replyToOrderMessage(orderId, reply);
+        renderNotesManager('orders', orderId, result, textareaId);
+        showToast('Reply sent to the customer portal.', 'success');
+    } catch (error) {
+        console.error('Customer reply failed:', error);
+        showToast(error.message || 'The reply could not be sent.', 'error');
     }
 }
 
@@ -9299,9 +9347,11 @@ async function showCustomerProfile(customerId) {
         // Display all addresses
         const addressElement = document.getElementById('profileAddress');
         if (profileData.customer.addresses && profileData.customer.addresses.length > 0) {
-            addressElement.innerHTML = profileData.customer.addresses.map((addr, index) => 
-                `<span class="customer-profile-value-line"><strong>${escapePaymentHtml(addr.label || 'Address ' + (index + 1))}</strong>${escapePaymentHtml(addr.address || '-')}</span>`
-            ).join('');
+            addressElement.innerHTML = profileData.customer.addresses.map((addr, index) => {
+                const locality = [addr.city, [addr.state, addr.zipCode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                const fullAddress = [addr.address, locality].filter(Boolean).join(', ');
+                return `<span class="customer-profile-value-line"><strong>${escapePaymentHtml(addr.label || 'Address ' + (index + 1))}</strong>${escapePaymentHtml(fullAddress || '-')}</span>`;
+            }).join('');
         } else {
             addressElement.textContent = profileData.customer.address || '-';
         }

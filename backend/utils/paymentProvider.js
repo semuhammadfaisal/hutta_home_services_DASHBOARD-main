@@ -7,10 +7,10 @@ function isConfigured() {
 }
 
 function assertConfigured() {
-  if (!isConfigured()) throw Object.assign(new Error('Saved-card management is not configured yet'), { status: 503 });
+  if (!isConfigured()) throw Object.assign(new Error('Secure payments are not configured yet'), { status: 503 });
 }
 
-async function stripeRequest(path, parameters = {}, method = 'POST') {
+async function stripeRequest(path, parameters = {}, method = 'POST', options = {}) {
   assertConfigured();
   const body = new URLSearchParams();
   Object.entries(parameters).forEach(([key, value]) => {
@@ -20,7 +20,8 @@ async function stripeRequest(path, parameters = {}, method = 'POST') {
     method,
     headers: {
       Authorization: `Basic ${Buffer.from(`${process.env.STRIPE_SECRET_KEY}:`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded',
+      ...(options.idempotencyKey ? { 'Idempotency-Key': String(options.idempotencyKey).slice(0, 255) } : {})
     },
     body: method === 'GET' ? undefined : body
   });
@@ -90,11 +91,48 @@ async function createBillingPortalSession(customer) {
   return { url: session.url };
 }
 
+async function createInvoiceCheckoutSession(customer, invoice, payment) {
+  const customerId = await getOrCreateCustomer(customer);
+  const amountInCents = Math.round((Number(invoice.amount) + Number.EPSILON) * 100);
+  if (!Number.isSafeInteger(amountInCents) || amountInCents < 1) {
+    throw Object.assign(new Error('This invoice does not have a payable balance'), { status: 409 });
+  }
+  const returnBase = buildPublicUrl('/pages/residential-portal.html');
+  const session = await stripeRequest('/checkout/sessions', {
+    mode: 'payment',
+    customer: customerId,
+    client_reference_id: String(invoice._id),
+    'payment_method_types[0]': 'card',
+    'line_items[0][quantity]': 1,
+    'line_items[0][price_data][currency]': 'usd',
+    'line_items[0][price_data][unit_amount]': amountInCents,
+    'line_items[0][price_data][product_data][name]': `SMPLfix invoice ${invoice.invoiceNumber}`,
+    'line_items[0][price_data][product_data][description]': String(invoice.jobSnapshot?.service || 'Home service').slice(0, 500),
+    success_url: `${returnBase}?payment=success&invoice=${encodeURIComponent(invoice._id)}&session_id={CHECKOUT_SESSION_ID}#invoices`,
+    cancel_url: `${returnBase}?payment=cancelled&invoice=${encodeURIComponent(invoice._id)}#invoices`,
+    'metadata[smplfix_invoice_id]': String(invoice._id),
+    'metadata[smplfix_payment_id]': String(payment._id),
+    'metadata[smplfix_customer_id]': String(customer._id),
+    'payment_intent_data[metadata][smplfix_invoice_id]': String(invoice._id),
+    'payment_intent_data[metadata][smplfix_payment_id]': String(payment._id)
+  }, 'POST', { idempotencyKey: `residential-invoice-${payment._id}` });
+  return { url: session.url };
+}
+
+async function retrieveCheckoutSession(sessionId) {
+  if (!/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(String(sessionId || ''))) {
+    throw Object.assign(new Error('Invalid payment session'), { status: 400 });
+  }
+  return stripeRequest(`/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=payment_intent`, {}, 'GET');
+}
+
 module.exports = {
   createBillingPortalSession,
+  createInvoiceCheckoutSession,
   createSetupSession,
   isConfigured,
   listPaymentMethods,
+  retrieveCheckoutSession,
   safePaymentMethod,
   stripeRequest
 };

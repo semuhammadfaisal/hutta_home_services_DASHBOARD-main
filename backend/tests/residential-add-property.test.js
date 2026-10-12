@@ -20,6 +20,22 @@ test('address keys normalize case and whitespace while preserving unit separatio
   assert.ok(exactText('123 Main (A)').test(' 123 MAIN (A) '));
   assert.ok(!exactText('123 Main (A)').test('123 Main A'));
 });
+test('precise property details are normalized and validated for add and edit forms', () => {
+  const output = validateProperty({
+    ...valid, propertySubtype: 'Ranch', propertyTitle: 'Desert home', yearBuilt: '2004', bedrooms: '4', fullBathrooms: '2',
+    livingAreaSqFt: '2450', lotSize: '0.4', lotSizeUnit: 'acres', county: 'Maricopa', parcelNumber: 'APN-22',
+    interiorCooling: 'Central AC', exteriorType: 'Stucco', utilityElectricity: 'APS', hasHoa: true, hoaFee: '125', hoaFrequency: 'monthly',
+    virtualTourUrl: 'https://example.com/tour', ownerName: 'Home Owner', ownerEmail: 'owner@example.com', ownerType: 'individual', ownerDeclaration: true
+  });
+  assert.equal(output.errors.length, 0);
+  assert.equal(output.data.details.yearBuilt, 2004);
+  assert.equal(output.data.details.lotSizeUnit, 'acres');
+  assert.equal(output.data.addressDetails.parcelNumber, 'APN-22');
+  assert.equal(output.data.hoa.hasHoa, true);
+  assert.equal(output.data.ownerInformation.email, 'owner@example.com');
+  assert.equal(output.data.ownershipVerification.declarationConfirmed, true);
+  assert.match(validateProperty({ ...valid, yearBuilt: '1200', virtualTourUrl: 'javascript:alert(1)' }).errors.join(' '), /Year built|Virtual tour URL/);
+});
 test('private ownership/dedup keys have unique indexes and cannot leak through serializer', () => {
   assert.ok(Property.schema.indexes().some(([key, options]) => key.residentialAddressKey && options.unique && options.sparse));
   assert.ok(Customer.schema.indexes().some(([key, options]) => key.portalOwnerUserId && options.unique));
@@ -44,6 +60,28 @@ test('portal offers accessible property form, duplicate guard, offline/error sta
   assert.match(js, /button.disabled \|\| !form.reportValidity/);
   assert.match(js, /navigator.onLine/); assert.match(js, /addResidentialProperty/);
   assert.match(js, /state.currentPropertyId = safeId\(response.data.id\)/);
+});
+
+test('Add All Details progressively exposes every property section with secure uploads', () => {
+  const html = read('pages/residential-portal.html');
+  const js = read('assets/js/residential-portal.js');
+  const api = read('assets/js/api-service.js');
+  const featureRoute = read('backend/routes/residentialFeatures.js');
+  const serializer = serializeProperty({ _id: 'id', details: { bedrooms: 3 }, addressDetails: { county: 'Maricopa' }, ownershipVerification: { status: 'pending_review', declarationConfirmed: true } }, {});
+  assert.equal(serializer.details.bedrooms, 3);
+  assert.equal(serializer.addressDetails.county, 'Maricopa');
+  assert.equal(serializer.ownershipVerification.status, 'pending_review');
+  assert.match(html, /data-expand-property-details="addPropertyExtendedDetails"/);
+  assert.match(html, /id="propertyExtendedDetailsTemplate"/);
+  for (const heading of ['Property Details', 'Property Address', 'Interior Features', 'Exterior Features', 'Utilities', 'HOA', 'Photos &amp; Media', 'Important Documents', 'Owner Information', 'Verification']) assert.match(html, new RegExp(heading));
+  for (const field of ['propertySubtype', 'yearBuilt', 'parcelNumber', 'interiorCooling', 'roofType', 'utilityWaterHeater', 'hoaFee', 'virtualTourUrl', 'ownerType', 'ownershipProof']) assert.match(html, new RegExp(`name="${field}"`));
+  assert.match(js, /initializePropertyDetailForms/);
+  assert.match(js, /uploadPropertyFiles/);
+  assert.match(js, /uploadResidentialPassportDocument/);
+  assert.match(api, /uploadResidentialPassportDocument/);
+  assert.match(featureRoute, /'video\/mp4'/);
+  assert.match(featureRoute, /category === 'proof_of_ownership'/);
+  assert.match(featureRoute, /'ownershipVerification.status': 'pending_review'/);
 });
 
 test('View property record opens on demand, scrolls and focuses the record with bounded SVG icons', () => {

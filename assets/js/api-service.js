@@ -330,6 +330,7 @@ class APIService {
     async getResidentialProperties() { return this.request('/residential/properties'); }
     async addResidentialProperty(payload) { return this.request('/residential/properties', { method: 'POST', body: JSON.stringify(payload) }); }
     async getResidentialProperty(propertyId) { return this.request(`/residential/properties/${encodeURIComponent(propertyId)}`); }
+    async updateResidentialProperty(propertyId, payload) { return this.request(`/residential/properties/${encodeURIComponent(propertyId)}`, { method: 'PATCH', body: JSON.stringify(payload || {}) }); }
     async getResidentialOrders(params = '') { return this.request(`/residential/orders${params ? `?${params}` : ''}`); }
     async getResidentialOrder(orderId) { return this.request(`/residential/orders/${encodeURIComponent(orderId)}`); }
     async getResidentialEstimates(params = '') { return this.request(`/residential/estimates${params ? `?${params}` : ''}`); }
@@ -341,6 +342,13 @@ class APIService {
     }
     async getResidentialSchedules(params = '') { return this.request(`/residential/schedules${params ? `?${params}` : ''}`); }
     async getResidentialInvoices(params = '') { return this.request(`/residential/invoices${params ? `?${params}` : ''}`); }
+    async getResidentialInvoice(invoiceId) { return this.request(`/residential/invoices/${encodeURIComponent(invoiceId)}`); }
+    async createResidentialInvoiceCheckout(invoiceId) {
+        return this.request(`/residential/invoices/${encodeURIComponent(invoiceId)}/checkout-session`, { method: 'POST', body: '{}' });
+    }
+    async confirmResidentialInvoicePayment(invoiceId, sessionId) {
+        return this.request(`/residential/invoices/${encodeURIComponent(invoiceId)}/confirm-payment`, { method: 'POST', body: JSON.stringify({ sessionId }) });
+    }
     async getResidentialActivity(limit = 50) { return this.request(`/residential/activity?limit=${encodeURIComponent(limit)}`); }
     async getResidentialBilling(propertyId) { return this.request(`/residential/billing?propertyId=${encodeURIComponent(propertyId)}`); }
     async createResidentialCardSetupSession(propertyId) {
@@ -441,6 +449,24 @@ class APIService {
 
     async getOrder(id) {
         return this.request(`/orders/${id}`);
+    }
+
+    async getAutopilotPlans() {
+        return this.request('/autopilot-plans');
+    }
+
+    async createAutopilotServiceOrder(propertyId, serviceKey, payload) {
+        return this.request(`/autopilot-plans/properties/${encodeURIComponent(propertyId)}/services/${encodeURIComponent(serviceKey)}/orders`, {
+            method: 'POST',
+            body: JSON.stringify(payload || {})
+        });
+    }
+
+    async replyToOrderMessage(id, body) {
+        return this.request(`/orders/${id}/messages`, {
+            method: 'POST',
+            body: JSON.stringify({ body })
+        });
     }
 
     async deleteOrder(id) {

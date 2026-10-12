@@ -11,7 +11,7 @@ const serviceSchema = new mongoose.Schema({
 
 const passportDocumentSchema = new mongoose.Schema({
   documentId: { type: String, default: () => crypto.randomUUID() },
-  category: { type: String, enum: ['warranty', 'permit', 'appliance', 'paint', 'filter', 'inspection', 'other'], default: 'other' },
+  category: { type: String, enum: ['warranty', 'permit', 'appliance', 'paint', 'filter', 'inspection', 'cover_photo', 'property_photo', 'floor_plan', 'property_video', 'deed', 'tax_record', 'survey', 'disclosure', 'hoa', 'proof_of_ownership', 'other'], default: 'other' },
   title: { type: String, required: true, trim: true, maxlength: 160 },
   name: { type: String, required: true, trim: true, maxlength: 180 },
   type: { type: String, required: true },
@@ -46,6 +46,7 @@ const residentialPropertyProfileSchema = new mongoose.Schema({
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
   autopilot: {
     enabled: { type: Boolean, default: false },
+    requestNote: { type: String, trim: true, maxlength: 2000, default: '' },
     autoApprovalEnabled: { type: Boolean, default: false },
     autoApprovalThreshold: { type: Number, min: 0, max: 10000, default: 0 },
     consentVersion: { type: String, default: '2026-09-04' },

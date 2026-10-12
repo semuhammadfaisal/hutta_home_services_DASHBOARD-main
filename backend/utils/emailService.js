@@ -785,6 +785,17 @@ const sendAgentClientInvitationEmail = ({ recipients, homeownerName, agentName, 
   });
 };
 
+const sendResidentialOrderMessageAlertEmail = ({ recipients, customerName, requestReference, orderReference, service, message }, delivery = deliverEmail) => {
+  const url = buildPublicUrl('/pages/admin-dashboard.html', 'orders');
+  const reference = requestReference || orderReference || 'Customer order';
+  return delivery({
+    to: recipients,
+    subject: `New customer message — ${reference}`,
+    text: `Hi Ryan,\n\n${customerName || 'A customer'} sent a message on ${reference}${service ? ` (${service})` : ''}:\n\n${message}\n\nOpen the order in SMPLfix: ${url}`,
+    html: emailShell('New Customer Message', `<p>Hi Ryan,</p><p><strong>${escapeHtml(customerName || 'A customer')}</strong> sent a message on an order.</p><div class="panel"><p><strong>Order:</strong> ${escapeHtml(reference)}</p>${service ? `<p><strong>Service:</strong> ${escapeHtml(service)}</p>` : ''}<p><strong>Message:</strong></p><p>${escapeHtml(message)}</p></div><p><a class="btn" href="${url}">Open Orders</a></p><p class="muted">This message was also saved in the order notes.</p>`)
+  });
+};
+
 module.exports = {
   deliverEmail,
   getEmailDeliveryStatus,
@@ -820,4 +831,5 @@ module.exports = {
   ,sendCustomerPaymentProofEmail
   ,sendStaffPaymentProofEmail
   ,sendAgentClientInvitationEmail
+  ,sendResidentialOrderMessageAlertEmail
 };

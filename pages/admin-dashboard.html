@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="../assets/css/pipeline.css">
     <link rel="stylesheet" href="../assets/css/accounting-styles.css">
     <link rel="stylesheet" href="../assets/css/calendar.css">
-    <link rel="stylesheet" href="../assets/css/detail-pages.css">
+    <link rel="stylesheet" href="../assets/css/detail-pages.css?v=20261010-order-message-reply">
     <link rel="stylesheet" href="../assets/css/toast.css">
     <link rel="stylesheet" href="../assets/css/users.css">
     <link rel="stylesheet" href="../assets/css/confirm-modal.css">
@@ -61,6 +61,7 @@
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
     <link rel="stylesheet" href="../assets/css/order-vendor-assignments.css?v=20260828-multi-vendor">
+    <link rel="stylesheet" href="../assets/css/autopilot-admin.css?v=20261011-autopilot-scroll-fix">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -174,6 +175,12 @@
                 <a href="#pipeline" data-section="pipeline">
                     <i class="fas fa-stream"></i>
                     <span>Pipeline</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#autopilot-plans" data-section="autopilot-plans">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    <span>Residential Autopilot</span>
                 </a>
             </li>
             <li class="menu-item">
@@ -1511,6 +1518,31 @@
                     <tbody id="customersTableBody">
                         <!-- Customers will be populated by JavaScript -->
                     </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="autopilot-plans" class="content-section autopilot-admin-section">
+            <header class="page-header autopilot-admin-header">
+                <div>
+                    <h1>Residential Autopilot</h1>
+                </div>
+                <button type="button" class="btn-secondary" id="refreshAutopilotPlans"><i class="fas fa-rotate" aria-hidden="true"></i> Refresh</button>
+            </header>
+            <div class="autopilot-admin-metrics" aria-label="Residential Autopilot summary">
+                <article><span><i class="fas fa-house"></i></span><div><small>Customers requesting service</small><strong id="autopilotMetricProperties">0</strong></div></article>
+                <article><span><i class="fas fa-clipboard-list"></i></span><div><small>Active requests</small><strong id="autopilotMetricEnrolled">0</strong></div></article>
+                <article><span><i class="fas fa-screwdriver-wrench"></i></span><div><small>Requested services</small><strong id="autopilotMetricServices">0</strong></div></article>
+                <article><span><i class="fas fa-shield-halved"></i></span><div><small>Customer auto-approval</small><strong id="autopilotMetricApproval">0</strong></div></article>
+            </div>
+            <div class="autopilot-admin-toolbar">
+                <label class="autopilot-admin-search"><i class="fas fa-search" aria-hidden="true"></i><input id="autopilotPlanSearch" type="search" placeholder="Search customer, property, or address…" autocomplete="off"><span class="visually-hidden">Search residential Autopilot</span></label>
+                <span id="autopilotPlanResultCount" class="autopilot-result-count">0 properties</span>
+            </div>
+            <div class="autopilot-admin-table-wrap">
+                <table class="autopilot-admin-table">
+                    <thead><tr><th>Customer &amp; property</th><th>Requested services</th><th>Next service</th><th>Customer authorization</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+                    <tbody id="autopilotPlansTableBody"><tr><td colspan="5"><div class="autopilot-admin-empty"><i class="fas fa-spinner fa-spin"></i><strong>Loading customer service requests…</strong></div></td></tr></tbody>
                 </table>
             </div>
         </section>
@@ -4805,7 +4837,7 @@
     </div>
 
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20261007-customer-quote-override"></script>
+    <script src="../assets/js/api-service.js?v=20261010-autopilot-confirm-work"></script>
     <script src="../assets/js/commercial-approval.js?v=20260916-commercial-completion"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
@@ -4821,7 +4853,8 @@
     <script src="../assets/js/calendar.js"></script>
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
-    <script src="../assets/js/dashboard-script.js?v=20260916-commercial-completion"></script>
+    <script src="../assets/js/dashboard-script.js?v=20261010-autopilot-confirm-work"></script>
+    <script src="../assets/js/autopilot-admin.js?v=20261011-autopilot-row-cleanup"></script>
     <script src="../assets/js/incoming-quotes.js?v=20261007-invitation-flow"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20261008-order-compliance-override"></script>
     <script src="../assets/js/customer-approvals.js?v=20260723-workflow-v2"></script>
@@ -4831,7 +4864,7 @@
     <script src="../assets/js/vendor-onboarding-admin.js?v=20260807-recipient1"></script>
     <script src="../assets/js/rbac-wrappers.js"></script>
     <script src="../assets/js/premium-dashboard-ux.js?v=20260806-search-polish"></script>
-    <script src="../assets/js/smplfix-shell.js?v=20260804-order-detail-header"></script>
+    <script src="../assets/js/smplfix-shell.js?v=20261010-autopilot-confirm-work"></script>
     <script src="../assets/js/icon-system.js?v=20260807-icon-reliability"></script>
     <script>
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {

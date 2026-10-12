@@ -37,9 +37,11 @@ const {
 } = require('../utils/customerQuoteDecisions');
 const {
   createBillingPortalSession,
+  createInvoiceCheckoutSession,
   createSetupSession,
   isConfigured: paymentProviderConfigured,
-  listPaymentMethods
+  listPaymentMethods,
+  retrieveCheckoutSession
 } = require('../utils/paymentProvider');
 const {
   requestCapabilities,
@@ -491,6 +493,39 @@ async function authorizedQuote(req, res, { requireApproval = false } = {}) {
   return { membership, order, quote };
 }
 
+async function authorizedInvoice(req, res, { requireBilling = false } = {}) {
+  if (!validId(req.params.invoiceId)) {
+    res.status(400).json({ message: 'Invalid invoice id' });
+    return null;
+  }
+  const invoice = await CustomerInvoice.findById(req.params.invoiceId).lean();
+  if (!invoice) {
+    res.status(404).json({ message: 'Invoice not found' });
+    return null;
+  }
+  const order = await Order.findById(invoice.orderId).lean();
+  if (!order?.propertyId || (invoice.customerId && String(invoice.customerId) !== String(order.customerId))) {
+    res.status(404).json({ message: 'Invoice not found' });
+    return null;
+  }
+  const membership = await PropertyMembership.findOne({
+    ...activeMembershipFilter(req.user.userId),
+    propertyId: order.propertyId,
+    customerId: order.customerId,
+    ...(requireBilling ? { 'permissions.manageBilling': true } : {})
+  }).lean();
+  if (!membership || membership.relationship === 'agent') {
+    res.status(requireBilling ? 403 : 404).json({ message: requireBilling ? 'You do not have billing permission for this invoice' : 'Invoice not found' });
+    return null;
+  }
+  const [payment, quote] = await Promise.all([
+    Payment.findOne({ customerInvoiceId: invoice._id }).lean(),
+    invoice.outgoingQuoteId ? OutgoingQuote.findById(invoice.outgoingQuoteId).select('vendorId').lean() : null
+  ]);
+  const vendor = quote?.vendorId ? await Vendor.findById(quote.vendorId).select(VENDOR_PUBLIC_FIELDS).lean() : null;
+  return { invoice, membership, order, payment, vendor };
+}
+
 async function decideResidentialQuote(req, authorized, payload) {
   const session = await mongoose.startSession();
   let result;
@@ -812,6 +847,7 @@ router.post('/properties', actionLimiter, async (req, res, next) => {
         if (!owner || existing.status !== 'active') throw Object.assign(new Error('This address requires staff review before it can be connected.'), { status: 409 });
         result = { data: serializeProperty(existing, owner), alreadyConnected: true }; return;
       }
+      if (payload.data.ownershipVerification?.declarationConfirmed) payload.data.ownershipVerification.declarationConfirmedAt = new Date();
       const property = (await Property.create([{ ...payload.data, ownerCustomerId: customer._id, residentialAddressKey: payload.addressKey, source: 'manual' }], { session }))[0];
       const membership = (await PropertyMembership.create([{ userId: user._id, propertyId: property._id, customerId: customer._id, relationship: 'owner', createdBy: user._id, permissions: { view: true, requestService: true, approveEstimates: true, manageBilling: true, manageProperty: true } }], { session }))[0];
       await PortalActivity.create([{ userId: user._id, customerId: customer._id, propertyId: property._id, type: 'property_added', title: 'Property added', summary: property.label }], { session });
@@ -849,6 +885,43 @@ router.get('/properties/:propertyId', async (req, res, next) => {
       summary: { activeOrders, completedOrders }
     });
   } catch (error) { next(error); }
+});
+
+router.patch('/properties/:propertyId', actionLimiter, async (req, res, next) => {
+  try {
+    const found = await scopedProperty(req, res);
+    if (!found) return;
+    if (found.membership.permissions?.manageProperty !== true) return res.status(403).json({ message: 'Property management permission is required' });
+    const payload = validateProperty({ ...req.body, confirmAuthority: req.body?.confirmAuthority === true });
+    if (payload.errors.length) return res.status(400).json({ message: payload.errors.join('. ') });
+    payload.data.ownershipVerification = {
+      status: found.property.ownershipVerification?.status || 'unverified',
+      declarationConfirmed: payload.data.ownershipVerification?.declarationConfirmed === true,
+      declarationConfirmedAt: payload.data.ownershipVerification?.declarationConfirmed === true
+        ? (found.property.ownershipVerification?.declarationConfirmedAt || new Date())
+        : found.property.ownershipVerification?.declarationConfirmedAt
+    };
+    const legacyAddress = {
+      addressLine1: exactText(payload.data.addressLine1), city: exactText(payload.data.city), state: exactText(payload.data.state), postalCode: exactText(payload.data.postalCode),
+      $or: [{ addressLine2: exactText(payload.data.addressLine2) }, ...(payload.data.addressLine2 ? [] : [{ addressLine2: { $exists: false } }, { addressLine2: null }])]
+    };
+    const duplicate = await Property.exists({ _id: { $ne: found.property._id }, $or: [{ residentialAddressKey: payload.addressKey }, legacyAddress] });
+    if (duplicate) return res.status(409).json({ message: 'Another property already uses this address. Contact support if these records should be combined.' });
+    const property = await Property.findOneAndUpdate(
+      { _id: found.property._id, ownerCustomerId: found.membership.customerId, status: 'active' },
+      { $set: { ...payload.data, residentialAddressKey: payload.addressKey } },
+      { new: true, runValidators: true }
+    ).lean();
+    if (!property) return res.status(404).json({ message: 'Property not found' });
+    await Promise.all([
+      PortalActivity.create({ userId: req.user.userId, customerId: found.membership.customerId, propertyId: property._id, type: 'property_updated', title: 'Property updated', summary: property.label }),
+      SecurityAuditEvent.create({ action: 'residential_property_updated', userId: req.user.userId, entityType: 'Property', entityId: String(property._id), ipAddress: req.ip, metadata: { customerId: found.membership.customerId } })
+    ]);
+    res.json({ property: serializeProperty(property, found.membership) });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ message: 'Another property already uses this address.' });
+    next(error);
+  }
 });
 
 router.get('/orders', async (req, res, next) => {
@@ -916,8 +989,10 @@ router.get('/schedules', async (req, res, next) => {
   try {
     const { page, limit, skip } = pageOptions(req.query);
     const scope = await residentialScope(req.user.userId);
-    const orderIds = scope.propertyIds.length
-      ? await Order.find({ propertyId: { $in: scope.propertyIds } }).distinct('_id')
+    if (req.query.propertyId && (!validId(req.query.propertyId) || !scope.membershipByProperty.has(String(req.query.propertyId)))) return res.status(404).json({ message: 'Property not found' });
+    const propertyIds = req.query.propertyId ? [req.query.propertyId] : scope.propertyIds;
+    const orderIds = propertyIds.length
+      ? await Order.find({ propertyId: { $in: propertyIds } }).distinct('_id')
       : [];
     const match = { orderId: { $in: orderIds }, status: { $ne: 'revoked' } };
     const [total, schedules] = await Promise.all([
@@ -933,8 +1008,10 @@ router.get('/invoices', async (req, res, next) => {
   try {
     const { page, limit, skip } = pageOptions(req.query);
     const scope = await residentialScope(req.user.userId);
-    const orderIds = scope.propertyIds.length
-      ? await Order.find({ propertyId: { $in: scope.propertyIds } }).distinct('_id')
+    if (req.query.propertyId && (!validId(req.query.propertyId) || !scope.membershipByProperty.has(String(req.query.propertyId)))) return res.status(404).json({ message: 'Property not found' });
+    const propertyIds = req.query.propertyId ? [req.query.propertyId] : scope.propertyIds;
+    const orderIds = propertyIds.length
+      ? await Order.find({ propertyId: { $in: propertyIds } }).distinct('_id')
       : [];
     const match = { orderId: { $in: orderIds } };
     const [total, invoices] = await Promise.all([
@@ -958,6 +1035,70 @@ router.get('/invoices', async (req, res, next) => {
       }),
       pagination: pagination(total, page, limit)
     });
+  } catch (error) { next(error); }
+});
+
+router.get('/invoices/:invoiceId', async (req, res, next) => {
+  try {
+    const authorized = await authorizedInvoice(req, res);
+    if (!authorized) return;
+    res.json({ invoice: serializeInvoice(authorized.invoice, authorized.payment, authorized.vendor) });
+  } catch (error) { next(error); }
+});
+
+router.post('/invoices/:invoiceId/checkout-session', actionLimiter, async (req, res, next) => {
+  try {
+    const authorized = await authorizedInvoice(req, res, { requireBilling: true });
+    if (!authorized) return;
+    if (!authorized.payment) return res.status(409).json({ message: 'This invoice does not have a payable balance yet' });
+    if (['received', 'completed'].includes(authorized.payment.status)) return res.status(409).json({ message: 'This invoice has already been paid' });
+    if (!['pending', 'failed'].includes(authorized.payment.status)) return res.status(409).json({ message: 'This invoice is not ready for online payment' });
+    const customer = await Customer.findById(authorized.membership.customerId).select('+paymentProvider.name +paymentProvider.customerId');
+    if (!customer) return res.status(409).json({ message: 'Billing account is unavailable' });
+    const result = await createInvoiceCheckoutSession(customer, authorized.invoice, authorized.payment);
+    if (!/^https:\/\/checkout\.stripe\.com\//.test(result.url)) throw new Error('Payment provider returned an invalid hosted URL');
+    res.status(201).json(result);
+  } catch (error) { next(error); }
+});
+
+router.post('/invoices/:invoiceId/confirm-payment', actionLimiter, async (req, res, next) => {
+  try {
+    const authorized = await authorizedInvoice(req, res, { requireBilling: true });
+    if (!authorized) return;
+    if (!authorized.payment) return res.status(409).json({ message: 'Payment record is unavailable' });
+    if (['received', 'completed'].includes(authorized.payment.status)) {
+      return res.json({ success: true, invoice: serializeInvoice(authorized.invoice, authorized.payment, authorized.vendor) });
+    }
+    const session = await retrieveCheckoutSession(req.body?.sessionId);
+    const expectedCents = Math.round((Number(authorized.invoice.amount) + Number.EPSILON) * 100);
+    const invoiceMatches = String(session.client_reference_id || '') === String(authorized.invoice._id)
+      && String(session.metadata?.smplfix_invoice_id || '') === String(authorized.invoice._id)
+      && String(session.metadata?.smplfix_payment_id || '') === String(authorized.payment._id);
+    if (!invoiceMatches || session.payment_status !== 'paid' || Number(session.amount_total) !== expectedCents || String(session.currency || '').toLowerCase() !== 'usd') {
+      return res.status(409).json({ message: 'The payment provider has not confirmed this invoice payment' });
+    }
+    const transactionId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+    const payment = await Payment.findOneAndUpdate(
+      { _id: authorized.payment._id, customerInvoiceId: authorized.invoice._id, status: { $in: ['pending', 'failed'] } },
+      { $set: { status: 'received', paymentMethod: 'online', paymentDate: new Date(), transactionId, receiptNumber: authorized.payment.receiptNumber || `RCPT-${authorized.payment.paymentId}` } },
+      { new: true }
+    ).lean();
+    const confirmedPayment = payment || await Payment.findById(authorized.payment._id).lean();
+    if (!confirmedPayment || !['received', 'completed'].includes(confirmedPayment.status)) return res.status(409).json({ message: 'Payment could not be recorded' });
+    await CustomerInvoice.updateOne({ _id: authorized.invoice._id, $or: [{ paymentId: null }, { paymentId: { $exists: false } }] }, { $set: { paymentId: confirmedPayment._id } });
+    await PortalActivity.create({
+      userId: req.user.userId,
+      customerId: authorized.order.customerId,
+      propertyId: authorized.order.propertyId,
+      orderId: authorized.order._id,
+      type: 'invoice_paid',
+      title: 'Invoice paid',
+      summary: `${authorized.invoice.invoiceNumber} · ${authorized.order.service}`,
+      occurredAt: confirmedPayment.paymentDate || new Date()
+    });
+    memCache.del('orders:stats:v2');
+    invalidateDashboardStatsCache();
+    res.json({ success: true, invoice: serializeInvoice(authorized.invoice, confirmedPayment, authorized.vendor) });
   } catch (error) { next(error); }
 });
 

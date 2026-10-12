@@ -37,7 +37,7 @@ test('residential portal has the required semantic views and dashboard modules',
   for (const id of [
     'portalMain', 'propertySwitcher', 'portalLoading', 'portalError', 'portalUnauthorized', 'offlineBanner',
     'homeView', 'propertiesView', 'estimateList', 'activeJobsList', 'activityList', 'bookAgainList',
-    'propertyList', 'propertyDetail', 'serviceHistoryList'
+    'propertyList', 'propertyDetail', 'requestedServicesList', 'serviceHistoryList'
   ]) assert.match(html, new RegExp(`id="${id}"`), `missing ${id}`);
   assert.match(html, /class="skip-link" href="#portalMain"/);
   assert.match(html, /aria-live="polite"/);
@@ -47,6 +47,37 @@ test('residential portal has the required semantic views and dashboard modules',
   assert.match(html, /residential-portal\.css\?v=/);
   assert.match(html, /residential-portal\.js\?v=/);
   assert.doesNotMatch(html, /admin-dashboard\.js|dashboard-script\.js|data-role-select|portal dropdown/i);
+});
+
+test('property record summarizes requested-service financial and workflow progress', () => {
+  const html = read('pages/residential-portal.html');
+  const client = read('assets/js/residential-portal.js');
+  assert.match(html, /id="requestedServicesTitle">Requested Services</);
+  assert.match(client, /requestedServiceCard/);
+  assert.match(client, /Current stage/);
+  assert.match(client, /Estimate/);
+  assert.match(client, /Invoice/);
+  assert.match(client, /Payment/);
+  assert.match(client, /requestedServicePaymentLabel/);
+  assert.match(client, /data-job-detail/);
+  assert.doesNotMatch(client, /requested-service[\s\S]{0,800}(?:vendorCost|markup|margin|profit)/i);
+});
+
+test('job details derive an accurate stage and expose only valid customer actions', () => {
+  const client = read('assets/js/residential-portal.js');
+  const css = read('assets/css/residential-portal.css');
+  assert.match(client, /function jobDetailStage/);
+  assert.match(client, /Payment received and this service record is complete/);
+  assert.match(client, /Cancellation requested/);
+  assert.match(client, /Schedule change requested/);
+  assert.match(client, /data-estimate-detail/);
+  assert.match(client, /data-order-action="reschedule"/);
+  assert.match(client, /data-order-action="cancel"/);
+  assert.match(client, /data-book-again/);
+  assert.match(client, /Invoice PDF/);
+  assert.match(client, /Receipt PDF/);
+  assert.match(client, /Message SMPLfix/);
+  assert.match(css, /repeat\(10, minmax/);
 });
 
 test('portal client reads only residential-scoped APIs and handles every required state', () => {
@@ -84,6 +115,10 @@ test('portal interactions escape API content and calculate views from scoped rec
   assert.equal(helpers.normalizeStatus('Awaiting_Customer Closeout'), 'awaiting-customer-closeout');
   assert.equal(helpers.isCompleted({ workflowStatus: 'completed' }), true);
   assert.equal(helpers.isCompleted({ workflowStatus: 'scheduled' }), false);
+  assert.equal(helpers.jobDetailStage({ order: { workflowStatus: 'awaiting_customer_closeout' }, invoice: { payment: { status: 'completed' } } }).label, 'Paid');
+  assert.equal(helpers.jobDetailStage({ order: {}, invoice: { payment: { status: 'pending' } } }).label, 'Payment pending');
+  assert.equal(helpers.jobDetailStage({ order: {}, completion: { completedAt: new Date().toISOString() } }).label, 'Work completed');
+  assert.equal(helpers.requestedServicePaymentLabel(null), 'Not due');
 });
 
 test('residential styles provide visible focus, responsive layouts, and reduced-motion support', () => {

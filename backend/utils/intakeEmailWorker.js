@@ -34,7 +34,8 @@ const {
   sendCustomerPaymentProofEmail,
   sendStaffPaymentProofEmail,
   sendWebsiteOperationsAlertEmail,
-  sendWebsiteRequestConfirmationEmail
+  sendWebsiteRequestConfirmationEmail,
+  sendResidentialOrderMessageAlertEmail
 } = require('./emailService');
 const { decryptToken, hashToken } = require('./incomingQuotes');
 const { decryptToken: decryptOutgoingToken, hashToken: hashOutgoingToken } = require('./outgoingQuotes');
@@ -198,14 +199,15 @@ async function alertPermanentFailure(message, category) {
   if (!users.length) return;
   const intake = isIntakeMessage(message.type);
   const outgoing = message.type === 'customer_outgoing_quote' || STAGE4_TYPES.has(message.type);
+  const portalMessage = message.type === 'residential_order_message_alert';
   const kind = intake ? (message.type === 'website_customer_confirmation' ? 'customer confirmation' : 'operations alert') : message.type.replaceAll('_', ' ');
   await Notification.insertMany(users.map(user => ({
     userId: user._id,
-    title: intake ? 'Website request email failed' : CLOSEOUT_TYPES.has(message.type) ? 'Closeout email failed' : STAGE5_TYPES.has(message.type) ? 'Scheduling email failed' : outgoing ? 'Customer quote email failed' : 'Vendor quote email failed',
+    title: portalMessage ? 'Order message email failed' : intake ? 'Website request email failed' : CLOSEOUT_TYPES.has(message.type) ? 'Closeout email failed' : STAGE5_TYPES.has(message.type) ? 'Scheduling email failed' : outgoing ? 'Customer quote email failed' : 'Vendor quote email failed',
     message: `${kind} for ${message.payload.requestReference || message.payload.quoteReference} failed after ${MAX_ATTEMPTS} attempts.`,
     type: 'error',
     priority: 'high',
-    actionUrl: intake ? '#workflow-center' : CLOSEOUT_TYPES.has(message.type) ? '#workflow-center/stage-6' : STAGE5_TYPES.has(message.type) ? '#scheduling' : STAGE4_TYPES.has(message.type) ? '#customer-approvals' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
+    actionUrl: portalMessage ? '#orders' : intake ? '#workflow-center' : CLOSEOUT_TYPES.has(message.type) ? '#workflow-center/stage-6' : STAGE5_TYPES.has(message.type) ? '#scheduling' : STAGE4_TYPES.has(message.type) ? '#customer-approvals' : outgoing ? '#outgoing-quotes' : '#incoming-quotes',
     metadata: { intakeSubmissionId: message.intakeSubmissionId, incomingQuoteId: message.incomingQuoteId, quoteInvitationId: message.quoteInvitationId, outgoingQuoteId: message.outgoingQuoteId, jobScheduleId: message.jobScheduleId, vendorWorkOrderId: message.vendorWorkOrderId, jobCompletionId: message.jobCompletionId, customerInvoiceId: message.customerInvoiceId, satisfactionDecisionId: message.satisfactionDecisionId, orderId: message.orderId, emailType: message.type, category }
   })));
 }
@@ -249,6 +251,7 @@ async function deliverMessage(message) {
     ,staff_payment_proof_alert: sendStaffPaymentProofEmail
     ,customer_payment_proof_verified: sendCustomerPaymentProofEmail
     ,customer_payment_proof_rejected: sendCustomerPaymentProofEmail
+    ,residential_order_message_alert: sendResidentialOrderMessageAlertEmail
   };
   const sender = senders[message.type];
   if (!sender) throw new Error(`Unsupported email outbox type: ${message.type}`);
