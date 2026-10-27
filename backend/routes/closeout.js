@@ -19,11 +19,13 @@ const Payment = require('../models/Payment');
 const PaymentProofSubmission = require('../models/PaymentProofSubmission');
 const QuoteSettings = require('../models/QuoteSettings');
 const User = require('../models/User');
+const Vendor = require('../models/Vendor');
 const VendorWorkOrder = require('../models/VendorWorkOrder');
 const { createCustomerInvoicePdf } = require('../utils/invoicePdf');
 const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache');
 const memCache = require('../utils/memoryCache');
 const { synchronizePaymentStage, synchronizeWorkflowOrder } = require('../utils/workflowSync');
+const { publicContractorSnapshot, vendorContractorSnapshot } = require('../utils/vendorContractor');
 const {
   COMPLETION_TOKEN_TTL_MS, SATISFACTION_TOKEN_TTL_MS, FOLLOWUP_DELAY_MS,
   MAX_FILES_PER_CATEGORY, MAX_FILE_BYTES, MAX_PUBLIC_BODY_BYTES, cleanText, generateToken, hashToken,
@@ -220,8 +222,8 @@ async function ensureCompletion(orderId, options={}) {
   try { await session.withTransaction(async()=>{
     const order=await Order.findOne({_id:orderId,workflowStatus:{$in:['scheduled','completed','closeout_issue_reported']}}).session(session);
     if(!order) throw Object.assign(new Error('Only a scheduled Order can enter closeout'),{status:409});
-    const [schedule,quote,workOrder]=await Promise.all([JobSchedule.findOne({_id:order.confirmedJobScheduleId,status:'accepted'}).session(session),OutgoingQuote.findOne({_id:order.approvedOutgoingQuoteId,status:'sent',customerDecisionStatus:'approved'}).session(session),VendorWorkOrder.findOne({jobScheduleId:order.confirmedJobScheduleId}).session(session)]);
-    if(!schedule||!quote||!workOrder) throw Object.assign(new Error('Confirmed schedule, approved quote, and work order are required'),{status:409});
+    const [schedule,quote,workOrder,vendor]=await Promise.all([JobSchedule.findOne({_id:order.confirmedJobScheduleId,status:'accepted'}).session(session),OutgoingQuote.findOne({_id:order.approvedOutgoingQuoteId,status:'sent',customerDecisionStatus:'approved'}).session(session),VendorWorkOrder.findOne({jobScheduleId:order.confirmedJobScheduleId}).session(session),Vendor.findById(order.vendor).session(session)]);
+    if(!schedule||!quote||!workOrder||!vendor) throw Object.assign(new Error('Confirmed schedule, approved quote, work order, and assigned vendor are required'),{status:409});
     const token=generateToken(); const expires=new Date(new Date(schedule.proposedEnd).getTime()+COMPLETION_TOKEN_TTL_MS);
     let completion=await JobCompletion.findOne({orderId:order._id}).session(session).select('+publicTokenHash +satisfactionTokenHash');
     if(!completion){const reference=await nextCompletionReference(session);[completion]=await JobCompletion.create([{completionReference:reference,orderId:order._id,jobScheduleId:schedule._id,outgoingQuoteId:quote._id,vendorWorkOrderId:workOrder._id,customerId:order.customerId,vendorId:order.vendor,status:'pending',customerSnapshot:quote.customerSnapshot,vendorSnapshot:{name:schedule.vendorSnapshot.name,email:schedule.vendorSnapshot.email,phone:schedule.vendorSnapshot.phone},scheduleSnapshot:{scheduleReference:schedule.scheduleReference,scheduledStart:schedule.proposedStart,scheduledEnd:schedule.proposedEnd,timezone:schedule.timezone,accessInstructions:schedule.accessInstructions},jobSnapshot:{requestReference:order.requestReference,orderReference:order.orderId,service:order.service,description:order.description,scopeOfWork:quote.scopeOfWork},approvedTotal:quote.customerTotal,publicTokenHash:hashToken(token),tokenExpiresAt:expires,tokenSentAt:new Date(),history:[{action:'completion_link_created',actorType:'system'}]}],{session});}
@@ -248,7 +250,7 @@ async function completeJob({completion,source,notes,enteredName,beforeFiles,afte
     const paymentInstructionsSnapshot = publicSettingsSnapshot(closeoutSettings);
     Object.assign(current,{source,status:'completed',completionNotes:notes,completedAt:now,vendorEnteredName:enteredName,beforePhotos:before,afterPhotos:after,photoOverride,photoOverrideReason:overrideReason,completedBy:source==='staff'?actor.id:undefined,completedByEmail:actor.email,publicTokenHash:undefined,tokenRevokedAt:now,satisfactionTokenHash:hashToken(satisfactionToken),satisfactionTokenExpiresAt:new Date(now.getTime()+SATISFACTION_TOKEN_TTL_MS),closeoutRevision:1,closeoutTokenSentAt:now,closeoutTokenRevokedAt:undefined});
     current.completionSnapshotHash=completionSnapshotHash(current);
-    const invoiceData={invoiceNumber,orderId:order._id,jobCompletionId:current._id,outgoingQuoteId:quote._id,customerId:order.customerId,amount:quote.customerTotal,issuedAt:now,dueDate:now,terms:'Due on receipt',companySnapshot:quoteSettings?.company||{name:'smplfix',email:'sales@smplfix.com'},customerSnapshot:quote.customerSnapshot,jobSnapshot:{...current.jobSnapshot,scopeOfWork:quote.scopeOfWork},quoteSnapshot:{quoteReference:quote.quoteReference,revisionNumber:quote.revisionNumber,customerTotal:quote.customerTotal},paymentInstructionsSnapshot};
+    const invoiceData={invoiceNumber,orderId:order._id,jobCompletionId:current._id,outgoingQuoteId:quote._id,customerId:order.customerId,amount:quote.customerTotal,issuedAt:now,dueDate:now,terms:'Due on receipt',companySnapshot:quoteSettings?.company||{name:'smplfix',email:'sales@smplfix.com'},customerSnapshot:quote.customerSnapshot,jobSnapshot:{...current.jobSnapshot,scopeOfWork:quote.scopeOfWork},quoteSnapshot:{quoteReference:quote.quoteReference,revisionNumber:quote.revisionNumber,customerTotal:quote.customerTotal},contractorSnapshot:publicContractorSnapshot(vendorContractorSnapshot(vendor)),paymentInstructionsSnapshot};
     invoiceData.snapshotHash=invoiceSnapshotHash(invoiceData);const [invoice]=await CustomerInvoice.create([invoiceData],{session});
     const [payment]=await Payment.create([{paymentId:paymentReference,invoiceNumber,order:order._id,customer:order.customerId,amount:quote.customerTotal,status:'pending',dueDate:now,description:`Invoice ${invoiceNumber} for ${order.service}`,source:'stage6_invoice',customerInvoiceId:invoice._id,jobCompletionId:current._id,outgoingQuoteId:quote._id,invoiceIssuedAt:now}],{session});
     invoice.paymentId=payment._id;await invoice.save({session});current.customerInvoiceId=invoice._id;current.history.push({action:'completed',actorType:source,actorId:source==='staff'?actor.id:undefined,actorEmail:actor.email,message:notes});await current.save({session});

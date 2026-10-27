@@ -38,9 +38,9 @@ function serializeLocation(location, property, access, entitlements, capabilitie
   const item = plain(location); const prop = plain(property);
   return seal({ id: id(item), organizationId: id(item.organizationId), portfolioId: id(item.portfolioId), propertyId: id(item.propertyId), locationCode: item.locationCode, label: prop.label, ownerLabel: item.ownerLabel, address: { line1: prop.addressLine1, line2: prop.addressLine2, city: prop.city, state: prop.state, postalCode: prop.postalCode, country: prop.country }, propertyType: prop.propertyType, role: access?.propertyMembership?.role || access?.portfolioMembership?.role || access?.organizationMembership?.role, tier: access?.agreement?.tier, entitlements, capabilities, status: item.status });
 }
-function serializeOrder(order, agreement, capabilities) {
+function serializeOrder(order, agreement, capabilities = {}) {
   const item = plain(order); const tierOne = agreement?.tier === 'tier_1';
-  return seal({ id: id(item), orderReference: item.orderId, workOrderNumber: item.workOrderNumber, requestReference: item.requestReference, propertyId: id(item.propertyId), service: item.service, description: item.description, clientAmount: tierOne ? undefined : item.amount, pricingStatus: item.pricingStatus, status: item.status, workflowStatus: item.workflowStatus, priority: item.priority, scheduledStart: item.scheduledStart || item.scheduleDate, scheduledEnd: item.scheduledEnd, completedAt: item.completedAt, purchaseOrderNumber: item.commercialContext?.purchaseOrderNumber, capabilities: { canRequestService: capabilities.canRequestService, canApproveEstimates: capabilities.canApproveEstimates }, createdAt: item.createdAt, updatedAt: item.updatedAt });
+  return seal({ id: id(item), orderReference: item.orderId, workOrderNumber: item.workOrderNumber, requestReference: item.requestReference, propertyId: id(item.propertyId), service: item.service, description: item.description, clientAmount: tierOne ? undefined : item.amount, pricingStatus: item.pricingStatus, status: item.status, workflowStatus: item.workflowStatus, priority: item.priority, scheduledStart: item.scheduledStart || item.scheduleDate, scheduledEnd: item.scheduledEnd, completedAt: item.completedAt, purchaseOrderNumber: item.commercialContext?.purchaseOrderNumber, targetCompletionDeadline: item.commercialContext?.targetCompletionDeadline, accessInstructions: item.commercialContext?.accessInstructions, capabilities: { canRequestService: capabilities.canRequestService, canApproveEstimates: capabilities.canApproveEstimates }, createdAt: item.createdAt, updatedAt: item.updatedAt });
 }
 function serializeInvoice(invoice, payment) {
   const item = plain(invoice); const commercial = item.commercialBilling || {};
@@ -67,7 +67,7 @@ function serializeEstimate(quote, order, canApprove) {
 }
 
 function serializeActivity(activity) { const item = plain(activity); return seal({ id: id(item), propertyId: id(item.propertyId), orderId: id(item.orderId), type: item.type, title: item.title, summary: item.summary, occurredAt: item.occurredAt }); }
-function serializeNotification(notification) { const item = plain(notification); return seal({ id: id(item), title: item.title, message: item.message, type: item.type, priority: item.priority, isRead: item.isRead === true, createdAt: item.createdAt }); }
+function serializeNotification(notification) { const item = plain(notification); const actionUrl = String(item.actionUrl || ''); return seal({ id: id(item), title: item.title, message: item.message, type: item.type, priority: item.priority, isRead: item.isRead === true, actionUrl: actionUrl.startsWith('#') ? actionUrl : undefined, createdAt: item.createdAt }); }
 function serializeWarrantyClaim(claim) {
   const item = plain(claim);
   return seal({

@@ -6,10 +6,29 @@ const mongoose = require('mongoose');
 
 const root = path.resolve(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
-const AgentReferralAttribution = require('../models/AgentReferralAttribution');
-const RealEstateAgentProfile = require('../models/RealEstateAgentProfile');
 const { serializeReferral } = require('../utils/agentSerializers');
 const { createAgentTransactionPackagePdf } = require('../utils/agentTransactionPackage');
+const { agentPortalEnabled } = require('../utils/featureFlags');
+
+test('agent portal feature flag defaults closed in production and supports an explicit pilot enablement', () => {
+  const previousNodeEnv = process.env.NODE_ENV; const previousFlag = process.env.AGENT_PORTAL_ENABLED;
+  try {
+    process.env.NODE_ENV = 'production'; delete process.env.AGENT_PORTAL_ENABLED;
+    assert.equal(agentPortalEnabled(), false);
+    process.env.AGENT_PORTAL_ENABLED = 'true';
+    assert.equal(agentPortalEnabled(), true);
+    process.env.AGENT_PORTAL_ENABLED = 'false';
+    assert.equal(agentPortalEnabled(), false);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
+    if (previousFlag === undefined) delete process.env.AGENT_PORTAL_ENABLED; else process.env.AGENT_PORTAL_ENABLED = previousFlag;
+  }
+  const server = read('backend/server.js'); const auth = read('backend/routes/auth.js');
+  assert.match(server, /\['\/api\/agent', '\/api\/agent-admin', '\/api\/residential\/agent-invitations'\], requireAgentPortalEnabled/);
+  assert.match(server, /if \(!agentPortalEnabled\(\)\) return res\.status\(404\)/);
+  assert.match(auth, /requestedRole === 'real_estate_agent' && !agentPortalEnabled\(\)/);
+  assert.match(auth, /residential-invite-signup[\s\S]{0,220}if \(!agentPortalEnabled\(\)\)/);
+});
 
 test('transaction package PDF renders client-safe completion records and ignores injected private fields', async () => {
   const pdf = await createAgentTransactionPackagePdf({
@@ -53,16 +72,17 @@ test('expired transactions are closed once, membership access is revoked, and ar
   assert.doesNotMatch(historyBlock, /downloadUrl|pdfUrl|customerId|propertyId/);
 });
 
-test('referral dashboard derives lead, conversion, completion, and configured non-financial rewards', () => {
-  assert.ok(RealEstateAgentProfile.schema.path('referralProgram.rewardLabel'));
-  assert.ok(RealEstateAgentProfile.schema.path('referralProgram.unitsPerCompletedJob'));
-  assert.ok(AgentReferralAttribution.schema.path('convertedJobCount'));
-  assert.ok(AgentReferralAttribution.schema.path('rewardUnits'));
+test('referral dashboard exposes attribution counts without rewards, commissions, or payouts', () => {
   const referral = serializeReferral({ _id: new mongoose.Types.ObjectId(), transactionId: new mongoose.Types.ObjectId(), customerId: new mongoose.Types.ObjectId(), propertyId: new mongoose.Types.ObjectId(), attributedAt: new Date(), customerSpend: 99999 }, { convertedJobCount: 2, completedJobCount: 1, rewardStatus: 'earned', rewardUnits: 1, transaction: { label: 'Closed deal', closeDate: new Date(), status: 'closed' }, property: { label: 'Desert Home' } });
   assert.equal(referral.convertedJobCount, 2);
+  assert.equal(referral.completedJobCount, 1);
   assert.equal(referral.transaction.archived, true);
   assert.equal(referral.transaction.protectedAccessAvailable, false);
-  assert.doesNotMatch(JSON.stringify(referral), /customerSpend|customerId|propertyId|amount|revenue/i);
+  assert.doesNotMatch(JSON.stringify(referral), /customerSpend|customerId|propertyId|amount|revenue|reward|commission|payout/i);
+  const route = read('backend/routes/agent.js'); const script = read('assets/js/agent-portal.js');
+  const referralsRoute = route.slice(route.indexOf("router.get('/referrals'"), route.indexOf("router.use((error"));
+  assert.doesNotMatch(referralsRoute, /rewardUnits|rewardStatus|unitsPerCompletedJob|rewardLabel/);
+  assert.doesNotMatch(script, /rewardUnits|unitsPerCompletedJob|Configured reward/);
 });
 
 test('order message relay is logged, redacted, scoped, and notifies both sides', () => {

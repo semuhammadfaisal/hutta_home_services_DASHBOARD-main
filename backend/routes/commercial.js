@@ -13,6 +13,7 @@ const CommercialPortfolio = require('../models/CommercialPortfolio');
 const CommercialPortalPreference = require('../models/CommercialPortalPreference');
 const CommercialPropertyMembership = require('../models/CommercialPropertyMembership');
 const CommercialServiceAgreement = require('../models/CommercialServiceAgreement');
+const CommercialSetupRequest = require('../models/CommercialSetupRequest');
 const CommercialWarrantyClaim = require('../models/CommercialWarrantyClaim');
 const CustomerInvoice = require('../models/CustomerInvoice');
 const Customer = require('../models/Customer');
@@ -55,8 +56,13 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function safeDocument(document, downloadUrl, source, propertyId, orderId) {
   return seal({ id: document.documentId, source, propertyId: String(propertyId), orderId: orderId ? String(orderId) : undefined, name: document.name, type: document.type, size: document.size, uploadedAt: document.uploadedAt, downloadUrl });
 }
+function safeCompletion(completion, orderId) {
+  const photos = phase => (completion?.[`${phase}Photos`] || []).filter(item => item.status !== 'archived').map(item => ({ id: item.documentId, name: redactContact(item.name), url: `/api/commercial/orders/${orderId}/completion-photos/${phase}/${encodeURIComponent(item.documentId)}` }));
+  return seal({ reference: completion.completionReference, completedAt: completion.completedAt, serviceNotes: redactContact(completion.completionNotes), beforePhotos: photos('before'), afterPhotos: photos('after') });
+}
 function preferencePayload(preference = {}) {
-  return seal({ timezone: preference.timezone || 'America/Phoenix', notifications: preference.notifications || { portal: true, email: true, orderUpdates: true, billingUpdates: true, warrantyUpdates: true, reportReady: true }, monthlyReports: { enabled: preference.monthlyReports?.enabled === true, deliveryDay: preference.monthlyReports?.deliveryDay || 1, format: preference.monthlyReports?.format || 'pdf', propertyIds: (preference.monthlyReports?.propertyIds || []).map(String), lastDeliveryPeriodKey: preference.monthlyReports?.lastDeliveryPeriodKey, lastDeliveryStatus: preference.monthlyReports?.lastDeliveryStatus, lastDeliveredAt: preference.monthlyReports?.lastDeliveredAt }, display: { compactTables: preference.display?.compactTables === true } });
+  const item = preference || {};
+  return seal({ timezone: item.timezone || 'America/Phoenix', notifications: item.notifications || { portal: true, email: true, orderUpdates: true, billingUpdates: true, warrantyUpdates: true, reportReady: true }, monthlyReports: { enabled: item.monthlyReports?.enabled === true, deliveryDay: item.monthlyReports?.deliveryDay || 1, format: item.monthlyReports?.format || 'pdf', propertyIds: (item.monthlyReports?.propertyIds || []).map(String), lastDeliveryPeriodKey: item.monthlyReports?.lastDeliveryPeriodKey, lastDeliveryStatus: item.monthlyReports?.lastDeliveryStatus, lastDeliveredAt: item.monthlyReports?.lastDeliveredAt }, display: { compactTables: item.display?.compactTables === true } });
 }
 function streamCommercialDocument(document, res, next) {
   if (!document || document.status === 'archived' || !document.fileId || !ObjectId.isValid(String(document.fileId))) return res.status(404).json({ message: 'Document not found' });
@@ -135,7 +141,9 @@ async function selectedAccesses(req, res) {
   const propertyId = String(req.query.propertyId || '');
   if (organizationId) {
     if (!validId(organizationId)) { res.status(400).json({ message: 'Invalid organization id' }); return null; }
-    if (!accesses.some(item => String(item.location.organizationId) === organizationId)) { res.status(404).json({ message: 'Organization not found' }); return null; }
+    // An active organization membership may legitimately have zero assigned locations
+    // while staff completes setup. Distinguish that state from an unauthorized ID.
+    if (!await organizationAccess(req.user.userId, organizationId)) { res.status(404).json({ message: 'Organization not found' }); return null; }
     accesses = accesses.filter(item => String(item.location.organizationId) === organizationId);
   }
   if (portfolioId) {
@@ -207,19 +215,40 @@ router.get('/me', async (req, res, next) => {
 router.post('/setup-request', writes, async (req, res, next) => {
   try {
     const organizationId = clean(req.body?.organizationId, 40);
-    if (organizationId && (!validId(organizationId) || !await organizationAccess(req.user.userId, organizationId))) {
+    if (!organizationId || !validId(organizationId) || !await organizationAccess(req.user.userId, organizationId)) {
       return res.status(404).json({ message: 'Organization not found' });
     }
+    const activeKey = `${req.user.userId}:${organizationId}`;
+    let setupRequest = await CommercialSetupRequest.findOne({ activeKey }).lean();
+    if (!setupRequest) {
+      try {
+        setupRequest = (await CommercialSetupRequest.create({
+          requestReference: `CSET-${new mongoose.Types.ObjectId().toString().slice(-10).toUpperCase()}`,
+          userId: req.user.userId,
+          organizationId,
+          activeKey,
+          history: [{ action: 'requested', actorUserId: req.user.userId, note: 'Commercial user requested workspace location setup.' }]
+        })).toObject();
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        setupRequest = await CommercialSetupRequest.findOne({ activeKey }).lean();
+      }
+    }
     const title = 'Commercial workspace setup requested';
-    const actionUrl = '/pages/admin-dashboard.html#users';
-    const message = `Commercial user ${req.user.userId} requested ${organizationId ? `location setup for organization ${organizationId}` : 'organization and location setup'}. Verify ownership and billing before granting access.`;
+    const actionUrl = `/pages/admin-dashboard.html#commercial-setup/${setupRequest._id}`;
+    const message = `Commercial user ${req.user.userId} requested location setup for organization ${organizationId}. Verify ownership, service tier, and billing before granting access.`;
     const staff = await User.find({ role: 'admin', isActive: true }).select('_id').lean();
     if (!staff.length) return res.status(503).json({ message: 'No account administrator is available. Please contact SMPLfix support.' });
     for (const user of staff) {
-      const recent = await Notification.exists({ userId: user._id, title, message, createdAt: { $gte: new Date(Date.now() - 86400000) } });
-      if (!recent) await Notification.create({ userId: user._id, title, message, type: 'info', actionUrl });
+      const notificationExists = await Notification.exists({ dedupeKey: `commercial-setup:${setupRequest._id}:${user._id}` });
+      if (notificationExists) continue;
+      await Notification.updateOne(
+        { dedupeKey: `commercial-setup:${setupRequest._id}:${user._id}` },
+        { $setOnInsert: { userId: user._id, title, message, type: 'info', priority: 'high', actionUrl, dedupeKey: `commercial-setup:${setupRequest._id}:${user._id}`, metadata: { setupRequestId: setupRequest._id, organizationId, commercialUserId: req.user.userId } } },
+        { upsert: true }
+      );
     }
-    res.status(202).json({ message: 'Workspace setup requested' });
+    res.status(202).json({ message: 'Workspace setup requested', request: { id: String(setupRequest._id), reference: setupRequest.requestReference, status: setupRequest.status } });
   } catch (error) { next(error); }
 });
 
@@ -372,8 +401,33 @@ router.get('/orders/:orderId/documents/:documentId', async (req, res, next) => {
 router.get('/notifications', async (req, res, next) => {
   try {
     const accesses = await visiblePropertyAccess(req.user.userId); const organizationIds = [...new Set(accesses.map(item => item.location.organizationId))]; const propertyIds = accesses.map(item => item.location.propertyId);
-    const notifications = await Notification.find({ userId: req.user.userId, $or: [{ 'metadata.organizationId': { $in: organizationIds } }, { 'metadata.propertyId': { $in: propertyIds } }] }).select('_id title message type priority isRead createdAt').sort({ createdAt: -1 }).limit(100).lean();
+    const notifications = await Notification.find({ userId: req.user.userId, $or: [{ 'metadata.organizationId': { $in: organizationIds } }, { 'metadata.propertyId': { $in: propertyIds } }] }).select('_id title message type priority isRead actionUrl createdAt').sort({ createdAt: -1 }).limit(100).lean();
     res.json({ data: notifications.map(serializeNotification), unreadCount: notifications.filter(item => !item.isRead).length });
+  } catch (error) { next(error); }
+});
+
+router.patch('/notifications/read-all', writes, async (req, res, next) => {
+  try {
+    const accesses = await visiblePropertyAccess(req.user.userId);
+    const organizationIds = [...new Set(accesses.map(item => item.location.organizationId))];
+    const propertyIds = accesses.map(item => item.location.propertyId);
+    const result = await Notification.updateMany(
+      { userId: req.user.userId, isRead: false, $or: [{ 'metadata.organizationId': { $in: organizationIds } }, { 'metadata.propertyId': { $in: propertyIds } }] },
+      { $set: { isRead: true, readAt: new Date() } }
+    );
+    res.json({ updatedCount: result.modifiedCount || 0 });
+  } catch (error) { next(error); }
+});
+
+router.patch('/notifications/:notificationId/read', writes, async (req, res, next) => {
+  try {
+    if (!validId(req.params.notificationId)) return res.status(400).json({ message: 'Invalid notification id' });
+    const accesses = await visiblePropertyAccess(req.user.userId);
+    const organizationIds = [...new Set(accesses.map(item => item.location.organizationId))];
+    const propertyIds = accesses.map(item => item.location.propertyId);
+    const notification = await Notification.findOneAndUpdate({ _id: req.params.notificationId, userId: req.user.userId, $or: [{ 'metadata.organizationId': { $in: organizationIds } }, { 'metadata.propertyId': { $in: propertyIds } }] }, { $set: { isRead: true, readAt: new Date() } }, { new: true }).select('_id title message type priority isRead actionUrl createdAt').lean();
+    if (!notification) return res.status(404).json({ message: 'Notification not found' });
+    res.json({ notification: serializeNotification(notification) });
   } catch (error) { next(error); }
 });
 
@@ -492,6 +546,46 @@ router.get('/organizations/:organizationId/properties/:propertyId', async (req, 
   try { const found = await scopedProperty(req, res); if (!found) return; res.json({ property: serializeLocation(found.location, found.property, found, found.entitlements, found.capabilities), portfolio: serializePortfolio(found.portfolio), agreement: found.agreement ? serializeAgreement(found.agreement, found.entitlements) : null }); } catch (error) { next(error); }
 });
 
+router.get('/organizations/:organizationId/properties/:propertyId/workspace', async (req, res, next) => {
+  try {
+    const found = await scopedProperty(req, res); if (!found) return;
+    const orderQuery = { propertyId: found.property._id, 'commercialContext.organizationId': found.organization._id };
+    const [orders, activities, propertyRecord, warrantyClaims, billingRows] = await Promise.all([
+      Order.find(orderQuery).sort({ createdAt: -1 }).limit(200).lean(),
+      PortalActivity.find({ propertyId: found.property._id }).select('_id propertyId orderId type title summary occurredAt').sort({ occurredAt: -1 }).limit(50).lean(),
+      Property.findById(found.property._id).select('_id documents').lean(),
+      found.entitlements.warrantyClaims ? CommercialWarrantyClaim.find({ organizationId: found.organization._id, propertyId: found.property._id }).sort({ openedAt: -1 }).lean() : [],
+      found.capabilities.canViewInvoices ? commercialBillingRows(req, [found], {}) : []
+    ]);
+    const orderIds = orders.map(item => item._id);
+    const estimates = orderIds.length ? await OutgoingQuote.find({ orderId: { $in: orderIds }, status: 'sent' }).sort({ sentAt: -1 }).lean() : [];
+    const orderMap = new Map(orders.map(item => [String(item._id), item]));
+    const documents = [];
+    (propertyRecord?.documents || []).filter(item => item.status !== 'archived').forEach(document => documents.push(safeDocument(document, `/api/commercial/properties/${found.property._id}/documents/${encodeURIComponent(document.documentId)}`, 'property', found.property._id)));
+    orders.forEach(order => (order.documents || []).filter(item => item.status !== 'archived').forEach(document => documents.push(safeDocument(document, `/api/commercial/orders/${order._id}/documents/${encodeURIComponent(document.documentId)}`, 'order', found.property._id, order._id))));
+    const closed = new Set(['completed', 'paid', 'cancelled', 'canceled', 'closed']);
+    const openOrders = orders.filter(item => !closed.has(String(item.status || '').toLowerCase()) && item.workflowStatus !== 'completed');
+    const upcoming = orders.filter(item => item.scheduledStart && new Date(item.scheduledStart) >= new Date()).sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart))[0];
+    const invoices = billingRows.map(({ invoice, payment }) => {
+      const safe = serializeInvoice(invoice, payment);
+      return safe ? { ...safe, propertyAmount: allocationFor(invoice, [String(found.property._id)]) } : null;
+    }).filter(Boolean);
+    res.set('Cache-Control', 'private, no-store').json(seal({
+      property: serializeLocation(found.location, found.property, found, found.entitlements, found.capabilities),
+      portfolio: serializePortfolio(found.portfolio),
+      agreement: found.agreement ? serializeAgreement(found.agreement, found.entitlements) : null,
+      summary: { openOrders: openOrders.length, totalOrders: orders.length, currentPeriodSpend: invoices.filter(item => item.issuedAt && new Date(item.issuedAt) >= phoenixPeriod(new Date(), 'monthly').start).reduce((sum, item) => sum + Number(item.propertyAmount || 0), 0), upcomingVisit: upcoming ? { orderId: String(upcoming._id), service: upcoming.service, scheduledStart: upcoming.scheduledStart, scheduledEnd: upcoming.scheduledEnd } : null },
+      capabilities: found.capabilities,
+      orders: orders.map(item => serializeOrder(item, found.agreement, found.capabilities)),
+      estimates: estimates.map(item => serializeEstimate(item, orderMap.get(String(item.orderId)), found.capabilities.canApproveEstimates)),
+      invoices,
+      documents,
+      warrantyClaims: warrantyClaims.map(serializeWarrantyClaim),
+      activity: activities.map(serializeActivity)
+    }));
+  } catch (error) { next(error); }
+});
+
 router.get('/organizations/:organizationId/properties/:propertyId/agreement', async (req, res, next) => {
   try { const found = await scopedProperty(req, res); if (!found) return; if (!found.agreement) return res.status(404).json({ message: 'Active service agreement not found' }); res.json({ agreement: serializeAgreement(found.agreement, found.entitlements), capabilities: found.capabilities }); } catch (error) { next(error); }
 });
@@ -570,6 +664,35 @@ router.get('/orders/:orderId', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get('/orders/:orderId/workspace', async (req, res, next) => {
+  try {
+    const found = await scopedCommercialOrder(req, res); if (!found) return;
+    const [property, portfolio, quotes, completions, activities, billingRows] = await Promise.all([
+      Property.findById(found.order.propertyId).lean(),
+      CommercialPortfolio.findById(found.access.location.portfolioId).lean(),
+      OutgoingQuote.find({ orderId: found.order._id, status: 'sent' }).sort({ sentAt: -1 }).lean(),
+      JobCompletion.find({ orderId: found.order._id, status: 'completed' }).sort({ completedAt: -1 }).select('completionReference completedAt completionNotes beforePhotos afterPhotos').lean(),
+      PortalActivity.find({ orderId: found.order._id }).select('_id propertyId orderId type title summary occurredAt').sort({ occurredAt: -1 }).limit(50).lean(),
+      capabilities(found.access).canViewInvoices ? commercialBillingRows(req, [found.access], {}) : []
+    ]);
+    if (!property || !portfolio) return res.status(404).json({ message: 'Order not found' });
+    const invoices = billingRows.filter(({ invoice }) => String(invoice.orderId) === String(found.order._id) || (invoice.commercialBilling?.propertyBreakdown || []).some(row => (row.orderIds || []).some(id => String(id) === String(found.order._id))));
+    const documents = (found.order.documents || []).filter(item => item.status !== 'archived').map(document => safeDocument(document, `/api/commercial/orders/${found.order._id}/documents/${encodeURIComponent(document.documentId)}`, 'order', found.order.propertyId, found.order._id));
+    res.set('Cache-Control', 'private, no-store').json(seal({
+      order: serializeOrder(found.order, found.access.agreement, capabilities(found.access)),
+      property: serializeLocation(found.access.location, property, found.access, tierEntitlements(found.access.agreement?.tier), capabilities(found.access)),
+      portfolio: serializePortfolio(portfolio),
+      agreement: found.access.agreement ? serializeAgreement(found.access.agreement, tierEntitlements(found.access.agreement.tier)) : null,
+      estimates: quotes.map(item => serializeEstimate(item, found.order, capabilities(found.access).canApproveEstimates)),
+      invoices: invoices.map(({ invoice, payment }) => serializeInvoice(invoice, payment)).filter(Boolean),
+      documents,
+      completions: completions.map(item => safeCompletion(item, found.order._id)),
+      activity: activities.map(serializeActivity),
+      capabilities: capabilities(found.access)
+    }));
+  } catch (error) { next(error); }
+});
+
 router.post('/organizations/:organizationId/requests', writes, async (req, res, next) => {
   let session;
   try {
@@ -579,12 +702,13 @@ router.post('/organizations/:organizationId/requests', writes, async (req, res, 
     if (!access) return res.status(404).json({ message: 'Property not found' });
     const allowed = capabilities(access); if (!allowed.canRequestService) return res.status(403).json({ message: 'Service-request permission required' });
     if (!access.agreement || String(access.agreement._id) !== agreementId) return res.status(409).json({ message: 'Select the active service agreement for this property' });
-    const service = clean(req.body?.serviceCategory, 120); const description = clean(req.body?.description, 5000); const urgency = clean(req.body?.urgency, 20); const preferredTiming = clean(req.body?.preferredTiming, 500); const po = clean(req.body?.purchaseOrderNumber, 120);
+    const service = clean(req.body?.serviceCategory, 120); const description = clean(req.body?.description, 5000); const urgency = clean(req.body?.urgency, 20); const preferredTiming = clean(req.body?.preferredTiming, 500); const po = clean(req.body?.purchaseOrderNumber, 120); const accessInstructions = clean(req.body?.accessInstructions, 1000); const deadlineText = clean(req.body?.targetCompletionDeadline, 20); const targetCompletionDeadline = deadlineText ? new Date(`${deadlineText}T23:59:59.999-07:00`) : null;
     const errors = [];
     if (!SERVICE_CATEGORIES.includes(service)) errors.push('Select a valid service category');
     if (description.length < 10) errors.push('Description must contain at least 10 characters');
     if (!['routine','soon','urgent','emergency'].includes(urgency)) errors.push('Select a valid urgency');
     if (preferredTiming.length < 2) errors.push('Preferred timing is required');
+    if (deadlineText && (!/^\d{4}-\d{2}-\d{2}$/.test(deadlineText) || Number.isNaN(targetCompletionDeadline.getTime()) || targetCompletionDeadline < new Date())) errors.push('Target completion date must be a future Arizona date');
     if (access.agreement.purchaseOrder?.required && !po) errors.push(`${access.agreement.purchaseOrder.label || 'PO number'} is required`);
     if (po && access.agreement.purchaseOrder?.pattern) { try { if (!new RegExp(access.agreement.purchaseOrder.pattern).test(po)) errors.push(`${access.agreement.purchaseOrder.label || 'PO number'} has an invalid format`); } catch (_error) { return res.status(409).json({ message: 'The service agreement has an invalid PO validation rule' }); } }
     const idempotencyKey = clean(req.get('Idempotency-Key'), 100); if (!/^[A-Za-z0-9._:-]{16,100}$/.test(idempotencyKey)) errors.push('A valid Idempotency-Key is required');
@@ -603,12 +727,12 @@ router.post('/organizations/:organizationId/requests', writes, async (req, res, 
         created = duplicate; return;
       }
       const now = new Date(); const orderSequence = await nextCounter('orders', session); const requestSequence = await nextCounter(`website-request:${now.getUTCFullYear()}`, session);
-      [created] = await Order.create([{ orderId:`ORD-${String(orderSequence).padStart(6,'0')}`, workOrderNumber:`WO-C-${String(orderSequence).padStart(6,'0')}`, customerId:owner._id, propertyId:property._id, customer:{ name:owner.name, email:owner.email, phone:owner.phone, address:[property.addressLine1,property.addressLine2,property.city,property.state,property.postalCode].filter(Boolean).join(', ') }, service, description, amount:null, pricingStatus:'unquoted', source:'commercial_portal', status:'new', workflowStatus:'request_received', requestReference:`REQ-${now.getUTCFullYear()}-${String(requestSequence).padStart(6,'0')}`, priority:['urgent','emergency'].includes(urgency)?'high':urgency==='soon'?'medium':'low', customerIntake:{ preferredTiming, completedAt:now }, commercialContext:{ organizationId:access.location.organizationId, portfolioId:access.location.portfolioId, locationId:access.location._id, serviceAgreementId:access.agreement._id, ownerCustomerId:owner._id, billingContact:access.location.billingContactOverride || {}, purchaseOrderNumber:po || undefined, submittedBy:req.user.userId }, portalSubmissionKey:submissionKey }], { session });
+      [created] = await Order.create([{ orderId:`ORD-${String(orderSequence).padStart(6,'0')}`, workOrderNumber:`WO-C-${String(orderSequence).padStart(6,'0')}`, customerId:owner._id, propertyId:property._id, customer:{ name:owner.name, email:owner.email, phone:owner.phone, address:[property.addressLine1,property.addressLine2,property.city,property.state,property.postalCode].filter(Boolean).join(', ') }, service, description, amount:null, pricingStatus:'unquoted', source:'commercial_portal', status:'new', workflowStatus:'request_received', requestReference:`REQ-${now.getUTCFullYear()}-${String(requestSequence).padStart(6,'0')}`, priority:['urgent','emergency'].includes(urgency)?'high':urgency==='soon'?'medium':'low', customerIntake:{ preferredTiming, accessInstructions, completedAt:now }, commercialContext:{ organizationId:access.location.organizationId, portfolioId:access.location.portfolioId, locationId:access.location._id, serviceAgreementId:access.agreement._id, ownerCustomerId:owner._id, billingContact:access.location.billingContactOverride || {}, purchaseOrderNumber:po || undefined, targetCompletionDeadline:targetCompletionDeadline || undefined, accessInstructions:accessInstructions || undefined, submittedBy:req.user.userId }, portalSubmissionKey:submissionKey }], { session });
       await synchronizeWorkflowOrder(created, 'request_received', { session });
       await CommercialAuditEvent.create([{ organizationId:access.location.organizationId, portfolioId:access.location.portfolioId, propertyId:property._id, orderId:created._id, actorUserId:req.user.userId, action:'service_request_created', summary:`${created.requestReference} created for ${property.label || access.location.locationCode}.`, metadata:{ agreementId:access.agreement._id, tier:access.agreement.tier, purchaseOrderProvided:Boolean(po) } }], { session });
       await PortalActivity.create([{ userId:req.user.userId, customerId:owner._id, propertyId:property._id, orderId:created._id, type:'commercial_request_submitted', title:'Commercial service requested', summary:`${service} · ${created.requestReference}` }], { session });
       const staff = await User.find({ isActive:true, role:{ $in:['admin','manager','account_rep'] } }).select('_id').session(session).lean();
-      await Notification.insertMany([{ userId:req.user.userId,title:'Service request received',message:`${created.requestReference} was created for ${property.label || access.location.locationCode}.`,type:'order',priority:created.priority==='high'?'high':'medium',actionUrl:'#orders',metadata:{orderId:created._id,propertyId:property._id}},...staff.map(item=>({userId:item._id,title:'New commercial service request',message:`${created.requestReference} · ${service}`,type:'order',priority:created.priority==='high'?'high':'medium',actionUrl:'#service-requests/overview',metadata:{orderId:created._id,organizationId:access.location.organizationId}}))],{session});
+      await Notification.insertMany([{ userId:req.user.userId,title:'Service request received',message:`${created.requestReference} was created for ${property.label || access.location.locationCode}.`,type:'order',priority:created.priority==='high'?'high':'medium',actionUrl:`#orders/${created._id}`,metadata:{orderId:created._id,propertyId:property._id,organizationId:access.location.organizationId}},...staff.map(item=>({userId:item._id,title:'New commercial service request',message:`${created.requestReference} · ${service}`,type:'order',priority:created.priority==='high'?'high':'medium',actionUrl:'#service-requests/overview',metadata:{orderId:created._id,organizationId:access.location.organizationId}}))],{session});
     });
     memCache.del('orders:stats:v2'); invalidateDashboardStatsCache();
     res.status(201).json({ order: serializeOrder(created, access.agreement, allowed), duplicate:false });

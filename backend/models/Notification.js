@@ -12,7 +12,10 @@ const notificationSchema = new mongoose.Schema({
   isRead: { type: Boolean, default: false },
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
   actionUrl: String,
+  dedupeKey: { type: String, unique: true, sparse: true },
   metadata: mongoose.Schema.Types.Mixed
 }, { timestamps: true });
+
+notificationSchema.index({ userId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

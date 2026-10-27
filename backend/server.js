@@ -12,6 +12,8 @@ const checkRole = require('./middleware/rbac');
 const { resolveSession } = require('./utils/authSessions');
 const { MAX_BODY_BYTES } = require('./utils/websiteIntake');
 const { startIntakeEmailWorker, stopIntakeEmailWorker } = require('./utils/intakeEmailWorker');
+const { agentPortalEnabled } = require('./utils/featureFlags');
+const { createAgentNotificationWorker } = require('./utils/agentNotifications');
 
 // Set default timezone to Arizona Time (MST / GMT-7, no DST)
 process.env.TZ = 'America/Phoenix';
@@ -20,6 +22,9 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 const STAFF_ROLES = ['admin', 'manager', 'account_rep'];
 const staffOnly = checkRole(STAFF_ROLES);
+const requireAgentPortalEnabled = (_req, res, next) => agentPortalEnabled()
+  ? next()
+  : res.status(404).json({ message: 'The real estate agent portal is not available' });
 
 if (process.env.NODE_ENV === 'production' && String(process.env.HUTTAS_WEBHOOK_SECRET || '').length < 32) {
   throw new Error('HUTTAS_WEBHOOK_SECRET must contain at least 32 characters in production');
@@ -75,6 +80,8 @@ app.use('/api/auth/vendor-signup', authRouteLimiter);
 app.use('/api/auth/residential-invite-signup', authRouteLimiter);
 app.use('/api/auth/forgot-password', authRouteLimiter);
 app.use('/api/', apiLimiter);
+app.use('/api/auth/residential-invite-signup', requireAgentPortalEnabled);
+app.use(['/api/agent', '/api/agent-admin', '/api/residential/agent-invitations'], requireAgentPortalEnabled);
 
 // Body parsers
 app.use(express.json({
@@ -157,8 +164,10 @@ try {
     app.use('/api/agent', checkRole(['real_estate_agent']), require('./routes/agent'));
     app.use('/api/agent-admin', staffOnly, require('./routes/agentAdmin'));
     app.use('/api/commercial', checkRole(['commercial']), require('./routes/commercial'));
+    app.use('/api/commercial-admin', staffOnly, require('./routes/commercialAdmin'));
     app.use('/api/vendor-portal', checkRole(['vendor']), require('./routes/vendorPortal'));
     app.use('/api/vendor-portal-admin', staffOnly, require('./routes/vendorPortalAdmin'));
+    app.use('/api/portal-admin', staffOnly, require('./routes/portalAdmin'));
   app.use('/api/users', checkRole(['admin']), require('./routes/users'));
   app.use('/api/dashboard', staffOnly, require('./routes/dashboard'));
   app.use('/api/orders', staffOnly, require('./routes/orders'));
@@ -242,6 +251,7 @@ async function serveResidentialPortal(req, res, next) {
 
 async function serveAgentPortal(req, res, next) {
   try {
+    if (!agentPortalEnabled()) return res.status(404).type('text/plain').send('The real estate agent portal is not available.');
     const resolved = await resolveSession(req, res);
     if (!resolved) {
       const returnTo = encodeURIComponent('/pages/agent-portal.html');
@@ -323,6 +333,7 @@ app.use('/pages', (req, res, next) => {
   if (fileName === 'agent-portal.html') return serveAgentPortal(req, res, next);
   if (fileName === 'commercial-portal.html') return serveCommercialPortal(req, res, next);
   if (fileName === 'vendor-portal.html') return serveVendorPortal(req, res, next);
+  if (fileName === 'agent-invitation.html' && !agentPortalEnabled()) return res.status(404).type('text/plain').send('The real estate agent portal is not available.');
   const publicPages = new Set(['login.html', 'signup.html', 'vendor-signup.html', 'forgot-password.html', 'reset-password.html', 'agent-invitation.html', 'commercial-invitation.html', 'vendor-onboarding.html', 'vendor-quote.html', 'customer-quote.html', 'vendor-schedule.html', 'vendor-completion.html', 'customer-satisfaction.html', 'complete-request.html']);
   if (fileName.endsWith('.html') && !publicPages.has(fileName)) return serveProtectedPage(req, res, next);
   if (['complete-request.html','vendor-completion.html','customer-satisfaction.html'].includes(fileName)) res.set({ 'Cache-Control': 'no-store, max-age=0', Pragma: 'no-cache' });
@@ -373,8 +384,11 @@ app.use((err, req, res, next) => {
 // Connect to MongoDB THEN start server
 const { createCommercialReportWorker } = require('./utils/commercialReportWorker');
 const commercialReportWorker = createCommercialReportWorker({ run: () => require('./run-commercial-report-scheduler').run(), connected: () => mongoose.connection.readyState === 1 });
+const agentNotificationWorker = createAgentNotificationWorker({ connected: () => mongoose.connection.readyState === 1 });
 process.once('SIGTERM', () => commercialReportWorker.stop());
 process.once('SIGINT', () => commercialReportWorker.stop());
+process.once('SIGTERM', () => agentNotificationWorker.stop());
+process.once('SIGINT', () => agentNotificationWorker.stop());
 async function startServer() {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
@@ -391,6 +405,7 @@ async function startServer() {
       console.log(' Health check: http://localhost:' + PORT + '/api/health');
       startIntakeEmailWorker();
       if (process.env.COMMERCIAL_REPORT_SCHEDULER_ENABLED !== 'false') commercialReportWorker.start();
+      if (process.env.AGENT_NOTIFICATION_WORKER_ENABLED !== 'false') agentNotificationWorker.start();
     });
   } catch (error) {
     console.error(' Failed to start server:', error);

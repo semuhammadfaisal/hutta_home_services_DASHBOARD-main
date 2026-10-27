@@ -113,6 +113,12 @@ class DashboardManager {
                 // Load section-specific data
                 if (targetSection === 'orders') {
                     loadOrdersSection();
+                } else if (targetSection === 'agent-requests') {
+                    window.loadAgentRequestsAdmin?.();
+                } else if (targetSection === 'agents') {
+                    window.loadAgentDirectoryAdmin?.();
+                } else if (targetSection === 'portal-accounts') {
+                    window.loadPortalAccountsAdmin?.();
                 } else if (targetSection === 'workflow-center') {
                     loadWorkflowCenter();
                 } else if (targetSection === 'incoming-quotes') {
@@ -11507,7 +11513,8 @@ window.addEventListener('order:status-changed', event => {
     workflowStatusRefreshTimer = setTimeout(async () => {
         window.APIService?.clearCache?.();
         const activeId = document.querySelector('.content-section.active')?.id || '';
-        if (activeId === 'workflow-overview' || activeId === 'workflow-center') await window.loadWorkflowCenter?.();
+        if (activeId === 'agent-requests') await window.loadAgentRequestsAdmin?.();
+        else if (activeId === 'workflow-overview' || activeId === 'workflow-center') await window.loadWorkflowCenter?.();
         else if (activeId === 'orders') await loadOrdersSection();
         else if (activeId === 'pipeline') await loadPipelineSection();
         else if (activeId === 'calendar') await window.loadCalendarSection?.();

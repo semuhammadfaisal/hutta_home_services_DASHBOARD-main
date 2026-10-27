@@ -10,7 +10,7 @@ const permissionSchema = new mongoose.Schema({
 }, { _id: false });
 
 const accessHistorySchema = new mongoose.Schema({
-  action: { type: String, enum: ['created', 'invited', 'accepted', 'extended', 'revoked', 'expired'], required: true },
+  action: { type: String, enum: ['created', 'invited', 'accepted', 'extended', 'revoked', 'expired', 'onboarding_reminder_sent'], required: true },
   actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   previousEndsAt: Date,
   newEndsAt: Date,

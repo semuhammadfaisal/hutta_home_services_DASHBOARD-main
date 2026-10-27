@@ -11,6 +11,7 @@ const RealEstateAgentProfile = require('../models/RealEstateAgentProfile');
 const RealEstateTransaction = require('../models/RealEstateTransaction');
 const { hashInvitationToken, membershipPermissions, propertyFingerprint } = require('../utils/agentAccess');
 const { serializeClientInvitation, serializeTransaction } = require('../utils/agentSerializers');
+const { validateProperty } = require('../utils/residentialProperties');
 
 const router = express.Router();
 const CONSENT_VERSION = 'agent-property-access-v1';
@@ -91,6 +92,20 @@ router.post('/accept', async (req, res, next) => {
       const now = new Date(); const email = String(req.user.email || '').toLowerCase(); const tokenHash = hashInvitationToken(token);
       const invitation = await AgentClientInvitation.findOneAndUpdate({ tokenHash, homeownerEmail: email, status: 'pending', expiresAt: { $gt: now } }, { $set: { status: 'processing' } }, { new: true, session });
       if (!invitation) throw Object.assign(new Error('This invitation is expired, revoked, already accepted, or belongs to another account'), { status: 410 });
+      if (invitation.existingPropertyId && req.body?.propertyCorrections) throw Object.assign(new Error('An existing property cannot be changed during invitation acceptance'), { status: 400 });
+      let proposedProperty = invitation.proposedProperty?.toObject?.() || invitation.proposedProperty || {};
+      if (!invitation.existingPropertyId && req.body?.propertyCorrections) {
+        const corrections = req.body.propertyCorrections;
+        if (!corrections || typeof corrections !== 'object' || Array.isArray(corrections)) throw Object.assign(new Error('Property corrections must be an object'), { status: 400 });
+        const allowed = ['label', 'addressLine1', 'addressLine2', 'city', 'state', 'postalCode', 'propertyType'];
+        const supplied = Object.fromEntries(allowed.filter(field => Object.prototype.hasOwnProperty.call(corrections, field)).map(field => [field, corrections[field]]));
+        const validated = validateProperty({ ...proposedProperty, ...supplied, confirmAuthority: true });
+        if (validated.errors.length) throw Object.assign(new Error(validated.errors.join('. ')), { status: 400 });
+        proposedProperty = Object.fromEntries(allowed.map(field => [field, validated.data[field]]));
+        invitation.proposedProperty = proposedProperty;
+        invitation.propertyFingerprint = propertyFingerprint(proposedProperty);
+        invitation.history.push({ action: 'property_corrected', actorId: req.user.userId, reason: 'Homeowner corrected proposed property details before consent' });
+      }
       const permissions = effectivePermissions(invitation.permissions, req.body?.permissions);
       if (!permissions.viewStatus) throw Object.assign(new Error('Status access must be approved to connect the transaction'), { status: 400 });
 
@@ -109,15 +124,16 @@ router.post('/accept', async (req, res, next) => {
         property = await Property.findOne({ _id: invitation.existingPropertyId, ownerCustomerId: customer._id, status: 'active' }).session(session);
         if (!property) throw Object.assign(new Error('The selected property ownership conflicts with this account'), { status: 409 });
       } else {
-        const proposedFingerprint = propertyFingerprint(invitation.proposedProperty);
+        const validated = validateProperty({ ...proposedProperty, confirmAuthority: true });
+        if (validated.errors.length) throw Object.assign(new Error(validated.errors.join('. ')), { status: 400 });
+        const proposedFingerprint = propertyFingerprint(proposedProperty);
         const matchingProperties = await Property.find({
           status: 'active',
-          city: invitation.proposedProperty.city,
-          state: invitation.proposedProperty.state
+          $or: [{ residentialAddressKey: validated.addressKey }, { city: proposedProperty.city, state: proposedProperty.state }]
         }).collation({ locale: 'en', strength: 2 }).session(session);
         property = matchingProperties.find(item => propertyFingerprint(item) === proposedFingerprint);
         if (property && String(property.ownerCustomerId) !== String(customer._id)) throw Object.assign(new Error('This property is owned by another customer record and requires staff review'), { status: 409 });
-        if (!property) property = (await Property.create([{ ownerCustomerId: customer._id, label: invitation.proposedProperty.label, addressLine1: invitation.proposedProperty.addressLine1, addressLine2: invitation.proposedProperty.addressLine2, city: invitation.proposedProperty.city, state: invitation.proposedProperty.state, postalCode: invitation.proposedProperty.postalCode, propertyType: invitation.proposedProperty.propertyType, source: 'manual' }], { session }))[0];
+        if (!property) property = (await Property.create([{ ownerCustomerId: customer._id, ...proposedProperty, residentialAddressKey: validated.addressKey, source: 'manual' }], { session }))[0];
       }
 
       const existingOwner = await PropertyMembership.findOne({ propertyId: property._id, relationship: 'owner', status: 'active' }).session(session);

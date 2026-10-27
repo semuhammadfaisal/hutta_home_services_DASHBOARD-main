@@ -303,6 +303,7 @@ class APIService {
 
     async signupVendor(payload) { return this.request('/auth/vendor-signup', { method: 'POST', body: JSON.stringify(payload || {}) }); }
     async getVendorPortal() { return this.request('/vendor-portal/me'); }
+    async getVendorTeam() { return this.request('/vendor-portal/team'); }
     async getVendorLeads() { return this.request('/vendor-portal/leads'); }
     async respondToVendorLead(invitationId, payload) { return this.request(`/vendor-portal/leads/${encodeURIComponent(invitationId)}/respond`, { method: 'POST', body: JSON.stringify(payload || {}) }); }
     async getVendorEstimateDraft(invitationId) { return this.request(`/vendor-portal/leads/${encodeURIComponent(invitationId)}/estimate-draft`); }
@@ -374,6 +375,8 @@ class APIService {
     async updateResidentialAccount(payload) { return this.request('/residential/features/account', { method: 'PUT', body: JSON.stringify(payload || {}) }); }
     async getResidentialReferrals() { return this.request('/residential/features/referrals'); }
     async getAgentProfile() { return this.request('/agent/me'); }
+    async updateAgentProfile(payload) { return this.request('/agent/me', { method: 'PATCH', body: JSON.stringify(payload || {}) }); }
+    async getAgentOverview() { this.requestCache.delete('GET:/agent/overview'); return this.request('/agent/overview'); }
     async getAgentPortfolio() { return this.request('/agent/portfolio'); }
     async getAgentClients() { return this.request('/agent/clients'); }
     async getAgentProperties() { return this.request('/agent/properties'); }
@@ -381,6 +384,9 @@ class APIService {
     async getAgentTransactionHistory() { return this.request('/agent/transaction-history'); }
     async getAgentTransaction(transactionId) { return this.request(`/agent/transactions/${encodeURIComponent(transactionId)}`); }
     async getAgentTransactionOrders(transactionId) { return this.request(`/agent/transactions/${encodeURIComponent(transactionId)}/orders`); }
+    async getAgentTransactionWorkspace(transactionId) { return this.request(`/agent/transactions/${encodeURIComponent(transactionId)}/workspace`); }
+    async getAgentTransactionOnboarding(transactionId) { return this.request(`/agent/transactions/${encodeURIComponent(transactionId)}/onboarding`); }
+    async remindAgentTransactionHomeowner(transactionId) { return this.request(`/agent/transactions/${encodeURIComponent(transactionId)}/onboarding/reminder`, { method: 'POST', body: '{}' }); }
     async getAgentOrders() { return this.request('/agent/orders'); }
     async getAgentActivity(limit = 30) { return this.request(`/agent/activity?limit=${encodeURIComponent(limit)}`); }
     async getAgentReferrals() { return this.request('/agent/referrals'); }
@@ -401,6 +407,11 @@ class APIService {
     async acceptAgentClientInvitation(token, payload) { return this.request('/residential/agent-invitations/accept', { method: 'POST', body: JSON.stringify({ ...(payload || {}), token }) }); }
     async getResidentialAgentAccess() { return this.request('/residential/agent-invitations/access'); }
     async revokeResidentialAgentAccess(transactionId, reason) { return this.request(`/residential/agent-invitations/transactions/${encodeURIComponent(transactionId)}/revoke`, { method: 'POST', body: JSON.stringify({ reason }) }); }
+    async getAgentAdminRequests() { this.requestCache.delete('GET:/agent-admin/requests'); return this.request('/agent-admin/requests'); }
+    async advanceAgentAdminRequest(orderId) { return this.request(`/agent-admin/requests/${encodeURIComponent(orderId)}/advance`, { method: 'POST', body: '{}' }); }
+    async getAgentAdminAgents() { this.requestCache.delete('GET:/agent-admin/agents'); return this.request('/agent-admin/agents'); }
+    async getAgentAdminAgent(agentUserId) { return this.request(`/agent-admin/agents/${encodeURIComponent(agentUserId)}`); }
+    async extendAgentAdminTransaction(transactionId, payload) { return this.request(`/agent-admin/transactions/${encodeURIComponent(transactionId)}/extend`, { method: 'POST', body: JSON.stringify(payload || {}) }); }
     async createResidentialInviteAccount(payload) {
         const response = await this.request('/auth/residential-invite-signup', { method: 'POST', body: JSON.stringify(payload || {}) });
         this.setSession(response);
@@ -1276,8 +1287,10 @@ class APIService {
     async getCommercialPortfolios(organizationId) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/portfolios`); }
     async getCommercialProperties(organizationId) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/properties`); }
     async getCommercialProperty(organizationId, propertyId) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/properties/${encodeURIComponent(propertyId)}`); }
+    async getCommercialPropertyWorkspace(organizationId, propertyId) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/properties/${encodeURIComponent(propertyId)}/workspace`); }
     async getCommercialPropertyOrders(organizationId, propertyId) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/properties/${encodeURIComponent(propertyId)}/orders?limit=100`); }
     async getCommercialOrders(filters = {}) { return this.request(`/commercial/orders${this.commercialQuery(filters)}`); }
+    async getCommercialOrderWorkspace(orderId) { return this.request(`/commercial/orders/${encodeURIComponent(orderId)}/workspace`); }
     async getCommercialInvoices(filters = {}) { return this.request(`/commercial/invoices${this.commercialQuery(filters)}`); }
     async getCommercialReports(filters = {}) { return this.request(`/commercial/reports${this.commercialQuery(filters)}`); }
     async getCommercialActivity(filters = {}) { return this.request(`/commercial/activity${this.commercialQuery(filters)}`); }
@@ -1287,7 +1300,10 @@ class APIService {
     async updateCommercialAccount(payload) { return this.request('/commercial/account', { method: 'PATCH', body: JSON.stringify(payload) }); }
     async getCommercialUsers(organizationId) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/users`); }
     async getCommercialWarrantyClaims(filters = {}) { return this.request(`/commercial/warranty-claims${this.commercialQuery(filters)}`); }
+    async getCommercialWarrantyClaim(claimId) { return this.request(`/commercial/warranty-claims/${encodeURIComponent(claimId)}`); }
     async getCommercialNotifications() { return this.request('/commercial/notifications'); }
+    async markCommercialNotificationRead(notificationId) { return this.request(`/commercial/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'PATCH' }); }
+    async markAllCommercialNotificationsRead() { return this.request('/commercial/notifications/read-all', { method: 'PATCH' }); }
     async createCommercialRequest(organizationId, payload, idempotencyKey) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/requests`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(payload) }); }
     async decideCommercialEstimate(orderId, quoteId, payload) { return this.request(`/commercial/orders/${encodeURIComponent(orderId)}/estimates/${encodeURIComponent(quoteId)}/decision`, { method: 'POST', body: JSON.stringify(payload) }); }
     async getCommercialInvitations(organizationId) { return this.request(`/commercial/organizations/${encodeURIComponent(organizationId)}/invitations`); }
@@ -1356,6 +1372,39 @@ class APIService {
             method: 'DELETE'
         });
     }
+
+    async getCommercialSetupRequests(status = 'pending') {
+        return this.request(`/commercial-admin/setup-requests?status=${encodeURIComponent(status)}`);
+    }
+
+    async getCommercialSetupWorkspace(requestId) {
+        return this.request(`/commercial-admin/setup-requests/${encodeURIComponent(requestId)}/workspace`);
+    }
+
+    async completeCommercialSetup(requestId, payload) {
+        this.clearCache();
+        return this.request(`/commercial-admin/setup-requests/${encodeURIComponent(requestId)}/complete`, { method: 'POST', body: JSON.stringify(payload || {}) });
+    }
+
+    async rejectCommercialSetup(requestId, reason) {
+        this.clearCache();
+        return this.request(`/commercial-admin/setup-requests/${encodeURIComponent(requestId)}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+    }
+
+    // Staff Portal Accounts. Authentication users remain separate from the
+    // canonical customer, organization, agent, vendor, property and order records.
+    async getPortalAccountsOverview() { return this.request('/portal-admin/overview'); }
+    async getPortalAccounts(type = 'all', filters = {}) {
+        const params = new URLSearchParams({ type });
+        if (filters.q) params.set('q', filters.q);
+        if (filters.status) params.set('status', filters.status);
+        return this.request(`/portal-admin/accounts?${params}`);
+    }
+    async getPortalAccountWorkspace(type, id) { return this.request(`/portal-admin/${type}/${encodeURIComponent(id)}/workspace`); }
+    async createPortalResidentialOrder(customerId, payload) { return this.request(`/portal-admin/residential/${encodeURIComponent(customerId)}/orders`, { method: 'POST', body: JSON.stringify(payload) }); }
+    async createPortalCommercialOrder(organizationId, payload) { return this.request(`/portal-admin/commercial/${encodeURIComponent(organizationId)}/orders`, { method: 'POST', body: JSON.stringify(payload) }); }
+    async linkPortalAgentOrder(transactionId, orderId) { return this.request(`/portal-admin/agents/transactions/${encodeURIComponent(transactionId)}/link-order`, { method: 'POST', body: JSON.stringify({ orderId }) }); }
+    async createPortalAgentOrder(transactionId, payload) { return this.request(`/portal-admin/agents/transactions/${encodeURIComponent(transactionId)}/orders`, { method: 'POST', body: JSON.stringify(payload) }); }
 }
 
 // Create global instance

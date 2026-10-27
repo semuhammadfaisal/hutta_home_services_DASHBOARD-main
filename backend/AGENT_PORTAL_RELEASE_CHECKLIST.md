@@ -3,6 +3,7 @@
 ## Data and deployment
 
 - Back up production MongoDB before model/index deployment.
+- Set `AGENT_PORTAL_ENABLED=true` only for approved pilot and production environments. Production defaults to disabled when the variable is absent.
 - Deploy the shared `Order`, referral-program, and attachment schema changes.
 - Confirm active agent transactions have matching active `PropertyMembership` records.
 - Run `npm run seed:agent-demo` first; use `npm run seed:agent-demo:apply` only in an approved demo environment.
@@ -23,7 +24,7 @@
 - Prepare the transaction package and open every authorized file.
 - Confirm invoice and estimate PDFs correspond to the selected transaction/property.
 - Send messages agent-to-homeowner and homeowner-to-agent; verify notification delivery and order audit history.
-- Confirm referral totals for leads, converted clients/jobs, completed jobs, and configured reward units.
+- Confirm referral totals include leads, converted clients/jobs, and completed jobs without commissions, rewards, balances, or payout promises.
 - Advance a test transaction past `accessEndsAt`; confirm it moves to archived history and all protected access stops.
 
 ## Accessibility and responsive QA

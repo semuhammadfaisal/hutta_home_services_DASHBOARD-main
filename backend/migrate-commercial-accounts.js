@@ -10,6 +10,7 @@ const CommercialPropertyMembership = require('./models/CommercialPropertyMembers
 const CommercialUserInvitation = require('./models/CommercialUserInvitation');
 const CommercialAuditEvent = require('./models/CommercialAuditEvent');
 const CommercialServiceAgreement = require('./models/CommercialServiceAgreement');
+const CommercialSetupRequest = require('./models/CommercialSetupRequest');
 const CommercialWarrantyClaim = require('./models/CommercialWarrantyClaim');
 const Customer = require('./models/Customer');
 const CustomerInvoice = require('./models/CustomerInvoice');
@@ -18,7 +19,7 @@ const Property = require('./models/Property');
 const User = require('./models/User');
 
 const APPLY = process.argv.includes('--apply');
-const MODELS = [CommercialOrganization, CommercialPortfolio, CommercialLocation, CommercialMembership, CommercialPortfolioMembership, CommercialPropertyMembership, CommercialServiceAgreement, CommercialUserInvitation, CommercialAuditEvent, CommercialPortalPreference, CommercialWarrantyClaim, CustomerInvoice];
+const MODELS = [CommercialOrganization, CommercialPortfolio, CommercialLocation, CommercialMembership, CommercialPortfolioMembership, CommercialPropertyMembership, CommercialServiceAgreement, CommercialUserInvitation, CommercialAuditEvent, CommercialPortalPreference, CommercialWarrantyClaim, CommercialSetupRequest, CustomerInvoice];
 
 function tierFrom(customer) {
   const value = (customer.customFields || []).find(field => /commercial\s*tier|service\s*tier/i.test(field.name || ''))?.value;

@@ -30,6 +30,7 @@ const schema = new mongoose.Schema({
   customerSnapshot: { type: mongoose.Schema.Types.Mixed, required: true, immutable: true },
   jobSnapshot: { type: mongoose.Schema.Types.Mixed, required: true, immutable: true },
   quoteSnapshot: { type: mongoose.Schema.Types.Mixed, required: true, immutable: true },
+  contractorSnapshot: { type: mongoose.Schema.Types.Mixed, default: {}, immutable: true },
   paymentInstructionsSnapshot: { type: mongoose.Schema.Types.Mixed, default: {}, immutable: true },
   commercialBilling: {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'CommercialOrganization', immutable: true },

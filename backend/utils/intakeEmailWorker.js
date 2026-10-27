@@ -35,7 +35,8 @@ const {
   sendStaffPaymentProofEmail,
   sendWebsiteOperationsAlertEmail,
   sendWebsiteRequestConfirmationEmail,
-  sendResidentialOrderMessageAlertEmail
+  sendResidentialOrderMessageAlertEmail,
+  sendAgentPortalUpdateEmail
 } = require('./emailService');
 const { decryptToken, hashToken } = require('./incomingQuotes');
 const { decryptToken: decryptOutgoingToken, hashToken: hashOutgoingToken } = require('./outgoingQuotes');
@@ -252,6 +253,8 @@ async function deliverMessage(message) {
     ,customer_payment_proof_verified: sendCustomerPaymentProofEmail
     ,customer_payment_proof_rejected: sendCustomerPaymentProofEmail
     ,residential_order_message_alert: sendResidentialOrderMessageAlertEmail
+    ,agent_portal_update: sendAgentPortalUpdateEmail
+    ,homeowner_agent_action_reminder: sendAgentPortalUpdateEmail
   };
   const sender = senders[message.type];
   if (!sender) throw new Error(`Unsupported email outbox type: ${message.type}`);

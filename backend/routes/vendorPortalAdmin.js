@@ -17,8 +17,9 @@ const router = express.Router();
 const STATUS_VALUES = new Set(['pending', 'compliance_incomplete', 'under_review', 'approved_active', 'rejected', 'suspended']);
 function clean(value, max = 1000) { return String(value || '').trim().slice(0, max); }
 function safeMessage(value) { return clean(value, 3000).replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[contact hidden]').replace(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g, '[contact hidden]'); }
+function requireManager(req, res, next) { return ['admin', 'manager'].includes(req.user.role) ? next() : res.status(403).json({ message: 'Administrator or manager access is required' }); }
 
-router.post('/assignments/:assignmentId/messages', async (req, res, next) => {
+router.post('/assignments/:assignmentId/messages', requireManager, async (req, res, next) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.assignmentId)) return res.status(404).json({ message: 'Assignment not found' });
     const order = await Order.findOne({ 'vendorAssignments._id': req.params.assignmentId }); const assignment = order?.vendorAssignments?.id(req.params.assignmentId);
@@ -37,7 +38,7 @@ router.get('/invoices', async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.patch('/invoices/:invoiceId/review', async (req, res, next) => {
+router.patch('/invoices/:invoiceId/review', requireManager, async (req, res, next) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.invoiceId) || !['approved', 'rejected', 'disputed'].includes(req.body.status)) return res.status(400).json({ message: 'Valid invoice and review status are required' });
     const invoice = await VendorInvoice.findById(req.params.invoiceId); if (!invoice) return res.status(404).json({ message: 'Vendor invoice not found' });
@@ -60,7 +61,7 @@ router.get('/invoices/:invoiceId/document', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.patch('/payouts/:payoutId/status', async (req, res, next) => {
+router.patch('/payouts/:payoutId/status', requireManager, async (req, res, next) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.payoutId)) return res.status(404).json({ message: 'Payout not found' });
     const payout = await VendorPayout.findById(req.params.payoutId).select('+providerReference'); if (!payout) return res.status(404).json({ message: 'Payout not found' });
@@ -74,7 +75,7 @@ router.patch('/payouts/:payoutId/status', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.patch('/vendors/:vendorId/status', async (req, res, next) => {
+router.patch('/vendors/:vendorId/status', requireManager, async (req, res, next) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.vendorId) || !STATUS_VALUES.has(req.body.status)) return res.status(400).json({ message: 'Valid vendor and status are required' });
     if (['rejected', 'suspended'].includes(req.body.status) && !clean(req.body.reason)) return res.status(400).json({ message: 'A reason is required' });
@@ -96,7 +97,7 @@ router.patch('/vendors/:vendorId/status', async (req, res, next) => {
 });
 
 // Staff-controlled linking supports vendor teams without letting a vendor choose another Vendor record.
-router.post('/vendors/:vendorId/team', async (req, res, next) => {
+router.post('/vendors/:vendorId/team', requireManager, async (req, res, next) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.vendorId)) return res.status(400).json({ message: 'Invalid vendor id' });
     const email = clean(req.body.email, 254).toLowerCase(); const role = ['admin', 'member'].includes(req.body.role) ? req.body.role : 'member';
@@ -105,7 +106,33 @@ router.post('/vendors/:vendorId/team', async (req, res, next) => {
     if (await VendorPortalMembership.exists({ userId: user._id })) return res.status(409).json({ message: 'This login is already assigned to a vendor' });
     const requested = req.body.permissions || {};
     const membership = await VendorPortalMembership.create({ userId: user._id, vendorId: vendor._id, role, invitedBy: req.user.userId, permissions: { profile: role === 'admin' && requested.profile === true, compliance: role === 'admin' && requested.compliance === true, team: false, assignments: requested.assignments !== false, invoices: requested.invoices === true } });
+    await SecurityAuditEvent.create({ action: 'vendor_portal_team_membership_created', userId: req.user.userId, userEmail: req.user.email, entityType: 'VendorPortalMembership', entityId: String(membership._id), metadata: { vendorId: vendor._id, subjectUserId: user._id, role }, ipAddress: req.ip, userAgent: clean(req.get('user-agent'), 500) });
     res.status(201).json({ membership: serializeMembership(membership) });
+  } catch (error) { next(error); }
+});
+
+router.patch('/vendors/:vendorId/team/:membershipId', requireManager, async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.vendorId) || !mongoose.Types.ObjectId.isValid(req.params.membershipId)) return res.status(404).json({ message: 'Vendor team member not found' });
+    const membership = await VendorPortalMembership.findOne({ _id: req.params.membershipId, vendorId: req.params.vendorId });
+    if (!membership) return res.status(404).json({ message: 'Vendor team member not found' });
+    const nextStatus = req.body.status === 'revoked' ? 'revoked' : 'active';
+    const nextRole = ['admin', 'member'].includes(req.body.role) ? req.body.role : membership.role;
+    const permissions = req.body.permissions || membership.permissions?.toObject?.() || membership.permissions || {};
+    membership.status = nextStatus;
+    membership.revokedAt = nextStatus === 'revoked' ? new Date() : undefined;
+    membership.revokedBy = nextStatus === 'revoked' ? req.user.userId : undefined;
+    membership.role = nextRole;
+    membership.permissions = {
+      profile: nextRole === 'admin' && permissions.profile === true,
+      compliance: nextRole === 'admin' && permissions.compliance === true,
+      team: false,
+      assignments: permissions.assignments !== false,
+      invoices: permissions.invoices === true
+    };
+    await membership.save();
+    await SecurityAuditEvent.create({ action: 'vendor_portal_team_membership_updated', userId: req.user.userId, userEmail: req.user.email, entityType: 'VendorPortalMembership', entityId: String(membership._id), metadata: { vendorId: membership.vendorId, subjectUserId: membership.userId, status: nextStatus, role: nextRole }, ipAddress: req.ip, userAgent: clean(req.get('user-agent'), 500) });
+    res.json({ membership: serializeMembership(membership) });
   } catch (error) { next(error); }
 });
 

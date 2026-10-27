@@ -30,7 +30,6 @@ const { ensureAgentProfile } = require('../utils/agentProfileProvisioning');
 const { buildPublicUrl } = require('../utils/publicAppUrl');
 const { SERVICE_CATEGORIES } = require('../utils/residentialRequests');
 const { deadlineRisk, median, validateAgentRequest } = require('../utils/agentRequests');
-const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 const { createOutgoingQuotePdf } = require('../utils/quotePdf');
 const { createCustomerInvoicePdf } = require('../utils/invoicePdf');
 const { createAgentTransactionPackagePdf } = require('../utils/agentTransactionPackage');
@@ -39,6 +38,11 @@ const Vendor = require('../models/Vendor');
 const { activeCompliance } = require('../utils/vendorLeadDistribution');
 const { createAgentArchive } = require('../utils/agentArchive');
 const { clientDocumentAllowed } = require('../utils/agentDocumentPolicy');
+const { cancelledOrder, completedOrder, daysFromPhoenixToday, readinessFor, riskRank } = require('../utils/agentOverview');
+const { publicContractorSnapshot, vendorContractorSnapshot } = require('../utils/vendorContractor');
+const { notifyHomeownersOfAgentUpload } = require('../utils/agentNotifications');
+const { publishPortalNotification } = require('../utils/agentNotifications');
+const { homeownerOnboarding, publicOnboarding } = require('../utils/agentOnboarding');
 
 const router = express.Router();
 router.use(async (req, res, next) => {
@@ -175,19 +179,19 @@ function safePackageDocument(document, category, downloadUrl) {
 }
 
 async function buildTransactionPackage(transaction) {
-  const orders = await Order.find({ customerId: transaction.customerId, propertyId: transaction.propertyId }).select('_id orderId requestReference service description workflowStatus documents createdAt completedAt customerInvoiceId currentOutgoingQuoteId approvedOutgoingQuoteId').sort({ createdAt: 1 }).lean();
+  const orders = await Order.find({ customerId: transaction.customerId, propertyId: transaction.propertyId }).select('_id orderId requestReference service description workflowStatus status documents createdAt completedAt customerInvoiceId currentOutgoingQuoteId approvedOutgoingQuoteId vendor').populate('vendor', 'name companyName legalBusinessName rocLicenseNumber rocNumber rocLicenseTypeClassification rocClassification').sort({ createdAt: 1 }).lean();
   const orderIds = orders.map(item => item._id);
   const [property, completions, quotes, invoices, passport] = await Promise.all([
     Property.findById(transaction.propertyId).select('label addressLine1 addressLine2 city state postalCode documents').lean(),
     JobCompletion.find({ orderId: { $in: orderIds }, status: 'completed' }).select('orderId completionReference completionNotes completedAt beforePhotos afterPhotos jobSnapshot').lean(),
     OutgoingQuote.find({ orderId: { $in: orderIds }, status: 'sent' }).select('orderId quoteReference revisionNumber status customerDecisionStatus customerSnapshot jobSnapshot scopeOfWork estimatedDuration earliestAvailableDate siteAccessRequired accessNotes exclusionsConditions customerTotal termsAndConditions legalDisclosure validUntil sentAt vendorSnapshot').sort({ revisionNumber: -1 }).lean(),
-    CustomerInvoice.find({ orderId: { $in: orderIds } }).select('_id orderId invoiceNumber amount issuedAt dueDate terms companySnapshot customerSnapshot jobSnapshot quoteSnapshot snapshotHash').lean(),
+    CustomerInvoice.find({ orderId: { $in: orderIds } }).select('_id orderId invoiceNumber amount issuedAt dueDate terms companySnapshot customerSnapshot jobSnapshot quoteSnapshot contractorSnapshot snapshotHash').lean(),
     ResidentialPropertyProfile.findOne({ propertyId: transaction.propertyId, customerId: transaction.customerId }).select('passportDocuments').lean()
   ]);
   const orderMap = new Map(orders.map(item => [String(item._id), item]));
   const packageReference = `TXN-${String(transaction._id).slice(-8).toUpperCase()}`;
   const safeQuotes = quotes.map(quote => ({ id: String(quote._id), quoteReference: quote.quoteReference, orderId: String(quote.orderId), service: quote.jobSnapshot?.service || orderMap.get(String(quote.orderId))?.service, status: quote.status, decisionStatus: quote.customerDecisionStatus, clientTotal: quote.customerTotal, sentAt: quote.sentAt, validUntil: quote.validUntil, pdfUrl: `/api/agent/transactions/${transaction._id}/estimates/${quote._id}/pdf` }));
-  const safeInvoices = invoices.map(invoice => ({ id: String(invoice._id), invoiceNumber: invoice.invoiceNumber, orderId: String(invoice.orderId), service: invoice.jobSnapshot?.service || orderMap.get(String(invoice.orderId))?.service, clientTotal: invoice.amount, issuedAt: invoice.issuedAt, dueDate: invoice.dueDate, pdfUrl: `/api/agent/transactions/${transaction._id}/invoices/${invoice._id}/pdf` }));
+  const safeInvoices = invoices.map(invoice => { const order = orderMap.get(String(invoice.orderId)); const contractor = invoice.contractorSnapshot?.name ? invoice.contractorSnapshot : publicContractorSnapshot(vendorContractorSnapshot(order?.vendor)); return { id: String(invoice._id), invoiceNumber: invoice.invoiceNumber, orderId: String(invoice.orderId), service: invoice.jobSnapshot?.service || order?.service, clientTotal: invoice.amount, issuedAt: invoice.issuedAt, dueDate: invoice.dueDate, contractor, pdfUrl: `/api/agent/transactions/${transaction._id}/invoices/${invoice._id}/pdf` }; });
   const safeCompletions = completions.map(completion => {
     const order = orderMap.get(String(completion.orderId));
     const photos = phase => (completion[`${phase}Photos`] || []).filter(item => item.status !== 'archived').map(item => safePackageDocument(item, `${phase}_photo`, `/api/agent/transactions/${transaction._id}/completion-photos/${phase}/${encodeURIComponent(item.documentId)}`));
@@ -200,6 +204,37 @@ async function buildTransactionPackage(transaction) {
   (passport?.passportDocuments || []).filter(clientDocumentAllowed).forEach(item => documents.push(safePackageDocument(item, item.category || 'property_passport', `/api/agent/transactions/${transaction._id}/passport-documents/${encodeURIComponent(item.documentId)}`)));
   const cleanDocuments = documents.filter(Boolean);
   return { packageReference, generatedAt: new Date(), transaction: { id: String(transaction._id), label: transaction.label, closeDate: transaction.closeDate }, property: { label: property?.label || 'Property', address: [property?.addressLine1, property?.addressLine2, property?.city, property?.state, property?.postalCode].filter(Boolean).join(', ') }, estimates: safeQuotes, invoices: safeInvoices, completions: safeCompletions, documents: cleanDocuments, summary: { orders: orders.length, completedJobs: safeCompletions.length, estimates: safeQuotes.length, invoices: safeInvoices.length, documents: cleanDocuments.length + safeCompletions.reduce((sum, item) => sum + item.beforePhotos.length + item.afterPhotos.length, 0) }, pdfUrl: `/api/agent/transactions/${transaction._id}/package.pdf`, capabilities: { canDownload: true, canApproveEstimates: false, canManageBilling: false } };
+}
+
+async function buildTransactionWorkspace(transaction) {
+  const [customer, property, rawOrders, onboarding] = await Promise.all([
+    Customer.findById(transaction.customerId).select('_id name status').lean(),
+    Property.findById(transaction.propertyId).lean(),
+    Order.find({ propertyId: transaction.propertyId, customerId: transaction.customerId }).populate('vendor', 'name legalBusinessName companyName category rocNumber rocLicenseNumber').sort({ createdAt: -1 }).lean(),
+    homeownerOnboarding(transaction)
+  ]);
+  const orders = await enrichOrders(rawOrders, [transaction]);
+  let messages = [];
+  if (transaction.permissions?.message === true && rawOrders.length) {
+    const rows = await ResidentialMessage.find({ orderId: { $in: rawOrders.map(item => item._id) }, propertyId: transaction.propertyId, customerId: transaction.customerId, status: 'sent' }).sort({ createdAt: 1 }).limit(500).lean();
+    messages = rows.map(item => ({ orderId: String(item.orderId), ...serializeMessage(item) }));
+  }
+  const pkg = transaction.permissions?.viewDocuments === true ? await buildTransactionPackage(transaction) : null;
+  const relevant = rawOrders.filter(item => !cancelledOrder(item));
+  const packageReady = Boolean(pkg && relevant.length && relevant.every(completedOrder) && pkg.summary.completedJobs >= relevant.length && pkg.summary.invoices >= relevant.length);
+  const open = orders.filter(item => !completedOrder(item) && !cancelledOrder(item));
+  const highestRisk = open.slice().sort((left, right) => riskRank(left.deadlineRisk?.level) - riskRank(right.deadlineRisk?.level))[0]?.deadlineRisk || null;
+  return {
+    transaction: serializeTransaction(transaction, { customer, property }),
+    readiness: readinessFor(orders),
+    deadlineRisk: highestRisk,
+    workItems: orders,
+    messages,
+    documents: pkg ? { estimates: pkg.estimates, invoices: pkg.invoices, completions: pkg.completions, files: pkg.documents } : { estimates: [], invoices: [], completions: [], files: [] },
+    package: pkg ? { ready: packageReady, packageReference: pkg.packageReference, summary: pkg.summary, pdfUrl: pkg.pdfUrl, zipUrl: pkg.pdfUrl.replace(/package\.pdf$/, 'package.zip') } : { ready: false },
+    onboarding: publicOnboarding(onboarding),
+    capabilities: { canRequestService: transaction.permissions?.requestService === true, canMessage: transaction.permissions?.message === true, canViewDocuments: transaction.permissions?.viewDocuments === true, canUploadInspection: transaction.permissions?.uploadInspection === true, canApproveEstimates: false, canManageBilling: false }
+  };
 }
 
 async function streamAgentDocument(document, res, next) {
@@ -260,6 +295,25 @@ router.get('/me', async (req, res, next) => {
     if (profile.status !== 'active') return res.status(403).json({ message: 'Agent profile is suspended. Please contact SMPLfix support.' });
     res.set('Cache-Control', 'no-store').json({ agent: serializeAgentProfile(profile, req.user) });
   } catch (error) { next(error); }
+});
+
+router.patch('/me', writes, async (req, res, next) => {
+  const firstName = clean(req.body?.firstName, 80); const lastName = clean(req.body?.lastName, 80);
+  const phone = clean(req.body?.phone, 40); const brokerageName = clean(req.body?.brokerageName, 180); const licenseNumber = clean(req.body?.licenseNumber, 80);
+  if (!firstName || !lastName || !phone || !brokerageName || !licenseNumber) return res.status(400).json({ message: 'First name, last name, phone, brokerage, and license number are required to complete your agent profile' });
+  if (!/^[0-9+().\-\s]{7,40}$/.test(phone)) return res.status(400).json({ message: 'Enter a valid phone number' });
+  const session = await mongoose.startSession();
+  try {
+    let user; let profile;
+    await session.withTransaction(async () => {
+      user = await User.findOneAndUpdate({ _id: req.user.userId, role: 'real_estate_agent', isActive: true }, { $set: { firstName, lastName, phone } }, { new: true, runValidators: true, session });
+      if (!user) throw Object.assign(new Error('Active agent account not found'), { status: 404 });
+      profile = await RealEstateAgentProfile.findOneAndUpdate({ userId: user._id, status: 'active' }, { $set: { displayName: `${firstName} ${lastName}`.trim(), brokerageName, licenseNumber } }, { new: true, runValidators: true, session });
+      if (!profile) throw Object.assign(new Error('Active agent profile not found'), { status: 404 });
+      await PortalActivity.create([{ userId: user._id, type: 'agent_profile_updated', title: 'Agent profile updated', summary: 'Contact, brokerage, and license details were updated.' }], { session });
+    });
+    res.set('Cache-Control', 'no-store').json({ agent: serializeAgentProfile(profile, user) });
+  } catch (error) { next(error); } finally { await session.endSession(); }
 });
 
 router.get('/client-invitations', async (req, res, next) => {
@@ -349,6 +403,86 @@ router.get('/portfolio', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get('/overview', async (req, res, next) => {
+  try {
+    const now = new Date();
+    const transactions = await visibleTransactions(req.user.userId);
+    if (!transactions.length) {
+      const [activity, unreadNotifications] = await Promise.all([
+        PortalActivity.find({ userId: req.user.userId }).sort({ occurredAt: -1, createdAt: -1 }).limit(8).lean(),
+        Notification.countDocuments({ userId: req.user.userId, isRead: { $ne: true } })
+      ]);
+      return res.json({
+        generatedAt: now.toISOString(), refreshAfterSeconds: 60,
+        summary: { activeTransactions: 0, closingWithinSevenDays: 0, openWorkItems: 0, atRiskItems: 0, upcomingVisits: 0 },
+        priorities: [], closings: [], appointments: [], openWorkItems: [],
+        activity: activity.map(item => ({ id: String(item._id), type: item.type, title: redactContact(item.title), summary: redactContact(item.summary), occurredAt: item.occurredAt || item.createdAt })),
+        unreadNotificationCount: unreadNotifications
+      });
+    }
+
+    const pairs = transactions.map(item => ({ propertyId: item.propertyId, customerId: item.customerId }));
+    const [customers, properties, rawOrders, activity, unreadNotifications] = await Promise.all([
+      Customer.find({ _id: { $in: transactions.map(item => item.customerId) } }).select('_id name status').lean(),
+      Property.find({ _id: { $in: transactions.map(item => item.propertyId) } }).lean(),
+      Order.find({ $or: pairs }).populate('vendor', 'name legalBusinessName companyName category rocNumber rocLicenseNumber').sort({ createdAt: -1 }).limit(500).lean(),
+      PortalActivity.find({ userId: req.user.userId }).sort({ occurredAt: -1, createdAt: -1 }).limit(8).lean(),
+      Notification.countDocuments({ userId: req.user.userId, isRead: { $ne: true } })
+    ]);
+    const enrichedOrders = await enrichOrders(rawOrders, transactions);
+    const customerMap = new Map(customers.map(item => [String(item._id), item]));
+    const propertyMap = new Map(properties.map(item => [String(item._id), item]));
+    const transactionMap = new Map(transactions.map(item => [`${item.customerId}:${item.propertyId}`, item]));
+    const rawOrderMap = new Map(rawOrders.map(item => [String(item._id), item]));
+    const safeTransactions = transactions.map(item => serializeTransaction(item, { customer: customerMap.get(String(item.customerId)), property: propertyMap.get(String(item.propertyId)) }));
+    const safeTransactionMap = new Map(safeTransactions.map(item => [item.id, item]));
+    const ordersByTransaction = new Map(transactions.map(item => [String(item._id), []]));
+    const transactionByOrder = new Map();
+    enrichedOrders.forEach(order => {
+      const raw = rawOrderMap.get(String(order.id));
+      const transaction = raw ? transactionMap.get(`${raw.customerId}:${raw.propertyId}`) : null;
+      if (transaction) { transactionByOrder.set(String(order.id), transaction); ordersByTransaction.get(String(transaction._id)).push(order); }
+    });
+
+    const openOrders = enrichedOrders.filter(order => !completedOrder(order) && !cancelledOrder(order));
+    const atRiskOrders = openOrders.filter(order => ['critical', 'high'].includes(order.deadlineRisk?.level));
+    const upcomingOrders = openOrders.filter(order => order.scheduledStart && new Date(order.scheduledStart) > now)
+      .sort((left, right) => new Date(left.scheduledStart) - new Date(right.scheduledStart));
+    const transactionForOrder = order => transactionByOrder.get(String(order.id));
+    const safeForOrder = order => safeTransactionMap.get(String(transactionForOrder(order)?._id));
+    const actionForOrder = order => ({ kind: 'message', route: `#requests?order=${encodeURIComponent(order.id)}`, label: 'Open work item' });
+    const openWorkItems = openOrders.slice().sort((left, right) => riskRank(left.deadlineRisk?.level) - riskRank(right.deadlineRisk?.level) || new Date(left.deadlineRisk?.deadline || 8640000000000000) - new Date(right.deadlineRisk?.deadline || 8640000000000000)).map(order => {
+      const transaction = safeForOrder(order);
+      return { ...order, transaction: transaction ? { id: transaction.id, label: transaction.label, closeDate: transaction.closeDate, daysUntilClose: daysFromPhoenixToday(transaction.closeDate, now) } : null, action: actionForOrder(order) };
+    });
+    const closings = safeTransactions.map(transaction => {
+      const orders = ordersByTransaction.get(transaction.id) || [];
+      const open = orders.filter(order => !completedOrder(order) && !cancelledOrder(order));
+      const readiness = readinessFor(orders);
+      const nextAppointment = open.filter(order => order.scheduledStart && new Date(order.scheduledStart) > now).sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart))[0];
+      const highestRisk = open.slice().sort((a, b) => riskRank(a.deadlineRisk?.level) - riskRank(b.deadlineRisk?.level))[0]?.deadlineRisk?.level || (readiness.total && readiness.percent === 100 ? 'ready' : 'on_track');
+      return { ...transaction, daysUntilClose: daysFromPhoenixToday(transaction.closeDate, now), readiness, openItemCount: open.length, riskLevel: highestRisk, nextAppointment: nextAppointment ? { orderId: nextAppointment.id, service: nextAppointment.service, startsAt: nextAppointment.scheduledStart, endsAt: nextAppointment.scheduledEnd } : null, action: { kind: 'transaction', route: `#transactions?transaction=${encodeURIComponent(transaction.id)}`, label: 'Open transaction' } };
+    }).sort((a, b) => a.daysUntilClose - b.daysUntilClose);
+    const closingWithinSevenDays = closings.filter(item => item.daysUntilClose >= 0 && item.daysUntilClose <= 7);
+    const riskPriorities = atRiskOrders.map(order => {
+      const transaction = safeForOrder(order);
+      return { id: `order:${order.id}`, type: 'work_item', severity: order.deadlineRisk.level, transactionId: transaction?.id || null, orderId: order.id, title: order.service || 'Service request', context: transaction?.label || order.requestReference || 'Transaction', reason: order.deadlineRisk.reason, deadline: order.deadlineRisk.deadline, daysRemaining: daysFromPhoenixToday(order.deadlineRisk.deadline, now), action: actionForOrder(order) };
+    });
+    const coveredTransactionIds = new Set(riskPriorities.map(item => item.transactionId).filter(Boolean));
+    const closingPriorities = closingWithinSevenDays.filter(item => item.openItemCount > 0 && !coveredTransactionIds.has(item.id)).map(item => ({ id: `transaction:${item.id}`, type: 'closing', severity: item.daysUntilClose <= 2 ? 'high' : 'watch', transactionId: item.id, orderId: null, title: item.label, context: `${item.client?.displayName || 'Client'} · ${item.property?.label || 'Property'}`, reason: `${item.openItemCount} open work item${item.openItemCount === 1 ? '' : 's'} before closing`, deadline: item.closeDate, daysRemaining: item.daysUntilClose, action: item.action }));
+    const priorities = [...riskPriorities, ...closingPriorities].sort((a, b) => riskRank(a.severity) - riskRank(b.severity) || (a.daysRemaining ?? Number.MAX_SAFE_INTEGER) - (b.daysRemaining ?? Number.MAX_SAFE_INTEGER)).slice(0, 10);
+    const appointments = upcomingOrders.slice(0, 10).map(order => { const transaction = safeForOrder(order); return { orderId: order.id, service: order.service, startsAt: order.scheduledStart, endsAt: order.scheduledEnd, transaction: transaction ? { id: transaction.id, label: transaction.label } : null, action: actionForOrder(order) }; });
+
+    res.json({
+      generatedAt: now.toISOString(), refreshAfterSeconds: 60,
+      summary: { activeTransactions: transactions.length, closingWithinSevenDays: closingWithinSevenDays.length, openWorkItems: openOrders.length, atRiskItems: atRiskOrders.length, upcomingVisits: upcomingOrders.length },
+      priorities, closings, appointments, openWorkItems: openWorkItems.slice(0, 12),
+      activity: activity.map(item => ({ id: String(item._id), type: item.type, title: redactContact(item.title), summary: redactContact(item.summary), propertyId: item.propertyId ? String(item.propertyId) : null, orderId: item.orderId ? String(item.orderId) : null, occurredAt: item.occurredAt || item.createdAt })),
+      unreadNotificationCount: unreadNotifications
+    });
+  } catch (error) { next(error); }
+});
+
 router.get('/clients', async (req, res, next) => {
   try {
     const allowed = await visibleTransactions(req.user.userId);
@@ -376,6 +510,28 @@ router.get('/transaction-history', async (req, res, next) => {
 });
 router.get('/transactions/:transactionId', async (req, res, next) => { try { const transaction = await scopedTransaction(req, res); if (!transaction) return; const [customer, property] = await Promise.all([Customer.findById(transaction.customerId).select('_id name status').lean(), Property.findById(transaction.propertyId).lean()]); res.json({ transaction: serializeTransaction(transaction, { customer, property }) }); } catch (error) { next(error); } });
 router.get('/transactions/:transactionId/orders', async (req, res, next) => { try { const transaction = await scopedTransaction(req, res); if (!transaction) return; const orders = await Order.find({ propertyId: transaction.propertyId, customerId: transaction.customerId }).populate('vendor', 'name legalBusinessName companyName category rocNumber rocLicenseNumber').sort({ createdAt: -1 }).lean(); res.json({ data: await enrichOrders(orders, [transaction]) }); } catch (error) { next(error); } });
+router.get('/transactions/:transactionId/workspace', async (req, res, next) => { try { const transaction = await scopedTransaction(req, res); if (!transaction) return; res.set('Cache-Control', 'private, no-store').json({ workspace: await buildTransactionWorkspace(transaction) }); } catch (error) { next(error); } });
+router.get('/transactions/:transactionId/onboarding', async (req, res, next) => { try { const transaction = await scopedTransaction(req, res); if (!transaction) return; res.set('Cache-Control', 'private, no-store').json({ onboarding: publicOnboarding(await homeownerOnboarding(transaction)) }); } catch (error) { next(error); } });
+router.post('/transactions/:transactionId/onboarding/reminder', writes, async (req, res, next) => {
+  try {
+    const transaction = await scopedTransaction(req, res); if (!transaction) return;
+    const onboarding = await homeownerOnboarding(transaction);
+    if (!onboarding.reminderAvailable) return res.status(409).json({ message: 'There is no incomplete homeowner action to remind about' });
+    const now = new Date(); const dayAgo = new Date(now.getTime() - 86400000); const weekAgo = new Date(now.getTime() - 7 * 86400000);
+    const filter = { userId: req.user.userId, type: 'agent_onboarding_reminder', 'metadata.transactionId': transaction._id };
+    const [recent, weekly] = await Promise.all([PortalActivity.exists({ ...filter, occurredAt: { $gt: dayAgo } }), PortalActivity.countDocuments({ ...filter, occurredAt: { $gt: weekAgo } })]);
+    if (recent) return res.status(429).json({ message: 'A reminder was already sent for this transaction in the last 24 hours' });
+    if (weekly >= 3) return res.status(429).json({ message: 'The weekly reminder limit has been reached for this transaction' });
+    const missing = onboarding.steps.filter(step => step.actionable && !step.complete).map(step => step.label);
+    const eventKey = `onboarding-reminder:${transaction._id}:${now.toISOString()}`;
+    await Promise.all(onboarding.owners.map(owner => publishPortalNotification({ userId: owner._id, email: owner.email, title: 'Homeowner action requested', message: `Please sign in to SMPLfix to finish ${missing.join(', ').toLowerCase()} for ${transaction.label}.`, eventKey, transactionId: transaction._id, eventType: 'homeowner_onboarding_reminder', audience: 'homeowner' })));
+    await Promise.all([
+      PortalActivity.create({ userId: req.user.userId, customerId: transaction.customerId, propertyId: transaction.propertyId, type: 'agent_onboarding_reminder', title: 'Homeowner onboarding reminder sent', summary: missing.join(', '), occurredAt: now, metadata: { transactionId: transaction._id, missing } }),
+      RealEstateTransaction.updateOne({ _id: transaction._id, ...nowFilter(req.user.userId) }, { $push: { accessHistory: { action: 'onboarding_reminder_sent', actorId: req.user.userId, reason: missing.join(', '), occurredAt: now } } })
+    ]);
+    res.status(201).json({ success: true, sentAt: now, onboarding: publicOnboarding(onboarding) });
+  } catch (error) { next(error); }
+});
 
 router.get('/orders', async (req, res, next) => {
   try {
@@ -398,7 +554,7 @@ router.get('/activity', async (req, res, next) => {
 router.get('/notifications', async (req, res, next) => {
   try {
     const items = await Notification.find({ userId: req.user.userId }).sort({ createdAt: -1 }).limit(100).lean();
-    const data = items.map(item => ({ id: String(item._id), title: redactContact(item.title), message: redactContact(item.message), type: item.type, priority: item.priority, isRead: item.isRead === true, createdAt: item.createdAt }));
+    const data = items.map(item => ({ id: String(item._id), title: redactContact(item.title), message: redactContact(item.message), type: item.type, priority: item.priority, isRead: item.isRead === true, actionUrl: /^#transactions(?:\/[^/?#]+)?$/.test(String(item.actionUrl || '')) ? item.actionUrl : null, createdAt: item.createdAt }));
     res.json({ data, unreadCount: data.filter(item => !item.isRead).length });
   } catch (error) { next(error); }
 });
@@ -408,7 +564,7 @@ router.patch('/notifications/:notificationId/read', writes, async (req, res, nex
     if (!validId(req.params.notificationId)) return res.status(400).json({ message: 'Invalid notification id' });
     const item = await Notification.findOneAndUpdate({ _id: req.params.notificationId, userId: req.user.userId }, { $set: { isRead: true } }, { new: true }).lean();
     if (!item) return res.status(404).json({ message: 'Notification not found' });
-    res.json({ notification: { id: String(item._id), title: redactContact(item.title), message: redactContact(item.message), type: item.type, priority: item.priority, isRead: true, createdAt: item.createdAt } });
+    res.json({ notification: { id: String(item._id), title: redactContact(item.title), message: redactContact(item.message), type: item.type, priority: item.priority, isRead: true, actionUrl: /^#transactions(?:\/[^/?#]+)?$/.test(String(item.actionUrl || '')) ? item.actionUrl : null, createdAt: item.createdAt } });
   } catch (error) { next(error); }
 });
 
@@ -427,6 +583,7 @@ router.post('/transactions/:transactionId/documents', writes, uploadDocument, as
     const updated = await RealEstateTransaction.findOneAndUpdate({ _id: transaction._id, ...nowFilter(req.user.userId) }, { $push: { documents: document } }, { new: true });
     if (!updated) throw Object.assign(new Error('Transaction access expired before the upload completed'), { status: 409 });
     await PortalActivity.create({ userId: req.user.userId, customerId: transaction.customerId, propertyId: transaction.propertyId, type: 'agent_inspection_uploaded', title: 'Inspection report uploaded', summary: name });
+    await notifyHomeownersOfAgentUpload(transaction, document);
     res.status(201).json({ transaction: serializeTransaction(updated) });
   } catch (error) { if (storedId && mongoose.connection.db) await new GridFSBucket(mongoose.connection.db, { bucketName: 'uploads' }).delete(storedId).catch(() => {}); next(error); }
 });
@@ -469,8 +626,8 @@ router.get('/transactions/:transactionId/package.zip', writes, async (req, res, 
       if (raw) append(`${quote.quoteReference}-estimate.pdf`, await createOutgoingQuotePdf({ quoteReference: raw.quoteReference, revisionNumber: raw.revisionNumber, customerSnapshot: { name: raw.customerSnapshot?.name, address: raw.customerSnapshot?.address }, jobSnapshot: { service: raw.jobSnapshot?.service, description: raw.jobSnapshot?.description }, scopeOfWork: raw.scopeOfWork, estimatedDuration: raw.estimatedDuration, customerTotal: raw.customerTotal, termsAndConditions: raw.termsAndConditions, legalDisclosure: raw.legalDisclosure, validUntil: raw.validUntil, sentAt: raw.sentAt, vendorSnapshot: { licensedContractorName: raw.vendorSnapshot?.licensedContractorName, rocNumber: raw.vendorSnapshot?.rocNumber, licenseType: raw.vendorSnapshot?.licenseType } }));
     }
     for (const invoice of pkg.invoices) {
-      const raw = await CustomerInvoice.findOne({ _id: invoice.id, orderId: invoice.orderId }).select('invoiceNumber amount issuedAt dueDate terms companySnapshot customerSnapshot jobSnapshot quoteSnapshot snapshotHash').lean();
-      if (raw) append(`${invoice.invoiceNumber}-invoice.pdf`, await createCustomerInvoicePdf({ ...raw, paymentInstructionsSnapshot: {}, contractor: undefined }));
+      const raw = await CustomerInvoice.findOne({ _id: invoice.id, orderId: invoice.orderId }).select('invoiceNumber amount issuedAt dueDate terms companySnapshot customerSnapshot jobSnapshot quoteSnapshot contractorSnapshot snapshotHash').lean();
+      if (raw) append(`${invoice.invoiceNumber}-invoice.pdf`, await createCustomerInvoicePdf({ ...raw, paymentInstructionsSnapshot: {}, contractor: invoice.contractor || raw.contractorSnapshot || {} }));
     }
     for (const doc of documents) {
       if (!doc._fileId || !ObjectId.isValid(String(doc._fileId))) { omitted.push({ name: doc.name, reason: 'File not available in protected storage' }); continue; }
@@ -505,9 +662,10 @@ router.get('/transactions/:transactionId/invoices/:invoiceId/pdf', async (req, r
   try {
     const transaction = await scopedTransaction(req, res, 'viewDocuments'); if (!transaction) return;
     if (!validId(req.params.invoiceId)) return res.status(400).json({ message: 'Invalid invoice id' });
-    const order = await Order.findOne({ customerId: transaction.customerId, propertyId: transaction.propertyId, customerInvoiceId: req.params.invoiceId }).select('_id').lean();
+    const order = await Order.findOne({ customerId: transaction.customerId, propertyId: transaction.propertyId, customerInvoiceId: req.params.invoiceId }).select('_id vendor').populate('vendor', 'name companyName legalBusinessName rocLicenseNumber rocNumber rocLicenseTypeClassification rocClassification').lean();
     const invoice = order ? await CustomerInvoice.findOne({ _id: req.params.invoiceId, orderId: order._id }).lean() : null; if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
-    const pdf = await createCustomerInvoicePdf({ ...invoice, paymentInstructionsSnapshot: {}, contractor: undefined });
+    const contractor = invoice.contractorSnapshot?.name ? invoice.contractorSnapshot : publicContractorSnapshot(vendorContractorSnapshot(order.vendor));
+    const pdf = await createCustomerInvoicePdf({ ...invoice, paymentInstructionsSnapshot: {}, contractor });
     res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${clean(invoice.invoiceNumber, 80)}.pdf"`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' }).send(pdf);
   } catch (error) { next(error); }
 });
@@ -596,14 +754,13 @@ router.post('/transactions/:transactionId/requests', writes, uploadRequestDocume
         documents: stored.documents,
         customerRequestHistory: [{ type: 'submitted', requestedBy: req.user.userId, requestedAt: now, preferredTiming: payload.preferredTiming }]
       }], { session });
-      await synchronizeWorkflowOrder(order, 'request_received', { session });
       await PortalActivity.insertMany([
         { userId: req.user.userId, customerId: customer._id, propertyId: property._id, orderId: order._id, type: 'agent_service_requested', title: 'Service requested', summary: `${payload.serviceCategory} · ${requestReference}`, occurredAt: now, metadata: { submittedByRole: 'real_estate_agent', transactionId: transaction._id, targetCompletionDeadline: payload.targetCompletionDeadline } },
         ...owners.map(owner => ({ userId: owner.userId, customerId: customer._id, propertyId: property._id, orderId: order._id, type: 'agent_service_requested', title: 'Your agent requested service', summary: `${payload.serviceCategory} · ${requestReference}`, occurredAt: now }))
       ], { session });
       await Notification.insertMany([
         ...owners.map(owner => ({ userId: owner.userId, title: 'Your agent requested service', message: `${payload.serviceCategory} was requested for ${property.label || property.addressLine1}. You retain estimate approval and payment control.`, type: 'order', priority: payload.urgency === 'emergency' ? 'high' : 'medium', actionUrl: '#home', metadata: { orderId: order._id, propertyId: property._id, transactionId: transaction._id } })),
-        ...staff.map(user => ({ userId: user._id, title: payload.urgency === 'emergency' ? 'Emergency agent request' : 'New agent service request', message: `${customer.name} has a ${payload.serviceCategory} request submitted by an authorized agent.`, type: 'order', priority: ['urgent', 'emergency'].includes(payload.urgency) ? 'high' : 'medium', actionUrl: '#service-requests/overview', metadata: { orderId: order._id, propertyId: property._id, transactionId: transaction._id } }))
+        ...staff.map(user => ({ userId: user._id, title: payload.urgency === 'emergency' ? 'Emergency agent request' : 'New agent service request', message: `${customer.name} has a ${payload.serviceCategory} request submitted by an authorized agent.`, type: 'order', priority: ['urgent', 'emergency'].includes(payload.urgency) ? 'high' : 'medium', actionUrl: '#agent-requests', metadata: { orderId: order._id, propertyId: property._id, transactionId: transaction._id } }))
       ], { session });
     });
     if (wasDuplicate && storedIds.length && mongoose.connection.db) { const bucket = new GridFSBucket(mongoose.connection.db, { bucketName: 'uploads' }); await Promise.all(storedIds.map(fileId => bucket.delete(fileId).catch(() => {}))); storedIds = []; }
@@ -622,13 +779,13 @@ router.post('/orders/:orderId/messages', writes, async (req, res, next) => { try
 
 router.get('/referrals', async (req, res, next) => { try {
   await expireAgentTransactions(req.user.userId);
-  const [referrals, profile] = await Promise.all([AgentReferralAttribution.find({ agentUserId: req.user.userId }).sort({ attributedAt: -1 }).lean(), RealEstateAgentProfile.findOne({ userId: req.user.userId }).select('referralCode referralProgram').lean()]);
+  const [referrals, profile] = await Promise.all([AgentReferralAttribution.find({ agentUserId: req.user.userId }).sort({ attributedAt: -1 }).lean(), RealEstateAgentProfile.findOne({ userId: req.user.userId }).select('referralCode').lean()]);
   const transactions = await RealEstateTransaction.find({ _id: { $in: referrals.map(item => item.transactionId) } }).select('_id label closeDate status').lean(); const transactionMap = new Map(transactions.map(item => [String(item._id), item]));
   const properties = await Property.find({ _id: { $in: referrals.map(item => item.propertyId) } }).select('_id label').lean(); const propertyMap = new Map(properties.map(item => [String(item._id), item]));
   const orders = referrals.length ? await Order.find({ $or: referrals.map(item => ({ customerId: item.customerId, propertyId: item.propertyId })) }).select('customerId propertyId workflowStatus status createdAt completedAt').lean() : [];
-  let convertedClients = 0; let convertedJobs = 0; let completedJobs = 0; let rewardUnits = 0;
-  const data = referrals.map(item => { const related = orders.filter(order => String(order.customerId) === String(item.customerId) && String(order.propertyId) === String(item.propertyId)); const converted = related.length; const completed = related.filter(order => order.completedAt || order.workflowStatus === 'completed').length; if (converted) convertedClients += 1; convertedJobs += converted; completedJobs += completed; const units = profile?.referralProgram?.enabled === false ? 0 : completed * Number(profile?.referralProgram?.unitsPerCompletedJob || 0); rewardUnits += units; return serializeReferral(item, { status: converted ? 'converted' : 'attributed', convertedAt: related[0]?.createdAt, convertedJobCount: converted, completedJobCount: completed, rewardStatus: units > 0 ? 'earned' : 'not_eligible', rewardUnits: units, transaction: transactionMap.get(String(item.transactionId)), property: propertyMap.get(String(item.propertyId)) }); });
-  res.json({ data, totals: { leads: referrals.length, convertedClients, convertedJobs, completedJobs, rewardUnits }, program: { referralCode: profile?.referralCode, enabled: profile?.referralProgram?.enabled !== false, rewardLabel: profile?.referralProgram?.rewardLabel || 'SMPLfix referral credit', unitsPerCompletedJob: Number(profile?.referralProgram?.unitsPerCompletedJob || 0) } });
+  let convertedClients = 0; let convertedJobs = 0; let completedJobs = 0;
+  const data = referrals.map(item => { const related = orders.filter(order => String(order.customerId) === String(item.customerId) && String(order.propertyId) === String(item.propertyId)); const converted = related.length; const completed = related.filter(order => order.completedAt || order.workflowStatus === 'completed').length; if (converted) convertedClients += 1; convertedJobs += converted; completedJobs += completed; return serializeReferral(item, { status: converted ? 'converted' : 'attributed', convertedAt: related[0]?.createdAt, convertedJobCount: converted, completedJobCount: completed, transaction: transactionMap.get(String(item.transactionId)), property: propertyMap.get(String(item.propertyId)) }); });
+  res.json({ data, totals: { leads: referrals.length, convertedClients, convertedJobs, completedJobs }, referralCode: profile?.referralCode || null });
 } catch (error) { next(error); } });
 
 router.use((error, _req, res, _next) => { console.error('Agent portal error:', error?.name || 'Error', error?.message || ''); if (error?.code === 11000) return res.status(409).json({ message: 'A pending invitation already exists for this homeowner and property' }); res.status(error.status || (['ValidationError', 'CastError'].includes(error.name) ? 400 : 500)).json({ message: error.message || 'Agent portal request failed' }); });

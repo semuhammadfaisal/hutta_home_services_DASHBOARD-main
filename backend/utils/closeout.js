@@ -71,6 +71,7 @@ function invoiceSnapshotHash(value) {
     customerSnapshot: value.customerSnapshot,
     jobSnapshot: value.jobSnapshot,
     quoteSnapshot: value.quoteSnapshot,
+    contractorSnapshot: value.contractorSnapshot || {},
     paymentInstructionsSnapshot: value.paymentInstructionsSnapshot || {},
     commercialBilling: value.commercialBilling
   }));

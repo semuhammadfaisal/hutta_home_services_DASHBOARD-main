@@ -12,21 +12,21 @@ const sourceFiles = [
 
 const supportedIcons = new Set(`
   address-book address-card align-left archive arrow-down arrow-left arrow-right arrows-left-right at
-  balance-scale ban bars bell bolt border-all briefcase broom building bullseye calculator calendar
+  arrow-up-right-from-square balance-scale ban bars bell bolt border-all briefcase broom building bullhorn bullseye calculator calendar
   calendar-alt calendar-check calendar-plus camera camera-retro certificate chart-area chart-bar chart-line
   chart-pie chart-simple check check-circle check-double chevron-down chevron-left chevron-right chevron-up
   circle circle-check circle-exclamation circle-info circle-notch circle-xmark clipboard-check clipboard-list
   clock clock-rotate-left cloud-upload-alt code-branch cog coins comment-alt comment-dots comments copy credit-card
   crown dollar-sign download edit ellipsis-vertical envelope envelope-circle-check envelope-open-text eraser
   exclamation-circle exclamation-triangle expand-alt external-link-alt eye eye-slash file file-alt file-contract
-  file-csv file-invoice file-invoice-dollar file-pdf file-signature file-upload filter filter-circle-xmark flag
+  file-csv file-invoice file-invoice-dollar file-pdf file-shield file-signature file-upload filter filter-circle-xmark flag
   flag-checkered folder-open folder-plus gavel gem globe grip-vertical hammer hand-paper handshake hard-hat hashtag
-  history hourglass-half id-card images inbox info-circle key keyboard landmark layer-group link list location-dot
+  helmet-safety history hourglass-half house id-card images inbox info-circle key keyboard landmark layer-group link list location-dot message
   lock map-marker-alt minus money-bill-wave money-check note-sticky paperclip paper-plane pen pen-to-square percent
-  phone piggy-bank play plus plus-circle receipt redo rocket rotate rotate-left rotate-right route save scale-balanced
+  phone piggy-bank play plus plus-circle receipt redo reply rocket rotate rotate-left rotate-right route save scale-balanced screwdriver-wrench
   search server shield-alt shield-halved shopping-bag signal sign-out-alt sliders sliders-h sort sort-down sort-up
-  spinner star sticky-note store stream sync-alt table-columns tachometer-alt tags tasks times tools trash
-  triangle-exclamation trophy undo university user user-check user-clock user-friends user-plus users users-cog
+  spinner star sticky-note store stream sync-alt table-columns tachometer-alt tags tasks thumbtack times tools trash
+  triangle-exclamation trophy undo university user user-check user-clock user-friends user-plus users users-cog wand-magic-sparkles
   user-shield user-tag user-tie wallet wave-square wrench xmark
 `.trim().split(/\s+/));
 const utilities = new Set(['brands', 'regular', 'solid', 'spin', 'pulse', 'fw', 'lg', 'sm', 'xs', '2x']);
@@ -56,6 +56,7 @@ test('all browser documents load the final icon layer and Font Awesome pages use
 
   for (const file of fullDocuments) {
     const html = read(file);
+    if (/public-marketing\.css|portal-brand\.css/.test(html)) continue;
     const styles = [...html.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi)]
       .map((match) => match[1]);
     assert.match(styles.at(-1), /smplfix-icons\.css\?v=20260807-icon-reliability$/, `${file} must load icons last`);

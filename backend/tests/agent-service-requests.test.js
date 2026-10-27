@@ -56,8 +56,9 @@ test('agent estimate payload is read-only and deadline data remains free of priv
   assert.doesNotMatch(JSON.stringify(order), /vendorCost|profit|customerTotal|markup/i);
 });
 
-test('agent request route rechecks expiring access, uses the shared workflow, protects files, and notifies owners', () => {
+test('agent request route rechecks expiring access, stays outside fulfillment, protects files, and notifies owners', () => {
   const route = read('backend/routes/agent.js');
+  const adminRoute = read('backend/routes/agentAdmin.js');
   assert.match(route, /router\.post\('\/transactions\/:transactionId\/requests', writes, uploadRequestDocuments/);
   assert.match(route, /currentTransaction = await RealEstateTransaction\.findOne\(\{ _id: transaction\._id, \.\.\.nowFilter/);
   assert.match(route, /currentMembership = currentTransaction \? await activeMembership\(currentTransaction, req\.user\.userId, new Date\(\), session\)/);
@@ -66,7 +67,9 @@ test('agent request route rechecks expiring access, uses the shared workflow, pr
   assert.match(route, /customerId: customer\._id, propertyId: property\._id/);
   assert.match(route, /submittedByRole: 'real_estate_agent'/);
   assert.match(route, /targetCompletionDeadline: payload\.targetCompletionDeadline/);
-  assert.match(route, /synchronizeWorkflowOrder\(order, 'request_received'/);
+  assert.doesNotMatch(route, /synchronizeWorkflowOrder\(order, 'request_received'/);
+  assert.match(adminRoute, /order\.source = 'agent_fulfillment'/);
+  assert.match(adminRoute, /synchronizeWorkflowOrder\(order, 'quote_collection'/);
   assert.match(route, /validFileSignature/);
   assert.match(route, /originalRetained: true/);
   assert.match(route, /portalDocumentType: item\.kind/);

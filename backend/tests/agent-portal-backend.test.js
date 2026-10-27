@@ -94,6 +94,33 @@ test('agent serializers allowlist status data and block private pricing and cont
   assert.throws(() => serializers.seal({ nested: { vendorCost: 1 } }), /Private agent field blocked/);
 });
 
+test('agent profile completion is server-derived and profile updates are allowlisted', () => {
+  const profileId = objectId();
+  const userId = objectId();
+  const incomplete = serializers.serializeAgentProfile(
+    { _id: profileId, displayName: 'Ada Agent', referralCode: 'ADA123', status: 'active' },
+    { _id: userId, firstName: 'Ada', lastName: 'Agent', email: 'ada@example.com', phone: '', role: 'real_estate_agent' }
+  );
+  assert.equal(incomplete.profileCompletion.complete, false);
+  assert.deepEqual(incomplete.profileCompletion.missingFields.sort(), ['brokerageName', 'licenseNumber', 'phone'].sort());
+
+  const complete = serializers.serializeAgentProfile(
+    { _id: profileId, displayName: 'Ada Agent', brokerageName: 'Demo Realty', licenseNumber: 'SA123', referralCode: 'ADA123', status: 'active' },
+    { _id: userId, firstName: 'Ada', lastName: 'Agent', email: 'ada@example.com', phone: '602-555-0123', role: 'real_estate_agent' }
+  );
+  assert.equal(complete.profileCompletion.complete, true);
+  assert.deepEqual(complete.profileCompletion.missingFields, []);
+
+  const route = read('backend/routes/agent.js');
+  assert.match(route, /router\.patch\('\/me', writes/);
+  assert.match(route, /First name, last name, phone, brokerage, and license number are required/);
+  assert.match(route, /role: 'real_estate_agent', isActive: true/);
+  assert.match(route, /\$set: \{ firstName, lastName, phone \}/);
+  assert.match(route, /\$set: \{ displayName: `\$\{firstName\} \$\{lastName\}`\.trim\(\), brokerageName, licenseNumber \}/);
+  assert.match(route, /agent_profile_updated/);
+  assert.doesNotMatch(route, /req\.body\?\.(email|role|referralCode|status)/);
+});
+
 test('agent routes fail closed on IDOR, expiration, property/customer mismatch, and document access', () => {
   const route = read('backend/routes/agent.js');
   assert.match(route, /const nowFilter = \(userId,[^\n]+agentUserId: userId, status: 'active', accessEndsAt: \{ \$gt: now \}/);
@@ -134,7 +161,7 @@ test('staff invitation flow reuses existing customers and properties and support
 
 test('agent resources are explicit and use shared orders, messages, documents, and referral attribution', () => {
   const route = read('backend/routes/agent.js');
-  for (const endpoint of ["'/clients'", "'/properties'", "'/transactions'", "'/portfolio'", "'/orders'", "'/activity'", "'/referrals'", "'/notifications'"]) assert.ok(route.includes(endpoint), `${endpoint} missing`);
+  for (const endpoint of ["'/overview'", "'/clients'", "'/properties'", "'/transactions'", "'/portfolio'", "'/orders'", "'/activity'", "'/referrals'", "'/notifications'"]) assert.ok(route.includes(endpoint), `${endpoint} missing`);
   assert.match(route, /source: 'agent_portal'/);
   assert.match(route, /pricingStatus: 'unquoted'/);
   assert.match(route, /ResidentialMessage\.create/);

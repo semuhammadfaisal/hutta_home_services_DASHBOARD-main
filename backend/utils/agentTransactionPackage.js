@@ -27,7 +27,10 @@ function createAgentTransactionPackagePdf(pkg) {
     pkg.estimates.forEach(item => drawText(document, `${item.quoteReference} · ${item.service} · ${money(item.clientTotal)} · ${item.decisionStatus || item.status}`, { size: 8.5 }));
     drawSectionTitle(document, 'Client invoices');
     if (!pkg.invoices.length) drawText(document, 'No client invoices are included.', { color: '#77777C' });
-    pkg.invoices.forEach(item => drawText(document, `${item.invoiceNumber} · ${item.service} · ${money(item.clientTotal)} · issued ${date(item.issuedAt)}`, { size: 8.5 }));
+    pkg.invoices.forEach(item => {
+      drawText(document, `${item.invoiceNumber} · ${item.service} · ${money(item.clientTotal)} · issued ${date(item.issuedAt)}`, { size: 8.5 });
+      if (item.contractor?.name || item.contractor?.rocNumber) drawText(document, [item.contractor.name, item.contractor.licenseType, item.contractor.rocNumber ? `ROC ${item.contractor.rocNumber}` : ''].filter(Boolean).join(' | '), { size: 7.8, color: '#55555A' });
+    });
     drawSectionTitle(document, 'Authorized documents and warranties');
     if (!pkg.documents.length) drawText(document, 'No additional authorized documents are included.', { color: '#77777C' });
     pkg.documents.forEach(item => drawText(document, `${item.category || 'Document'} · ${item.name}`, { size: 8.5 }));

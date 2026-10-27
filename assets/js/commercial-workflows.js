@@ -80,7 +80,7 @@
   }
   document.addEventListener('click', event => {
     const review = event.target.closest('[data-estimate-order]'); if (review) estimate(review.dataset.estimateOrder, review.dataset.estimateId);
-    const order = event.target.closest('[data-order-id]'); if (order) job(order.dataset.orderId);
+    const order = event.target.closest('[data-order-id]'); if (order) window.location.hash = `#orders/${encodeURIComponent(order.dataset.orderId)}`;
     const edit = event.target.closest('[data-edit-user-id]'); if (edit) access(edit.dataset.editUserId);
   });
 })();

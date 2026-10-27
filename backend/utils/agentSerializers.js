@@ -20,7 +20,9 @@ function seal(value, path = 'response') {
 
 function serializeAgentProfile(profile, user) {
   const item = plain(profile); const identity = plain(user);
-  return seal({ id: id(item), displayName: item.displayName, brokerageName: item.brokerageName, licenseNumber: item.licenseNumber, referralCode: item.referralCode, referralProgram: item.referralProgram ? { enabled: item.referralProgram.enabled === true, rewardLabel: item.referralProgram.rewardLabel, unitsPerCompletedJob: item.referralProgram.unitsPerCompletedJob } : undefined, status: item.status, email: identity.email });
+  const required = { firstName: identity.firstName, lastName: identity.lastName, phone: identity.phone, brokerageName: item.brokerageName, licenseNumber: item.licenseNumber };
+  const missingFields = Object.entries(required).filter(([, value]) => !String(value || '').trim()).map(([key]) => key);
+  return seal({ id: id(item), displayName: item.displayName, firstName: identity.firstName, lastName: identity.lastName, email: identity.email, phone: identity.phone, brokerageName: item.brokerageName, licenseNumber: item.licenseNumber, referralCode: item.referralCode, status: item.status, role: identity.role, profileCompletion: { complete: missingFields.length === 0, missingFields } });
 }
 
 function serializeClient(customer) {
@@ -53,7 +55,7 @@ function serializeMessage(message) {
 
 function serializeReferral(item, related = {}) {
   const value = plain(item);
-  return seal({ id: id(value), transactionId: id(value.transactionId), status: related.status || value.status, attributedAt: value.attributedAt, convertedAt: related.convertedAt || value.convertedAt, convertedJobCount: related.convertedJobCount ?? value.convertedJobCount ?? 0, completedJobCount: related.completedJobCount ?? value.completedJobCount ?? 0, rewardStatus: related.rewardStatus || value.rewardStatus, rewardUnits: related.rewardUnits ?? value.rewardUnits ?? 0, transaction: related.transaction ? { label: related.transaction.label, closeDate: related.transaction.closeDate, status: related.transaction.status, archived: related.transaction.status !== 'active', protectedAccessAvailable: false } : undefined, propertyLabel: related.property?.label });
+  return seal({ id: id(value), transactionId: id(value.transactionId), status: related.status || value.status, attributedAt: value.attributedAt, convertedAt: related.convertedAt || value.convertedAt, convertedJobCount: related.convertedJobCount ?? value.convertedJobCount ?? 0, completedJobCount: related.completedJobCount ?? value.completedJobCount ?? 0, transaction: related.transaction ? { label: related.transaction.label, closeDate: related.transaction.closeDate, status: related.transaction.status, archived: related.transaction.status !== 'active', protectedAccessAvailable: false } : undefined, propertyLabel: related.property?.label });
 }
 
 function serializeClientInvitation(invitation, { includeEmail = true } = {}) {

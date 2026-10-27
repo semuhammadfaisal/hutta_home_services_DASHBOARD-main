@@ -89,7 +89,7 @@ test('suspended agents get 403 on real routed APIs before database resource hand
   const server = app.listen(0, '127.0.0.1');
   try {
     await new Promise(resolve => server.once('listening', resolve));
-    for (const route of ['/me', '/orders', '/referrals', '/transactions/x/package.zip', '/orders/x/messages', '/transactions/x/documents/x']) {
+    for (const route of ['/me', '/overview', '/orders', '/referrals', '/transactions/x/package.zip', '/orders/x/messages', '/transactions/x/documents/x']) {
       const response = await fetch(`http://127.0.0.1:${server.address().port}/agent${route}`);
       assert.equal(response.status, 403, route);
     }

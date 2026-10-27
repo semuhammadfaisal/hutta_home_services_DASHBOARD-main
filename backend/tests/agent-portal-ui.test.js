@@ -23,7 +23,8 @@ test('agent portal has dedicated accessible navigation for every requested works
   assert.match(html, /aria-label="Agent portal navigation"/);
   assert.match(html, /role="alert"/);
   assert.match(html, /role="status" aria-live="polite"/);
-  assert.match(html, /<dialog id="transactionDialog"[^>]*aria-labelledby=/);
+  assert.match(html, /data-view="transaction-detail"[^>]*aria-labelledby=/);
+  assert.match(html, /id="transactionWorkspace"/);
 });
 
 test('overview emphasizes close risk, work, appointments, activity, and readiness', () => {
@@ -38,8 +39,8 @@ test('overview emphasizes close risk, work, appointments, activity, and readines
 test('portfolio and transaction details use authorized agent payloads without internal controls', () => {
   assert.match(script, /window\.APIService\.getAgentPortfolio\(\)/);
   assert.match(script, /window\.APIService\.getAgentOrders\(\)/);
-  assert.match(script, /getAgentTransaction\(transactionId\)/);
-  assert.match(script, /getAgentTransactionOrders\(transactionId\)/);
+  assert.match(script, /getAgentTransactionWorkspace\(transactionId\)/);
+  assert.match(script, /workspace\.workItems/);
   assert.match(script, /transaction\.client\?\.displayName/);
   assert.match(script, /transaction\.property/);
   assert.doesNotMatch(html + script, /vendor cost|profit margin|coordination fee|assign vendor|release invoice|payment method/i);
@@ -47,10 +48,23 @@ test('portfolio and transaction details use authorized agent payloads without in
 });
 
 test('agent frontend service methods call only agent-scoped APIs', () => {
-  for (const method of ['getAgentProfile', 'getAgentPortfolio', 'getAgentClients', 'getAgentProperties', 'getAgentTransactions', 'getAgentTransaction', 'getAgentTransactionOrders', 'getAgentOrders', 'getAgentActivity', 'getAgentReferrals', 'getAgentNotifications', 'readAgentNotification', 'acceptAgentInvitation', 'createAgentRequest']) assert.match(api, new RegExp(`async ${method}\\(`));
+  for (const method of ['getAgentProfile', 'updateAgentProfile', 'getAgentPortfolio', 'getAgentClients', 'getAgentProperties', 'getAgentTransactions', 'getAgentTransaction', 'getAgentTransactionOrders', 'getAgentOrders', 'getAgentActivity', 'getAgentReferrals', 'getAgentNotifications', 'readAgentNotification', 'acceptAgentInvitation', 'createAgentRequest']) assert.match(api, new RegExp(`async ${method}\\(`));
   assert.match(api, /\/(?:agent)\/portfolio/);
   assert.match(api, /\/(?:agent)\/notifications/);
   assert.match(api, /\/(?:agent)\/transactions\/\$\{encodeURIComponent\(transactionId\)\}\/requests/);
+});
+
+test('incomplete agent profiles prompt for attention and can be completed in Account', () => {
+  for (const id of ['profileAttention', 'profileAttentionMessage', 'agentProfileForm', 'profileFirstName', 'profileLastName', 'profileEmail', 'profilePhone', 'profileBrokerage', 'profileLicense', 'profileReferralCode', 'profileRole', 'profileCompletionBadge', 'profileSaveButton']) {
+    assert.ok(html.includes(`id="${id}"`), `${id} missing`);
+  }
+  assert.match(html, /Attention needed: complete your agent profile/);
+  for (const id of ['profileEmail', 'profileReferralCode', 'profileRole']) assert.match(html, new RegExp(`id="${id}"[^>]*readonly`));
+  assert.match(script, /function renderProfileAttention\(\)/);
+  assert.match(script, /state\.profile\?\.profileCompletion/);
+  assert.match(script, /element\.profileAttention\.addEventListener\('click', \(\) => navigate\('account'\)\)/);
+  assert.match(script, /window\.APIService\.updateAgentProfile\(\{ firstName:/);
+  assert.match(api, /async updateAgentProfile\(payload\)[\s\S]*?method: 'PATCH'/);
 });
 
 test('routing is controlled by the authenticated server role', () => {
@@ -76,6 +90,10 @@ test('portal implements search, filters, loading, empty, error, offline, and exp
   assert.match(script, /state\.transactionFilter/);
   assert.match(script, /error\?\.status === 404 \|\| error\?\.status === 403/);
   assert.match(script, /window\.addEventListener\('offline'/);
+  assert.match(html, /id="accessStateTitle">Build your first client portfolio/);
+  assert.match(script, /Waiting for homeowner acceptance/);
+  assert.match(script, /if \(state\.archivedTransactions\.length\)/);
+  assert.doesNotMatch(script, /element\.expired\.hidden = state\.portfolio\.length > 0 \|\| state\.invitations\.length > 0/);
 });
 
 test('responsive CSS supports desktop, tablet, mobile, focus, and reduced motion', () => {

@@ -7,7 +7,7 @@
   <meta name="application-name" content="SMPLfix Agent">
   <title>Agent Portal | SMPLfix</title>
   <link rel="icon" type="image/png" href="/assets/images/smplfix-icon-192.png">
-  <link rel="stylesheet" href="/assets/css/agent-portal.css?v=20260907-agent-portal">
+  <link rel="stylesheet" href="/assets/css/agent-portal.css?v=20261020-agent-profile">
   <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
   <link rel="stylesheet" href="/assets/css/portal-crm-shell.css?v=20260921-crm-shell">
 </head>
@@ -61,18 +61,23 @@
         <div id="portalError" class="state-panel error-state" role="alert" hidden>
           <strong>We couldn’t load the agent portal</strong><p id="portalErrorMessage">Try again in a moment.</p><button class="secondary-button" id="retryButton" type="button">Try again</button>
         </div>
-        <div id="expiredState" class="state-panel expired-state" hidden>
-          <strong>No active transaction access</strong><p>Your property access may have expired at closing, been revoked, or not yet been accepted. Contact SMPLfix if an extension is needed.</p>
-        </div>
-
         <div id="portalContent" hidden>
+          <div id="expiredState" class="agent-access-state" role="status" hidden>
+            <div><p class="eyebrow" id="accessStateEyebrow">Getting started</p><strong id="accessStateTitle">Build your first client portfolio</strong><p id="accessStateMessage">Invite a homeowner to connect their property and transaction.</p></div>
+            <button class="primary-button" id="accessStateInvite" type="button">Invite a homeowner</button>
+          </div>
+          <button id="profileAttention" class="profile-attention" type="button" hidden>
+            <span class="profile-attention-icon" aria-hidden="true">!</span><span><strong>Attention needed: complete your agent profile</strong><small id="profileAttentionMessage">Add your contact, brokerage, and license details to finish setting up your account.</small></span><span class="profile-attention-action">Complete profile →</span>
+          </button>
           <section class="portal-view is-active" data-view="overview" aria-labelledby="overviewHeading">
-            <div class="page-intro"><div><p class="eyebrow">White-glove transaction support</p><h2 id="overviewHeading">Good <span id="dayPeriod">morning</span>, <span id="welcomeName">Agent</span>.</h2><p>Keep every property moving toward a clean close.</p></div><button class="primary-button" type="button" data-route-button="requests">New service request</button></div>
+            <div class="page-intro"><div><p class="eyebrow">White-glove transaction support</p><h2 id="overviewHeading">Good <span id="dayPeriod">morning</span>, <span id="welcomeName">Agent</span>.</h2><p>Keep every property moving toward a clean close.</p></div><div class="overview-actions"><span id="overviewUpdated" class="overview-updated" aria-live="polite"></span><button class="secondary-button compact" id="overviewRefresh" type="button">Refresh</button><button class="primary-button" type="button" data-route-button="requests">New service request</button></div></div>
+            <div id="overviewStale" class="overview-stale" role="status" hidden>Live CRM updates could not be loaded. Showing the last successful snapshot.</div>
             <div class="metric-grid" id="overviewMetrics" aria-label="Portfolio summary"></div>
             <div class="overview-grid">
-              <section class="panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">Priority queue</p><h3>Closing soon</h3></div><button class="text-button" type="button" data-route-button="transactions">View all</button></div><div id="closingSoonList" class="stack-list"></div></section>
+              <section class="panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">Action needed</p><h3>Priority queue</h3></div><button class="text-button" type="button" data-route-button="requests">View requests</button></div><div id="priorityList" class="stack-list"></div></section>
               <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Schedule</p><h3>Next appointments</h3></div></div><div id="appointmentList" class="stack-list"></div></section>
-              <section class="panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">Action needed</p><h3>Open work items</h3></div><button class="text-button" type="button" data-route-button="requests">View requests</button></div><div id="openItemsList" class="stack-list"></div></section>
+              <section class="panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">Closing timeline</p><h3>Active transactions</h3></div><button class="text-button" type="button" data-route-button="transactions">View all</button></div><div id="closingSoonList" class="stack-list"></div></section>
+              <section class="panel"><div class="panel-heading"><div><p class="eyebrow">In progress</p><h3>Open work</h3></div><button class="text-button" type="button" data-route-button="requests">View all</button></div><div id="openItemsList" class="stack-list"></div></section>
               <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Latest</p><h3>Recent activity</h3></div></div><div id="activityList" class="timeline"></div></section>
             </div>
           </section>
@@ -89,6 +94,11 @@
             <div id="transactionList" class="transaction-list"></div>
             <div id="transactionEmpty" class="empty-state" hidden><strong>No matching transactions</strong><p>Change the filter or search phrase.</p></div>
             <section class="archive-panel"><div class="panel-heading"><div><p class="eyebrow">Summary only</p><h3>Archived transaction history</h3><p>Closed and revoked transactions remain visible for referral history, but protected records cannot be opened.</p></div></div><div id="archivedTransactionList" class="archive-list"></div></section>
+          </section>
+
+          <section class="portal-view transaction-workspace-view" data-view="transaction-detail" aria-labelledby="transactionWorkspaceHeading" hidden>
+            <button id="transactionWorkspaceBack" class="text-button workspace-back" type="button">← Back to transactions</button>
+            <div id="transactionWorkspace" aria-live="polite"></div>
           </section>
 
           <section class="portal-view" data-view="requests" aria-labelledby="requestsHeading" hidden>
@@ -130,18 +140,32 @@
           </section>
 
           <section class="portal-view" data-view="account" aria-labelledby="accountHeading" hidden>
-            <div class="page-intro"><div><p class="eyebrow">Agent identity</p><h2 id="accountHeading">Account</h2><p>Your portal identity and access boundaries.</p></div></div>
-            <div class="account-grid"><section class="panel profile-card" id="profileCard"></section><section class="panel boundary-card"><p class="eyebrow">Permission boundary</p><h3>Your clients stay in control</h3><ul><li>You can request service and view authorized status.</li><li>You cannot approve estimates or manage payment.</li><li>Access is property-specific and expires by transaction rules.</li><li>SMPLfix staff must approve extensions.</li></ul><button class="secondary-button" id="logoutButton" type="button">Sign out</button></section></div>
+            <div class="page-intro"><div><p class="eyebrow">Agent identity</p><h2 id="accountHeading">Account</h2><p>Complete and maintain your real estate agent profile.</p></div></div>
+            <div class="account-grid">
+              <section class="panel profile-card" id="profileCard"></section>
+              <section class="panel boundary-card"><p class="eyebrow">Permission boundary</p><h3>Your clients stay in control</h3><ul><li>You can request service and view authorized status.</li><li>You cannot approve estimates or manage payment.</li><li>Access is property-specific and expires by transaction rules.</li><li>SMPLfix staff must approve extensions.</li></ul><button class="secondary-button" id="logoutButton" type="button">Sign out</button></section>
+              <form id="agentProfileForm" class="panel agent-profile-form">
+                <div class="panel-heading"><div><p class="eyebrow">Professional details</p><h3>Agent profile</h3><p>These details identify you inside SMPLfix and your client portfolio.</p></div><span id="profileCompletionBadge" class="status-pill pending">Incomplete</span></div>
+                <div class="form-grid two-column">
+                  <label>First name<input id="profileFirstName" maxlength="80" autocomplete="given-name" required></label>
+                  <label>Last name<input id="profileLastName" maxlength="80" autocomplete="family-name" required></label>
+                  <label>Email<input id="profileEmail" type="email" readonly aria-readonly="true"></label>
+                  <label>Phone<input id="profilePhone" type="tel" maxlength="40" autocomplete="tel" required placeholder="(602) 555-0123"></label>
+                  <label>Brokerage<input id="profileBrokerage" maxlength="180" autocomplete="organization" required placeholder="Brokerage or company name"></label>
+                  <label>Real estate license number<input id="profileLicense" maxlength="80" required placeholder="License number"></label>
+                  <label>Referral code<input id="profileReferralCode" readonly aria-readonly="true"></label>
+                  <label>Portal role<input id="profileRole" readonly aria-readonly="true" value="Real estate agent"></label>
+                </div>
+                <p id="profileFormError" class="form-error" role="alert" hidden></p>
+                <div class="dialog-actions"><button class="primary-button" id="profileSaveButton" type="submit">Save profile</button></div>
+              </form>
+            </div>
           </section>
         </div>
       </main>
     </div>
   </div>
 
-  <dialog id="transactionDialog" class="detail-dialog" aria-labelledby="transactionDialogTitle">
-    <div class="dialog-header"><div><p class="eyebrow">Transaction detail</p><h2 id="transactionDialogTitle">Transaction</h2></div><button class="icon-button" id="closeTransactionDialog" type="button" aria-label="Close transaction detail">×</button></div>
-    <div id="transactionDialogBody" class="dialog-body"></div>
-  </dialog>
   <dialog id="inviteDialog" class="detail-dialog invite-dialog" aria-labelledby="inviteDialogTitle">
     <div class="dialog-header"><div><p class="eyebrow">Agent-to-client invitation</p><h2 id="inviteDialogTitle">Invite a homeowner</h2></div><button class="icon-button" id="closeInviteDialog" type="button" aria-label="Close invitation form">×</button></div>
     <form id="inviteForm" class="dialog-body invite-form">
@@ -158,7 +182,7 @@
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="/assets/js/api-service.js?v=20260907-agent-api"></script>
-  <script src="/assets/js/agent-portal.js?v=20260916-agent-completion"></script>
+  <script src="/assets/js/api-service.js?v=20261020-agent-directory"></script>
+  <script src="/assets/js/agent-portal.js?v=20261020-agent-profile"></script>
 </body>
 </html>

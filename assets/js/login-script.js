@@ -45,7 +45,8 @@ class LoginManager {
 
         const params = new URLSearchParams(window.location.search);
         const requestedPath = params.get('returnTo') || '';
-        const requestedPortal = Object.entries(this.portals).find(([, portal]) => requestedPath.startsWith(portal.destination))?.[0];
+        const explicitPortal = params.get('portal');
+        const requestedPortal = this.portals[explicitPortal] ? explicitPortal : Object.entries(this.portals).find(([, portal]) => requestedPath.startsWith(portal.destination))?.[0];
         let rememberedPortal = '';
         try {
             rememberedPortal = window.localStorage.getItem(this.preferenceKey) || '';

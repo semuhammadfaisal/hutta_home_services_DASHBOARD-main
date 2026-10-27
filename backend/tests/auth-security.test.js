@@ -103,7 +103,7 @@ test('profile modal loads fresh data and separates profile and password transact
   assert.match(styles, /body #profileModal \.profile-form,[\s\S]*?display: block !important/);
   assert.match(styles, /width: min\(920px, calc\(100vw - 48px\)\) !important/);
   assert.match(dashboard, /document\.body\.classList\.add\('profile-modal-open'\)/);
-  assert.match(html, /dashboard-script\.js\?v=20260812-payment-receipts/);
+  assert.match(html, /dashboard-script\.js\?v=20261010-autopilot-confirm-work/);
 });
 
 test('sensitive modules and notification mutations have server-side ownership checks', () => {
@@ -131,6 +131,16 @@ test('idle and absolute session deadlines fail closed', () => {
   assert.equal(isSessionExpired({ ...valid, lastActivityAt: new Date(now - IDLE_TIMEOUT_MS) }, now), true);
   assert.equal(isSessionExpired({ ...valid, absoluteExpiresAt: new Date(now) }, now), true);
   assert.equal(ABSOLUTE_TIMEOUT_MS, 8 * 60 * 60 * 1000);
+});
+
+test('vendor sessions survive the protected portal redirect and remain role scoped', () => {
+  const sessions = read('backend/utils/authSessions.js');
+  const middleware = read('backend/middleware/auth.js');
+  const server = read('backend/server.js');
+  assert.match(sessions, /\['admin', 'manager', 'account_rep', 'residential', 'real_estate_agent', 'commercial', 'vendor'\]\.includes\(user\.role\)/);
+  assert.match(middleware, /vendor \? '\/pages\/vendor-portal\.html'/);
+  assert.match(server, /resolved\.user\.role !== 'vendor'/);
+  assert.match(server, /app\.get\(\['\/pages\/vendor-portal\.html', '\/vendor-portal\.html'\], serveVendorPortal\)/);
 });
 
 test('CSRF comparisons trust the canonical app origin and reject unconfigured origins', () => {

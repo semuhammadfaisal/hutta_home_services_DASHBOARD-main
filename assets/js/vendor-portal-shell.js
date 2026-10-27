@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  const routes = new Set(['overview', 'assignments', 'opportunities', 'billing', 'compliance', 'documents', 'account']);
+  const titles = { overview: 'Overview', assignments: 'Assignments', opportunities: 'Opportunities', billing: 'Billing & payouts', compliance: 'Compliance', documents: 'Documents', account: 'Account' };
   const sidebar = document.getElementById('vendorSidebar');
   const menuButton = document.getElementById('vendorMenuButton');
   const closeButton = document.getElementById('vendorSidebarClose');
@@ -9,56 +11,63 @@
   const companyName = document.getElementById('companyName');
   const sidebarName = document.getElementById('vendorSidebarName');
   const vendorInitials = document.getElementById('vendorInitials');
+  const routeTitle = document.getElementById('routeTitle');
   const links = Array.from(document.querySelectorAll('.vendor-nav .nav-link'));
+  const views = Array.from(document.querySelectorAll('[data-view]'));
   const mobileQuery = window.matchMedia('(max-width: 860px)');
 
-  if (!sidebar || !menuButton || !closeButton || !scrim) return;
+  function parseRoute() {
+    const parts = String(location.hash || '#overview').slice(1).split('/').filter(Boolean);
+    const route = routes.has(parts[0]) ? parts[0] : 'overview';
+    return { route, id: parts[1] ? decodeURIComponent(parts.slice(1).join('/')) : '' };
+  }
 
   function setOpen(open) {
+    if (!sidebar || !menuButton || !scrim) return;
     sidebar.classList.toggle('is-open', open);
     scrim.hidden = !open;
     menuButton.setAttribute('aria-expanded', String(open));
     document.body.style.overflow = open && mobileQuery.matches ? 'hidden' : '';
-    if (open) closeButton.focus();
+    if (open) closeButton?.focus();
   }
 
-  function setActive(hash) {
-    const current = hash || '#workspace';
+  function applyRoute(options = {}) {
+    const state = parseRoute();
+    views.forEach((view) => { view.hidden = view.dataset.view !== state.route; });
     links.forEach((link) => {
-      const active = link.getAttribute('href') === current;
+      const active = link.getAttribute('href') === `#${state.route}`;
       link.classList.toggle('is-active', active);
-      if (active) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
+      if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
     });
+    if (routeTitle) routeTitle.textContent = state.id ? `${titles[state.route]} · Detail` : titles[state.route];
+    document.body.dataset.vendorRoute = state.route;
+    document.body.classList.toggle('vendor-detail-route', Boolean(state.id));
+    document.getElementById('assignmentDetailBar')?.toggleAttribute('hidden', !(state.route === 'assignments' && state.id));
+    document.getElementById('opportunityDetailBar')?.toggleAttribute('hidden', !(state.route === 'opportunities' && state.id));
+    setOpen(false);
+    window.dispatchEvent(new CustomEvent('vendorroutechange', { detail: state }));
+    if (options.focus !== false) document.getElementById('main')?.focus({ preventScroll: true });
   }
 
-  menuButton.addEventListener('click', () => setOpen(true));
-  closeButton.addEventListener('click', () => setOpen(false));
-  scrim.addEventListener('click', () => setOpen(false));
-  accountShortcut?.addEventListener('click', () => {
-    document.getElementById('company-profile')?.scrollIntoView({ behavior: 'smooth' });
-    history.replaceState(null, '', '#company-profile');
-    setActive('#company-profile');
-    setOpen(false);
-  });
-
-  links.forEach((link) => link.addEventListener('click', () => {
-    setActive(link.getAttribute('href'));
-    setOpen(false);
-  }));
-
+  window.VendorPortalRouter = { parseRoute, applyRoute };
+  menuButton?.addEventListener('click', () => setOpen(true));
+  closeButton?.addEventListener('click', () => setOpen(false));
+  scrim?.addEventListener('click', () => setOpen(false));
+  accountShortcut?.addEventListener('click', () => { location.hash = '#account'; });
+  links.forEach((link) => link.addEventListener('click', () => setOpen(false)));
   mobileQuery.addEventListener('change', () => setOpen(false));
-  window.addEventListener('hashchange', () => setActive(location.hash));
+  window.addEventListener('hashchange', () => applyRoute());
 
   if (companyName && sidebarName) {
     const syncCompanyName = () => {
       const name = companyName.textContent.trim() || 'Vendor account';
       sidebarName.textContent = name;
-      if (vendorInitials) vendorInitials.textContent = name.charAt(0).toUpperCase();
+      if (vendorInitials) vendorInitials.textContent = name.split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase() || 'V';
     };
     new MutationObserver(syncCompanyName).observe(companyName, { childList: true, characterData: true, subtree: true });
     syncCompanyName();
   }
 
-  setActive(location.hash);
+  if (!location.hash || !routes.has(String(location.hash).slice(1).split('/')[0])) history.replaceState(null, '', '#overview');
+  applyRoute({ focus: false });
 })();

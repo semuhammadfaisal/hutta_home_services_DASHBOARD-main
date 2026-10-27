@@ -42,6 +42,8 @@ const emailOutboxSchema = new mongoose.Schema({
       ,'customer_payment_proof_verified'
       ,'customer_payment_proof_rejected'
       ,'residential_order_message_alert'
+      ,'agent_portal_update'
+      ,'homeowner_agent_action_reminder'
     ],
     required: true
   },
@@ -49,7 +51,8 @@ const emailOutboxSchema = new mongoose.Schema({
   recipients: { type: [String], required: true },
   payload: { type: mongoose.Schema.Types.Mixed, required: true },
   intakeSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IntakeSubmission' },
-  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+  transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateTransaction' },
   incomingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'IncomingQuote' },
   quoteInvitationId: { type: mongoose.Schema.Types.ObjectId, ref: 'QuoteInvitation' },
   outgoingQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'OutgoingQuote' },
@@ -83,5 +86,6 @@ emailOutboxSchema.index({ outgoingQuoteId: 1, type: 1 });
 emailOutboxSchema.index({ jobScheduleId: 1, type: 1 });
 emailOutboxSchema.index({ jobCompletionId: 1, type: 1 });
 emailOutboxSchema.index({ customerInvoiceId: 1, type: 1 });
+emailOutboxSchema.index({ transactionId: 1, type: 1 });
 
 module.exports = mongoose.model('EmailOutbox', emailOutboxSchema);

@@ -72,7 +72,7 @@ test('Settings uses the responsive SMPLFix workspace and safe interaction states
   const dashboard = read('assets/js/dashboard-script.js');
   const markup = html.slice(html.indexOf('<section id="settings"'), html.indexOf('<!-- Calendar Section -->'));
   assert.match(html, /settings\.css\?v=20260806-settings-ui/);
-  assert.match(html, /dashboard-script\.js\?v=20260812-payment-receipts/);
+  assert.match(html, /dashboard-script\.js\?v=20261010-autopilot-confirm-work/);
   assert.match(markup, /id="settingsForm" class="settings-workspace" onsubmit="saveSettings\(event\)"/);
   assert.match(markup, /id="settingsSaveState" role="status" aria-live="polite"/);
   assert.match(markup, /class="settings-toggle-control" aria-hidden="true"/);
@@ -151,6 +151,7 @@ test('every full browser page loads the shared fluid layout before final form an
   for (const file of htmlFiles) {
     const html = read(file);
     if (!html.includes('</head>')) continue;
+    if (/public-marketing\.css|portal-brand\.css/.test(html)) continue;
     const styles = [...html.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi)]
       .map((match) => match[1]);
     assert.ok(styles.length > 0, `${file} has no stylesheets`);

@@ -796,6 +796,16 @@ const sendResidentialOrderMessageAlertEmail = ({ recipients, customerName, reque
   });
 };
 
+const sendAgentPortalUpdateEmail = ({ recipients, subject, heading, message, pagePath = '/pages/agent-portal.html', actionPath = '#overview', actionLabel = 'Open Agent Portal' }, delivery = deliverEmail) => {
+  const url = buildPublicUrl(pagePath, actionPath);
+  return delivery({
+    to: recipients,
+    subject,
+    text: `${message}\n\n${url}`,
+    html: emailShell(heading || subject, `<p>${escapeHtml(message)}</p><p><a class="btn" href="${url}">${escapeHtml(actionLabel)}</a></p><p class="muted">Sign in to SMPLfix to view protected transaction details.</p>`)
+  });
+};
+
 module.exports = {
   deliverEmail,
   getEmailDeliveryStatus,
@@ -832,4 +842,5 @@ module.exports = {
   ,sendStaffPaymentProofEmail
   ,sendAgentClientInvitationEmail
   ,sendResidentialOrderMessageAlertEmail
+  ,sendAgentPortalUpdateEmail
 };

@@ -39,7 +39,8 @@ test('commercial UI fetches only commercial-scoped APIs and consumes server navi
   assert.match(script, /state\.navigation = dashboard\.navigation/);
   assert.match(script, /const allowed = new Set\(state\.navigation\)/);
   assert.match(script, /APIService\.getCommercialDashboard/);
-  assert.match(script, /APIService\.getCommercialPropertyOrders/);
+  assert.match(script, /APIService\.getCommercialPropertyWorkspace/);
+  assert.match(script, /APIService\.getCommercialOrderWorkspace/);
   assert.doesNotMatch(script, /APIService\.(?:getOrders|getDashboardStats|getCustomers|getVendors)\(/);
   for (const endpoint of ['dashboard', 'invoices', 'reports', 'warranty-claims', 'notifications']) {
     assert.match(api, new RegExp(`\\/commercial\\/${endpoint}`));

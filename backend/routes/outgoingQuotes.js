@@ -19,6 +19,7 @@ const { invalidateDashboardStatsCache } = require('../utils/dashboardStatsCache'
 const memCache = require('../utils/memoryCache');
 const { synchronizeWorkflowOrder } = require('../utils/workflowSync');
 const { applyVendorComplianceOverride, hasVendorComplianceOverride } = require('../utils/vendorComplianceOverride');
+const { vendorContractorSnapshot } = require('../utils/vendorContractor');
 const {
   calculatePricing, cleanText, encryptToken, generateToken, hashToken,
   legalDisclosure, nextOutgoingQuoteReference, publicQuote
@@ -345,12 +346,7 @@ router.post('/orders/:orderId/convert', async (req, res, next) => {
       const config = await settings(session);
       const price = calculatePricing(incoming.total, config.defaultMarkupType, config.defaultMarkupValue);
       const reference = await nextOutgoingQuoteReference(session);
-      const vendorData = {
-        companyName: vendor.name, licensedContractorName: vendor.legalBusinessName || vendor.name,
-        contractorLicenseNumber: vendor.contractorLicenseNumber || '', licenseType: vendor.rocLicenseTypeClassification || '',
-        rocNumber: vendor.rocLicenseNumber || '', rocLicenseExpirationDate: vendor.rocLicenseExpirationDate,
-        coiOnFile: Boolean(vendor.certificateOfInsuranceOnFile), insuranceExpirationDate: vendor.insuranceExpirationDate
-      };
+      const vendorData = vendorContractorSnapshot(vendor);
       [result] = await OutgoingQuote.create([{
         quoteReference: reference, orderId: order._id, customerId: order.customerId, vendorId: vendor._id, incomingQuoteId: incoming._id,
         customerSnapshot: order.customer, jobSnapshot: { requestReference: order.requestReference, orderReference: order.orderId, service: order.service, description: order.description },
@@ -380,15 +376,17 @@ router.post('/orders/:orderId/convert', async (req, res, next) => {
 
 router.patch('/:quoteId', async (req, res, next) => {
   try {
+    if (req.body.vendorSnapshot !== undefined) return res.status(400).json({ message: 'Contractor identity is managed from the assigned vendor record' });
     const quote = await OutgoingQuote.findOne({ _id: req.params.quoteId, status: 'draft' });
     if (!quote) return res.status(409).json({ message: 'Only draft quotes can be edited' });
+    const [order, vendor] = await Promise.all([Order.findById(quote.orderId), Vendor.findById(quote.vendorId)]);
+    if (!order || !vendor || String(order.vendor || '') !== String(vendor._id)) return res.status(409).json({ message: 'The assigned vendor is no longer current' });
     const textFields = ['scopeOfWork', 'accessNotes', 'exclusionsConditions', 'termsAndConditions'];
     for (const field of textFields) if (req.body[field] !== undefined) quote[field] = cleanText(req.body[field], field === 'termsAndConditions' ? 30000 : 10000);
     if (req.body.customerSnapshot) {
       for (const field of ['name', 'email', 'phone', 'address']) if (req.body.customerSnapshot[field] !== undefined) quote.customerSnapshot[field] = cleanText(req.body.customerSnapshot[field], 500);
     }
     if (req.body.jobSnapshot) for (const field of ['service', 'description']) if (req.body.jobSnapshot[field] !== undefined) quote.jobSnapshot[field] = cleanText(req.body.jobSnapshot[field], 10000);
-    if (req.body.vendorSnapshot) for (const field of ['companyName', 'licensedContractorName', 'contractorLicenseNumber', 'licenseType', 'rocNumber']) if (req.body.vendorSnapshot[field] !== undefined) quote.vendorSnapshot[field] = cleanText(req.body.vendorSnapshot[field], 500);
     if (req.body.estimatedDuration) quote.estimatedDuration = req.body.estimatedDuration;
     if (req.body.earliestAvailableDate !== undefined) quote.earliestAvailableDate = req.body.earliestAvailableDate || undefined;
     if (req.body.siteAccessRequired !== undefined) quote.siteAccessRequired = Boolean(req.body.siteAccessRequired);
@@ -398,6 +396,7 @@ router.patch('/:quoteId', async (req, res, next) => {
       quote.markupValue = req.body.markupValue ?? quote.markupValue;
     }
     Object.assign(quote, calculatePricing(quote.vendorCost, quote.markupType, quote.markupValue));
+    quote.vendorSnapshot = vendorContractorSnapshot(vendor);
     quote.legalDisclosure = legalDisclosure(quote.vendorSnapshot);
     quote.history.push({ action: 'edited', actorId: actorId(req), actorEmail: req.user.email, message: 'Draft fields updated' });
     await quote.save();
@@ -444,6 +443,8 @@ router.post('/:quoteId/send', async (req, res, next) => {
         Order.findById(quote.orderId).session(session), IncomingQuote.findById(quote.incomingQuoteId).session(session), Vendor.findById(quote.vendorId).session(session)
       ]);
       if (!order || !incoming || !vendor || String(order.selectedIncomingQuoteId) !== String(incoming._id) || incoming.status !== 'selected') throw Object.assign(new Error('The selected vendor quote is no longer current'), { status: 409 });
+      if (String(order.vendor || '') !== String(vendor._id)) throw Object.assign(new Error('The assigned vendor is no longer current'), { status: 409 });
+      quote.vendorSnapshot = vendorContractorSnapshot(vendor);
       const complianceErrors = vendorComplianceSendErrors(vendor);
       const errors = validateSend(quote, vendor);
       const blockingErrors = errors.filter(message => !complianceErrors.includes(message));

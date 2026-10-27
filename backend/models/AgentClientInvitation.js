@@ -19,7 +19,7 @@ const proposedPropertySchema = new mongoose.Schema({
 }, { _id: false });
 
 const eventSchema = new mongoose.Schema({
-  action: { type: String, enum: ['created', 'sent', 'viewed', 'accepted', 'expired', 'revoked', 'delivery_failed'], required: true },
+  action: { type: String, enum: ['created', 'sent', 'viewed', 'property_corrected', 'accepted', 'expired', 'revoked', 'delivery_failed'], required: true },
   actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   occurredAt: { type: Date, default: Date.now },
   reason: { type: String, trim: true, maxlength: 1000 }

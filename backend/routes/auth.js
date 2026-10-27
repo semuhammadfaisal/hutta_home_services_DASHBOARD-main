@@ -15,6 +15,7 @@ const CommercialUserInvitation = require('../models/CommercialUserInvitation');
 const { hashToken: hashCommercialInvitationToken } = require('../utils/commercialPermissions');
 const Vendor = require('../models/Vendor');
 const VendorPortalMembership = require('../models/VendorPortalMembership');
+const { agentPortalEnabled } = require('../utils/featureFlags');
 const router = express.Router();
 
 const noteOwnerModels = [
@@ -151,6 +152,7 @@ router.post('/signup', async (req, res) => {
     const { name, email, password, requestedRole } = req.body;
     const requestedPortal = req.body.requestedPortal || 'crm';
     const externalRoles = ['residential', 'real_estate_agent', 'commercial'];
+    if (requestedRole === 'real_estate_agent' && !agentPortalEnabled()) return res.status(404).json({ message: 'The real estate agent portal is not available' });
     if (!['crm', ...externalRoles].includes(requestedPortal) || (requestedPortal !== 'crm' && requestedRole !== requestedPortal)) {
       return res.status(400).json({ message: 'Invalid requested portal or role' });
     }
@@ -251,6 +253,7 @@ router.post('/vendor-signup', async (req, res) => {
 // The password is accepted and hashed by User; it is never written to invitation/customer records.
 router.post('/residential-invite-signup', async (req, res) => {
   try {
+    if (!agentPortalEnabled()) return res.status(404).json({ message: 'The real estate agent portal is not available' });
     const name = String(req.body?.name || '').trim(); const email = String(req.body?.email || '').trim().toLowerCase(); const password = String(req.body?.password || ''); const token = String(req.body?.token || '');
     if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || !/^[A-Za-z0-9_-]{32,100}$/.test(token)) return res.status(400).json({ message: 'Name, valid email, password of at least 8 characters, and invitation token are required' });
     const invitation = await AgentClientInvitation.findOne({ tokenHash: hashInvitationToken(token), homeownerEmail: email, status: 'pending', expiresAt: { $gt: new Date() } }).lean();

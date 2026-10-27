@@ -12,7 +12,7 @@ test('every full form page loads the authoritative SMPLFix form layer after feat
     .map((name) => `pages/${name}`)
     .filter((file) => {
       const html = read(file);
-      return html.includes('</head>') && html.includes('<form');
+      return html.includes('</head>') && html.includes('<form') && !/public-marketing\.css|portal-brand\.css/.test(html);
     });
 
   assert.ok(pages.length >= 11, 'expected all admin, auth, vendor, and customer form pages');

@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Agent invitation | SMPLfix</title>
   <link rel="stylesheet" href="/assets/css/agent-invitation.css?v=20260907">
+  <link rel="stylesheet" href="/assets/css/agent-invitation-property.css?v=20261026">
   <link rel="stylesheet" href="/assets/css/portal-brand.css?v=20260916-unified-brand">
 </head>
 <body>
@@ -24,6 +25,7 @@
         <p class="eyebrow">Review before connecting</p><h1>Approve agent access</h1><p id="agentSummary"></p>
         <section class="property-summary" aria-labelledby="propertyTitle"><h2 id="propertyTitle">Property and transaction</h2><strong id="propertyLabel"></strong><span id="propertyAddress"></span><dl><div><dt>Transaction</dt><dd id="transactionLabel"></dd></div><div><dt>Close date</dt><dd id="closeDate"></dd></div><div><dt>Access ends</dt><dd id="accessEnds"></dd></div></dl></section>
         <form id="consentForm" class="stack-form">
+          <fieldset id="propertyCorrectionFields"><legend>Confirm or correct the proposed property</legend><div class="property-edit-grid"><label>Property label<input id="correctedPropertyLabel" maxlength="120"></label><label>Property type<select id="correctedPropertyType"><option value="">Select type</option><option value="single_family">Single family</option><option value="townhome">Townhome</option><option value="condo">Condo</option><option value="multi_family">Multi-family</option><option value="other">Other</option></select></label><label class="full">Street address<input id="correctedAddressLine1" maxlength="240" required></label><label class="full">Address line 2<input id="correctedAddressLine2" maxlength="240"></label><label>City<input id="correctedCity" maxlength="120" required></label><label>State<input id="correctedState" maxlength="80" required></label><label>Postal code<input id="correctedPostalCode" maxlength="24" required></label></div><p>These details become the homeowner-controlled property record after you approve access.</p></fieldset>
           <fieldset><legend>Choose the access you approve</legend><label><input id="permissionView" type="checkbox" checked disabled> View work status (required)</label><label id="permissionRequestRow"><input id="permissionRequest" type="checkbox"> Request service</label><label id="permissionDocumentsRow"><input id="permissionDocuments" type="checkbox"> View authorized documents</label><label id="permissionUploadRow"><input id="permissionUpload" type="checkbox"> Upload inspection reports</label><label id="permissionMessageRow"><input id="permissionMessage" type="checkbox"> Message through SMPLfix</label></fieldset>
           <div class="boundary"><strong>You remain in control.</strong><p>The agent cannot approve estimates, enter payment information, manage billing, or own your account.</p></div>
           <label class="check"><input id="propertyConfirmed" type="checkbox" required> I confirm the property information above is correct.</label>

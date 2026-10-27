@@ -71,7 +71,7 @@ const orderSchema = new mongoose.Schema({
       message: 'Amount is required for quoted orders'
     }
   },
-  source: { type: String, enum: ['website', 'manual', 'residential_portal', 'agent_portal', 'commercial_portal'], default: 'manual' },
+  source: { type: String, enum: ['website', 'manual', 'residential_portal', 'agent_portal', 'agent_fulfillment', 'commercial_portal'], default: 'manual' },
   intakeSubmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IntakeSubmission' },
   requestReference: { type: String },
   workflowStatus: { type: String, enum: ['request_received', 'quote_collection', 'vendor_selected', 'outgoing_quote_draft', 'quote_sent', 'quote_changes_requested', 'customer_approved', 'schedule_pending_vendor', 'schedule_changes_requested', 'scheduled', 'awaiting_customer_closeout', 'completed', 'closeout_issue_reported'], default: undefined },
@@ -132,6 +132,8 @@ const orderSchema = new mongoose.Schema({
     ownerCustomerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     billingContact: { name: String, email: String, phone: String },
     purchaseOrderNumber: { type: String, trim: true, maxlength: 120 },
+    targetCompletionDeadline: Date,
+    accessInstructions: { type: String, trim: true, maxlength: 1000 },
     submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   },
   repeatedFromOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },

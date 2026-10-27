@@ -2,8 +2,10 @@
   'use strict';
 
   const ROUTES = new Set(['overview', 'portfolio', 'transactions', 'requests', 'documents', 'referrals', 'notifications', 'account']);
-  const TITLES = { overview: 'Overview', portfolio: 'Portfolio', transactions: 'Transactions', requests: 'Requests', documents: 'Documents', referrals: 'Referrals', notifications: 'Notifications', account: 'Account' };
-  const state = { profile: null, portfolio: [], archivedTransactions: [], orders: [], packages: {}, messages: [], selectedMessageOrder: '', activity: [], referrals: [], referralTotals: {}, referralProgram: {}, notifications: [], invitations: [], invitationProperties: [], unreadCount: 0, route: 'overview', query: '', transactionFilter: 'all', invitationFilter: 'all' };
+  const TITLES = { overview: 'Overview', portfolio: 'Portfolio', transactions: 'Transactions', 'transaction-detail': 'Transaction', requests: 'Requests', documents: 'Documents', referrals: 'Referrals', notifications: 'Notifications', account: 'Account' };
+  const state = { profile: null, overview: null, portfolio: [], archivedTransactions: [], orders: [], packages: {}, messages: [], selectedMessageOrder: '', activity: [], referrals: [], referralTotals: {}, referralCode: '', notifications: [], invitations: [], invitationProperties: [], unreadCount: 0, route: 'overview', query: '', transactionFilter: 'all', invitationFilter: 'all', workspace: null, workspaceTransactionId: '' };
+  let overviewTimer = null;
+  let overviewRequest = 0;
   const element = {};
   let toastTimer;
   let guidanceRequest = 0;
@@ -36,22 +38,49 @@
   function setBusy(button, busy, busyLabel = 'Working…') { if (!button) return; if (busy) button.dataset.label = button.textContent; button.disabled = busy; button.textContent = busy ? busyLabel : (button.dataset.label || button.textContent); }
   function setOffline(offline) { element.offlineBanner.hidden = !offline; }
 
-  function metric(label, value, detail, tone = '') { return `<article class="metric-card ${tone}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><p>${escapeHtml(detail)}</p></article>`; }
+  function metric(label, value, detail, tone = '', route = '') { return `<button type="button" class="metric-card ${tone}" ${route ? `data-metric-route="${escapeHtml(route)}"` : ''}><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><p>${escapeHtml(detail)}</p></button>`; }
   function renderOverview() {
-    const allOpen = state.orders.filter(order => !completed(order) && !cancelled(order));
-    const risks = state.portfolio.filter(isRisk);
-    const upcoming = state.orders.filter(order => order.scheduledStart && new Date(order.scheduledStart) > new Date()).sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
+    const overview = state.overview || { summary: {}, priorities: [], closings: [], appointments: [], openWorkItems: [], activity: [] };
+    const summary = overview.summary || {};
     element.overviewMetrics.innerHTML = [
-      metric('Active transactions', state.portfolio.length, 'Authorized properties'),
-      metric('Closing in 7 days', risks.length, risks.length ? 'Needs attention' : 'No deadline risk', risks.length ? 'is-warning' : 'is-success'),
-      metric('Open work items', allOpen.length, 'Across active transactions'),
-      metric('Upcoming visits', upcoming.length, 'Scheduled appointments')
+      metric('Active transactions', summary.activeTransactions || 0, 'Authorized properties', '', 'transactions'),
+      metric('Closing in 7 days', summary.closingWithinSevenDays || 0, summary.closingWithinSevenDays ? 'Closing window' : 'No near-term closings', summary.closingWithinSevenDays ? 'is-warning' : 'is-success', 'transactions'),
+      metric('Open work items', summary.openWorkItems || 0, 'Across active transactions', '', 'requests'),
+      metric('At-risk items', summary.atRiskItems || 0, summary.atRiskItems ? 'High or critical' : 'No urgent blockers', summary.atRiskItems ? 'is-warning' : 'is-success', 'requests')
     ].join('');
-    const closing = state.portfolio.filter(matchesSearch).slice().sort((a, b) => Number(a.daysUntilClose) - Number(b.daysUntilClose)).slice(0, 5);
-    element.closingSoonList.innerHTML = closing.length ? closing.map(transaction => `<button class="list-row" type="button" data-transaction-id="${escapeHtml(transaction.id)}"><span><strong>${escapeHtml(transaction.label)}</strong><small>${escapeHtml(transaction.client?.displayName || 'Client')} · ${escapeHtml(address(transaction.property))}</small></span><span class="row-meta"><strong>${Math.max(0, Number(transaction.daysUntilClose))}</strong><small>days to close</small></span></button>`).join('') : empty('No active closings');
-    element.appointmentList.innerHTML = upcoming.length ? upcoming.slice(0, 5).map(order => `<div class="list-row"><span><strong>${escapeHtml(order.service || 'Service visit')}</strong><small>${escapeHtml(transactionForProperty(order.propertyId)?.label || 'Authorized property')}</small></span><span class="row-meta"><strong>${escapeHtml(dateTime(order.scheduledStart))}</strong></span></div>`).join('') : empty('No appointments scheduled', 'Confirmed visits will appear here.');
-    element.openItemsList.innerHTML = allOpen.filter(matchesSearch).length ? allOpen.filter(matchesSearch).slice(0, 6).map(order => `<div class="list-row"><span><strong>${escapeHtml(order.service || 'Service request')}</strong><small>${escapeHtml(transactionForProperty(order.propertyId)?.label || order.requestReference || 'Transaction')}</small></span>${pill(order.workflowStatus || order.status, /pending|received|new/.test(normalize(order.workflowStatus || order.status)) ? 'pending' : '')}</div>`).join('') : empty('No open work items');
-    element.activityList.innerHTML = state.activity.length ? state.activity.slice(0, 6).map(item => `<div class="timeline-item"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.summary || '')}</p><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(relative(item.createdAt))}</time></div>`).join('') : empty('No recent activity');
+    const priorities = (overview.priorities || []).filter(matchesSearch);
+    element.priorityList.innerHTML = priorities.length ? priorities.slice(0, 8).map(item => `<article class="list-row priority-row"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.context || '')}</small><small>${escapeHtml(item.reason || '')}</small></span><span class="row-actions">${pill(item.severity, ['critical', 'high'].includes(item.severity) ? 'risk' : 'pending')}<button class="text-button" type="button" data-overview-kind="${escapeHtml(item.action?.kind || 'transaction')}" data-overview-transaction="${escapeHtml(item.transactionId || '')}" data-overview-order="${escapeHtml(item.orderId || '')}">${escapeHtml(item.action?.label || 'Open')}</button></span></article>`).join('') : empty('No priority items', 'Current transactions are on track.');
+    const closings = (overview.closings || []).filter(matchesSearch);
+    element.closingSoonList.innerHTML = closings.length ? closings.slice(0, 6).map(transaction => `<article class="list-row closing-row"><span><strong>${escapeHtml(transaction.label)}</strong><small>${escapeHtml(transaction.client?.displayName || 'Client')} · ${escapeHtml(address(transaction.property))}</small><small>${escapeHtml(transaction.readiness?.label || 'Readiness unavailable')} · ${Number(transaction.openItemCount || 0)} open</small></span><span class="row-meta"><strong>${Math.max(0, Number(transaction.daysUntilClose || 0))}</strong><small>days to close</small><button class="text-button" type="button" data-transaction-id="${escapeHtml(transaction.id)}">Open</button></span></article>`).join('') : empty('No active closings');
+    const appointments = (overview.appointments || []).filter(matchesSearch);
+    element.appointmentList.innerHTML = appointments.length ? appointments.slice(0, 5).map(item => `<article class="list-row"><span><strong>${escapeHtml(item.service || 'Service visit')}</strong><small>${escapeHtml(item.transaction?.label || 'Authorized property')}</small></span><span class="row-meta"><strong>${escapeHtml(dateTime(item.startsAt))}</strong><button class="text-button" type="button" data-overview-kind="message" data-overview-order="${escapeHtml(item.orderId)}">Open</button></span></article>`).join('') : empty('No appointments scheduled', 'Confirmed visits will appear here.');
+    const openItems = (overview.openWorkItems || []).filter(matchesSearch);
+    element.openItemsList.innerHTML = openItems.length ? openItems.slice(0, 6).map(order => `<article class="list-row"><span><strong>${escapeHtml(order.service || 'Service request')}</strong><small>${escapeHtml(order.transaction?.label || order.requestReference || 'Transaction')}</small><small>${escapeHtml(order.deadlineRisk?.reason || '')}</small></span><span class="row-actions">${pill(order.workflowStatus || order.status, /pending|received|new/.test(normalize(order.workflowStatus || order.status)) ? 'pending' : '')}<button class="text-button" type="button" data-overview-kind="message" data-overview-order="${escapeHtml(order.id)}">Open</button></span></article>`).join('') : empty('No open work items');
+    const activity = overview.activity || [];
+    element.activityList.innerHTML = activity.length ? activity.slice(0, 6).map(item => `<div class="timeline-item"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.summary || '')}</p><time datetime="${escapeHtml(item.occurredAt)}">${escapeHtml(relative(item.occurredAt))}</time></div>`).join('') : empty('No recent activity');
+    element.overviewUpdated.textContent = overview.generatedAt ? `Updated ${relative(overview.generatedAt)}` : '';
+  }
+
+  async function refreshOverview({ manual = false } = {}) {
+    const request = ++overviewRequest;
+    if (manual) setBusy(element.overviewRefresh, true, 'Refreshing…');
+    try {
+      const payload = await window.APIService.getAgentOverview();
+      if (request !== overviewRequest) return;
+      state.overview = payload; state.unreadCount = Number(payload.unreadNotificationCount ?? state.unreadCount ?? 0);
+      element.overviewStale.hidden = true; renderOverview(); renderNotifications();
+      scheduleOverviewRefresh();
+    } catch (error) {
+      if (request !== overviewRequest) return;
+      if (state.overview) element.overviewStale.hidden = false;
+      else throw error;
+    } finally { if (manual) setBusy(element.overviewRefresh, false); }
+  }
+
+  function scheduleOverviewRefresh() {
+    clearTimeout(overviewTimer);
+    if (document.hidden) return;
+    overviewTimer = setTimeout(() => refreshOverview().catch(() => {}), Math.max(15, Number(state.overview?.refreshAfterSeconds || 60)) * 1000);
   }
 
   function renderPortfolio() {
@@ -185,15 +214,15 @@
   }
 
   function renderReferrals() {
-    element.referralMetrics.innerHTML = metric('Leads', state.referralTotals.leads || 0, 'Attributed transactions') + metric('Converted clients', state.referralTotals.convertedClients || 0, 'Clients with an order', 'is-success') + metric('Converted jobs', state.referralTotals.convertedJobs || 0, 'Orders attributed') + metric('Completed jobs', state.referralTotals.completedJobs || 0, 'Reward-eligible completions');
-    element.referralProgram.innerHTML = `<div><p class="eyebrow">Configured reward</p><h3>${escapeHtml(state.referralProgram.rewardLabel || 'SMPLfix referral credit')}</h3><p>${Number(state.referralProgram.unitsPerCompletedJob || 0)} unit(s) per completed referred job · ${escapeHtml(state.referralTotals.rewardUnits || 0)} earned unit(s)</p></div><strong class="referral-code">${escapeHtml(state.referralProgram.referralCode || state.profile?.referralCode || 'Pending')}</strong>`;
+    element.referralMetrics.innerHTML = metric('Leads', state.referralTotals.leads || 0, 'Attributed transactions') + metric('Converted clients', state.referralTotals.convertedClients || 0, 'Clients with an order', 'is-success') + metric('Converted jobs', state.referralTotals.convertedJobs || 0, 'Orders attributed') + metric('Completed jobs', state.referralTotals.completedJobs || 0, 'Completed referred work');
+    element.referralProgram.innerHTML = `<div><p class="eyebrow">Referral tracking</p><h3>Your SMPLfix referral code</h3><p>Invitations and completed work are attributed to your portfolio. No commission or payout is promised by this dashboard.</p></div><strong class="referral-code">${escapeHtml(state.referralCode || state.profile?.referralCode || 'Pending')}</strong>`;
     const items = state.referrals.filter(matchesSearch);
-    element.referralList.innerHTML = items.length ? `<div class="table-row header"><span>Transaction</span><span>Jobs</span><span>Reward</span><span>Status</span></div>${items.map(item => `<div class="table-row"><span><strong>${escapeHtml(item.transaction?.label || item.transactionId)}</strong><small>${item.transaction?.archived ? 'Archived summary · protected records unavailable' : escapeHtml(item.propertyLabel || 'Active transaction')}</small></span><span>${item.convertedJobCount || 0} converted · ${item.completedJobCount || 0} completed</span><span>${escapeHtml(item.rewardUnits || 0)} unit(s)</span>${pill(item.status)}</div>`).join('')}` : empty('No referral history yet');
+    element.referralList.innerHTML = items.length ? `<div class="table-row header"><span>Transaction</span><span>Jobs</span><span>Attributed</span><span>Status</span></div>${items.map(item => `<div class="table-row"><span><strong>${escapeHtml(item.transaction?.label || item.transactionId)}</strong><small>${item.transaction?.archived ? 'Archived summary · protected records unavailable' : escapeHtml(item.propertyLabel || 'Active transaction')}</small></span><span>${item.convertedJobCount || 0} converted · ${item.completedJobCount || 0} completed</span><span>${escapeHtml(date(item.attributedAt))}</span>${pill(item.status)}</div>`).join('')}` : empty('No referral history yet');
   }
 
   function renderNotifications() {
     const items = state.notifications.filter(matchesSearch);
-    element.notificationList.innerHTML = items.map(item => `<button class="notification-item ${item.isRead ? '' : 'unread'}" type="button" data-notification-id="${escapeHtml(item.id)}" ${item.isRead ? 'disabled' : ''}><span class="notification-dot" aria-hidden="true"></span><span><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.message)}</p></span><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(relative(item.createdAt))}</time></button>`).join('');
+    element.notificationList.innerHTML = items.map(item => `<button class="notification-item ${item.isRead ? '' : 'unread'}" type="button" data-notification-id="${escapeHtml(item.id)}"><span class="notification-dot" aria-hidden="true"></span><span><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.message)}</p></span><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(relative(item.createdAt))}</time></button>`).join('');
     element.notificationEmpty.hidden = items.length > 0;
     element.notificationBadge.hidden = state.unreadCount < 1; element.notificationBadge.textContent = String(state.unreadCount);
   }
@@ -201,9 +230,64 @@
   function renderAccount() {
     const profile = state.profile || {};
     element.profileCard.innerHTML = `<span class="avatar" aria-hidden="true">${escapeHtml(initials(profile.displayName))}</span><div><p class="eyebrow">Active agent</p><h3>${escapeHtml(profile.displayName || 'Real estate agent')}</h3><p>${escapeHtml(profile.brokerageName || 'Independent agent')}</p></div><div class="profile-facts"><div class="profile-fact"><span>Email</span><strong>${escapeHtml(profile.email || 'Not available')}</strong></div><div class="profile-fact"><span>License</span><strong>${escapeHtml(profile.licenseNumber || 'Not provided')}</strong></div><div class="profile-fact"><span>Referral code</span><strong>${escapeHtml(profile.referralCode || 'Pending')}</strong></div></div>`;
+    element.profileFirstName.value = profile.firstName || '';
+    element.profileLastName.value = profile.lastName || '';
+    element.profileEmail.value = profile.email || '';
+    element.profilePhone.value = profile.phone || '';
+    element.profileBrokerage.value = profile.brokerageName || '';
+    element.profileLicense.value = profile.licenseNumber || '';
+    element.profileReferralCode.value = profile.referralCode || 'Pending';
+    const complete = profile.profileCompletion?.complete === true;
+    element.profileCompletionBadge.textContent = complete ? 'Complete' : 'Incomplete';
+    element.profileCompletionBadge.className = `status-pill ${complete ? 'ready' : 'pending'}`;
   }
 
-  function renderAll() { renderOverview(); renderPortfolio(); renderTransactions(); renderRequests(); renderDocuments(); renderReferrals(); renderNotifications(); renderAccount(); }
+  function renderProfileAttention() {
+    const completion = state.profile?.profileCompletion || { complete: false, missingFields: [] };
+    element.profileAttention.hidden = completion.complete === true;
+    if (completion.complete) return;
+    const labels = { firstName: 'first name', lastName: 'last name', phone: 'phone', brokerageName: 'brokerage', licenseNumber: 'license number' };
+    const missing = (completion.missingFields || []).map(field => labels[field]).filter(Boolean);
+    element.profileAttentionMessage.textContent = missing.length ? `Missing: ${missing.join(', ')}.` : 'Add your contact, brokerage, and license details to finish setting up your account.';
+  }
+
+  function renderAccessState() {
+    if (state.portfolio.length) { element.expired.hidden = true; return; }
+    const pending = state.invitations.filter(item => item.status === 'pending');
+    element.expired.hidden = false;
+    if (pending.length) {
+      element.accessStateEyebrow.textContent = 'Invitation pending';
+      element.accessStateTitle.textContent = 'Waiting for homeowner acceptance';
+      element.accessStateMessage.textContent = `${pending.length} secure invitation${pending.length === 1 ? ' is' : 's are'} awaiting review. You can resend or revoke it from Portfolio.`;
+      element.accessStateInvite.textContent = 'View invitations';
+      element.accessStateInvite.dataset.action = 'portfolio';
+    } else if (state.archivedTransactions.length) {
+      element.accessStateEyebrow.textContent = 'Portfolio status';
+      element.accessStateTitle.textContent = 'No active transaction access';
+      element.accessStateMessage.textContent = 'Previous transaction access has ended. Invite a homeowner to start another property transaction, or contact SMPLfix about an extension.';
+      element.accessStateInvite.textContent = 'Invite a homeowner';
+      element.accessStateInvite.dataset.action = 'invite';
+    } else {
+      element.accessStateEyebrow.textContent = 'Getting started';
+      element.accessStateTitle.textContent = 'Build your first client portfolio';
+      element.accessStateMessage.textContent = 'Invite a homeowner to connect their property and closing transaction. They stay in control of estimates and payments.';
+      element.accessStateInvite.textContent = 'Invite a homeowner';
+      element.accessStateInvite.dataset.action = 'invite';
+    }
+  }
+
+  function renderAll() { renderAccessState(); renderProfileAttention(); renderOverview(); renderPortfolio(); renderTransactions(); renderRequests(); renderDocuments(); renderReferrals(); renderNotifications(); renderAccount(); }
+
+  async function saveAgentProfile(event) {
+    event.preventDefault(); element.profileFormError.hidden = true; setBusy(element.profileSaveButton, true, 'Saving…');
+    try {
+      const response = await window.APIService.updateAgentProfile({ firstName: element.profileFirstName.value, lastName: element.profileLastName.value, phone: element.profilePhone.value, brokerageName: element.profileBrokerage.value, licenseNumber: element.profileLicense.value });
+      state.profile = response.agent || state.profile;
+      element.sidebarAgentName.textContent = state.profile.displayName || 'Agent'; element.sidebarBrokerage.textContent = state.profile.brokerageName || 'Real estate portal'; element.agentAvatar.textContent = initials(state.profile.displayName); element.welcomeName.textContent = String(state.profile.displayName || 'Agent').split(/\s+/)[0];
+      renderProfileAttention(); renderAccount(); showToast('Agent profile saved.');
+    } catch (error) { element.profileFormError.textContent = error?.message || 'Could not save your profile.'; element.profileFormError.hidden = false; }
+    finally { setBusy(element.profileSaveButton, false); }
+  }
 
   function setPropertyMode() {
     const existing = element.invitePropertyMode.value === 'existing';
@@ -261,11 +345,11 @@
   }
 
   function navigate(route, options = {}) {
-    const next = ROUTES.has(route) ? route : 'overview'; state.route = next;
+    const next = route === 'transaction-detail' ? route : ROUTES.has(route) ? route : 'overview'; state.route = next;
     document.querySelectorAll('[data-view]').forEach(view => { const active = view.dataset.view === next; view.hidden = !active; view.classList.toggle('is-active', active); });
     document.querySelectorAll('[data-route]').forEach(link => { const active = link.dataset.route === next; link.classList.toggle('is-active', active); if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current'); });
     element.routeTitle.textContent = TITLES[next];
-    if (!options.skipHash && location.hash !== `#${next}`) history.replaceState(null, '', `#${next}`);
+    if (!options.skipHash && next !== 'transaction-detail' && location.hash !== `#${next}`) history.replaceState(null, '', `#${next}`);
     closeSidebar();
     if (options.focus !== false) element.main.focus({ preventScroll: true });
   }
@@ -275,17 +359,30 @@
 
   async function showTransaction(transactionId) {
     const cached = state.portfolio.find(item => key(item.id) === key(transactionId)); if (!cached) return;
-    element.transactionDialogTitle.textContent = cached.label;
-    element.transactionDialogBody.innerHTML = '<div class="state-panel"><span class="spinner" aria-hidden="true"></span><strong>Loading transaction</strong></div>';
-    element.transactionDialog.showModal();
+    state.workspaceTransactionId = transactionId; state.workspace = null;
+    if (location.hash !== `#transactions/${transactionId}`) history.pushState({ transactionId }, '', `#transactions/${transactionId}`);
+    navigate('transaction-detail', { skipHash: true });
+    element.routeTitle.textContent = cached.label;
+    element.transactionWorkspace.innerHTML = '<div class="state-panel"><span class="spinner" aria-hidden="true"></span><strong>Loading transaction workspace</strong><p>Collecting work, messages, documents, and onboarding status.</p></div>';
     try {
-      const [detailPayload, ordersPayload] = await Promise.all([window.APIService.getAgentTransaction(transactionId), window.APIService.getAgentTransactionOrders(transactionId)]);
-      const transaction = { ...cached, ...(detailPayload.transaction || {}) }; const orders = list(ordersPayload); const open = orders.filter(order => !completed(order) && !cancelled(order)); const done = orders.filter(completed).length; const percent = orders.length ? Math.round((done / orders.length) * 100) : 100;
-      element.transactionDialogBody.innerHTML = `<div class="detail-hero"><div class="detail-stat"><span>Close date</span><strong>${escapeHtml(date(transaction.closeDate))}</strong></div><div class="detail-stat"><span>Time remaining</span><strong>${Math.max(0, Number(transaction.daysUntilClose))} days</strong></div><div class="detail-stat"><span>Access ends</span><strong>${escapeHtml(date(transaction.accessEndsAt))}</strong></div></div><div class="readiness"><div class="readiness-header"><span>Completion readiness</span><strong>${percent}%</strong></div><div class="progress-track" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div></div><section class="dialog-section"><h3>Property and client</h3><div class="list-row"><span><strong>${escapeHtml(transaction.client?.displayName || 'Client')}</strong><small>${escapeHtml(address(transaction.property))}</small></span>${pill(isRisk(transaction) ? 'At risk' : 'Active', isRisk(transaction) ? 'risk' : 'ready')}</div></section><section class="dialog-section"><h3>Open work items and deadlines</h3><div class="stack-list">${open.length ? open.map(order => `<div class="list-row"><span><strong>${escapeHtml(order.service || 'Service')}</strong><small>${escapeHtml(order.requestReference || order.orderReference || '')}${order.scheduledStart ? ` · ${escapeHtml(dateTime(order.scheduledStart))}` : ' · Scheduling pending'}</small><small>${escapeHtml(order.deadlineRisk?.reason || 'Deadline assessment pending')} · ${escapeHtml(order.estimateStatus ? `Estimate ${statusName(order.estimateStatus.decisionStatus || order.estimateStatus.status)} (read-only)` : 'Estimate not available')}</small></span>${pill(order.deadlineRisk?.level || order.workflowStatus || order.status, ['critical', 'high'].includes(order.deadlineRisk?.level) ? 'risk' : '')}</div>`).join('') : empty('Completion ready', 'No open work remains for this transaction.')}</div></section>`;
+      const payload = await window.APIService.getAgentTransactionWorkspace(transactionId);
+      state.workspace = payload.workspace; renderTransactionWorkspace();
     } catch (error) {
       const expired = error?.status === 404 || error?.status === 403;
-      element.transactionDialogBody.innerHTML = empty(expired ? 'Access is no longer available' : 'Could not load this transaction', expired ? 'The transaction may have closed, expired, or been revoked.' : (error?.message || 'Try again.'));
+      element.transactionWorkspace.innerHTML = empty(expired ? 'Access is no longer available' : 'Could not load this transaction', expired ? 'The transaction may have closed, expired, or been revoked.' : (error?.message || 'Try again.'));
     }
+  }
+
+  function renderTransactionWorkspace() {
+    const workspace = state.workspace; if (!workspace) return;
+    const transaction = workspace.transaction || {}; const work = workspace.workItems || []; const onboarding = workspace.onboarding || { steps: [] }; const docs = workspace.documents || {};
+    const percent = workspace.readiness?.percent ?? (work.length ? 0 : 100);
+    const messagesByOrder = new Map(); (workspace.messages || []).forEach(message => { if (!messagesByOrder.has(message.orderId)) messagesByOrder.set(message.orderId, []); messagesByOrder.get(message.orderId).push(message); });
+    const workHtml = work.length ? work.map(order => `<article class="workspace-work-card"><div><p class="eyebrow">${escapeHtml(order.requestReference || order.orderReference || 'Work item')}</p><h3>${escapeHtml(order.service || 'Service')}</h3><p>${escapeHtml(order.description || '')}</p><small>${escapeHtml(order.deadlineRisk?.reason || 'Deadline assessment pending')}</small></div><div class="workspace-work-meta">${pill(order.deadlineRisk?.level || order.workflowStatus || order.status, ['critical','high'].includes(order.deadlineRisk?.level) ? 'risk' : '')}<span>${order.scheduledStart ? escapeHtml(dateTime(order.scheduledStart)) : 'Schedule not confirmed'}</span><span>${order.estimateStatus ? `Estimate ${escapeHtml(statusName(order.estimateStatus.decisionStatus || order.estimateStatus.status))}` : 'Estimate not available'}</span></div></article>`).join('') : empty('No work requested', 'Start a service request for this transaction when the property needs attention.');
+    const messagesHtml = work.length ? work.map(order => { const messages = messagesByOrder.get(order.id) || []; return `<section class="workspace-message-thread"><div class="panel-heading"><div><p class="eyebrow">${escapeHtml(order.requestReference || order.orderReference || '')}</p><h3>${escapeHtml(order.service || 'Work item')}</h3></div></div><div class="message-list">${messages.length ? messages.map(message => `<div class="message-bubble ${message.sender === 'You' ? 'mine' : ''}"><strong>${escapeHtml(message.sender)}</strong><p>${escapeHtml(message.body)}</p><time>${escapeHtml(dateTime(message.createdAt))}</time></div>`).join('') : empty('No messages yet')}</div>${workspace.capabilities?.canMessage ? `<form class="message-form" data-workspace-message-form="${escapeHtml(order.id)}"><label class="visually-hidden">Message about ${escapeHtml(order.service || 'work item')}</label><textarea name="body" maxlength="3000" rows="2" required placeholder="Message the homeowner through SMPLfix"></textarea><button class="secondary-button" type="submit">Send message</button></form>` : ''}</section>`; }).join('') : empty('No work-item conversations');
+    const files = [...(docs.files || []), ...(docs.estimates || []).map(item => ({ name: `${item.quoteReference} estimate`, category: 'Estimate', downloadUrl: item.pdfUrl })), ...(docs.invoices || []).map(item => ({ name: `${item.invoiceNumber} invoice`, category: item.contractor?.name ? `${item.contractor.name}${item.contractor.rocNumber ? ` · ROC ${item.contractor.rocNumber}` : ''}` : 'Invoice', downloadUrl: item.pdfUrl }))];
+    const documentsHtml = files.length ? files.map(file => `<div class="document-row"><span><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(file.category || 'Transaction document')}</small></span><a href="${escapeHtml(file.downloadUrl)}" target="_blank" rel="noopener">Open file</a></div>`).join('') : empty('No authorized documents yet');
+    element.transactionWorkspace.innerHTML = `<div class="workspace-hero"><div><p class="eyebrow">Transaction command center</p><h2 id="transactionWorkspaceHeading">${escapeHtml(transaction.label)}</h2><p>${escapeHtml(transaction.client?.displayName || 'Homeowner')} · ${escapeHtml(address(transaction.property))}</p></div><button class="primary-button" type="button" data-workspace-request="${escapeHtml(transaction.id)}" ${workspace.capabilities?.canRequestService ? '' : 'disabled'}>Request service</button></div><div class="detail-hero"><div class="detail-stat"><span>Close date</span><strong>${escapeHtml(date(transaction.closeDate))}</strong></div><div class="detail-stat"><span>Time remaining</span><strong>${Math.max(0, Number(transaction.daysUntilClose || 0))} days</strong></div><div class="detail-stat"><span>Access ends</span><strong>${escapeHtml(date(transaction.accessEndsAt))}</strong></div></div><div class="readiness"><div class="readiness-header"><span>${escapeHtml(workspace.readiness?.label || 'Completion readiness')}</span><strong>${percent}%</strong></div><div class="progress-track" aria-label="${percent}% complete"><span style="width:${percent}%"></span></div>${workspace.deadlineRisk?.reason ? `<p class="workspace-risk">${escapeHtml(workspace.deadlineRisk.reason)}</p>` : ''}</div><nav class="workspace-tabs" aria-label="Transaction workspace"><button type="button" class="is-active" data-workspace-tab="work">Work</button><button type="button" data-workspace-tab="messages">Messages</button><button type="button" data-workspace-tab="documents">Documents</button><button type="button" data-workspace-tab="onboarding">Onboarding</button></nav><section class="workspace-tab is-active" data-workspace-panel="work">${workHtml}</section><section class="workspace-tab" data-workspace-panel="messages" hidden>${messagesHtml}</section><section class="workspace-tab" data-workspace-panel="documents" hidden><article class="package-card ${workspace.package?.ready ? 'ready' : ''}"><p class="eyebrow">Transaction package</p><h3>${workspace.package?.ready ? 'Client-safe package ready' : 'Package is still being prepared'}</h3><p>${workspace.package?.ready ? 'All non-cancelled work and required completion records are available.' : 'The package becomes available after all work and required closeout documents are complete.'}</p>${workspace.package?.ready ? `<div class="package-actions"><a class="primary-button" href="${escapeHtml(workspace.package.pdfUrl)}">Summary PDF</a><a class="secondary-button" href="${escapeHtml(workspace.package.zipUrl)}">Full ZIP</a></div>` : ''}</article><section class="panel"><div class="panel-heading"><h3>Authorized files</h3></div>${documentsHtml}</section></section><section class="workspace-tab" data-workspace-panel="onboarding" hidden><section class="panel"><div class="panel-heading"><div><p class="eyebrow">White-glove onboarding</p><h3>Homeowner readiness</h3><p>${onboarding.completedCount || 0} of ${onboarding.totalCount || 0} steps complete. Private account and payment details remain hidden.</p></div>${onboarding.reminderAvailable ? '<button class="secondary-button" type="button" id="workspaceReminder">Send reminder</button>' : ''}</div><div class="onboarding-list">${(onboarding.steps || []).map(step => `<div class="onboarding-step ${step.complete ? 'complete' : ''}"><span aria-hidden="true">${step.complete ? '✓' : '○'}</span><strong>${escapeHtml(step.label)}</strong>${!step.complete && step.actionable ? '<small>Homeowner action needed</small>' : ''}</div>`).join('')}</div></section></section>`;
   }
 
   async function submitRequest(event) {
@@ -304,7 +401,18 @@
   }
 
   async function markNotificationRead(id) {
-    try { await window.APIService.readAgentNotification(id); const item = state.notifications.find(notification => key(notification.id) === key(id)); if (item && !item.isRead) { item.isRead = true; state.unreadCount = Math.max(0, state.unreadCount - 1); renderNotifications(); } } catch (error) { showToast(error?.message || 'Could not update the notification.'); }
+    const item = state.notifications.find(notification => key(notification.id) === key(id));
+    try {
+      if (item && !item.isRead) {
+        await window.APIService.readAgentNotification(id);
+        item.isRead = true;
+        state.unreadCount = Math.max(0, state.unreadCount - 1);
+        renderNotifications();
+      }
+      const transactionMatch = String(item?.actionUrl || '').match(/^#transactions\/([^/?#]+)$/);
+      if (transactionMatch) await showTransaction(decodeURIComponent(transactionMatch[1]));
+      else if (item?.actionUrl === '#transactions') navigate('transactions');
+    } catch (error) { showToast(error?.message || 'Could not update the notification.'); }
   }
 
   async function acceptInvitationFromFragment() {
@@ -320,36 +428,42 @@
       await window.AuthReady;
       if (window.AuthSession?.user?.role !== 'real_estate_agent') throw Object.assign(new Error('This portal is available to real estate agents only.'), { status: 403 });
       await acceptInvitationFromFragment();
-      const [profilePayload, portfolioPayload, historyPayload, orderPayload, activityPayload, referralPayload, notificationPayload, invitationPayload, invitationPropertyPayload] = await Promise.all([
-        window.APIService.getAgentProfile(), window.APIService.getAgentPortfolio(), window.APIService.getAgentTransactionHistory(), window.APIService.getAgentOrders(), window.APIService.getAgentActivity(), window.APIService.getAgentReferrals(), window.APIService.getAgentNotifications(), window.APIService.getAgentClientInvitations(), window.APIService.getAgentClientInvitationProperties()
+      const [profilePayload, overviewPayload, portfolioPayload, historyPayload, orderPayload, activityPayload, referralPayload, notificationPayload, invitationPayload, invitationPropertyPayload] = await Promise.all([
+        window.APIService.getAgentProfile(), window.APIService.getAgentOverview(), window.APIService.getAgentPortfolio(), window.APIService.getAgentTransactionHistory(), window.APIService.getAgentOrders(), window.APIService.getAgentActivity(), window.APIService.getAgentReferrals(), window.APIService.getAgentNotifications(), window.APIService.getAgentClientInvitations(), window.APIService.getAgentClientInvitationProperties()
       ]);
-      state.profile = profilePayload.agent || {}; state.portfolio = list(portfolioPayload); state.archivedTransactions = list(historyPayload); state.orders = list(orderPayload); state.activity = list(activityPayload); state.referrals = list(referralPayload); state.referralTotals = referralPayload.totals || {}; state.referralProgram = referralPayload.program || {}; state.notifications = list(notificationPayload); state.invitations = list(invitationPayload); state.invitationProperties = list(invitationPropertyPayload); state.unreadCount = Number(notificationPayload.unreadCount || 0);
+      state.profile = profilePayload.agent || {}; state.overview = overviewPayload; state.portfolio = list(portfolioPayload); state.archivedTransactions = list(historyPayload); state.orders = list(orderPayload); state.activity = list(activityPayload); state.referrals = list(referralPayload); state.referralTotals = referralPayload.totals || {}; state.referralCode = referralPayload.referralCode || state.profile.referralCode || ''; state.notifications = list(notificationPayload); state.invitations = list(invitationPayload); state.invitationProperties = list(invitationPropertyPayload); state.unreadCount = Number(overviewPayload.unreadNotificationCount ?? notificationPayload.unreadCount ?? 0);
       element.sidebarAgentName.textContent = state.profile.displayName || 'Agent'; element.sidebarBrokerage.textContent = state.profile.brokerageName || 'Real estate portal'; element.agentAvatar.textContent = initials(state.profile.displayName); element.welcomeName.textContent = String(state.profile.displayName || 'Agent').split(/\s+/)[0];
-      renderAll(); element.loading.hidden = true; element.content.hidden = false; element.expired.hidden = state.portfolio.length > 0 || state.invitations.length > 0;
-      const initial = options.preserveRoute ? state.route : (ROUTES.has(location.hash.slice(1)) ? location.hash.slice(1) : 'overview'); navigate(initial, { skipHash: false, focus: false });
+      renderAll(); scheduleOverviewRefresh(); element.loading.hidden = true; element.content.hidden = false;
+      const hashRoute = location.hash.slice(1); const transactionMatch = hashRoute.match(/^transactions\/([a-f0-9]{24})$/i);
+      const initial = options.preserveRoute ? state.route : (transactionMatch ? 'transaction-detail' : ROUTES.has(hashRoute) ? hashRoute : 'overview');
+      navigate(initial, { skipHash: transactionMatch || initial === 'transaction-detail', focus: false });
+      if (transactionMatch) await showTransaction(transactionMatch[1]);
     } catch (error) {
       element.loading.hidden = true; element.error.hidden = false; element.portalErrorMessage.textContent = error?.status === 403 ? 'Your signed-in account does not have access to the Real Estate Agent Portal.' : (error?.message || 'Try again in a moment.');
     }
   }
 
   function bind() {
-    ['offlineBanner', 'agentSidebar', 'sidebarScrim', 'menuButton', 'sidebarClose', 'agentMain', 'portalLoading', 'portalError', 'portalErrorMessage', 'expiredState', 'portalContent', 'routeTitle', 'globalSearch', 'notificationBadge', 'overviewMetrics', 'closingSoonList', 'appointmentList', 'openItemsList', 'activityList', 'portfolioList', 'portfolioEmpty', 'invitationFilter', 'invitationList', 'invitationEmpty', 'openInviteButton', 'inviteDialog', 'closeInviteDialog', 'cancelInviteButton', 'inviteForm', 'inviteName', 'inviteEmail', 'invitePropertyMode', 'inviteExistingField', 'inviteExistingProperty', 'invitePropertyFields', 'invitePropertyLabel', 'inviteAddress', 'inviteCity', 'inviteState', 'invitePostal', 'invitePropertyType', 'inviteTransactionLabel', 'inviteCloseDate', 'inviteView', 'inviteRequest', 'inviteDocuments', 'inviteUpload', 'inviteMessage', 'inviteDelivery', 'inviteError', 'inviteSubmit', 'transactionFilter', 'transactionList', 'transactionEmpty', 'archivedTransactionList', 'requestForm', 'requestTransaction', 'requestPropertySummary', 'requestService', 'requestDescription', 'requestUrgency', 'requestDeadline', 'requestTiming', 'requestAccess', 'requestInspection', 'requestSupporting', 'requestFileSummary', 'requestGuidance', 'requestError', 'requestSubmit', 'requestList', 'messageOrder', 'messageList', 'messageForm', 'messageBody', 'messageError', 'messageSubmit', 'packageList', 'documentList', 'documentEmpty', 'referralMetrics', 'referralProgram', 'referralList', 'notificationList', 'notificationEmpty', 'profileCard', 'transactionDialog', 'transactionDialogTitle', 'transactionDialogBody', 'closeTransactionDialog', 'retryButton', 'logoutButton', 'toast', 'sidebarAgentName', 'sidebarBrokerage', 'agentAvatar', 'welcomeName'].forEach(id => { element[id.replace(/^agentMain$/, 'main').replace(/^agentSidebar$/, 'sidebar').replace(/^sidebarScrim$/, 'scrim').replace(/^portalLoading$/, 'loading').replace(/^portalError$/, 'error').replace(/^portalContent$/, 'content').replace(/^expiredState$/, 'expired')] = byId(id); });
+    ['offlineBanner', 'agentSidebar', 'sidebarScrim', 'menuButton', 'sidebarClose', 'agentMain', 'portalLoading', 'portalError', 'portalErrorMessage', 'expiredState', 'accessStateEyebrow', 'accessStateTitle', 'accessStateMessage', 'accessStateInvite', 'profileAttention', 'profileAttentionMessage', 'portalContent', 'routeTitle', 'globalSearch', 'notificationBadge', 'overviewMetrics', 'overviewUpdated', 'overviewRefresh', 'overviewStale', 'priorityList', 'closingSoonList', 'appointmentList', 'openItemsList', 'activityList', 'portfolioList', 'portfolioEmpty', 'invitationFilter', 'invitationList', 'invitationEmpty', 'openInviteButton', 'inviteDialog', 'closeInviteDialog', 'cancelInviteButton', 'inviteForm', 'inviteName', 'inviteEmail', 'invitePropertyMode', 'inviteExistingField', 'inviteExistingProperty', 'invitePropertyFields', 'invitePropertyLabel', 'inviteAddress', 'inviteCity', 'inviteState', 'invitePostal', 'invitePropertyType', 'inviteTransactionLabel', 'inviteCloseDate', 'inviteView', 'inviteRequest', 'inviteDocuments', 'inviteUpload', 'inviteMessage', 'inviteDelivery', 'inviteError', 'inviteSubmit', 'transactionFilter', 'transactionList', 'transactionEmpty', 'archivedTransactionList', 'transactionWorkspaceBack', 'transactionWorkspace', 'requestForm', 'requestTransaction', 'requestPropertySummary', 'requestService', 'requestDescription', 'requestUrgency', 'requestDeadline', 'requestTiming', 'requestAccess', 'requestInspection', 'requestSupporting', 'requestFileSummary', 'requestGuidance', 'requestError', 'requestSubmit', 'requestList', 'messageOrder', 'messageList', 'messageForm', 'messageBody', 'messageError', 'messageSubmit', 'packageList', 'documentList', 'documentEmpty', 'referralMetrics', 'referralProgram', 'referralList', 'notificationList', 'notificationEmpty', 'profileCard', 'agentProfileForm', 'profileFirstName', 'profileLastName', 'profileEmail', 'profilePhone', 'profileBrokerage', 'profileLicense', 'profileReferralCode', 'profileRole', 'profileCompletionBadge', 'profileFormError', 'profileSaveButton', 'retryButton', 'logoutButton', 'toast', 'sidebarAgentName', 'sidebarBrokerage', 'agentAvatar', 'welcomeName'].forEach(id => { element[id.replace(/^agentMain$/, 'main').replace(/^agentSidebar$/, 'sidebar').replace(/^sidebarScrim$/, 'scrim').replace(/^portalLoading$/, 'loading').replace(/^portalError$/, 'error').replace(/^portalContent$/, 'content').replace(/^expiredState$/, 'expired')] = byId(id); });
     document.querySelectorAll('[data-route]').forEach(link => link.addEventListener('click', event => { event.preventDefault(); navigate(link.dataset.route); }));
     document.querySelectorAll('[data-route-button]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.routeButton)));
     element.menuButton.addEventListener('click', openSidebar); element.sidebarClose.addEventListener('click', closeSidebar); element.scrim.addEventListener('click', closeSidebar);
     element.globalSearch.addEventListener('input', () => { state.query = element.globalSearch.value.trim().toLowerCase(); renderAll(); });
+    element.profileAttention.addEventListener('click', () => navigate('account')); element.agentProfileForm.addEventListener('submit', saveAgentProfile);
+    element.overviewRefresh.addEventListener('click', () => refreshOverview({ manual: true }).catch(error => showToast(error?.message || 'Could not refresh the overview.')));
     element.transactionFilter.addEventListener('change', () => { state.transactionFilter = element.transactionFilter.value; renderTransactions(); });
     element.invitationFilter.addEventListener('change', () => { state.invitationFilter = element.invitationFilter.value; renderInvitations(); });
-    element.openInviteButton.addEventListener('click', openInviteDialog); element.closeInviteDialog.addEventListener('click', () => element.inviteDialog.close()); element.cancelInviteButton.addEventListener('click', () => element.inviteDialog.close());
+    element.openInviteButton.addEventListener('click', openInviteDialog); element.accessStateInvite.addEventListener('click', () => { if (element.accessStateInvite.dataset.action === 'portfolio') navigate('portfolio'); else openInviteDialog(); }); element.closeInviteDialog.addEventListener('click', () => element.inviteDialog.close()); element.cancelInviteButton.addEventListener('click', () => element.inviteDialog.close());
     element.invitePropertyMode.addEventListener('change', setPropertyMode); element.inviteForm.addEventListener('submit', submitInvitation);
     element.requestForm.addEventListener('submit', submitRequest); element.requestTransaction.addEventListener('change', syncRequestContext); element.requestService.addEventListener('change', loadRequestGuidance); element.requestInspection.addEventListener('change', updateRequestFiles); element.requestSupporting.addEventListener('change', updateRequestFiles); element.messageOrder.addEventListener('change', loadMessages); element.messageForm.addEventListener('submit', submitMessage); element.retryButton.addEventListener('click', () => loadPortal({ preserveRoute: true }));
-    document.addEventListener('click', event => { const transaction = event.target.closest('[data-transaction-id]'); if (transaction) showTransaction(transaction.dataset.transactionId); const notification = event.target.closest('[data-notification-id]'); if (notification && !notification.disabled) markNotificationRead(notification.dataset.notificationId); const resend = event.target.closest('[data-invitation-resend]'); if (resend) resendInvitation(resend.dataset.invitationResend, resend); const revoke = event.target.closest('[data-invitation-revoke]'); if (revoke) revokeInvitation(revoke.dataset.invitationRevoke, revoke); const packageButton = event.target.closest('[data-package-load]'); if (packageButton) loadTransactionPackage(packageButton.dataset.packageLoad, packageButton); });
-    element.closeTransactionDialog.addEventListener('click', () => element.transactionDialog.close());
-    element.transactionDialog.addEventListener('click', event => { if (event.target === element.transactionDialog) element.transactionDialog.close(); });
+    document.addEventListener('click', async event => { const metricRoute = event.target.closest('[data-metric-route]'); if (metricRoute) navigate(metricRoute.dataset.metricRoute); const overviewAction = event.target.closest('[data-overview-kind]'); if (overviewAction) { if (overviewAction.dataset.overviewKind === 'transaction' && overviewAction.dataset.overviewTransaction) showTransaction(overviewAction.dataset.overviewTransaction); else { navigate('requests'); if (overviewAction.dataset.overviewOrder) { element.messageOrder.value = overviewAction.dataset.overviewOrder; loadMessages(); } } } const transaction = event.target.closest('[data-transaction-id]'); if (transaction) showTransaction(transaction.dataset.transactionId); const notification = event.target.closest('[data-notification-id]'); if (notification) markNotificationRead(notification.dataset.notificationId); const resend = event.target.closest('[data-invitation-resend]'); if (resend) resendInvitation(resend.dataset.invitationResend, resend); const revoke = event.target.closest('[data-invitation-revoke]'); if (revoke) revokeInvitation(revoke.dataset.invitationRevoke, revoke); const packageButton = event.target.closest('[data-package-load]'); if (packageButton) loadTransactionPackage(packageButton.dataset.packageLoad, packageButton); const tab = event.target.closest('[data-workspace-tab]'); if (tab) { document.querySelectorAll('[data-workspace-tab]').forEach(item => item.classList.toggle('is-active', item === tab)); document.querySelectorAll('[data-workspace-panel]').forEach(panel => { const active = panel.dataset.workspacePanel === tab.dataset.workspaceTab; panel.hidden = !active; panel.classList.toggle('is-active', active); }); } const request = event.target.closest('[data-workspace-request]'); if (request) { navigate('requests'); element.requestTransaction.value = request.dataset.workspaceRequest; syncRequestContext(); } if (event.target.id === 'workspaceReminder') { setBusy(event.target, true, 'Sending…'); try { await window.APIService.remindAgentTransactionHomeowner(state.workspaceTransactionId); showToast('Homeowner reminder sent.'); } catch (error) { showToast(error?.message || 'Could not send the reminder.'); } finally { setBusy(event.target, false); } } });
+    document.addEventListener('submit', async event => { const form = event.target.closest('[data-workspace-message-form]'); if (!form) return; event.preventDefault(); const button = form.querySelector('button'); setBusy(button, true, 'Sending…'); try { await window.APIService.sendAgentMessage(form.dataset.workspaceMessageForm, form.elements.body.value); await showTransaction(state.workspaceTransactionId); showToast('Message sent and logged to the work item.'); } catch (error) { showToast(error?.message || 'Could not send the message.'); } finally { if (button?.isConnected) setBusy(button, false); } });
+    element.transactionWorkspaceBack.addEventListener('click', () => { state.workspace = null; state.workspaceTransactionId = ''; navigate('transactions'); });
     element.inviteDialog.addEventListener('click', event => { if (event.target === element.inviteDialog) element.inviteDialog.close(); });
     element.logoutButton.addEventListener('click', async () => { try { await window.APIService.logout(); } finally { window.location.replace('/pages/login.html'); } });
-    window.addEventListener('hashchange', () => { const route = location.hash.slice(1); if (ROUTES.has(route)) navigate(route, { skipHash: true }); });
+    window.addEventListener('hashchange', () => { const route = location.hash.slice(1); const match = route.match(/^transactions\/([a-f0-9]{24})$/i); if (match) showTransaction(match[1]); else if (ROUTES.has(route)) navigate(route, { skipHash: true }); });
     window.addEventListener('online', () => { setOffline(false); loadPortal({ preserveRoute: true }); }); window.addEventListener('offline', () => setOffline(true)); setOffline(!navigator.onLine);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) clearTimeout(overviewTimer); else refreshOverview().catch(() => {}); });
     const hour = new Date().getHours(); byId('dayPeriod').textContent = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
   }
 

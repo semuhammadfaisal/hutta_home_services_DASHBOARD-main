@@ -1,0 +1,5 @@
+.property-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.property-edit-grid .full { grid-column: 1 / -1; }
+.stack-form select { width: 100%; border: 1px solid #bdcbc3; border-radius: 10px; padding: 12px 13px; font: inherit; color: var(--ink); background: white; }
+#propertyCorrectionFields > p { margin: 0; font-size: .78rem; }
+@media (max-width: 620px) { .property-edit-grid { grid-template-columns: 1fr; } .property-edit-grid .full { grid-column: auto; } }

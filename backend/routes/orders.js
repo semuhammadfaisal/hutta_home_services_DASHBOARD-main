@@ -16,6 +16,8 @@ const { redactContact } = require('../utils/agentSerializers');
 const { prepareDocumentUpdate } = require('../utils/documents');
 const { retainEntityAttachments } = require('../utils/attachmentRetention');
 const { saveWithPersistentAttachmentMetadata } = require('../utils/attachmentMetadata');
+const SecurityAuditEvent = require('../models/SecurityAuditEvent');
+const { complianceChecklist } = require('../utils/vendorCompliance');
 const router = express.Router();
 
 const STATS_CACHE_KEY = 'orders:stats:v2';
@@ -72,6 +74,14 @@ function parseVendorAssignmentInput(body = {}, { partial = false } = {}) {
   if (body.completionRules !== undefined) payload.completionRules = { requireServiceNotes: body.completionRules.requireServiceNotes !== false, requireBeforePhotos: body.completionRules.requireBeforePhotos !== false, requireAfterPhotos: body.completionRules.requireAfterPhotos !== false };
   payload.timezone = 'America/Phoenix';
   return payload;
+}
+
+function vendorAssignmentProblems(vendor, order) {
+  if (!vendor?.isActive || ['rejected', 'suspended'].includes(vendor.portalStatus)) return ['vendor_inactive'];
+  const overridden = (order.vendorComplianceOverrides || []).some(item => item.active && String(item.vendorId) === String(vendor._id));
+  if (overridden) return [];
+  if (vendor.portalStatus && vendor.portalStatus !== 'approved_active') return ['portal_approval'];
+  return complianceChecklist(vendor).filter(item => !item.complete).map(item => item.key);
 }
 
 async function populatedVendorAssignments(orderId) {
@@ -365,14 +375,18 @@ router.post('/:id/vendor-assignments', authenticateToken, checkRole(['admin', 'm
     const payload = parseVendorAssignmentInput(req.body);
     const [order, vendor] = await Promise.all([
       Order.findById(req.params.id),
-      Vendor.findById(payload.vendor).select('_id')
+      Vendor.findById(payload.vendor)
     ]);
     if (!order) return res.status(404).json({ message: 'Order not found' });
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    const problems = vendorAssignmentProblems(vendor, order);
+    if (problems.length) return res.status(409).json({ message: 'Vendor is inactive or compliance is incomplete', incomplete: problems });
 
     payload.createdBy = req.user?.userId || req.user?.id;
     order.vendorAssignments.push(payload);
     await order.save();
+    const assignment = order.vendorAssignments[order.vendorAssignments.length - 1];
+    await SecurityAuditEvent.create({ action: 'order_vendor_assignment_created', userId: req.user.userId, userEmail: req.user.email, entityType: 'VendorAssignment', entityId: String(assignment._id), metadata: { orderId: order._id, vendorId: vendor._id, billingLane: assignment.billingLane }, ipAddress: req.ip, userAgent: req.get('user-agent') });
     invalidateOrderStatsCache();
     res.status(201).json({ vendorAssignments: await populatedVendorAssignments(order._id) });
   } catch (error) {
@@ -389,11 +403,14 @@ router.patch('/:id/vendor-assignments/:assignmentId', authenticateToken, checkRo
 
     const payload = parseVendorAssignmentInput(req.body, { partial: true });
     if (payload.vendor) {
-      const vendor = await Vendor.findById(payload.vendor).select('_id');
+      const vendor = await Vendor.findById(payload.vendor);
       if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+      const problems = vendorAssignmentProblems(vendor, order);
+      if (problems.length) return res.status(409).json({ message: 'Vendor is inactive or compliance is incomplete', incomplete: problems });
     }
     Object.assign(assignment, payload);
     await order.save();
+    await SecurityAuditEvent.create({ action: 'order_vendor_assignment_updated', userId: req.user.userId, userEmail: req.user.email, entityType: 'VendorAssignment', entityId: String(assignment._id), metadata: { orderId: order._id, vendorId: assignment.vendor, status: assignment.status, billingLane: assignment.billingLane }, ipAddress: req.ip, userAgent: req.get('user-agent') });
     invalidateOrderStatsCache();
     res.json({ vendorAssignments: await populatedVendorAssignments(order._id) });
   } catch (error) {
@@ -407,8 +424,10 @@ router.delete('/:id/vendor-assignments/:assignmentId', authenticateToken, checkR
     if (!order) return res.status(404).json({ message: 'Order not found' });
     const assignment = order.vendorAssignments.id(req.params.assignmentId);
     if (!assignment) return res.status(404).json({ message: 'Vendor assignment not found' });
+    const removedVendorId = assignment.vendor;
     assignment.deleteOne();
     await order.save();
+    await SecurityAuditEvent.create({ action: 'order_vendor_assignment_removed', userId: req.user.userId, userEmail: req.user.email, entityType: 'VendorAssignment', entityId: String(req.params.assignmentId), metadata: { orderId: order._id, vendorId: removedVendorId }, ipAddress: req.ip, userAgent: req.get('user-agent') });
     invalidateOrderStatsCache();
     res.json({ vendorAssignments: await populatedVendorAssignments(order._id) });
   } catch (error) {

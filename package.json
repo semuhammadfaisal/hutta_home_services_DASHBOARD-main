@@ -14,6 +14,10 @@
     "migrate:workflow-pipeline-sync:apply": "node backend/migrate-workflow-pipeline-sync.js --apply",
     "migrate:residential-properties": "node backend/migrate-residential-properties.js",
     "migrate:residential-properties:apply": "node backend/migrate-residential-properties.js --apply",
+    "migrate:invoice-contractors": "node backend/migrate-invoice-contractors.js",
+    "migrate:invoice-contractors:apply": "node backend/migrate-invoice-contractors.js --apply",
+    "audit:agent-extension-limits": "node backend/audit-agent-extension-limits.js",
+    "audit:portal-accounts": "node backend/audit-portal-accounts.js",
     "seed:residential-demo": "node backend/seed-residential-demo.js",
     "seed:residential-demo:apply": "node backend/seed-residential-demo.js --apply",
     "postinstall": "cd backend && npm install"

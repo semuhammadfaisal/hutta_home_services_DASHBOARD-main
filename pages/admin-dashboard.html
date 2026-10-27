@@ -38,6 +38,10 @@
     <link rel="stylesheet" href="../assets/css/vendor-reviews-polish.css?v=20260807-vendor-reviews-monochrome">
     <link rel="stylesheet" href="../assets/css/vendor-review-detail-polish.css?v=20260807-vendor-reviews-monochrome">
     <link rel="stylesheet" href="../assets/css/workflow-center.css?v=20260806-workflow-monochrome">
+    <link rel="stylesheet" href="../assets/css/agent-requests-admin.css?v=20261020-registered-agents">
+    <link rel="stylesheet" href="../assets/css/agent-directory-admin.css?v=20261020-agent-directory">
+    <link rel="stylesheet" href="../assets/css/commercial-setup-admin.css?v=20261026-commercial-setup">
+    <link rel="stylesheet" href="../assets/css/portal-accounts-admin.css?v=20261027-portal-accounts">
     <link rel="stylesheet" href="../assets/css/incoming-quotes.css?v=20260806-workflow-monochrome">
     <link rel="stylesheet" href="../assets/css/outgoing-quotes.css?v=20261007-visible-send-anyway">
     <link rel="stylesheet" href="../assets/css/customer-approvals.css?v=20260806-workflow-monochrome">
@@ -57,11 +61,11 @@
     <link rel="stylesheet" href="../assets/css/smplfix-layout.css?v=20260806-fluid-layout">
     <link rel="stylesheet" href="../assets/css/stage2-workspace-polish.css?v=20260812-stage2-workspace">
     <link rel="stylesheet" href="../assets/css/stage3-workspace-polish.css?v=20261007-visible-send-anyway">
+    <link rel="stylesheet" href="../assets/css/order-vendor-assignments.css?v=20260828-multi-vendor">
+    <link rel="stylesheet" href="../assets/css/autopilot-admin.css?v=20261011-autopilot-scroll-fix">
     <link rel="stylesheet" href="../assets/css/workflow-filterbar-polish.css?v=20260812-filterbar-polish">
     <link rel="stylesheet" href="../assets/css/smplfix-forms.css?v=20260807-customer-backdrop">
     <link rel="stylesheet" href="../assets/css/smplfix-icons.css?v=20260807-icon-reliability">
-    <link rel="stylesheet" href="../assets/css/order-vendor-assignments.css?v=20260828-multi-vendor">
-    <link rel="stylesheet" href="../assets/css/autopilot-admin.css?v=20261011-autopilot-scroll-fix">
 </head>
 <body>
     <!-- Top Navigation -->
@@ -153,6 +157,12 @@
                 <a href="#service-requests/overview" data-section="workflow-overview" id="serviceRequestsNav"><i class="fas fa-house"></i><span>Service Requests</span></a>
             </li>
             <li class="menu-item">
+                <a href="#agent-requests" data-section="agent-requests" id="agentRequestsNav"><i class="fas fa-user-tie"></i><span>Agent Requests</span><span class="workflow-nav-badge" id="agentRequestsNavBadge" hidden>0</span></a>
+            </li>
+            <li class="menu-item">
+                <a href="#commercial-setup" data-section="commercial-setup" id="commercialSetupNav"><i class="fas fa-building"></i><span>Commercial Setup</span><span class="workflow-nav-badge" id="commercialSetupNavBadge" hidden>0</span></a>
+            </li>
+            <li class="menu-item">
                 <a href="#workflow-center/overview" data-section="workflow-overview" id="workflowCenterNav">
                     <i class="fas fa-route"></i>
                     <span>Workflow Center</span>
@@ -222,6 +232,19 @@
                 </a>
             </li>
             <li class="sidebar-section-label" aria-hidden="true">People & Admin</li>
+            <li class="menu-item">
+                <a href="#portal-accounts/overview" data-section="portal-accounts" id="portalAccountsNav">
+                    <i class="fas fa-address-book"></i>
+                    <span>Portal Accounts</span>
+                    <span class="workflow-nav-badge" id="portalAccountsNavBadge" hidden>0</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#agents" data-section="agents" id="agentsNav">
+                    <i class="fas fa-id-card"></i>
+                    <span>Agents</span>
+                </a>
+            </li>
             <li class="menu-item">
                 <a href="#employees" data-section="employees">
                     <i class="fas fa-user-tie"></i>
@@ -897,6 +920,117 @@
 
         <section id="workflow-overview" class="content-section workflow-hub-section">
             <div id="workflowOverviewMount" aria-live="polite"></div>
+        </section>
+
+        <section id="agent-requests" class="content-section agent-requests-section" aria-labelledby="agentRequestsTitle">
+            <header class="agent-requests-header">
+                <div><p class="page-eyebrow">Real estate operations</p><h1 id="agentRequestsTitle">Agent Requests</h1><p>Review agent-submitted transaction work before deciding whether to send it into the service fulfillment workflow.</p></div>
+                <div class="agent-requests-header-actions"><span id="agentRequestsUpdated" aria-live="polite"></span><button class="btn-secondary" id="agentRequestsRefresh" type="button"><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div>
+            </header>
+            <div class="agent-requests-boundary"><i class="fas fa-shield-alt" aria-hidden="true"></i><div><strong>Separate intake workspace</strong><p>These submissions are not part of Service Requests, Workflow Center, or Pipeline until staff explicitly sends them to fulfillment.</p></div></div>
+            <div class="agent-requests-metrics" aria-label="Agent request summary">
+                <article><span>Awaiting review</span><strong id="agentRequestsAwaiting">0</strong></article>
+                <article><span>Urgent or at risk</span><strong id="agentRequestsUrgent">0</strong></article>
+                <article><span>Closing in 7 days</span><strong id="agentRequestsClosing">0</strong></article>
+                <article><span>Attachments</span><strong id="agentRequestsAttachments">0</strong></article>
+            </div>
+            <div class="agent-requests-toolbar" role="search">
+                <label><span>Search requests</span><input id="agentRequestsSearch" type="search" placeholder="Search agent, client, property, service…" autocomplete="off"></label>
+                <label><span>Urgency</span><select id="agentRequestsUrgency"><option value="all">All urgency levels</option><option value="emergency">Emergency</option><option value="urgent">Urgent</option><option value="soon">Soon</option><option value="routine">Routine</option></select></label>
+            </div>
+            <div id="agentRequestsStatus" class="agent-requests-status" role="status" aria-live="polite"></div>
+            <div id="agentRequestsList" class="agent-requests-list"></div>
+            <section class="agent-requests-registered" aria-labelledby="agentRequestsRegisteredTitle">
+                <div class="agent-requests-registered-heading"><div><p class="page-eyebrow">Agent accounts</p><h2 id="agentRequestsRegisteredTitle">Registered Agents</h2><p>Agents appear here even when they have not submitted a service request.</p></div><button class="btn-secondary" type="button" id="viewAllAgentsButton">View all agents</button></div>
+                <div id="agentRequestsAgentsStatus" class="agent-requests-status" role="status" aria-live="polite"></div>
+                <div id="agentRequestsAgentsList" class="agent-requests-agent-list"></div>
+            </section>
+        </section>
+
+        <section id="commercial-setup" class="content-section commercial-setup-section" aria-labelledby="commercialSetupTitle">
+            <header class="commercial-setup-header">
+                <div><p class="page-eyebrow">Commercial operations</p><h1 id="commercialSetupTitle">Commercial Workspace Setup</h1><p>Verify ownership and connect approved CRM properties, service tiers, billing rules, and PO requirements.</p></div>
+                <button class="btn-secondary" id="commercialSetupRefresh" type="button"><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button>
+            </header>
+            <div class="commercial-setup-boundary"><i class="fas fa-link" aria-hidden="true"></i><div><strong>Shared CRM records</strong><p>Setup links existing customers and properties. It does not create a separate commercial database or duplicate a property.</p></div></div>
+            <div class="commercial-setup-metrics" aria-label="Commercial setup request summary">
+                <article><span>Awaiting setup</span><strong id="commercialSetupPending">0</strong></article>
+                <article><span>Completed</span><strong id="commercialSetupCompleted">0</strong></article>
+                <article><span>Needs information</span><strong id="commercialSetupRejected">0</strong></article>
+            </div>
+            <div class="commercial-setup-toolbar">
+                <label><span>Status</span><select id="commercialSetupStatusFilter"><option value="pending">Awaiting setup</option><option value="completed">Completed</option><option value="rejected">Needs information</option><option value="all">All requests</option></select></label>
+                <label><span>Search</span><input id="commercialSetupSearch" type="search" placeholder="Search company, user, email, reference…" autocomplete="off"></label>
+            </div>
+            <div id="commercialSetupStatus" class="commercial-setup-status" role="status" aria-live="polite"></div>
+            <div id="commercialSetupList" class="commercial-setup-list"></div>
+        </section>
+
+        <dialog id="commercialSetupDialog" class="commercial-setup-dialog" aria-labelledby="commercialSetupDialogTitle">
+            <form id="commercialSetupForm" method="dialog">
+                <header><div><p class="page-eyebrow">Workspace approval</p><h2 id="commercialSetupDialogTitle">Configure commercial access</h2><p id="commercialSetupDialogSubtitle"></p></div><button type="button" class="commercial-setup-close" id="commercialSetupClose" aria-label="Close setup workspace">&times;</button></header>
+                <div id="commercialSetupDialogStatus" class="commercial-setup-dialog-status" role="status" aria-live="polite"></div>
+                <div id="commercialSetupWorkspace"></div>
+                <footer><button class="btn-secondary" id="commercialSetupReject" type="button">Request more information</button><span></span><button class="btn-secondary" id="commercialSetupCancel" type="button">Cancel</button><button class="btn-primary" id="commercialSetupApprove" type="submit">Approve &amp; activate workspace</button></footer>
+            </form>
+        </dialog>
+
+        <section id="portal-accounts" class="content-section portal-accounts-section" aria-labelledby="portalAccountsTitle">
+            <header class="portal-accounts-header">
+                <div><p class="page-eyebrow">People &amp; Admin</p><h1 id="portalAccountsTitle">Portal Accounts</h1><p>One staff workspace for residential clients, commercial organizations, real estate agents, and vendors.</p></div>
+                <div class="portal-accounts-header-actions"><span id="portalAccountsUpdated" aria-live="polite"></span><button class="btn-secondary" id="portalAccountsRefresh" type="button"><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div>
+            </header>
+            <div id="portalAccountsStatus" class="portal-accounts-status" role="status" aria-live="polite"></div>
+            <div id="portalAccountsOverview" class="portal-accounts-overview"></div>
+            <nav class="portal-accounts-tabs" aria-label="Portal account directories">
+                <button type="button" data-portal-type="overview" class="active">Overview</button>
+                <button type="button" data-portal-type="residential">Residential</button>
+                <button type="button" data-portal-type="commercial">Commercial</button>
+                <button type="button" data-portal-type="agents">Agents</button>
+                <button type="button" data-portal-type="vendors">Vendors</button>
+            </nav>
+            <div id="portalAccountsDirectory" hidden>
+                <div class="portal-accounts-toolbar" role="search">
+                    <label><span>Search accounts</span><input id="portalAccountsSearch" type="search" placeholder="Name, company, email, property, order or reference…" autocomplete="off"></label>
+                    <label><span>Status</span><select id="portalAccountsStatusFilter"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="pending">Pending</option><option value="approved_active">Approved vendor</option><option value="compliance_incomplete">Compliance incomplete</option></select></label>
+                    <label><span>Attention</span><select id="portalAccountsAttentionFilter"><option value="">All accounts</option><option value="needed">Needs attention</option></select></label>
+                </div>
+                <div id="portalAccountsList" class="portal-accounts-list"></div>
+            </div>
+            <div id="portalAccountDetail" class="portal-account-detail" hidden aria-live="polite"></div>
+        </section>
+
+        <dialog id="portalAccountActionDialog" class="portal-account-dialog" aria-labelledby="portalAccountActionTitle">
+            <form id="portalAccountActionForm" method="dialog">
+                <header><div><p class="page-eyebrow" id="portalAccountActionEyebrow">Portal account action</p><h2 id="portalAccountActionTitle">Create order</h2><p id="portalAccountActionSubtitle"></p></div><button type="button" id="portalAccountActionClose" aria-label="Close">&times;</button></header>
+                <div id="portalAccountActionFields" class="portal-account-action-fields"></div>
+                <div id="portalAccountActionStatus" class="portal-accounts-status" role="status" aria-live="polite"></div>
+                <footer><button class="btn-secondary" id="portalAccountActionCancel" type="button">Cancel</button><button class="btn-primary" id="portalAccountActionSubmit" type="submit">Save</button></footer>
+            </form>
+        </dialog>
+
+        <section id="agents" class="content-section agent-directory-section" aria-labelledby="agentsTitle">
+            <header class="agent-directory-header">
+                <div><p class="page-eyebrow">People &amp; Admin</p><h1 id="agentsTitle">Real Estate Agents</h1><p>Open an agent record to review their profile, portfolio, transactions, invitations, referrals, and service activity.</p></div>
+                <div class="agent-directory-header-actions"><span id="agentsUpdated" aria-live="polite"></span><button class="btn-secondary" id="agentsRefresh" type="button"><i class="fas fa-sync-alt" aria-hidden="true"></i> Refresh</button></div>
+            </header>
+            <div class="agent-directory-metrics" aria-label="Agent account summary">
+                <article><span>Total agents</span><strong id="agentsTotal">0</strong></article>
+                <article><span>Active agents</span><strong id="agentsActive">0</strong></article>
+                <article><span>Profiles incomplete</span><strong id="agentsIncomplete">0</strong></article>
+                <article><span>Active transactions</span><strong id="agentsTransactions">0</strong></article>
+            </div>
+            <div class="agent-directory-toolbar" role="search">
+                <label><span>Search agents</span><input id="agentsSearch" type="search" placeholder="Search name, email, brokerage, license…" autocomplete="off"></label>
+                <label><span>Status</span><select id="agentsStatus"><option value="all">All agents</option><option value="active">Active</option><option value="incomplete">Profile incomplete</option><option value="inactive">Inactive or suspended</option></select></label>
+            </div>
+            <div id="agentsStatusText" class="agent-directory-status" role="status" aria-live="polite"></div>
+            <div id="agentsList" class="agent-directory-list"></div>
+        </section>
+
+        <section id="agent-detail" class="content-section agent-detail-section" aria-labelledby="agentDetailTitle">
+            <button class="btn-secondary agent-detail-back" id="agentDetailBack" type="button"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Agents</button>
+            <div id="agentDetailContent" aria-live="polite"></div>
         </section>
 
         <section id="workflow-center" class="content-section workflow-center-section workflow-stage-section" data-workflow-stage="1">
@@ -4837,7 +4971,7 @@
     </div>
 
     <script src="../config/timezone-config.js"></script>
-    <script src="../assets/js/api-service.js?v=20261010-autopilot-confirm-work"></script>
+    <script src="../assets/js/api-service.js?v=20261020-agent-directory"></script>
     <script src="../assets/js/commercial-approval.js?v=20260916-commercial-completion"></script>
     <script src="../assets/js/rbac.js"></script>
     <script src="../assets/js/toast.js"></script>
@@ -4854,6 +4988,10 @@
     <script src="../assets/js/top-customers.js"></script>
     <script src="../assets/js/recurring-custom-frequency.js"></script>
     <script src="../assets/js/dashboard-script.js?v=20261010-autopilot-confirm-work"></script>
+    <script src="../assets/js/agent-requests-admin.js?v=20261020-registered-agents"></script>
+    <script src="../assets/js/agent-directory-admin.js?v=20261020-agent-directory"></script>
+    <script src="../assets/js/commercial-setup-admin.js?v=20261026-commercial-setup"></script>
+    <script src="../assets/js/portal-accounts-admin.js?v=20261027-portal-accounts"></script>
     <script src="../assets/js/autopilot-admin.js?v=20261011-autopilot-row-cleanup"></script>
     <script src="../assets/js/incoming-quotes.js?v=20261007-invitation-flow"></script>
     <script src="../assets/js/outgoing-quotes.js?v=20261008-order-compliance-override"></script>

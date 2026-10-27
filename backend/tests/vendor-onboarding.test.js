@@ -260,11 +260,12 @@ test('onboarding route and UI include approval, change, rejection, resend, and r
   assert.doesNotMatch(adminSource, /configured Hutta mailbox|Hutta team/);
 });
 
-test('missing public files cannot trigger nested login redirect loops', () => {
+test('public homepage is stable and missing public files cannot trigger nested login redirect loops', () => {
   const indexSource = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
   const serverSource = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
-  assert.match(indexSource, /location\.replace\('\/pages\/login\.html'\)/);
-  assert.doesNotMatch(indexSource, /\.\/pages\/login\.html/);
+  assert.match(indexSource, /href="\/pages\/login\.html"/);
+  assert.match(indexSource, /href="\/pages\/real-estate-agents\.html"/);
+  assert.match(indexSource, /href="\/pages\/property-management\.html"/);
   assert.match(serverSource, /path\.extname\(req\.path\)/);
   assert.match(serverSource, /status\(404\)/);
 });

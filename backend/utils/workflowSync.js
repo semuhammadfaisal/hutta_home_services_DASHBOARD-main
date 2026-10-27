@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const Payment = require('../models/Payment');
 const PipelineRecord = require('../models/PipelineRecord');
+const PortalActivity = require('../models/PortalActivity');
+const Notification = require('../models/Notification');
+const RealEstateTransaction = require('../models/RealEstateTransaction');
 const Stage = require('../models/Stage');
 
 const WORKFLOW_STATUS = Object.freeze({
@@ -34,6 +37,16 @@ const STAGE_DEFINITIONS = Object.freeze({
   invoice_sent: { name: 'Invoice Sent', position: 8, aliases: [/^invoice sent$/i] },
   paid: { name: 'Paid', position: 9, aliases: [/^paid$/i] },
   closed: { name: 'Closed', position: 10, aliases: [/^closed$/i] }
+});
+
+const AGENT_MILESTONES = Object.freeze({
+  quote_sent: { title: 'Estimate sent to homeowner', type: 'agent_quote_sent', priority: 'medium' },
+  quote_changes_requested: { title: 'Estimate changes requested', type: 'agent_quote_changes_requested', priority: 'high' },
+  customer_approved: { title: 'Estimate approved by homeowner', type: 'agent_quote_approved', priority: 'medium' },
+  schedule_changes_requested: { title: 'Schedule changes requested', type: 'agent_schedule_changes_requested', priority: 'high' },
+  scheduled: { title: 'Service visit confirmed', type: 'agent_schedule_confirmed', priority: 'medium' },
+  closeout_issue_reported: { title: 'Completion issue reported', type: 'agent_closeout_issue', priority: 'high' },
+  completed: { title: 'Service work completed', type: 'agent_work_completed', priority: 'medium' }
 });
 
 function withSession(query, session) {
@@ -95,6 +108,24 @@ async function hasReceivedPayment(orderId, session) {
   }), session));
 }
 
+async function publishAgentMilestone(order, previousStatus, targetStatus, session, now) {
+  const milestone = AGENT_MILESTONES[targetStatus];
+  if (!milestone || previousStatus === targetStatus || !['agent_portal', 'agent_fulfillment'].includes(order.source) || !order.residentialRequest?.transactionId) return;
+  const transaction = await withSession(RealEstateTransaction.findOne({ _id: order.residentialRequest.transactionId, customerId: order.customerId, propertyId: order.propertyId }).select('agentUserId label'), session).lean();
+  if (!transaction?.agentUserId) return;
+  const reference = order.requestReference || order.orderId || 'service request';
+  const summary = `${order.service || 'Service request'} · ${reference}`;
+  await PortalActivity.create([{
+    userId: transaction.agentUserId, customerId: order.customerId, propertyId: order.propertyId, orderId: order._id,
+    type: milestone.type, title: milestone.title, summary, occurredAt: now,
+    metadata: { transactionId: transaction._id, workflowStatus: targetStatus }
+  }], { session });
+  await Notification.create([{
+    userId: transaction.agentUserId, title: milestone.title, message: `${summary} for ${transaction.label}.`, type: 'order', priority: milestone.priority,
+    actionUrl: '#requests', metadata: { transactionId: transaction._id, orderId: order._id, workflowStatus: targetStatus }
+  }], { session });
+}
+
 async function synchronizeWorkflowOrderInSession(order, targetWorkflowStatus, options = {}) {
   const {
     session,
@@ -106,6 +137,7 @@ async function synchronizeWorkflowOrderInSession(order, targetWorkflowStatus, op
   if (!mapping) throw Object.assign(new Error(`Unsupported workflow status: ${targetWorkflowStatus}`), { status: 400 });
 
   const now = new Date();
+  const previousStatus = order.workflowStatus;
   order.workflowStatus = targetWorkflowStatus;
   order.status = mapping.orderStatus;
 
@@ -142,6 +174,7 @@ async function synchronizeWorkflowOrderInSession(order, targetWorkflowStatus, op
   order.pipelineRecordId = record._id;
   order.pipelineStage = stage?.name || order.pipelineStage;
   if (saveOrder) await order.save({ session });
+  await publishAgentMilestone(order, previousStatus, targetWorkflowStatus, session, now);
 
   return {
     orderId: String(order._id),
@@ -183,6 +216,7 @@ async function synchronizePaymentStage(order, options = {}) {
 
 module.exports = {
   STAGE_DEFINITIONS,
+  AGENT_MILESTONES,
   WORKFLOW_STATUS,
   resolveStage,
   synchronizePaymentStage,
